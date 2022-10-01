@@ -84,7 +84,7 @@ class ByteReader
     func readVarInt() throws -> Int32 {
         let b = try readOctetAsInt32()
         if b & 0x80 == 0 {
-            return (Int32)(b & 0x7F)
+            return b & 0x7F
         } else if b & 0x40 == 0 {
             let v = (try readOctetAsInt32()) | ((b & 31) << 8);
             
@@ -128,15 +128,46 @@ class ByteReader
         let nglobals = try self.readVarInt()
         let nnatives = try self.readVarInt()
         let nfunctions = try self.readVarInt()
-        let nconstants = try self.readVarInt()
+        let nconstants = sig.v >= 4 ? try self.readVarInt() : 0
         let entrypoint = try self.readVarInt()
         let constInts = try Array(repeating: 0, count: Int(nints)).map { _ in try self.readInt32() } 
         let constFloats = try Array(repeating: 0, count: Int(nfloats)).map { _ in try self.readDouble() } 
         
-        let nstrings2 = try self.readUInt32()
-        // guard nstrings == nstrings2 else { fatalError("Both string values dont match - \(nstrings) vs \(nstrings2)") }
-        print("Strings: \(nstrings)")
-        let constStrings = try Array(repeating: 0, count: Int(nstrings)).map { _ in try self.readString() } 
+        let constStrings = try self.readStrings(nstrings)
+
+        if sig.v >= 5 {
+            fatalError("byte reading not implemented")
+        }
+        // 24
+        let hasdebug = (flags & 1 != 0)
+        if hasdebug {
+            let debugEntryCount = try self.readVarInt()
+            let debugEntries = try self.readStrings(debugEntryCount)
+            // print("Got it in \(skipped): \(x)")
+            fatalError("Got \(debugEntries) \(debugEntryCount)")
+            // print(try self.readVarInt())
+            // print(try self.readVarInt())
+            // print(try self.readVarInt())
+            let _debugEntryStringSize = try self.readInt32()
+            // print("Debug entries \(debugEntries)")
+            for _ in 0..<3 { print(try self.readString().count) }
+            let debugStrings = try Array(repeating: 0, count: Int(24)).map { _ in try self.readString() } 
+            print(" \(debugStrings)")
+            fatalError("Yo \(debugEntries) \(_debugEntryStringSize)")
+        }
+
+        // print("ntypes", ntypes)
+        // fatalError("wat")
+
+        /*
+        
+ntypes * type	types	types definitions
+var * nglobals	globals	types of each globals
+nnatives * native	natives	Native functions to be loaded from external libraries
+nfunctions* function	functions	Function definitions
+nconstants* constant	constants	Constant definitions
+        */
+
 
         let result = ModuleHeader(
             signature: sig, 
@@ -158,6 +189,30 @@ class ByteReader
         return result
     }
 
+    private func skip(_ amount: Int) {
+        self.pointer += amount
+    }
+
+    private func readStrings(_ count: Int32) throws -> [String] {
+        try readStrings(Int(count))
+    }
+
+    private func readStrings(_ count: Int) throws -> [String] {
+        let stringDataSize = try self.readUInt32()
+        let expectedPostDataPointer = UInt32(pointer) + UInt32(stringDataSize)
+        let strings = try Array(repeating: 0, count: count).map { _ in try self.readString() } 
+        guard expectedPostDataPointer == pointer else {
+            fatalError("Invalid string read")
+        }
+        for i in 0..<count {
+            let siz = try self.readVarInt()
+            guard siz == strings[strings.startIndex.advanced(by: Int(i))].count else {
+                fatalError("Invalid file. String length encoding doesn't match at index \(i)")
+            }
+        }
+        return strings
+    }
+
     private func readString() throws -> String {
         var bytes = [UInt8]()
         while (try peekUInt8() != 0) {
@@ -177,6 +232,8 @@ class ByteReader
             where Result: UnsignedInteger
     {
         let expected = MemoryLayout<Result>.size
+
+        guard data.count >= pointer + expected else { fatalError("Not enough data before seeking") }
 
         let result = self.data[
             self.data.startIndex.advanced(by: pointer)..<self.data.startIndex.advanced(by: pointer+expected)]
@@ -218,6 +275,14 @@ class ByteReader
 
     func readUInt8() throws -> UInt8 {
         try parseLEUIntX(UInt8.self)
+    }
+
+    func readUInt16() throws -> UInt16 {
+        try parseLEUIntX(UInt16.self)
+    }
+
+    func readInt16() throws -> Int16 {
+        Int16(bitPattern: try readUInt16())
     }
 
     func peekUInt8() throws -> UInt8 {
