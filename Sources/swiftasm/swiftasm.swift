@@ -87,13 +87,20 @@ extension OpBuilder
 
 @main
 struct SwiftAsm: ParsableCommand {
-    @Argument var arg: UInt16
+    @Argument var hlFileIn: String
     
     mutating func run() throws {
 
+        let file = try! Data(contentsOf: URL(fileURLWithPath: hlFileIn))
+        let reader = ByteReader(file)
+
+        let head = try! reader.readHeader()
+        print(String(reflecting: head))
+        return
+
         let builder = OpBuilder()
         builder.append(.nop)
-        builder.append(.movz64(.x0, arg, ._0))
+        builder.append(.movz64(.x0, 23, ._0))
         builder.append(.ret)
 
         print("Building entrypoint")
