@@ -1,21 +1,25 @@
 import Foundation
 
-protocol ModuleHeader : CustomDebugStringConvertible {
-    var version: UInt8 { get }
-    var	flags: Int32 { get }
-    var	nints: Int32 { get }
-    var	nfloats: Int32 { get }
-    var	nstrings: Int32 { get }
-    var	nbytes: Int32 { get }
-    var	ntypes: Int32 { get }
-    var	nglobals: Int32 { get }
-    var	nnatives: Int32 { get }
-    var	nfunctions: Int32 { get }
-    var	nconstants: Int32 { get }
-    var	entrypoint: Int32 { get }
+// protocol ModuleHeader : CustomDebugStringConvertible {
+//     var version: UInt8 { get }
+//     var	flags: Int32 { get }
+//     var	nints: Int32 { get }
+//     var	nfloats: Int32 { get }
+//     var	nstrings: Int32 { get }
+//     var	nbytes: Int32 { get }
+//     var	ntypes: Int32 { get }
+//     var	nglobals: Int32 { get }
+//     var	nnatives: Int32 { get }
+//     var	nfunctions: Int32 { get }
+//     var	nconstants: Int32 { get }
+//     var	entrypoint: Int32 { get }
+// }
+
+struct Constants {
+
 }
 
-struct ModuleHeader_v4 : ModuleHeader {
+struct ModuleHeader : CustomDebugStringConvertible {
     let signature: ModuleSignature
     var version: UInt8 { signature.v }
 
@@ -23,13 +27,22 @@ struct ModuleHeader_v4 : ModuleHeader {
     let	nints: Int32
     let	nfloats: Int32
     let	nstrings: Int32
-    var	nbytes: Int32 { 0 }
+    
+    // only v5 upwards
+    let	nbytes: Int32
+
     let	ntypes: Int32
     let	nglobals: Int32
     let	nnatives: Int32
     let	nfunctions: Int32
     let	nconstants: Int32
     let	entrypoint: Int32
+
+    // [i32]
+    let constInts: [Int32]
+    // [f64]
+    let constFloats: [Double]
+    let constStrings: [String]
 
     var debugDescription: String {
 return """
@@ -38,12 +51,16 @@ entry @\(entrypoint)
 \(nstrings) strings
 \(0) bytes
 \(nints) ints
+\(constInts.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
 \(nfloats) floats
+\(constFloats.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
 \(nglobals) globals
 \(nnatives) natives
 \(nfunctions) functions
 ??? objects protos (not types)
 \(nconstants) constant values
+strings
+\(constStrings.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
 """
     }
 }
@@ -53,40 +70,6 @@ struct ModuleSignature {
     let l: UInt8
     let b: UInt8
     let v: UInt8
-}
-
-/* Contains nbytes over v4 */
-struct ModuleHeader_v5 : ModuleHeader {
-    let signature: ModuleSignature
-    var version: UInt8 { signature.v }
-
-    let	flags: Int32
-    let	nints: Int32
-    let	nfloats: Int32
-    let	nstrings: Int32
-    let	nbytes: Int32
-    let	ntypes: Int32
-    let	nglobals: Int32
-    let	nnatives: Int32
-    let	nfunctions: Int32
-    let	nconstants: Int32
-    let	entrypoint: Int32
-
-    var debugDescription: String {
-return """
-hl v\(version)
-entry \(entrypoint)
-\(nstrings) strings
-\(nbytes) bytes
-\(nints) ints
-\(nfloats) floats
-\(nglobals) globals
-\(nnatives) natives
-\(nfunctions) functions
-??? objects protos (not types)
-\(nconstants) constant values
-"""
-    }
 }
 
 class ByteReader
@@ -127,44 +110,117 @@ class ByteReader
             b: try self.readUInt8(), 
             v: try self.readUInt8())
 
-        guard String(bytes: [sig.h, sig.l, sig.b], encoding: .ascii)! == "HLB" else {
-            fatalError("Invalid header (first three bytes must be HLB)")
+        let firstB = String(bytes: [sig.h, sig.l, sig.b], encoding: .ascii)!
+        guard firstB == "HLB" else {
+            fatalError("Invalid header (first three bytes must be HLB but got \(firstB))")
         }
 
         guard sig.v == 4 else {
             fatalError("Supported version is 4")
         }
 
-        let result = ModuleHeader_v4(
+        let flags = try self.readVarInt()
+        let nints = try self.readVarInt()
+        let nfloats = try self.readVarInt()
+        let nstrings = try self.readVarInt()
+        let nbytes = sig.v >= 5 ? try self.readVarInt() : 0
+        let ntypes = try self.readVarInt()
+        let nglobals = try self.readVarInt()
+        let nnatives = try self.readVarInt()
+        let nfunctions = try self.readVarInt()
+        let nconstants = try self.readVarInt()
+        let entrypoint = try self.readVarInt()
+        let constInts = try Array(repeating: 0, count: Int(nints)).map { _ in try self.readInt32() } 
+        let constFloats = try Array(repeating: 0, count: Int(nfloats)).map { _ in try self.readDouble() } 
+        
+        let nstrings2 = try self.readUInt32()
+        // guard nstrings == nstrings2 else { fatalError("Both string values dont match - \(nstrings) vs \(nstrings2)") }
+        print("Strings: \(nstrings)")
+        let constStrings = try Array(repeating: 0, count: Int(nstrings)).map { _ in try self.readString() } 
+
+        let result = ModuleHeader(
             signature: sig, 
-            flags: try self.readVarInt(), 
-            nints: try self.readVarInt(),
-            nfloats: try self.readVarInt(),
-            nstrings: try self.readVarInt(),
-            ntypes: try self.readVarInt(),
-            nglobals: try self.readVarInt(),
-            nnatives: try self.readVarInt(),
-            nfunctions: try self.readVarInt(),
-            nconstants: try self.readVarInt(),
-            entrypoint: try self.readVarInt())
+            flags: flags, 
+            nints: nints,
+            nfloats: nfloats,
+            nstrings: nstrings,
+            nbytes: nbytes,
+            ntypes: ntypes,
+            nglobals: nglobals,
+            nnatives: nnatives,
+            nfunctions: nfunctions,
+            nconstants: nconstants,
+            entrypoint: entrypoint,
+            constInts: constInts,
+            constFloats: constFloats,
+            constStrings: constStrings)
 
         return result
+    }
+
+    private func readString() throws -> String {
+        var bytes = [UInt8]()
+        while (try peekUInt8() != 0) {
+            bytes += [try readUInt8()]
+        } 
+
+        try readUInt8() // skip the 0 terminator
+        
+        guard let result = String(bytes: bytes, encoding: .ascii) else {
+            fatalError("Failed to decode string")
+        }
+
+        return result 
+    }
+
+    private func parseLEUIntX<Result>(_: Result.Type, advance: Bool = true) throws -> Result
+            where Result: UnsignedInteger
+    {
+        let expected = MemoryLayout<Result>.size
+
+        let result = self.data[
+            self.data.startIndex.advanced(by: pointer)..<self.data.startIndex.advanced(by: pointer+expected)]
+
+        defer { 
+            if advance {
+                pointer += expected 
+            }
+        }
+        guard result.count >= expected else { fatalError("Not enough data") }
+
+        return result
+                .prefix(expected)
+                .reversed()
+                .reduce(0, { soFar, new in
+                        (soFar << 8) | Result(new)
+                })
     }
 
     func readOctetAsInt32() throws -> Int32 {
         return Int32(try readUInt8())
     }
 
+    func readUInt32() throws -> UInt32 {
+        try parseLEUIntX(UInt32.self)
+    }
+
+    func readUInt64() throws -> UInt64 {
+        try parseLEUIntX(UInt64.self)
+    }
+
+    func readInt32() throws -> Int32 {
+        Int32(bitPattern: try readUInt32())
+    }
+
+    func readDouble() throws -> Double {
+        Double(bitPattern: try readUInt64())
+    }
+
     func readUInt8() throws -> UInt8 {
-        let result = self.data[
-            self.data.startIndex.advanced(by: pointer)..<self.data.startIndex.advanced(by: pointer+1)]
+        try parseLEUIntX(UInt8.self)
+    }
 
-        defer { pointer += 1 }
-
-        return result.reduce(0) {
-            _, next in 
-
-            next
-        }
+    func peekUInt8() throws -> UInt8 {
+        try parseLEUIntX(UInt8.self, advance: false)
     }
 }
