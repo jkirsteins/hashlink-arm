@@ -1,0 +1,2 @@
+@:used @:coreType
+abstract hl.BytesAccess<T> from hl.Bytes to hl.Bytes {}

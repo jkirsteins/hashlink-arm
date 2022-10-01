@@ -1,0 +1,803 @@
+@:keep @:directlyUsed @:used @:coreApi
+class StringBuf {
+
+	public function new[Function:() -> Void]
+		[Block:hl.Bytes]
+			[Binop:Int]
+				[Field:Int]
+					[Const:StringBuf] this
+					[FInstance:Int]
+						StringBuf
+						pos:Int
+				=
+				[Const:Int] 0
+			[Binop:Int]
+				[Field:Int]
+					[Const:StringBuf] this
+					[FInstance:Int]
+						StringBuf
+						size:Int
+				=
+				[Const:Int] 8
+			[Var this1(804):hl.Bytes]
+				[Call:hl.Bytes]
+					[Field:(size : Int) -> hl.Bytes]
+						[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+						[FStatic:(size : Int) -> hl.Bytes]
+							hl._Bytes.Bytes_Impl_
+							alloc:(size : Int) -> hl.Bytes
+					[Field:Int]
+						[Const:StringBuf] this
+						[FInstance:Int]
+							StringBuf
+							size:Int
+			[Binop:hl.Bytes]
+				[Field:hl.Bytes]
+					[Const:StringBuf] this
+					[FInstance:hl.Bytes]
+						StringBuf
+						b:hl.Bytes
+				=
+				[Local this1(804):hl.Bytes:hl.Bytes]
+
+	var b:hl.Bytes;
+
+	var size:Int;
+
+	var pos:Int;
+
+	public function add<T>[Function:(x : add.T) -> Void]
+		[Arg:add.T] [Local x(845):add.T]
+		[Block:Void]
+			[Var slen(846):Int] [Const:Int] 0
+			[Var str(847):String]
+				[Call:String]
+					[Field:(value : Unknown<12>, c : Class<String>) -> String]
+						[TypeExpr Std:Class<Std>]
+						[FStatic:(value : Unknown<12> : { }, c : Class<String>) -> String]
+							Std
+							downcast:(value : downcast.T, c : Class<downcast.S>) -> downcast.S
+					[Cast:Dynamic] [Local x(845):add.T:add.T]
+					[TypeExpr String:Class<String>]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local str(847):String:String]
+						!=
+						[Const:String] null
+				[Then:Dynamic] [Block:Dynamic]
+					[Block:Void]
+						[Var bytes(850):hl.Bytes]
+							[Field:hl.Bytes]
+								[Local str(847):String:String]
+								[FInstance:hl.Bytes]
+									String
+									bytes:hl.Bytes
+						[Var ssize(852):Int]
+							[Binop:Int]
+								[Field:Int]
+									[Local str(847):String:String]
+									[FInstance:Int]
+										String
+										length:Int
+								<<
+								[Const:Int] 1
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Binop:Int]
+										[Field:Int]
+											[Const:StringBuf] this
+											[FInstance:Int]
+												StringBuf
+												pos:Int
+										+
+										[Local ssize(852):Int:Int]
+									>
+									[Field:Int]
+										[Const:StringBuf] this
+										[FInstance:Int]
+											StringBuf
+											size:Int
+							[Then:Void] [Block:Void]
+								[Var need(853):Int]
+									[Binop:Int]
+										[Field:Int]
+											[Const:StringBuf] this
+											[FInstance:Int]
+												StringBuf
+												pos:Int
+										+
+										[Local ssize(852):Int:Int]
+								[Var nsize(854):Int]
+									[Binop:Int]
+										[Binop:Int]
+											[Field:Int]
+												[Const:StringBuf] this
+												[FInstance:Int]
+													StringBuf
+													size:Int
+											*
+											[Const:Int] 3
+										>>
+										[Const:Int] 1
+								[If:Void]
+									[Parenthesis:Bool]
+										[Binop:Bool]
+											[Local need(853):Int:Int]
+											>
+											[Local nsize(854):Int:Int]
+									[Then:Int] [Binop:Int]
+										[Local nsize(854):Int:Int]
+										=
+										[Local need(853):Int:Int]
+								[Var this1(855):hl.Bytes]
+									[Call:hl.Bytes]
+										[Field:(size : Int) -> hl.Bytes]
+											[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+											[FStatic:(size : Int) -> hl.Bytes]
+												hl._Bytes.Bytes_Impl_
+												alloc:(size : Int) -> hl.Bytes
+										[Local nsize(854):Int:Int]
+								[Var b2(856):hl.Bytes] [Local this1(855):hl.Bytes:hl.Bytes]
+								[Call:Void]
+									[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+										[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+										[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+											hl._Bytes.Bytes_Impl_
+											blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+									[Local b2(856):hl.Bytes:hl.Bytes]
+									[Const:Int] 0
+									[Field:hl.Bytes]
+										[Const:StringBuf] this
+										[FInstance:hl.Bytes]
+											StringBuf
+											b:hl.Bytes
+									[Const:Int] 0
+									[Field:Int]
+										[Const:StringBuf] this
+										[FInstance:Int]
+											StringBuf
+											pos:Int
+								[Binop:hl.Bytes]
+									[Field:hl.Bytes]
+										[Const:StringBuf] this
+										[FInstance:hl.Bytes]
+											StringBuf
+											b:hl.Bytes
+									=
+									[Local b2(856):hl.Bytes:hl.Bytes]
+								[Binop:Int]
+									[Field:Int]
+										[Const:StringBuf] this
+										[FInstance:Int]
+											StringBuf
+											size:Int
+									=
+									[Local nsize(854):Int:Int]
+						[Call:Void]
+							[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+								[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+								[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+									hl._Bytes.Bytes_Impl_
+									blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+							[Field:hl.Bytes]
+								[Const:StringBuf] this
+								[FInstance:hl.Bytes]
+									StringBuf
+									b:hl.Bytes
+							[Field:Int]
+								[Const:StringBuf] this
+								[FInstance:Int]
+									StringBuf
+									pos:Int
+							[Local bytes(850):hl.Bytes:hl.Bytes]
+							[Const:Int] 0
+							[Local ssize(852):Int:Int]
+						[Binop:Int]
+							[Field:Int]
+								[Const:StringBuf] this
+								[FInstance:Int]
+									StringBuf
+									pos:Int
+							+=
+							[Local ssize(852):Int:Int]
+					[Return:Dynamic]
+			[Var this1(860):hl.Ref<Int>]
+				[Call:hl.Ref<Int>]
+					[Ident:Int -> Unknown<0>] $ref
+					[Local slen(846):Int:Int]
+			[Var sbytes(861):hl.Bytes]
+				[Call:hl.Bytes]
+					[Field:(v : Dynamic, length : hl.Ref<Int>) -> hl.Bytes]
+						[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+						[FStatic:(v : Dynamic, length : hl.Ref<Int>) -> hl.Bytes]
+							hl._Bytes.Bytes_Impl_
+							fromValue:(v : Dynamic, length : hl.Ref<Int>) -> hl.Bytes
+					[Local x(845):add.T:add.T]
+					[Local this1(860):hl.Ref<Int>:hl.Ref<Int>]
+			[Block:Void]
+				[Var ssize(866):Int]
+					[Binop:Int]
+						[Local slen(846):Int:Int]
+						<<
+						[Const:Int] 1
+				[If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Binop:Int]
+								[Field:Int]
+									[Const:StringBuf] this
+									[FInstance:Int]
+										StringBuf
+										pos:Int
+								+
+								[Local ssize(866):Int:Int]
+							>
+							[Field:Int]
+								[Const:StringBuf] this
+								[FInstance:Int]
+									StringBuf
+									size:Int
+					[Then:Void] [Block:Void]
+						[Var need(867):Int]
+							[Binop:Int]
+								[Field:Int]
+									[Const:StringBuf] this
+									[FInstance:Int]
+										StringBuf
+										pos:Int
+								+
+								[Local ssize(866):Int:Int]
+						[Var nsize(868):Int]
+							[Binop:Int]
+								[Binop:Int]
+									[Field:Int]
+										[Const:StringBuf] this
+										[FInstance:Int]
+											StringBuf
+											size:Int
+									*
+									[Const:Int] 3
+								>>
+								[Const:Int] 1
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Local need(867):Int:Int]
+									>
+									[Local nsize(868):Int:Int]
+							[Then:Int] [Binop:Int]
+								[Local nsize(868):Int:Int]
+								=
+								[Local need(867):Int:Int]
+						[Var this1(869):hl.Bytes]
+							[Call:hl.Bytes]
+								[Field:(size : Int) -> hl.Bytes]
+									[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+									[FStatic:(size : Int) -> hl.Bytes]
+										hl._Bytes.Bytes_Impl_
+										alloc:(size : Int) -> hl.Bytes
+								[Local nsize(868):Int:Int]
+						[Var b2(870):hl.Bytes] [Local this1(869):hl.Bytes:hl.Bytes]
+						[Call:Void]
+							[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+								[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+								[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+									hl._Bytes.Bytes_Impl_
+									blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+							[Local b2(870):hl.Bytes:hl.Bytes]
+							[Const:Int] 0
+							[Field:hl.Bytes]
+								[Const:StringBuf] this
+								[FInstance:hl.Bytes]
+									StringBuf
+									b:hl.Bytes
+							[Const:Int] 0
+							[Field:Int]
+								[Const:StringBuf] this
+								[FInstance:Int]
+									StringBuf
+									pos:Int
+						[Binop:hl.Bytes]
+							[Field:hl.Bytes]
+								[Const:StringBuf] this
+								[FInstance:hl.Bytes]
+									StringBuf
+									b:hl.Bytes
+							=
+							[Local b2(870):hl.Bytes:hl.Bytes]
+						[Binop:Int]
+							[Field:Int]
+								[Const:StringBuf] this
+								[FInstance:Int]
+									StringBuf
+									size:Int
+							=
+							[Local nsize(868):Int:Int]
+				[Call:Void]
+					[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+						[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+							hl._Bytes.Bytes_Impl_
+							blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+					[Field:hl.Bytes]
+						[Const:StringBuf] this
+						[FInstance:hl.Bytes]
+							StringBuf
+							b:hl.Bytes
+					[Field:Int]
+						[Const:StringBuf] this
+						[FInstance:Int]
+							StringBuf
+							pos:Int
+					[Local sbytes(861):hl.Bytes:hl.Bytes]
+					[Const:Int] 0
+					[Local ssize(866):Int:Int]
+				[Binop:Int]
+					[Field:Int]
+						[Const:StringBuf] this
+						[FInstance:Int]
+							StringBuf
+							pos:Int
+					+=
+					[Local ssize(866):Int:Int]
+
+	public function addChar[Function:(c : Int) -> Void]
+		[Arg:Int] [Local c(985):Int]
+		[Block:Void]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Binop:Bool]
+							[Local c(985):Int:Int]
+							>=
+							[Const:Int] 0
+						&&
+						[Binop:Bool]
+							[Local c(985):Int:Int]
+							<
+							[Const:Int] 65536
+				[Then:Int] [Block:Int]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Binop:Bool]
+									[Local c(985):Int:Int]
+									>=
+									[Const:Int] 55296
+								&&
+								[Binop:Bool]
+									[Local c(985):Int:Int]
+									<=
+									[Const:Int] 57343
+						[Then:Dynamic] [Throw:Dynamic]
+							[Call:Any]
+								[Field:(value : Any) -> Any]
+									[TypeExpr haxe.Exception:{ Statics haxe.Exception }]
+									[FStatic:(value : Any) -> Any]
+										haxe.Exception
+										thrown:(value : Any) -> Any
+								[Binop:String]
+									[Const:String] "Invalid unicode char "
+									+
+									[Local c(985):Int:Int]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Binop:Int]
+									[Field:Int]
+										[Const:StringBuf] this
+										[FInstance:Int]
+											StringBuf
+											pos:Int
+									+
+									[Const:Int] 2
+								>
+								[Field:Int]
+									[Const:StringBuf] this
+									[FInstance:Int]
+										StringBuf
+										size:Int
+						[Then:Void] [Block:Void]
+							[Var nsize(989):Int]
+								[Binop:Int]
+									[Binop:Int]
+										[Field:Int]
+											[Const:StringBuf] this
+											[FInstance:Int]
+												StringBuf
+												size:Int
+										*
+										[Const:Int] 3
+									>>
+									[Const:Int] 1
+							[If:Void]
+								[Parenthesis:Bool]
+									[Binop:Bool]
+										[Const:Int] 0
+										>
+										[Local nsize(989):Int:Int]
+								[Then:Int] [Binop:Int]
+									[Local nsize(989):Int:Int]
+									=
+									[Const:Int] 0
+							[Var this1(990):hl.Bytes]
+								[Call:hl.Bytes]
+									[Field:(size : Int) -> hl.Bytes]
+										[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+										[FStatic:(size : Int) -> hl.Bytes]
+											hl._Bytes.Bytes_Impl_
+											alloc:(size : Int) -> hl.Bytes
+									[Local nsize(989):Int:Int]
+							[Var b2(991):hl.Bytes] [Local this1(990):hl.Bytes:hl.Bytes]
+							[Call:Void]
+								[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+									[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+									[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+										hl._Bytes.Bytes_Impl_
+										blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+								[Local b2(991):hl.Bytes:hl.Bytes]
+								[Const:Int] 0
+								[Field:hl.Bytes]
+									[Const:StringBuf] this
+									[FInstance:hl.Bytes]
+										StringBuf
+										b:hl.Bytes
+								[Const:Int] 0
+								[Field:Int]
+									[Const:StringBuf] this
+									[FInstance:Int]
+										StringBuf
+										pos:Int
+							[Binop:hl.Bytes]
+								[Field:hl.Bytes]
+									[Const:StringBuf] this
+									[FInstance:hl.Bytes]
+										StringBuf
+										b:hl.Bytes
+								=
+								[Local b2(991):hl.Bytes:hl.Bytes]
+							[Binop:Int]
+								[Field:Int]
+									[Const:StringBuf] this
+									[FInstance:Int]
+										StringBuf
+										size:Int
+								=
+								[Local nsize(989):Int:Int]
+					[Block:Void]
+						[Var this1(994):hl.Bytes]
+							[Field:hl.Bytes]
+								[Const:StringBuf] this
+								[FInstance:hl.Bytes]
+									StringBuf
+									b:hl.Bytes
+						[Var pos(995):Int]
+							[Field:Int]
+								[Const:StringBuf] this
+								[FInstance:Int]
+									StringBuf
+									pos:Int
+						[Call:Unknown<9>]
+							[Ident:(hl.Bytes, Int, Int) -> Unknown<8>] $bsetui16
+							[Local this1(994):hl.Bytes:hl.Bytes]
+							[Local pos(995):Int:Int]
+							[Local c(985):Int:Int]
+					[Binop:Int]
+						[Field:Int]
+							[Const:StringBuf] this
+							[FInstance:Int]
+								StringBuf
+								pos:Int
+						+=
+						[Const:Int] 2
+				[Else:Void] [If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local c(985):Int:Int]
+							<
+							[Const:Int] 1114112
+					[Then:Int] [Block:Int]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Binop:Int]
+										[Field:Int]
+											[Const:StringBuf] this
+											[FInstance:Int]
+												StringBuf
+												pos:Int
+										+
+										[Const:Int] 4
+									>
+									[Field:Int]
+										[Const:StringBuf] this
+										[FInstance:Int]
+											StringBuf
+											size:Int
+							[Then:Void] [Block:Void]
+								[Var nsize(1000):Int]
+									[Binop:Int]
+										[Binop:Int]
+											[Field:Int]
+												[Const:StringBuf] this
+												[FInstance:Int]
+													StringBuf
+													size:Int
+											*
+											[Const:Int] 3
+										>>
+										[Const:Int] 1
+								[If:Void]
+									[Parenthesis:Bool]
+										[Binop:Bool]
+											[Const:Int] 0
+											>
+											[Local nsize(1000):Int:Int]
+									[Then:Int] [Binop:Int]
+										[Local nsize(1000):Int:Int]
+										=
+										[Const:Int] 0
+								[Var this1(1001):hl.Bytes]
+									[Call:hl.Bytes]
+										[Field:(size : Int) -> hl.Bytes]
+											[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+											[FStatic:(size : Int) -> hl.Bytes]
+												hl._Bytes.Bytes_Impl_
+												alloc:(size : Int) -> hl.Bytes
+										[Local nsize(1000):Int:Int]
+								[Var b2(1002):hl.Bytes] [Local this1(1001):hl.Bytes:hl.Bytes]
+								[Call:Void]
+									[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+										[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+										[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+											hl._Bytes.Bytes_Impl_
+											blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+									[Local b2(1002):hl.Bytes:hl.Bytes]
+									[Const:Int] 0
+									[Field:hl.Bytes]
+										[Const:StringBuf] this
+										[FInstance:hl.Bytes]
+											StringBuf
+											b:hl.Bytes
+									[Const:Int] 0
+									[Field:Int]
+										[Const:StringBuf] this
+										[FInstance:Int]
+											StringBuf
+											pos:Int
+								[Binop:hl.Bytes]
+									[Field:hl.Bytes]
+										[Const:StringBuf] this
+										[FInstance:hl.Bytes]
+											StringBuf
+											b:hl.Bytes
+									=
+									[Local b2(1002):hl.Bytes:hl.Bytes]
+								[Binop:Int]
+									[Field:Int]
+										[Const:StringBuf] this
+										[FInstance:Int]
+											StringBuf
+											size:Int
+									=
+									[Local nsize(1000):Int:Int]
+						[Binop:Int]
+							[Local c(985):Int:Int]
+							-=
+							[Const:Int] 65536
+						[Block:Void]
+							[Var this1(1005):hl.Bytes]
+								[Field:hl.Bytes]
+									[Const:StringBuf] this
+									[FInstance:hl.Bytes]
+										StringBuf
+										b:hl.Bytes
+							[Var pos(1006):Int]
+								[Field:Int]
+									[Const:StringBuf] this
+									[FInstance:Int]
+										StringBuf
+										pos:Int
+							[Call:Unknown<9>]
+								[Ident:(hl.Bytes, Int, Int) -> Unknown<8>] $bsetui16
+								[Local this1(1005):hl.Bytes:hl.Bytes]
+								[Local pos(1006):Int:Int]
+								[Binop:Int]
+									[Parenthesis:Int]
+										[Binop:Int]
+											[Local c(985):Int:Int]
+											>>
+											[Const:Int] 10
+									+
+									[Const:Int] 55296
+						[Block:Void]
+							[Var this1(1010):hl.Bytes]
+								[Field:hl.Bytes]
+									[Const:StringBuf] this
+									[FInstance:hl.Bytes]
+										StringBuf
+										b:hl.Bytes
+							[Var pos(1011):Int]
+								[Binop:Int]
+									[Field:Int]
+										[Const:StringBuf] this
+										[FInstance:Int]
+											StringBuf
+											pos:Int
+									+
+									[Const:Int] 2
+							[Call:Unknown<9>]
+								[Ident:(hl.Bytes, Int, Int) -> Unknown<8>] $bsetui16
+								[Local this1(1010):hl.Bytes:hl.Bytes]
+								[Local pos(1011):Int:Int]
+								[Binop:Int]
+									[Parenthesis:Int]
+										[Binop:Int]
+											[Local c(985):Int:Int]
+											&
+											[Const:Int] 1023
+									+
+									[Const:Int] 56320
+						[Binop:Int]
+							[Field:Int]
+								[Const:StringBuf] this
+								[FInstance:Int]
+									StringBuf
+									pos:Int
+							+=
+							[Const:Int] 4
+					[Else:Dynamic] [Throw:Dynamic]
+						[Call:Any]
+							[Field:(value : Any) -> Any]
+								[TypeExpr haxe.Exception:{ Statics haxe.Exception }]
+								[FStatic:(value : Any) -> Any]
+									haxe.Exception
+									thrown:(value : Any) -> Any
+							[Binop:String]
+								[Const:String] "Invalid unicode char "
+								+
+								[Local c(985):Int:Int]
+
+	public function toString[Function:() -> String]
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Binop:Int]
+							[Field:Int]
+								[Const:StringBuf] this
+								[FInstance:Int]
+									StringBuf
+									pos:Int
+							+
+							[Const:Int] 2
+						>
+						[Field:Int]
+							[Const:StringBuf] this
+							[FInstance:Int]
+								StringBuf
+								size:Int
+				[Then:Void] [Block:Void]
+					[Var nsize(900):Int]
+						[Binop:Int]
+							[Binop:Int]
+								[Field:Int]
+									[Const:StringBuf] this
+									[FInstance:Int]
+										StringBuf
+										size:Int
+								*
+								[Const:Int] 3
+							>>
+							[Const:Int] 1
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Const:Int] 0
+								>
+								[Local nsize(900):Int:Int]
+						[Then:Int] [Binop:Int]
+							[Local nsize(900):Int:Int]
+							=
+							[Const:Int] 0
+					[Var this1(901):hl.Bytes]
+						[Call:hl.Bytes]
+							[Field:(size : Int) -> hl.Bytes]
+								[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+								[FStatic:(size : Int) -> hl.Bytes]
+									hl._Bytes.Bytes_Impl_
+									alloc:(size : Int) -> hl.Bytes
+							[Local nsize(900):Int:Int]
+					[Var b2(902):hl.Bytes] [Local this1(901):hl.Bytes:hl.Bytes]
+					[Call:Void]
+						[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+							[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+							[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+								hl._Bytes.Bytes_Impl_
+								blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+						[Local b2(902):hl.Bytes:hl.Bytes]
+						[Const:Int] 0
+						[Field:hl.Bytes]
+							[Const:StringBuf] this
+							[FInstance:hl.Bytes]
+								StringBuf
+								b:hl.Bytes
+						[Const:Int] 0
+						[Field:Int]
+							[Const:StringBuf] this
+							[FInstance:Int]
+								StringBuf
+								pos:Int
+					[Binop:hl.Bytes]
+						[Field:hl.Bytes]
+							[Const:StringBuf] this
+							[FInstance:hl.Bytes]
+								StringBuf
+								b:hl.Bytes
+						=
+						[Local b2(902):hl.Bytes:hl.Bytes]
+					[Binop:Int]
+						[Field:Int]
+							[Const:StringBuf] this
+							[FInstance:Int]
+								StringBuf
+								size:Int
+						=
+						[Local nsize(900):Int:Int]
+			[Block:Void]
+				[Var this1(905):hl.Bytes]
+					[Field:hl.Bytes]
+						[Const:StringBuf] this
+						[FInstance:hl.Bytes]
+							StringBuf
+							b:hl.Bytes
+				[Var pos(906):Int]
+					[Field:Int]
+						[Const:StringBuf] this
+						[FInstance:Int]
+							StringBuf
+							pos:Int
+				[Call:Unknown<9>]
+					[Ident:(hl.Bytes, Int, Int) -> Unknown<8>] $bsetui16
+					[Local this1(905):hl.Bytes:hl.Bytes]
+					[Local pos(906):Int:Int]
+					[Const:Int] 0
+			[Var b(910):hl.Bytes]
+				[Field:hl.Bytes]
+					[Const:StringBuf] this
+					[FInstance:hl.Bytes]
+						StringBuf
+						b:hl.Bytes
+			[Var length(911):Int]
+				[Binop:Int]
+					[Field:Int]
+						[Const:StringBuf] this
+						[FInstance:Int]
+							StringBuf
+							pos:Int
+					>>
+					[Const:Int] 1
+			[Var s(912):String]
+				[Call:String]
+					[Ident:Class<String> -> Unknown<1>] $new
+					[TypeExpr String:Class<String>]
+			[Binop:hl.Bytes]
+				[Field:hl.Bytes]
+					[Local s(912):String:String]
+					[FInstance:hl.Bytes]
+						String
+						bytes:hl.Bytes
+				=
+				[Local b(910):hl.Bytes:hl.Bytes]
+			[Binop:Int]
+				[Field:Int]
+					[Local s(912):String:String]
+					[FInstance:Int]
+						String
+						length:Int
+				=
+				[Local length(911):Int:Int]
+			[Return:Dynamic] [Local s(912):String:String]
+}

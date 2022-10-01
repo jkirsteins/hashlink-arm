@@ -1,0 +1,75 @@
+@:directlyUsed @:used @:keep @:noDoc
+class hl.types.BytesKeyValueIterator_hl_F32 extends haxe.iterators.ArrayKeyValueIterator<hl.F32> {
+
+	public function new[Function:(a : hl.types.ArrayBytes_hl_F32) -> Void]
+		[Arg:hl.types.ArrayBytes_hl_F32] [Local a(7795):hl.types.ArrayBytes_hl_F32]
+		[Block:hl.types.ArrayBytes_hl_F32]
+			[Call:Void]
+				[Const:haxe.iterators.ArrayKeyValueIterator<hl.F32>] super
+				[Cast:Dynamic] [Const:Unknown<27>] null
+			[Binop:hl.types.ArrayBytes_hl_F32]
+				[Field:hl.types.ArrayBytes_hl_F32]
+					[Const:hl.types.BytesKeyValueIterator_hl_F32] this
+					[FInstance:hl.types.ArrayBytes_hl_F32]
+						hl.types.BytesKeyValueIterator_hl_F32
+						a:hl.types.ArrayBytes_hl_F32
+				=
+				[Local a(7795):hl.types.ArrayBytes_hl_F32:hl.types.ArrayBytes_hl_F32]
+
+	var a:hl.types.ArrayBytes_hl_F32;
+
+	public function hasNext[Function:() -> Bool]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Field:Int]
+						[Const:hl.types.BytesKeyValueIterator_hl_F32] this
+						[FInstance:Int]
+							haxe.iterators.ArrayKeyValueIterator<hl.F32>
+							current:Int
+					<
+					[Field:Int]
+						[Field:hl.types.ArrayBytes_hl_F32]
+							[Const:hl.types.BytesKeyValueIterator_hl_F32] this
+							[FInstance:hl.types.ArrayBytes_hl_F32]
+								hl.types.BytesKeyValueIterator_hl_F32
+								a:hl.types.ArrayBytes_hl_F32
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+
+	public function next[Function:() -> { value : hl.F32, key : Int }]
+		[Block:Dynamic]
+			[Var this1(7792):hl.BytesAccess<hl.F32>]
+				[Field:hl.BytesAccess<hl.F32>]
+					[Field:hl.types.ArrayBytes_hl_F32]
+						[Const:hl.types.BytesKeyValueIterator_hl_F32] this
+						[FInstance:hl.types.ArrayBytes_hl_F32]
+							hl.types.BytesKeyValueIterator_hl_F32
+							a:hl.types.ArrayBytes_hl_F32
+					[FInstance:hl.BytesAccess<hl.F32>]
+						hl.types.ArrayBytes_hl_F32
+						bytes:hl.BytesAccess<hl.F32>
+			[Var pos(7793):Int]
+				[Field:Int]
+					[Const:hl.types.BytesKeyValueIterator_hl_F32] this
+					[FInstance:Int]
+						haxe.iterators.ArrayKeyValueIterator<hl.F32>
+						current:Int
+			[Var v(7794):hl.F32]
+				[Call:hl.F32]
+					[Ident:(hl.BytesAccess<hl.F32>, Int) -> Unknown<26>] $bget
+					[Local this1(7792):hl.BytesAccess<hl.F32>:hl.BytesAccess<hl.F32>]
+					[Local pos(7793):Int:Int]
+			[Return:Dynamic]
+				[ObjectDecl:{ value : hl.F32, key : Int }]
+					key: [Unop:Int]
+						++
+						Postfix
+						[Field:Int]
+							[Const:hl.types.BytesKeyValueIterator_hl_F32] this
+							[FInstance:Int]
+								haxe.iterators.ArrayKeyValueIterator<hl.F32>
+								current:Int
+					value: [Local v(7794):hl.F32:hl.F32]
+}

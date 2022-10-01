@@ -1,0 +1,75 @@
+@:directlyUsed @:used @:keep @:noDoc
+class hl.types.BytesKeyValueIterator_Float extends haxe.iterators.ArrayKeyValueIterator<Float> {
+
+	public function new[Function:(a : hl.types.ArrayBytes_Float) -> Void]
+		[Arg:hl.types.ArrayBytes_Float] [Local a(7944):hl.types.ArrayBytes_Float]
+		[Block:hl.types.ArrayBytes_Float]
+			[Call:Void]
+				[Const:haxe.iterators.ArrayKeyValueIterator<Float>] super
+				[Cast:Dynamic] [Const:Unknown<27>] null
+			[Binop:hl.types.ArrayBytes_Float]
+				[Field:hl.types.ArrayBytes_Float]
+					[Const:hl.types.BytesKeyValueIterator_Float] this
+					[FInstance:hl.types.ArrayBytes_Float]
+						hl.types.BytesKeyValueIterator_Float
+						a:hl.types.ArrayBytes_Float
+				=
+				[Local a(7944):hl.types.ArrayBytes_Float:hl.types.ArrayBytes_Float]
+
+	var a:hl.types.ArrayBytes_Float;
+
+	public function hasNext[Function:() -> Bool]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Field:Int]
+						[Const:hl.types.BytesKeyValueIterator_Float] this
+						[FInstance:Int]
+							haxe.iterators.ArrayKeyValueIterator<Float>
+							current:Int
+					<
+					[Field:Int]
+						[Field:hl.types.ArrayBytes_Float]
+							[Const:hl.types.BytesKeyValueIterator_Float] this
+							[FInstance:hl.types.ArrayBytes_Float]
+								hl.types.BytesKeyValueIterator_Float
+								a:hl.types.ArrayBytes_Float
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+
+	public function next[Function:() -> { value : Float, key : Int }]
+		[Block:Dynamic]
+			[Var this1(7941):hl.BytesAccess<Float>]
+				[Field:hl.BytesAccess<Float>]
+					[Field:hl.types.ArrayBytes_Float]
+						[Const:hl.types.BytesKeyValueIterator_Float] this
+						[FInstance:hl.types.ArrayBytes_Float]
+							hl.types.BytesKeyValueIterator_Float
+							a:hl.types.ArrayBytes_Float
+					[FInstance:hl.BytesAccess<Float>]
+						hl.types.ArrayBytes_Float
+						bytes:hl.BytesAccess<Float>
+			[Var pos(7942):Int]
+				[Field:Int]
+					[Const:hl.types.BytesKeyValueIterator_Float] this
+					[FInstance:Int]
+						haxe.iterators.ArrayKeyValueIterator<Float>
+						current:Int
+			[Var v(7943):Float]
+				[Call:Float]
+					[Ident:(hl.BytesAccess<Float>, Int) -> Unknown<26>] $bget
+					[Local this1(7941):hl.BytesAccess<Float>:hl.BytesAccess<Float>]
+					[Local pos(7942):Int:Int]
+			[Return:Dynamic]
+				[ObjectDecl:{ value : Float, key : Int }]
+					key: [Unop:Int]
+						++
+						Postfix
+						[Field:Int]
+							[Const:hl.types.BytesKeyValueIterator_Float] this
+							[FInstance:Int]
+								haxe.iterators.ArrayKeyValueIterator<Float>
+								current:Int
+					value: [Local v(7943):Float:Float]
+}

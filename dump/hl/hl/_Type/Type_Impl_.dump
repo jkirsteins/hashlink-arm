@@ -1,0 +1,35 @@
+@:keep @:directlyUsed @:used
+private class hl._Type.Type_Impl_ {
+
+	@:hlNative("std", "type_name")
+	static function getNameBytes[Function:(this : hl.Type) -> hl.Bytes]
+		[Arg:hl.Type] [Local this1(460):hl.Type]
+		[Block:Dynamic] [Return:Dynamic] [Const:hl.Bytes] null
+
+	@:hlNative("std", "type_safe_cast")
+	public static function safeCast[Function:(this : hl.Type, t : hl.Type) -> Bool]
+		[Arg:hl.Type] [Local this1(583):hl.Type]
+		[Arg:hl.Type] [Local t(584):hl.Type]
+		[Block:Dynamic] [Return:Dynamic] [Const:Bool] false
+
+	@:hlNative("std", "type_set_global")
+	public static function setGlobal[Function:(this : hl.Type, v : Dynamic) -> Bool]
+		[Arg:hl.Type] [Local this1(442):hl.Type]
+		[Arg:Dynamic] [Local v(443):Dynamic]
+		[Block:Dynamic] [Return:Dynamic] [Const:Bool] false
+
+	@:hlNative("std", "type_enum_fields")
+	public static function getEnumFields[Function:(this : hl.Type) -> hl.NativeArray<hl.Bytes>]
+		[Arg:hl.Type] [Local this1(474):hl.Type]
+		[Block:Dynamic] [Return:Dynamic] [Const:hl.NativeArray<hl.Bytes>] null
+
+	@:hlNative("std", "type_enum_values")
+	public static function getEnumValues[Function:(this : hl.Type) -> hl.NativeArray<Dynamic>]
+		[Arg:hl.Type] [Local this1(458):hl.Type]
+		[Block:Dynamic] [Return:Dynamic] [Const:hl.NativeArray<Dynamic>] null
+
+	@:hlNative("std", "alloc_obj")
+	public static function allocObject[Function:(this : hl.Type) -> Dynamic]
+		[Arg:hl.Type] [Local this1(440):hl.Type]
+		[Block:Dynamic] [Return:Dynamic] [Const:Unknown<19>] null
+}

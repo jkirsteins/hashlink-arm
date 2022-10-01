@@ -1,0 +1,344 @@
+@:keep @:directlyUsed @:used @:coreApi
+class Std {
+
+	static var rnd:_Std.Rand;
+
+	@:value(0)
+	static var toStringDepth:Int = [Const:Int] 0;
+
+	@:hlNative("std", "rnd_init_system")
+	static function rnd_sys[Function:() -> _Std.Rand] [Block:Dynamic] [Return:Dynamic] [Const:_Std.Rand] null
+
+	public static function isOfType[Function:(v : Dynamic, t : Dynamic) -> Bool]
+		[Arg:Dynamic] [Local v(533):Dynamic]
+		[Arg:Dynamic] [Local t(534):Dynamic]
+		[Block:Dynamic]
+			[Var t(535):hl.BaseType] [Local t(534):Dynamic:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local t(535):hl.BaseType:hl.BaseType]
+						==
+						[Const:hl.BaseType] null
+				[Then:Dynamic] [Return:Dynamic] [Const:Bool] false
+			[Block:Void]
+				[Var this1(565):hl.Type]
+					[Field:hl.Type]
+						[Local t(535):hl.BaseType:hl.BaseType]
+						[FInstance:hl.Type]
+							hl.BaseType
+							__type__:hl.Type
+				[Switch:Void]
+					[Parenthesis:hl.TypeKind]
+						[Call:hl.TypeKind]
+							[Ident:hl.Type -> Unknown<4>] $tkind
+							[Local this1(565):hl.Type:hl.Type]
+					[Case:Void]
+						[Const:Int] 3
+						[Block:Void]
+							[Var this1(567):hl.Type]
+								[Call:hl.Type]
+									[Ident:Dynamic -> Unknown<2>] $tdyntype
+									[Local v(533):Dynamic:Dynamic]
+							[Switch:Void]
+								[Parenthesis:hl.TypeKind]
+									[Call:hl.TypeKind]
+										[Ident:hl.Type -> Unknown<4>] $tkind
+										[Local this1(567):hl.Type:hl.Type]
+								[Case:Dynamic]
+									[Const:Int] 5
+									[Const:Int] 6
+									[Block:Dynamic]
+										[Var v(568):Float] [Local v(533):Dynamic:Dynamic]
+										[Return:Dynamic]
+											[Binop:Bool]
+												[Call:Int]
+													[Ident:Float -> Unknown<3>] $int
+													[Local v(568):Float:Float]
+												==
+												[Local v(568):Float:Float]
+								[Default:Void] [Block:Void]
+					[Case:Void]
+						[Const:Int] 6
+						[Block:Void]
+							[Var this1(570):hl.Type]
+								[Call:hl.Type]
+									[Ident:Dynamic -> Unknown<2>] $tdyntype
+									[Local v(533):Dynamic:Dynamic]
+							[Switch:Void]
+								[Parenthesis:hl.TypeKind]
+									[Call:hl.TypeKind]
+										[Ident:hl.Type -> Unknown<4>] $tkind
+										[Local this1(570):hl.Type:hl.Type]
+								[Case:Dynamic]
+									[Const:Int] 1
+									[Const:Int] 2
+									[Const:Int] 3
+									[Return:Dynamic] [Const:Bool] true
+								[Default:Void] [Block:Void]
+					[Case:Dynamic]
+						[Const:Int] 9
+						[Return:Dynamic]
+							[Binop:Bool]
+								[Local v(533):Dynamic:Dynamic]
+								!=
+								[Const:Unknown<5>] null
+					[Default:Void] [Block:Void]
+			[Return:Dynamic]
+				[Call:Bool]
+					[Field:(v : Dynamic) -> Bool]
+						[Local t(535):hl.BaseType:hl.BaseType]
+						[FInstance:(v : Dynamic) -> Bool]
+							hl.BaseType
+							check:(v : Dynamic) -> Bool
+					[Local v(533):Dynamic:Dynamic]
+
+	@:keep
+	public static function string[Function:(s : Dynamic) -> String]
+		[Arg:Dynamic] [Local s(214):Dynamic]
+		[Block:Dynamic]
+			[Var len(215):Int] [Const:Int] 0
+			[Var this1(223):hl.Ref<Int>]
+				[Call:hl.Ref<Int>]
+					[Ident:Int -> Unknown<0>] $ref
+					[Local len(215):Int:Int]
+			[Var bytes(224):hl.Bytes]
+				[Call:hl.Bytes]
+					[Field:(v : Dynamic, length : hl.Ref<Int>) -> hl.Bytes]
+						[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+						[FStatic:(v : Dynamic, length : hl.Ref<Int>) -> hl.Bytes]
+							hl._Bytes.Bytes_Impl_
+							fromValue:(v : Dynamic, length : hl.Ref<Int>) -> hl.Bytes
+					[Local s(214):Dynamic:Dynamic]
+					[Local this1(223):hl.Ref<Int>:hl.Ref<Int>]
+			[Var s(229):String]
+				[Call:String]
+					[Ident:Class<String> -> Unknown<1>] $new
+					[TypeExpr String:Class<String>]
+			[Binop:hl.Bytes]
+				[Field:hl.Bytes]
+					[Local s(229):String:String]
+					[FInstance:hl.Bytes]
+						String
+						bytes:hl.Bytes
+				=
+				[Local bytes(224):hl.Bytes:hl.Bytes]
+			[Binop:Int]
+				[Field:Int]
+					[Local s(229):String:String]
+					[FInstance:Int]
+						String
+						length:Int
+				=
+				[Local len(215):Int:Int]
+			[Return:Dynamic] [Local s(229):String:String]
+
+	@:keep
+	static function __add__[Function:(a : Dynamic, b : Dynamic) -> Dynamic]
+		[Arg:Dynamic] [Local a(4055):Dynamic]
+		[Arg:Dynamic] [Local b(4056):Dynamic]
+		[Block:Dynamic]
+			[Var ta(4060):hl.Type]
+				[Call:hl.Type]
+					[Ident:Dynamic -> Unknown<2>] $tdyntype
+					[Local a(4055):Dynamic:Dynamic]
+			[Var tb(4064):hl.Type]
+				[Call:hl.Type]
+					[Ident:Dynamic -> Unknown<2>] $tdyntype
+					[Local b(4056):Dynamic:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local ta(4060):hl.Type:hl.Type]
+						==
+						[Call:hl.Type]
+							[Ident:String -> Unknown<6>] $ttype
+							[Const:String] ""
+				[Then:Dynamic] [Return:Dynamic]
+					[Binop:String]
+						[Cast:String] [Local a(4055):Dynamic:Dynamic]
+						+
+						[Call:String]
+							[Field:(s : Dynamic) -> String]
+								[TypeExpr Std:Class<Std>]
+								[FStatic:(s : Dynamic) -> String]
+									Std
+									string:(s : Dynamic) -> String
+							[Local b(4056):Dynamic:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local tb(4064):hl.Type:hl.Type]
+						==
+						[Call:hl.Type]
+							[Ident:String -> Unknown<6>] $ttype
+							[Const:String] ""
+				[Then:Dynamic] [Return:Dynamic]
+					[Binop:String]
+						[Call:String]
+							[Field:(s : Dynamic) -> String]
+								[TypeExpr Std:Class<Std>]
+								[FStatic:(s : Dynamic) -> String]
+									Std
+									string:(s : Dynamic) -> String
+							[Local a(4055):Dynamic:Dynamic]
+						+
+						[Cast:String] [Local b(4056):Dynamic:Dynamic]
+			[Switch:Void]
+				[Parenthesis:hl.TypeKind]
+					[Call:hl.TypeKind]
+						[Ident:hl.Type -> Unknown<4>] $tkind
+						[Local ta(4060):hl.Type:hl.Type]
+				[Case:Void]
+					[Const:Int] 0
+					[Switch:Void]
+						[Parenthesis:hl.TypeKind]
+							[Call:hl.TypeKind]
+								[Ident:hl.Type -> Unknown<4>] $tkind
+								[Local tb(4064):hl.Type:hl.Type]
+						[Case:Dynamic]
+							[Const:Int] 0
+							[Return:Dynamic] [Const:Float] 0.
+						[Case:Dynamic]
+							[Const:Int] 1
+							[Const:Int] 2
+							[Const:Int] 3
+							[Const:Int] 5
+							[Const:Int] 6
+							[Return:Dynamic] [Local b(4056):Dynamic:Dynamic]
+						[Default:Void] [Block:Void]
+				[Case:Void]
+					[Const:Int] 1
+					[Const:Int] 2
+					[Const:Int] 3
+					[Block:Void]
+						[Var a(4094):Int] [Local a(4055):Dynamic:Dynamic]
+						[Switch:Void]
+							[Parenthesis:hl.TypeKind]
+								[Call:hl.TypeKind]
+									[Ident:hl.Type -> Unknown<4>] $tkind
+									[Local tb(4064):hl.Type:hl.Type]
+							[Case:Dynamic]
+								[Const:Int] 0
+								[Return:Dynamic] [Local a(4094):Int:Int]
+							[Case:Dynamic]
+								[Const:Int] 1
+								[Const:Int] 2
+								[Const:Int] 3
+								[Return:Dynamic]
+									[Binop:Int]
+										[Local a(4094):Int:Int]
+										+
+										[Cast:Int] [Local b(4056):Dynamic:Dynamic]
+							[Case:Dynamic]
+								[Const:Int] 5
+								[Const:Int] 6
+								[Return:Dynamic]
+									[Binop:Float]
+										[Local a(4094):Int:Int]
+										+
+										[Cast:Float] [Local b(4056):Dynamic:Dynamic]
+							[Default:Void] [Block:Void]
+				[Case:Void]
+					[Const:Int] 5
+					[Const:Int] 6
+					[Block:Void]
+						[Var a(4096):Float] [Local a(4055):Dynamic:Dynamic]
+						[Switch:Void]
+							[Parenthesis:hl.TypeKind]
+								[Call:hl.TypeKind]
+									[Ident:hl.Type -> Unknown<4>] $tkind
+									[Local tb(4064):hl.Type:hl.Type]
+							[Case:Dynamic]
+								[Const:Int] 0
+								[Return:Dynamic] [Local a(4096):Float:Float]
+							[Case:Dynamic]
+								[Const:Int] 1
+								[Const:Int] 2
+								[Const:Int] 3
+								[Return:Dynamic]
+									[Binop:Float]
+										[Local a(4096):Float:Float]
+										+
+										[Cast:Int] [Local b(4056):Dynamic:Dynamic]
+							[Case:Dynamic]
+								[Const:Int] 5
+								[Const:Int] 6
+								[Return:Dynamic]
+									[Binop:Float]
+										[Local a(4096):Float:Float]
+										+
+										[Cast:Float] [Local b(4056):Dynamic:Dynamic]
+							[Default:Void] [Block:Void]
+				[Default:Void] [Block:Void]
+			[Throw:Dynamic]
+				[Call:Any]
+					[Field:(value : Any) -> Any]
+						[TypeExpr haxe.Exception:{ Statics haxe.Exception }]
+						[FStatic:(value : Any) -> Any]
+							haxe.Exception
+							thrown:(value : Any) -> Any
+					[Binop:String]
+						[Binop:String]
+							[Binop:String]
+								[Binop:String]
+									[Binop:String]
+										[Binop:String]
+											[Binop:String]
+												[Binop:String]
+													[Const:String] "Can't add "
+													+
+													[Call:String]
+														[Field:(s : Dynamic) -> String]
+															[TypeExpr Std:Class<Std>]
+															[FStatic:(s : Dynamic) -> String]
+																Std
+																string:(s : Dynamic) -> String
+														[Local a(4055):Dynamic:Dynamic]
+												+
+												[Const:String] "("
+											+
+											[Call:String]
+												[Field:(s : Dynamic) -> String]
+													[TypeExpr Std:Class<Std>]
+													[FStatic:(s : Dynamic) -> String]
+														Std
+														string:(s : Dynamic) -> String
+												[Local ta(4060):hl.Type:hl.Type]
+										+
+										[Const:String] ") and "
+									+
+									[Call:String]
+										[Field:(s : Dynamic) -> String]
+											[TypeExpr Std:Class<Std>]
+											[FStatic:(s : Dynamic) -> String]
+												Std
+												string:(s : Dynamic) -> String
+										[Local b(4056):Dynamic:Dynamic]
+								+
+								[Const:String] "("
+							+
+							[Call:String]
+								[Field:(s : Dynamic) -> String]
+									[TypeExpr Std:Class<Std>]
+									[FStatic:(s : Dynamic) -> String]
+										Std
+										string:(s : Dynamic) -> String
+								[Local tb(4064):hl.Type:hl.Type]
+						+
+						[Const:String] ")"
+
+	static function __init__() [Binop:_Std.Rand]
+		[Field:_Std.Rand]
+			[TypeExpr Std:Class<Std>]
+			[FStatic:_Std.Rand]
+				Std
+				rnd:_Std.Rand
+		=
+		[Call:_Std.Rand]
+			[Field:() -> _Std.Rand]
+				[TypeExpr Std:Class<Std>]
+				[FStatic:() -> _Std.Rand]
+					Std
+					rnd_sys:() -> _Std.Rand
+}

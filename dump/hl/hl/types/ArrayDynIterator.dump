@@ -1,0 +1,62 @@
+@:keep @:directlyUsed @:used
+class hl.types.ArrayDynIterator extends haxe.iterators.ArrayIterator<Dynamic> {
+
+	public function new[Function:(a : hl.types.ArrayBase) -> Void]
+		[Arg:hl.types.ArrayBase] [Local a(2206):hl.types.ArrayBase]
+		[Block:hl.types.ArrayBase]
+			[Call:Void]
+				[Const:haxe.iterators.ArrayIterator<Dynamic>] super
+				[Cast:Dynamic] [Const:Unknown<36>] null
+			[Binop:hl.types.ArrayBase]
+				[Field:hl.types.ArrayBase]
+					[Const:hl.types.ArrayDynIterator] this
+					[FInstance:hl.types.ArrayBase]
+						hl.types.ArrayDynIterator
+						a:hl.types.ArrayBase
+				=
+				[Local a(2206):hl.types.ArrayBase:hl.types.ArrayBase]
+
+	var a:hl.types.ArrayBase;
+
+	public function hasNext[Function:() -> Bool]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Field:Int]
+						[Const:hl.types.ArrayDynIterator] this
+						[FInstance:Int]
+							haxe.iterators.ArrayIterator<Dynamic>
+							current:Int
+					<
+					[Field:Int]
+						[Field:hl.types.ArrayBase]
+							[Const:hl.types.ArrayDynIterator] this
+							[FInstance:hl.types.ArrayBase]
+								hl.types.ArrayDynIterator
+								a:hl.types.ArrayBase
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+
+	public function next[Function:() -> Unknown<37>]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Dynamic]
+					[Field:(pos : Int) -> Dynamic]
+						[Field:hl.types.ArrayBase]
+							[Const:hl.types.ArrayDynIterator] this
+							[FInstance:hl.types.ArrayBase]
+								hl.types.ArrayDynIterator
+								a:hl.types.ArrayBase
+						[FInstance:(pos : Int) -> Dynamic]
+							hl.types.ArrayAccess
+							getDyn:(pos : Int) -> Dynamic
+					[Unop:Int]
+						++
+						Postfix
+						[Field:Int]
+							[Const:hl.types.ArrayDynIterator] this
+							[FInstance:Int]
+								haxe.iterators.ArrayIterator<Dynamic>
+								current:Int
+}

@@ -1,0 +1,134 @@
+@:keep @:directlyUsed @:used
+private class hl._Bytes.Bytes_Impl_ {
+
+	@:hlNative("std", "bytes_blit")
+	public static function blit[Function:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+		[Arg:hl.Bytes] [Local this1(283):hl.Bytes]
+		[Arg:Int] [Local pos(284):Int]
+		[Arg:hl.Bytes] [Local src(285):hl.Bytes]
+		[Arg:Int] [Local srcPos(286):Int]
+		[Arg:Int] [Local len(287):Int]
+		[Block:Void]
+
+	@:hlNative("std", "alloc_bytes")
+	static function alloc[Function:(size : Int) -> hl.Bytes]
+		[Arg:Int] [Local size(24):Int]
+		[Block:Dynamic] [Return:Dynamic] [Const:hl.Bytes] null
+
+	@:hlNative("std", "bytes_compare")
+	public static function compare[Function:(this : hl.Bytes, pos : Int, bytes : hl.Bytes, bytesPos : Int, size : Int) -> Int]
+		[Arg:hl.Bytes] [Local this1(266):hl.Bytes]
+		[Arg:Int] [Local pos(267):Int]
+		[Arg:hl.Bytes] [Local bytes(268):hl.Bytes]
+		[Arg:Int] [Local bytesPos(269):Int]
+		[Arg:Int] [Local size(270):Int]
+		[Block:Dynamic] [Return:Dynamic] [Const:Int] 0
+
+	@:hlNative("std", "bytes_compare16")
+	public static function compare16[Function:(this : hl.Bytes, bytes : hl.Bytes, size : Int) -> Int]
+		[Arg:hl.Bytes] [Local this1(367):hl.Bytes]
+		[Arg:hl.Bytes] [Local bytes(368):hl.Bytes]
+		[Arg:Int] [Local size(369):Int]
+		[Block:Dynamic] [Return:Dynamic] [Const:Int] 0
+
+	@:hlNative("std", "bytes_find")
+	public static function find[Function:(this : hl.Bytes, pos : Int, size : Int, bytes : hl.Bytes, bytesPos : Int, bytesSize : Int) -> Int]
+		[Arg:hl.Bytes] [Local this1(244):hl.Bytes]
+		[Arg:Int] [Local pos(245):Int]
+		[Arg:Int] [Local size(246):Int]
+		[Arg:hl.Bytes] [Local bytes(247):hl.Bytes]
+		[Arg:Int] [Local bytesPos(248):Int]
+		[Arg:Int] [Local bytesSize(249):Int]
+		[Block:Dynamic] [Return:Dynamic] [Const:Int] 0
+
+	@:hlNative("std", "bytes_fill")
+	public static function fill[Function:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void]
+		[Arg:hl.Bytes] [Local this1(1952):hl.Bytes]
+		[Arg:Int] [Local pos(1953):Int]
+		[Arg:Int] [Local size(1954):Int]
+		[Arg:Int] [Local v(1955):Int]
+		[Block:Void]
+
+	@:hlNative("std", "bsort_i32")
+	public static function sortI32[Function:(this : hl.Bytes, pos : Int, length : Int, f : ((Int, Int) -> Int)) -> Void]
+		[Arg:hl.Bytes] [Local this1(2038):hl.Bytes]
+		[Arg:Int] [Local pos(2039):Int]
+		[Arg:Int] [Local length(2040):Int]
+		[Arg:(Int, Int) -> Int] [Local f(2041):(Int, Int) -> Int]
+		[Block:Void]
+
+	@:hlNative("std", "bsort_f64")
+	public static function sortF64[Function:(this : hl.Bytes, pos : Int, length : Int, f : ((Float, Float) -> Int)) -> Void]
+		[Arg:hl.Bytes] [Local this1(2042):hl.Bytes]
+		[Arg:Int] [Local pos(2043):Int]
+		[Arg:Int] [Local length(2044):Int]
+		[Arg:(Float, Float) -> Int] [Local f(2045):(Float, Float) -> Int]
+		[Block:Void]
+
+	public static function sub[Function:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes]
+		[Arg:hl.Bytes] [Local this1(2017):hl.Bytes]
+		[Arg:Int] [Local pos(2018):Int]
+		[Arg:Int] [Local size(2019):Int]
+		[Block:Dynamic]
+			[Var this2(2023):hl.Bytes]
+				[Call:hl.Bytes]
+					[Field:(size : Int) -> hl.Bytes]
+						[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+						[FStatic:(size : Int) -> hl.Bytes]
+							hl._Bytes.Bytes_Impl_
+							alloc:(size : Int) -> hl.Bytes
+					[Local size(2019):Int:Int]
+			[Var b(2024):hl.Bytes] [Local this2(2023):hl.Bytes:hl.Bytes]
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Local b(2024):hl.Bytes:hl.Bytes]
+				[Const:Int] 0
+				[Local this1(2017):hl.Bytes:hl.Bytes]
+				[Local pos(2018):Int:Int]
+				[Local size(2019):Int:Int]
+			[Return:Dynamic] [Local b(2024):hl.Bytes:hl.Bytes]
+
+	@:hlNative("std", "ucs2length")
+	public static function ucs2Length[Function:(this : hl.Bytes, bytePos : Int) -> Int]
+		[Arg:hl.Bytes] [Local this1(376):hl.Bytes]
+		[Arg:Int] [Local bytePos(377):Int]
+		[Block:Dynamic] [Return:Dynamic] [Const:Int] 0
+
+	@:hlNative("std", "utf8_to_utf16")
+	public static function utf8ToUtf16[Function:(this : hl.Bytes, bytePos : Int, outSize : hl.Ref<Int>) -> hl.Bytes]
+		[Arg:hl.Bytes] [Local this1(380):hl.Bytes]
+		[Arg:Int] [Local bytePos(381):Int]
+		[Arg:hl.Ref<Int>] [Local outSize(382):hl.Ref<Int>]
+		[Block:Dynamic] [Return:Dynamic] [Const:hl.Bytes] null
+
+	@:hlNative("std", "utf16_to_utf8")
+	public static function utf16ToUtf8[Function:(this : hl.Bytes, len : Int, outSize : hl.Ref<Int>) -> hl.Bytes]
+		[Arg:hl.Bytes] [Local this1(362):hl.Bytes]
+		[Arg:Int] [Local len(363):Int]
+		[Arg:hl.Ref<Int>] [Local outSize(364):hl.Ref<Int>]
+		[Block:Dynamic] [Return:Dynamic] [Const:hl.Bytes] null
+
+	@:hlNative("std", "ucs2_upper")
+	static function ucs2Upper[Function:(this : hl.Bytes, bytePos : Int, size : Int) -> hl.Bytes]
+		[Arg:hl.Bytes] [Local this1(5):hl.Bytes]
+		[Arg:Int] [Local bytePos(6):Int]
+		[Arg:Int] [Local size(7):Int]
+		[Block:Dynamic] [Return:Dynamic] [Const:hl.Bytes] null
+
+	@:hlNative("std", "ucs2_lower")
+	static function ucs2Lower[Function:(this : hl.Bytes, bytePos : Int, size : Int) -> hl.Bytes]
+		[Arg:hl.Bytes] [Local this1(13):hl.Bytes]
+		[Arg:Int] [Local bytePos(14):Int]
+		[Arg:Int] [Local size(15):Int]
+		[Block:Dynamic] [Return:Dynamic] [Const:hl.Bytes] null
+
+	@:hlNative("std", "value_to_string")
+	public static function fromValue[Function:(v : Dynamic, length : hl.Ref<Int>) -> hl.Bytes]
+		[Arg:Dynamic] [Local v(216):Dynamic]
+		[Arg:hl.Ref<Int>] [Local length(217):hl.Ref<Int>]
+		[Block:Dynamic] [Return:Dynamic] [Const:hl.Bytes] null
+}

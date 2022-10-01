@@ -1,0 +1,67 @@
+@:keep @:directlyUsed @:used
+class hl.types.ArrayObjIterator<T> extends haxe.iterators.ArrayIterator<hl.types.ArrayObjIterator.T> {
+
+	public inline function new[Function:(arr : hl.types.ArrayObj<hl.types.ArrayObjIterator.T>) -> Void]
+		[Arg:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>] [Local arr(1210):hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+		[Block:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+			[Call:Void]
+				[Const:haxe.iterators.ArrayIterator<hl.types.ArrayObjIterator.T>] super
+				[Cast:Dynamic] [Const:Unknown<49>] null
+			[Binop:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+				[Field:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+					[Const:hl.types.ArrayObjIterator<hl.types.ArrayObjIterator.T>] this
+					[FInstance:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+						hl.types.ArrayObjIterator<hl.types.ArrayObjIterator.T>
+						arr:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>
+				=
+				[Local arr(1210):hl.types.ArrayObj<hl.types.ArrayObjIterator.T>:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+
+	var arr:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>;
+
+	public function hasNext[Function:() -> Bool]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Field:Int]
+						[Const:hl.types.ArrayObjIterator<hl.types.ArrayObjIterator.T>] this
+						[FInstance:Int]
+							haxe.iterators.ArrayIterator<hl.types.ArrayObjIterator.T>
+							current:Int
+					<
+					[Field:Int]
+						[Field:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+							[Const:hl.types.ArrayObjIterator<hl.types.ArrayObjIterator.T>] this
+							[FInstance:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+								hl.types.ArrayObjIterator<hl.types.ArrayObjIterator.T>
+								arr:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+
+	public function next[Function:() -> hl.types.ArrayObjIterator.T]
+		[Block:Dynamic]
+			[Var this1(1213):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Field:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+						[Const:hl.types.ArrayObjIterator<hl.types.ArrayObjIterator.T>] this
+						[FInstance:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>]
+							hl.types.ArrayObjIterator<hl.types.ArrayObjIterator.T>
+							arr:hl.types.ArrayObj<hl.types.ArrayObjIterator.T>
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObjIterator.T>
+						array:hl.NativeArray<Dynamic>
+			[Var pos(1214):Int]
+				[Unop:Int]
+					++
+					Postfix
+					[Field:Int]
+						[Const:hl.types.ArrayObjIterator<hl.types.ArrayObjIterator.T>] this
+						[FInstance:Int]
+							haxe.iterators.ArrayIterator<hl.types.ArrayObjIterator.T>
+							current:Int
+			[Return:Dynamic]
+				[Call:Dynamic]
+					[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+					[Local this1(1213):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local pos(1214):Int:Int]
+}

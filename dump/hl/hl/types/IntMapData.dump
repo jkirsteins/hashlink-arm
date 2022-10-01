@@ -1,0 +1,1 @@
+typedef hl.types.IntMapData = hl.Abstract<"hl_int_map">

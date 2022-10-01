@@ -1,0 +1,1 @@
+typedef hl.types.ArrayF64 = hl.types.ArrayBytes_Float

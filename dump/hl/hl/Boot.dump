@@ -1,0 +1,3 @@
+@:dox(hide)
+extern class hl.Boot {
+}

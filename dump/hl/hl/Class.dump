@@ -1,0 +1,7 @@
+@:used @:keep
+class hl.Class extends hl.BaseType {
+
+	public var __name__:String;
+
+	public var __constructor__:Dynamic;
+}

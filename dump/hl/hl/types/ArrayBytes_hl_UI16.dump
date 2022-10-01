@@ -1,0 +1,2343 @@
+@:directlyUsed @:used @:keep @:noDoc
+class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
+
+	public function new[Function:() -> Void]
+		[Block:hl.BytesAccess<hl.UI16>]
+			[Binop:Int]
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBytes_hl_UI16
+						size:Int
+				=
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					=
+					[Const:Int] 0
+			[Binop:hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+				=
+				[Const:hl.BytesAccess<hl.UI16>] null
+
+	var bytes:hl.BytesAccess<hl.UI16>;
+
+	var size:Int;
+
+	public function concat[Function:(a : hl.types.ArrayBytes_hl_UI16) -> hl.types.ArrayBytes_hl_UI16]
+		[Arg:hl.types.ArrayBytes_hl_UI16] [Local a(7741):hl.types.ArrayBytes_hl_UI16]
+		[Block:Dynamic]
+			[Var ac(7740):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Binop:Int]
+				[Field:Int]
+					[Local ac(7740):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				=
+				[Binop:Int]
+					[Field:Int]
+						[Local ac(7740):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[FInstance:Int]
+							hl.types.ArrayBytes_hl_UI16
+							size:Int
+					=
+					[Binop:Int]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						+
+						[Field:Int]
+							[Local a(7741):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+			[Var this1(7742):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7744):hl.Bytes]
+				[Call:hl.Bytes]
+					[Field:(size : Int) -> hl.Bytes]
+						[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+						[FStatic:(size : Int) -> hl.Bytes]
+							hl._Bytes.Bytes_Impl_
+							alloc:(size : Int) -> hl.Bytes
+					[Binop:Int]
+						[Field:Int]
+							[Local ac(7740):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						<<
+						[Call:Int]
+							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+							[Local this1(7742):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Binop:hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Local ac(7740):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+				=
+				[Local this1(7744):hl.Bytes:hl.Bytes]
+			[Var this1(7745):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var offset(7746):Int]
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7745):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Local ac(7740):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+				[Const:Int] 0
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+				[Const:Int] 0
+				[Local offset(7746):Int:Int]
+			[Var this1(7747):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Local ac(7740):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+				[Local offset(7746):Int:Int]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Local a(7741):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+				[Const:Int] 0
+				[Binop:Int]
+					[Field:Int]
+						[Local a(7741):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7747):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Return:Dynamic] [Local ac(7740):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+
+	public function join[Function:(sep : String) -> String]
+		[Arg:String] [Local sep(7738):String]
+		[Block:Dynamic]
+			[Var s(7734):StringBuf] [New:StringBuf] StringBuf
+			[Block:Void]
+				[Var _g(7735):Int] [Const:Int] 0
+				[Var _g1(7736):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(7735):Int:Int]
+							<
+							[Local _g1(7736):Int:Int]
+					[Block:Dynamic]
+						[Var i(7737):Int]
+							[Unop:Int]
+								++
+								Postfix
+								[Local _g(7735):Int:Int]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Local i(7737):Int:Int]
+									>
+									[Const:Int] 0
+							[Then:Void] [Call:Void]
+								[Field:(x : String) -> Void]
+									[Local s(7734):StringBuf:StringBuf]
+									[FInstance:(x : String) -> Void]
+										StringBuf
+										add:(x : add.T) -> Void
+								[Local sep(7738):String:String]
+						[Var this1(7739):hl.BytesAccess<hl.UI16>]
+							[Field:hl.BytesAccess<hl.UI16>]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:hl.BytesAccess<hl.UI16>]
+									hl.types.ArrayBytes_hl_UI16
+									bytes:hl.BytesAccess<hl.UI16>
+						[Call:Void]
+							[Field:(x : hl.UI16) -> Void]
+								[Local s(7734):StringBuf:StringBuf]
+								[FInstance:(x : hl.UI16) -> Void]
+									StringBuf
+									add:(x : add.T) -> Void
+							[Call:hl.UI16]
+								[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+								[Local this1(7739):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+								[Local i(7737):Int:Int]
+			[Return:Dynamic]
+				[Call:String]
+					[Field:() -> String]
+						[Local s(7734):StringBuf:StringBuf]
+						[FInstance:() -> String]
+							StringBuf
+							toString:() -> String
+
+	public function pop[Function:() -> Null<hl.UI16>]
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						==
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [Const:Null<hl.UI16>] null
+			[Unop:Int]
+				--
+				Postfix
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var this1(7732):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var pos(7733):Int]
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Return:Dynamic]
+				[Call:hl.UI16]
+					[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+					[Local this1(7732):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7733):Int:Int]
+
+	public function push[Function:(x : hl.UI16) -> Int]
+		[Arg:hl.UI16] [Local x(7731):hl.UI16]
+		[Block:Dynamic]
+			[Var len(7729):Int]
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBytes_hl_UI16
+								size:Int
+						==
+						[Local len(7729):Int:Int]
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayBytes_hl_UI16
+							__expand:(index : Int) -> Void
+					[Local len(7729):Int:Int]
+				[Else:Int] [Unop:Int]
+					++
+					Postfix
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+			[Block:hl.UI16]
+				[Var this1(7730):hl.BytesAccess<hl.UI16>]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+				[Call:Unknown<30>]
+					[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
+					[Local this1(7730):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local len(7729):Int:Int]
+					[Local x(7731):hl.UI16:hl.UI16]
+			[Return:Dynamic]
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+
+	public function reverse[Function:() -> Void]
+		[Block:Void]
+			[Var _g(7719):Int] [Const:Int] 0
+			[Var _g1(7720):Int]
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					>>
+					[Const:Int] 1
+			[While:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local _g(7719):Int:Int]
+						<
+						[Local _g1(7720):Int:Int]
+				[Block:Dynamic]
+					[Var i(7721):Int]
+						[Unop:Int]
+							++
+							Postfix
+							[Local _g(7719):Int:Int]
+					[Var k(7722):Int]
+						[Binop:Int]
+							[Binop:Int]
+								[Field:Int]
+									[Const:hl.types.ArrayBytes_hl_UI16] this
+									[FInstance:Int]
+										hl.types.ArrayBase
+										length:Int
+								-
+								[Const:Int] 1
+							-
+							[Local i(7721):Int:Int]
+					[Var this1(7723):hl.BytesAccess<hl.UI16>]
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+					[Var tmp(7724):hl.UI16]
+						[Call:hl.UI16]
+							[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+							[Local this1(7723):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Local i(7721):Int:Int]
+					[Block:hl.UI16]
+						[Var this1(7725):hl.BytesAccess<hl.UI16>]
+							[Field:hl.BytesAccess<hl.UI16>]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:hl.BytesAccess<hl.UI16>]
+									hl.types.ArrayBytes_hl_UI16
+									bytes:hl.BytesAccess<hl.UI16>
+						[Var this2(7726):hl.BytesAccess<hl.UI16>]
+							[Field:hl.BytesAccess<hl.UI16>]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:hl.BytesAccess<hl.UI16>]
+									hl.types.ArrayBytes_hl_UI16
+									bytes:hl.BytesAccess<hl.UI16>
+						[Var value(7727):hl.UI16]
+							[Call:hl.UI16]
+								[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+								[Local this2(7726):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+								[Local k(7722):Int:Int]
+						[Call:Unknown<30>]
+							[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
+							[Local this1(7725):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Local i(7721):Int:Int]
+							[Local value(7727):hl.UI16:hl.UI16]
+					[Block:hl.UI16]
+						[Var this1(7728):hl.BytesAccess<hl.UI16>]
+							[Field:hl.BytesAccess<hl.UI16>]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:hl.BytesAccess<hl.UI16>]
+									hl.types.ArrayBytes_hl_UI16
+									bytes:hl.BytesAccess<hl.UI16>
+						[Call:Unknown<30>]
+							[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
+							[Local this1(7728):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Local k(7722):Int:Int]
+							[Local tmp(7724):hl.UI16:hl.UI16]
+
+	public function shift[Function:() -> Null<hl.UI16>]
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						==
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [Const:Null<hl.UI16>] null
+			[Var this1(7715):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var v(7716):hl.UI16]
+				[Call:hl.UI16]
+					[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+					[Local this1(7715):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Const:Int] 0
+			[Unop:Int]
+				--
+				Postfix
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var tmp(11637):hl.Bytes]
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11638):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7717):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp2(11639):Int]
+				[Binop:Int]
+					[Const:Int] 1
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7717):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7718):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Local tmp(11637):hl.Bytes:hl.Bytes]
+				[Const:Int] 0
+				[Local tmp1(11638):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp2(11639):Int:Int]
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7718):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Return:Dynamic] [Local v(7716):hl.UI16:hl.UI16]
+
+	public function blit[Function:(pos : Int, src : hl.types.ArrayAccess, srcpos : Int, len : Int) -> Void]
+		[Arg:Int] [Local pos(7709):Int]
+		[Arg:hl.types.ArrayAccess] [Local src(7707):hl.types.ArrayAccess]
+		[Arg:Int] [Local srcpos(7710):Int]
+		[Arg:Int] [Local len(7711):Int]
+		[Block:Void]
+			[Var src(7708):hl.types.ArrayBytes_hl_UI16] [Cast:hl.types.ArrayBytes_hl_UI16] [Local src(7707):hl.types.ArrayAccess:hl.types.ArrayAccess]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Binop:Bool]
+							[Binop:Bool]
+								[Binop:Bool]
+									[Binop:Bool]
+										[Local pos(7709):Int:Int]
+										<
+										[Const:Int] 0
+									||
+									[Binop:Bool]
+										[Local srcpos(7710):Int:Int]
+										<
+										[Const:Int] 0
+								||
+								[Binop:Bool]
+									[Local len(7711):Int:Int]
+									<
+									[Const:Int] 0
+							||
+							[Binop:Bool]
+								[Binop:Int]
+									[Local pos(7709):Int:Int]
+									+
+									[Local len(7711):Int:Int]
+								>
+								[Field:Int]
+									[Const:hl.types.ArrayBytes_hl_UI16] this
+									[FInstance:Int]
+										hl.types.ArrayBase
+										length:Int
+						||
+						[Binop:Bool]
+							[Binop:Int]
+								[Local srcpos(7710):Int:Int]
+								+
+								[Local len(7711):Int:Int]
+							>
+							[Field:Int]
+								[Local src(7708):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+				[Then:Dynamic] [Throw:Dynamic]
+					[Call:Any]
+						[Field:(value : Any) -> Any]
+							[TypeExpr haxe.Exception:{ Statics haxe.Exception }]
+							[FStatic:(value : Any) -> Any]
+								haxe.Exception
+								thrown:(value : Any) -> Any
+						[Field:haxe.io.Error]
+							[TypeExpr haxe.io.Error:Enum<haxe.io.Error>]
+							[FEnum:haxe.io.Error]
+								haxe.io.Error
+								OutsideBounds
+			[Var tmp(11654):hl.Bytes]
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7712):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11655):Int]
+				[Binop:Int]
+					[Local pos(7709):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7712):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var src(11657):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Local src(7708):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7713):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp2(11658):Int]
+				[Binop:Int]
+					[Local srcpos(7710):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7713):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7714):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Local tmp(11654):hl.Bytes:hl.Bytes]
+				[Local tmp1(11655):Int:Int]
+				[Local src(11657):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp2(11658):Int:Int]
+				[Binop:Int]
+					[Local len(7711):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7714):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+
+	public function slice[Function:(pos : Int, ?end : Null<Int>) -> hl.types.ArrayBytes_hl_UI16]
+		[Arg:Int] [Local pos(7700):Int]
+		[Arg:Null<Int>]
+			[Local end(7702):Null<Int>]
+			[Const:Null<Int>] null
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(7700):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Void] [Block:Void]
+					[Binop:Int]
+						[Local pos(7700):Int:Int]
+						=
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							+
+							[Local pos(7700):Int:Int]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pos(7700):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local pos(7700):Int:Int]
+							=
+							[Const:Int] 0
+			[Var pend(7701):Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local end(7702):Null<Int>:Null<Int>]
+						==
+						[Const:Null<Int>] null
+				[Then:Int] [Binop:Int]
+					[Local pend(7701):Int:Int]
+					=
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[Else:Void] [Block:Void]
+					[Binop:Int]
+						[Local pend(7701):Int:Int]
+						=
+						[Local end(7702):Null<Int>:Null<Int>]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pend(7701):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local pend(7701):Int:Int]
+							+=
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pend(7701):Int:Int]
+								>
+								[Field:Int]
+									[Const:hl.types.ArrayBytes_hl_UI16] this
+									[FInstance:Int]
+										hl.types.ArrayBase
+										length:Int
+						[Then:Int] [Binop:Int]
+							[Local pend(7701):Int:Int]
+							=
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+			[Var len(7703):Int]
+				[Binop:Int]
+					[Local pend(7701):Int:Int]
+					-
+					[Local pos(7700):Int:Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local len(7703):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Var a(7704):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Binop:Int]
+				[Field:Int]
+					[Local a(7704):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				=
+				[Binop:Int]
+					[Field:Int]
+						[Local a(7704):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[FInstance:Int]
+							hl.types.ArrayBytes_hl_UI16
+							size:Int
+					=
+					[Local len(7703):Int:Int]
+			[Var tmp(11668):hl.Bytes]
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7705):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11669):Int]
+				[Binop:Int]
+					[Local pos(7700):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7705):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7706):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Binop:hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Local a(7704):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+				=
+				[Call:hl.Bytes]
+					[Field:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes]
+						[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+						[FStatic:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes]
+							hl._Bytes.Bytes_Impl_
+							sub:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes
+					[Local tmp(11668):hl.Bytes:hl.Bytes]
+					[Local tmp1(11669):Int:Int]
+					[Binop:Int]
+						[Local len(7703):Int:Int]
+						<<
+						[Call:Int]
+							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+							[Local this1(7706):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Return:Dynamic] [Local a(7704):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+
+	public function sort[Function:(f : ((hl.UI16, hl.UI16) -> Int)) -> Void]
+		[Arg:(hl.UI16, hl.UI16) -> Int] [Local f(7699):(hl.UI16, hl.UI16) -> Int]
+		[Block:Void]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Call:hl.Type]
+							[Ident:hl.UI16 -> Unknown<6>] $ttype
+							[Cast:hl.UI16] [Const:Unknown<31>] null
+						==
+						[Call:hl.Type]
+							[Ident:Int -> Unknown<6>] $ttype
+							[Const:Int] 0
+				[Then:Void] [Call:Void]
+					[Field:(this : hl.Bytes, pos : Int, length : Int, f : ((Int, Int) -> Int)) -> Void]
+						[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+						[FStatic:(this : hl.Bytes, pos : Int, length : Int, f : ((Int, Int) -> Int)) -> Void]
+							hl._Bytes.Bytes_Impl_
+							sortI32:(this : hl.Bytes, pos : Int, length : Int, f : ((Int, Int) -> Int)) -> Void
+					[Cast:hl.Bytes]
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+					[Const:Int] 0
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					[Cast:(Int, Int) -> Int] [Local f(7699):(hl.UI16, hl.UI16) -> Int:(hl.UI16, hl.UI16) -> Int]
+				[Else:Void] [Call:Void]
+					[Field:(this : hl.Bytes, pos : Int, length : Int, f : ((Float, Float) -> Int)) -> Void]
+						[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+						[FStatic:(this : hl.Bytes, pos : Int, length : Int, f : ((Float, Float) -> Int)) -> Void]
+							hl._Bytes.Bytes_Impl_
+							sortF64:(this : hl.Bytes, pos : Int, length : Int, f : ((Float, Float) -> Int)) -> Void
+					[Cast:hl.Bytes]
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+					[Const:Int] 0
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					[Cast:(Float, Float) -> Int] [Local f(7699):(hl.UI16, hl.UI16) -> Int:(hl.UI16, hl.UI16) -> Int]
+
+	public function splice[Function:(pos : Int, len : Int) -> hl.types.ArrayBytes_hl_UI16]
+		[Arg:Int] [Local pos(7691):Int]
+		[Arg:Int] [Local len(7690):Int]
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local len(7690):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(7691):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Void] [Block:Void]
+					[Binop:Int]
+						[Local pos(7691):Int:Int]
+						=
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							+
+							[Local pos(7691):Int:Int]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pos(7691):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local pos(7691):Int:Int]
+							=
+							[Const:Int] 0
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(7691):Int:Int]
+						>
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+				[Then:Int] [Block:Int]
+					[Binop:Int]
+						[Local pos(7691):Int:Int]
+						=
+						[Const:Int] 0
+					[Binop:Int]
+						[Local len(7690):Int:Int]
+						=
+						[Const:Int] 0
+				[Else:Void] [If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Binop:Int]
+								[Local pos(7691):Int:Int]
+								+
+								[Local len(7690):Int:Int]
+							>
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+					[Then:Void] [Block:Void]
+						[Binop:Int]
+							[Local len(7690):Int:Int]
+							=
+							[Binop:Int]
+								[Field:Int]
+									[Const:hl.types.ArrayBytes_hl_UI16] this
+									[FInstance:Int]
+										hl.types.ArrayBase
+										length:Int
+								-
+								[Local pos(7691):Int:Int]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Local len(7690):Int:Int]
+									<
+									[Const:Int] 0
+							[Then:Int] [Binop:Int]
+								[Local len(7690):Int:Int]
+								=
+								[Const:Int] 0
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local len(7690):Int:Int]
+						==
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Var ret(7692):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Var tmp(11684):hl.Bytes]
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7693):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11685):Int]
+				[Binop:Int]
+					[Local pos(7691):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7693):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7694):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Binop:hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Local ret(7692):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+				=
+				[Call:hl.Bytes]
+					[Field:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes]
+						[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+						[FStatic:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes]
+							hl._Bytes.Bytes_Impl_
+							sub:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes
+					[Local tmp(11684):hl.Bytes:hl.Bytes]
+					[Local tmp1(11685):Int:Int]
+					[Binop:Int]
+						[Local len(7690):Int:Int]
+						<<
+						[Call:Int]
+							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+							[Local this1(7694):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Binop:Int]
+				[Field:Int]
+					[Local ret(7692):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:Int]
+						hl.types.ArrayBytes_hl_UI16
+						size:Int
+				=
+				[Binop:Int]
+					[Field:Int]
+						[Local ret(7692):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					=
+					[Local len(7690):Int:Int]
+			[Var end(7695):Int]
+				[Binop:Int]
+					[Local pos(7691):Int:Int]
+					+
+					[Local len(7690):Int:Int]
+			[Var tmp(11689):hl.Bytes]
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7696):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11690):Int]
+				[Binop:Int]
+					[Local pos(7691):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7696):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var tmp2(11692):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7697):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp3(11693):Int]
+				[Binop:Int]
+					[Local end(7695):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7697):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7698):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Local tmp(11689):hl.Bytes:hl.Bytes]
+				[Local tmp1(11690):Int:Int]
+				[Local tmp2(11692):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp3(11693):Int:Int]
+				[Binop:Int]
+					[Binop:Int]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						-
+						[Local end(7695):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7698):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Binop:Int]
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				-=
+				[Local len(7690):Int:Int]
+			[Return:Dynamic] [Local ret(7692):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+
+	public function toString[Function:() -> String]
+		[Block:Dynamic]
+			[Var b(7685):StringBuf] [New:StringBuf] StringBuf
+			[Call:Void]
+				[Field:(c : Int) -> Void]
+					[Local b(7685):StringBuf:StringBuf]
+					[FInstance:(c : Int) -> Void]
+						StringBuf
+						addChar:(c : Int) -> Void
+				[Const:Int] 91
+			[Block:Void]
+				[Var _g(7686):Int] [Const:Int] 0
+				[Var _g1(7687):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(7686):Int:Int]
+							<
+							[Local _g1(7687):Int:Int]
+					[Block:Dynamic]
+						[Var i(7688):Int]
+							[Unop:Int]
+								++
+								Postfix
+								[Local _g(7686):Int:Int]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Local i(7688):Int:Int]
+									>
+									[Const:Int] 0
+							[Then:Void] [Call:Void]
+								[Field:(c : Int) -> Void]
+									[Local b(7685):StringBuf:StringBuf]
+									[FInstance:(c : Int) -> Void]
+										StringBuf
+										addChar:(c : Int) -> Void
+								[Const:Int] 44
+						[Var this1(7689):hl.BytesAccess<hl.UI16>]
+							[Field:hl.BytesAccess<hl.UI16>]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:hl.BytesAccess<hl.UI16>]
+									hl.types.ArrayBytes_hl_UI16
+									bytes:hl.BytesAccess<hl.UI16>
+						[Call:Void]
+							[Field:(x : hl.UI16) -> Void]
+								[Local b(7685):StringBuf:StringBuf]
+								[FInstance:(x : hl.UI16) -> Void]
+									StringBuf
+									add:(x : add.T) -> Void
+							[Call:hl.UI16]
+								[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+								[Local this1(7689):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+								[Local i(7688):Int:Int]
+			[Call:Void]
+				[Field:(c : Int) -> Void]
+					[Local b(7685):StringBuf:StringBuf]
+					[FInstance:(c : Int) -> Void]
+						StringBuf
+						addChar:(c : Int) -> Void
+				[Const:Int] 93
+			[Return:Dynamic]
+				[Call:String]
+					[Field:() -> String]
+						[Local b(7685):StringBuf:StringBuf]
+						[FInstance:() -> String]
+							StringBuf
+							toString:() -> String
+
+	public function unshift[Function:(x : hl.UI16) -> Void]
+		[Arg:hl.UI16] [Local x(7684):hl.UI16]
+		[Block:hl.UI16]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						==
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBytes_hl_UI16
+								size:Int
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayBytes_hl_UI16
+							__expand:(index : Int) -> Void
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[Else:Int] [Unop:Int]
+					++
+					Postfix
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+			[Var tmp(11705):hl.Bytes]
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7681):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11706):Int]
+				[Binop:Int]
+					[Const:Int] 1
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7681):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7682):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Local tmp(11705):hl.Bytes:hl.Bytes]
+				[Local tmp1(11706):Int:Int]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+				[Const:Int] 0
+				[Binop:Int]
+					[Binop:Int]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						-
+						[Const:Int] 1
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7682):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Block:hl.UI16]
+				[Var this1(7683):hl.BytesAccess<hl.UI16>]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+				[Call:Unknown<30>]
+					[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
+					[Local this1(7683):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Const:Int] 0
+					[Local x(7684):hl.UI16:hl.UI16]
+
+	public function insert[Function:(pos : Int, x : hl.UI16) -> Void]
+		[Arg:Int] [Local pos(7675):Int]
+		[Arg:hl.UI16] [Local x(7680):hl.UI16]
+		[Block:hl.UI16]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(7675):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Void] [Block:Void]
+					[Binop:Int]
+						[Local pos(7675):Int:Int]
+						=
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							+
+							[Local pos(7675):Int:Int]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pos(7675):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local pos(7675):Int:Int]
+							=
+							[Const:Int] 0
+				[Else:Void] [If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local pos(7675):Int:Int]
+							>
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+					[Then:Int] [Binop:Int]
+						[Local pos(7675):Int:Int]
+						=
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						==
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBytes_hl_UI16
+								size:Int
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayBytes_hl_UI16
+							__expand:(index : Int) -> Void
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[Else:Int] [Unop:Int]
+					++
+					Postfix
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+			[Var tmp(11716):hl.Bytes]
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7676):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11717):Int]
+				[Binop:Int]
+					[Binop:Int]
+						[Local pos(7675):Int:Int]
+						+
+						[Const:Int] 1
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7676):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var tmp2(11720):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7677):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp3(11721):Int]
+				[Binop:Int]
+					[Local pos(7675):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7677):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7678):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Local tmp(11716):hl.Bytes:hl.Bytes]
+				[Local tmp1(11717):Int:Int]
+				[Local tmp2(11720):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp3(11721):Int:Int]
+				[Binop:Int]
+					[Binop:Int]
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							-
+							[Local pos(7675):Int:Int]
+						-
+						[Const:Int] 1
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7678):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Block:hl.UI16]
+				[Var this1(7679):hl.BytesAccess<hl.UI16>]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+				[Call:Unknown<30>]
+					[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
+					[Local this1(7679):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7675):Int:Int]
+					[Local x(7680):hl.UI16:hl.UI16]
+
+	public function contains[Function:(x : hl.UI16) -> Bool]
+		[Arg:hl.UI16] [Local x(7674):hl.UI16]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Call:Int]
+						[Field:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
+								hl.types.ArrayBytes_hl_UI16
+								indexOf:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int
+						[Local x(7674):hl.UI16:hl.UI16]
+						[Const:Null<Int>] null
+					!=
+					[Const:Int] -1
+
+	public function remove[Function:(x : hl.UI16) -> Bool]
+		[Arg:hl.UI16] [Local x(7669):hl.UI16]
+		[Block:Dynamic]
+			[Var idx(7670):Int]
+				[Call:Int]
+					[Field:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
+							hl.types.ArrayBytes_hl_UI16
+							indexOf:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int
+					[Local x(7669):hl.UI16:hl.UI16]
+					[Const:Null<Int>] null
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local idx(7670):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [Const:Bool] false
+			[Unop:Int]
+				--
+				Postfix
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var tmp(11729):hl.Bytes]
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7671):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11730):Int]
+				[Binop:Int]
+					[Local idx(7670):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7671):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var tmp2(11732):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7672):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp3(11733):Int]
+				[Binop:Int]
+					[Binop:Int]
+						[Local idx(7670):Int:Int]
+						+
+						[Const:Int] 1
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7672):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7673):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Local tmp(11729):hl.Bytes:hl.Bytes]
+				[Local tmp1(11730):Int:Int]
+				[Local tmp2(11732):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp3(11733):Int:Int]
+				[Binop:Int]
+					[Binop:Int]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						-
+						[Local idx(7670):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7673):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Return:Dynamic] [Const:Bool] true
+
+	public function indexOf[Function:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
+		[Arg:hl.UI16] [Local x(7668):hl.UI16]
+		[Arg:Null<Int>]
+			[Local fromIndex(7662):Null<Int>]
+			[Const:Null<Int>] null
+		[Block:Dynamic]
+			[Var idx(7663):Int]
+				[If:Int]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local fromIndex(7662):Null<Int>:Null<Int>]
+							==
+							[Const:Null<Int>] null
+					[Then:Int] [Const:Int] 0
+					[Else:Null<Int>] [Local fromIndex(7662):Null<Int>:Null<Int>]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local idx(7663):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Void] [Block:Void]
+					[Binop:Int]
+						[Local idx(7663):Int:Int]
+						+=
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local idx(7663):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local idx(7663):Int:Int]
+							=
+							[Const:Int] 0
+			[Block:Void]
+				[Var _g(7664):Int] [Local idx(7663):Int:Int]
+				[Var _g1(7665):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(7664):Int:Int]
+							<
+							[Local _g1(7665):Int:Int]
+					[Block:Dynamic]
+						[Var i(7666):Int]
+							[Unop:Int]
+								++
+								Postfix
+								[Local _g(7664):Int:Int]
+						[Var this1(7667):hl.BytesAccess<hl.UI16>]
+							[Field:hl.BytesAccess<hl.UI16>]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:hl.BytesAccess<hl.UI16>]
+									hl.types.ArrayBytes_hl_UI16
+									bytes:hl.BytesAccess<hl.UI16>
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Call:hl.UI16]
+										[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+										[Local this1(7667):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+										[Local i(7666):Int:Int]
+									==
+									[Local x(7668):hl.UI16:hl.UI16]
+							[Then:Dynamic] [Return:Dynamic] [Local i(7666):Int:Int]
+			[Return:Dynamic] [Const:Int] -1
+
+	public function lastIndexOf[Function:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
+		[Arg:hl.UI16] [Local x(7661):hl.UI16]
+		[Arg:Null<Int>]
+			[Local fromIndex(7658):Null<Int>]
+			[Const:Null<Int>] null
+		[Block:Dynamic]
+			[Var len(7657):Int]
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var i(7659):Int]
+				[If:Int]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local fromIndex(7658):Null<Int>:Null<Int>]
+							!=
+							[Const:Null<Int>] null
+					[Then:Null<Int>] [Local fromIndex(7658):Null<Int>:Null<Int>]
+					[Else:Int] [Binop:Int]
+						[Local len(7657):Int:Int]
+						-
+						[Const:Int] 1
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local i(7659):Int:Int]
+						>=
+						[Local len(7657):Int:Int]
+				[Then:Int] [Binop:Int]
+					[Local i(7659):Int:Int]
+					=
+					[Binop:Int]
+						[Local len(7657):Int:Int]
+						-
+						[Const:Int] 1
+				[Else:Void] [If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local i(7659):Int:Int]
+							<
+							[Const:Int] 0
+					[Then:Int] [Binop:Int]
+						[Local i(7659):Int:Int]
+						+=
+						[Local len(7657):Int:Int]
+			[While:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local i(7659):Int:Int]
+						>=
+						[Const:Int] 0
+				[Block:Dynamic]
+					[Var this1(7660):hl.BytesAccess<hl.UI16>]
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Call:hl.UI16]
+									[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+									[Local this1(7660):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+									[Local i(7659):Int:Int]
+								==
+								[Local x(7661):hl.UI16:hl.UI16]
+						[Then:Dynamic] [Return:Dynamic] [Local i(7659):Int:Int]
+					[Unop:Int]
+						--
+						Prefix
+						[Local i(7659):Int:Int]
+			[Return:Dynamic] [Const:Int] -1
+
+	public function copy[Function:() -> hl.types.ArrayBytes_hl_UI16]
+		[Block:Dynamic]
+			[Var a(7652):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Binop:Int]
+				[Field:Int]
+					[Local a(7652):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				=
+				[Binop:Int]
+					[Field:Int]
+						[Local a(7652):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[FInstance:Int]
+							hl.types.ArrayBytes_hl_UI16
+							size:Int
+					=
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+			[Var this1(7653):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7655):hl.Bytes]
+				[Call:hl.Bytes]
+					[Field:(size : Int) -> hl.Bytes]
+						[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+						[FStatic:(size : Int) -> hl.Bytes]
+							hl._Bytes.Bytes_Impl_
+							alloc:(size : Int) -> hl.Bytes
+					[Binop:Int]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						<<
+						[Call:Int]
+							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+							[Local this1(7653):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Binop:hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Local a(7652):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+				=
+				[Local this1(7655):hl.Bytes:hl.Bytes]
+			[Var this1(7656):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Call:Void]
+				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+						hl._Bytes.Bytes_Impl_
+						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+				[Cast:hl.Bytes]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Local a(7652):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+				[Const:Int] 0
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+				[Const:Int] 0
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7656):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Return:Dynamic] [Local a(7652):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+
+	public function iterator[Function:() -> haxe.iterators.ArrayIterator<hl.UI16>]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[New:hl.types.BytesIterator_hl_UI16]
+					hl.types.BytesIterator_hl_UI16
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+
+	public function keyValueIterator[Function:() -> haxe.iterators.ArrayKeyValueIterator<hl.UI16>]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[New:hl.types.BytesKeyValueIterator_hl_UI16]
+					hl.types.BytesKeyValueIterator_hl_UI16
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+
+	public function map<S>[Function:(f : (hl.UI16 -> map.S)) -> hl.types.ArrayDyn]
+		[Arg:hl.UI16 -> map.S] [Local f(7640):hl.UI16 -> map.S]
+		[Block:Dynamic]
+			[Var a(7635):hl.types.ArrayObj<Unknown<32>>] [New:hl.types.ArrayObj<Unknown<32>>] hl.types.ArrayObj<Unknown<32>>
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						>
+						[Const:Int] 0
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Local a(7635):hl.types.ArrayObj<Unknown<32>>:hl.types.ArrayObj<Unknown<32>>]
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayObj<Unknown<32>>
+							__expand:(index : Int) -> Void
+					[Binop:Int]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						-
+						[Const:Int] 1
+			[Block:Void]
+				[Var _g(7636):Int] [Const:Int] 0
+				[Var _g1(7637):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(7636):Int:Int]
+							<
+							[Local _g1(7637):Int:Int]
+					[Block:Dynamic]
+						[Var i(7638):Int]
+							[Unop:Int]
+								++
+								Postfix
+								[Local _g(7636):Int:Int]
+						[Block:Dynamic]
+							[Var this1(7639):hl.NativeArray<Dynamic>]
+								[Field:hl.NativeArray<Dynamic>]
+									[Local a(7635):hl.types.ArrayObj<Unknown<32>>:hl.types.ArrayObj<Unknown<32>>]
+									[FInstance:hl.NativeArray<Dynamic>]
+										hl.types.ArrayObj<Unknown<32>>
+										array:hl.NativeArray<Dynamic>
+							[Var this2(7641):hl.BytesAccess<hl.UI16>]
+								[Field:hl.BytesAccess<hl.UI16>]
+									[Const:hl.types.ArrayBytes_hl_UI16] this
+									[FInstance:hl.BytesAccess<hl.UI16>]
+										hl.types.ArrayBytes_hl_UI16
+										bytes:hl.BytesAccess<hl.UI16>
+							[Var value(7642):Dynamic]
+								[Call:map.S]
+									[Local f(7640):hl.UI16 -> map.S:hl.UI16 -> map.S]
+									[Call:hl.UI16]
+										[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+										[Local this2(7641):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+										[Local i(7638):Int:Int]
+							[Call:Unknown<34>]
+								[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+								[Local this1(7639):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+								[Local i(7638):Int:Int]
+								[Local value(7642):Dynamic:Dynamic]
+			[Return:Dynamic]
+				[Call:hl.types.ArrayDyn]
+					[Field:(a : hl.types.ArrayBase, ?allowReinterpret : Bool) -> hl.types.ArrayDyn]
+						[TypeExpr hl.types.ArrayDyn:Class<hl.types.ArrayDyn>]
+						[FStatic:(a : hl.types.ArrayBase, ?allowReinterpret : Bool) -> hl.types.ArrayDyn]
+							hl.types.ArrayDyn
+							alloc:(a : hl.types.ArrayBase, ?allowReinterpret : Bool) -> hl.types.ArrayDyn
+					[Local a(7635):hl.types.ArrayObj<Unknown<32>>:hl.types.ArrayObj<Unknown<32>>]
+					[Const:Bool] true
+
+	public function filter[Function:(f : (hl.UI16 -> Bool)) -> hl.types.ArrayBytes_hl_UI16]
+		[Arg:hl.UI16 -> Bool] [Local f(7634):hl.UI16 -> Bool]
+		[Block:Dynamic]
+			[Var a(7628):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Block:Void]
+				[Var _g(7629):Int] [Const:Int] 0
+				[Var _g1(7630):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(7629):Int:Int]
+							<
+							[Local _g1(7630):Int:Int]
+					[Block:Dynamic]
+						[Var i(7631):Int]
+							[Unop:Int]
+								++
+								Postfix
+								[Local _g(7629):Int:Int]
+						[Var this1(7632):hl.BytesAccess<hl.UI16>]
+							[Field:hl.BytesAccess<hl.UI16>]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:hl.BytesAccess<hl.UI16>]
+									hl.types.ArrayBytes_hl_UI16
+									bytes:hl.BytesAccess<hl.UI16>
+						[Var v(7633):hl.UI16]
+							[Call:hl.UI16]
+								[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+								[Local this1(7632):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+								[Local i(7631):Int:Int]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Call:Bool]
+									[Local f(7634):hl.UI16 -> Bool:hl.UI16 -> Bool]
+									[Local v(7633):hl.UI16:hl.UI16]
+							[Then:Int] [Call:Int]
+								[Field:(x : hl.UI16) -> Int]
+									[Local a(7628):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+									[FInstance:(x : hl.UI16) -> Int]
+										hl.types.ArrayBytes_hl_UI16
+										push:(x : hl.UI16) -> Int
+								[Local v(7633):hl.UI16:hl.UI16]
+			[Return:Dynamic] [Local a(7628):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+
+	public function resize[Function:(len : Int) -> Void]
+		[Arg:Int] [Local len(7625):Int]
+		[Block:Void]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						<
+						[Local len(7625):Int:Int]
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayBytes_hl_UI16
+							__expand:(index : Int) -> Void
+					[Binop:Int]
+						[Local len(7625):Int:Int]
+						-
+						[Const:Int] 1
+				[Else:Void] [If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							>
+							[Local len(7625):Int:Int]
+					[Then:Int] [Block:Int]
+						[Var tmp(11768):hl.Bytes]
+							[Cast:hl.Bytes]
+								[Field:hl.BytesAccess<hl.UI16>]
+									[Const:hl.types.ArrayBytes_hl_UI16] this
+									[FInstance:hl.BytesAccess<hl.UI16>]
+										hl.types.ArrayBytes_hl_UI16
+										bytes:hl.BytesAccess<hl.UI16>
+						[Var this1(7626):hl.BytesAccess<hl.UI16>]
+							[Field:hl.BytesAccess<hl.UI16>]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:hl.BytesAccess<hl.UI16>]
+									hl.types.ArrayBytes_hl_UI16
+									bytes:hl.BytesAccess<hl.UI16>
+						[Var tmp1(11769):Int]
+							[Binop:Int]
+								[Local len(7625):Int:Int]
+								<<
+								[Call:Int]
+									[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+									[Local this1(7626):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+						[Var this1(7627):hl.BytesAccess<hl.UI16>]
+							[Field:hl.BytesAccess<hl.UI16>]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:hl.BytesAccess<hl.UI16>]
+									hl.types.ArrayBytes_hl_UI16
+									bytes:hl.BytesAccess<hl.UI16>
+						[Call:Void]
+							[Field:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void]
+								[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+								[FStatic:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void]
+									hl._Bytes.Bytes_Impl_
+									fill:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void
+							[Local tmp(11768):hl.Bytes:hl.Bytes]
+							[Local tmp1(11769):Int:Int]
+							[Binop:Int]
+								[Binop:Int]
+									[Field:Int]
+										[Const:hl.types.ArrayBytes_hl_UI16] this
+										[FInstance:Int]
+											hl.types.ArrayBase
+											length:Int
+									-
+									[Local len(7625):Int:Int]
+								<<
+								[Call:Int]
+									[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+									[Local this1(7627):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Const:Int] 0
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							=
+							[Local len(7625):Int:Int]
+
+	public function getDyn[Function:(pos : Int) -> Dynamic]
+		[Arg:Int] [Local pos(7621):Int]
+		[Block:Dynamic]
+			[Var pos(7622):UInt] [Local pos(7621):Int:Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(7622):UInt:UInt]
+						>=
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+				[Then:Dynamic] [Block:Dynamic]
+					[Var this1(7623):hl.BytesAccess<hl.UI16>]
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+					[Return:Dynamic]
+						[Call:hl.UI16]
+							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<35>] $bytes_nullvalue
+							[Local this1(7623):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7624):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Return:Dynamic]
+				[Call:hl.UI16]
+					[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+					[Local this1(7624):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7622):UInt:UInt]
+
+	public function setDyn[Function:(pos : Int, v : Dynamic) -> Void]
+		[Arg:Int] [Local pos(7616):Int]
+		[Arg:Dynamic] [Local v(7619):Dynamic]
+		[Block:hl.UI16]
+			[Var pos(7617):UInt] [Local pos(7616):Int:Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(7617):UInt:UInt]
+						>=
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayBytes_hl_UI16
+							__expand:(index : Int) -> Void
+					[Local pos(7617):UInt:UInt]
+			[Block:hl.UI16]
+				[Var this1(7618):hl.BytesAccess<hl.UI16>]
+					[Field:hl.BytesAccess<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:hl.BytesAccess<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							bytes:hl.BytesAccess<hl.UI16>
+				[Var value(7620):hl.UI16] [Cast:hl.UI16] [Local v(7619):Dynamic:Dynamic]
+				[Call:Unknown<30>]
+					[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
+					[Local this1(7618):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7617):UInt:UInt]
+					[Local value(7620):hl.UI16:hl.UI16]
+
+	public function pushDyn[Function:(v : Dynamic) -> Int]
+		[Arg:Dynamic] [Local v(7615):Dynamic]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Int]
+					[Field:(x : hl.UI16) -> Int]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(x : hl.UI16) -> Int]
+							hl.types.ArrayBytes_hl_UI16
+							push:(x : hl.UI16) -> Int
+					[Local v(7615):Dynamic:Dynamic]
+
+	public function popDyn[Function:() -> Null<Dynamic>]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Null<hl.UI16>]
+					[Field:() -> Null<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:() -> Null<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							pop:() -> Null<hl.UI16>
+
+	public function shiftDyn[Function:() -> Null<Dynamic>]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Null<hl.UI16>]
+					[Field:() -> Null<hl.UI16>]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:() -> Null<hl.UI16>]
+							hl.types.ArrayBytes_hl_UI16
+							shift:() -> Null<hl.UI16>
+
+	public function unshiftDyn[Function:(v : Dynamic) -> Void]
+		[Arg:Dynamic] [Local v(7614):Dynamic]
+		[Block:Void]
+			[Call:Void]
+				[Field:(x : hl.UI16) -> Void]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:(x : hl.UI16) -> Void]
+						hl.types.ArrayBytes_hl_UI16
+						unshift:(x : hl.UI16) -> Void
+				[Local v(7614):Dynamic:Dynamic]
+
+	public function insertDyn[Function:(pos : Int, v : Dynamic) -> Void]
+		[Arg:Int] [Local pos(7612):Int]
+		[Arg:Dynamic] [Local v(7613):Dynamic]
+		[Block:Void]
+			[Call:Void]
+				[Field:(pos : Int, x : hl.UI16) -> Void]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:(pos : Int, x : hl.UI16) -> Void]
+						hl.types.ArrayBytes_hl_UI16
+						insert:(pos : Int, x : hl.UI16) -> Void
+				[Local pos(7612):Int:Int]
+				[Local v(7613):Dynamic:Dynamic]
+
+	public function containsDyn[Function:(v : Dynamic) -> Bool]
+		[Arg:Dynamic] [Local v(7611):Dynamic]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Bool]
+					[Field:(x : hl.UI16) -> Bool]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(x : hl.UI16) -> Bool]
+							hl.types.ArrayBytes_hl_UI16
+							contains:(x : hl.UI16) -> Bool
+					[Local v(7611):Dynamic:Dynamic]
+
+	public function removeDyn[Function:(v : Dynamic) -> Bool]
+		[Arg:Dynamic] [Local v(7610):Dynamic]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Bool]
+					[Field:(x : hl.UI16) -> Bool]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(x : hl.UI16) -> Bool]
+							hl.types.ArrayBytes_hl_UI16
+							remove:(x : hl.UI16) -> Bool
+					[Local v(7610):Dynamic:Dynamic]
+
+	public function sortDyn[Function:(f : ((Dynamic, Dynamic) -> Int)) -> Void]
+		[Arg:(Dynamic, Dynamic) -> Int] [Local f(7609):(Dynamic, Dynamic) -> Int]
+		[Block:Void]
+			[Call:Void]
+				[Field:(f : ((hl.UI16, hl.UI16) -> Int)) -> Void]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:(f : ((hl.UI16, hl.UI16) -> Int)) -> Void]
+						hl.types.ArrayBytes_hl_UI16
+						sort:(f : ((hl.UI16, hl.UI16) -> Int)) -> Void
+				[Local f(7609):(Dynamic, Dynamic) -> Int:(Dynamic, Dynamic) -> Int]
+
+	function __expand[Function:(index : Int) -> Void]
+		[Arg:Int] [Local index(7599):Int]
+		[Block:Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local index(7599):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Dynamic] [Throw:Dynamic]
+					[Call:Any]
+						[Field:(value : Any) -> Any]
+							[TypeExpr haxe.Exception:{ Statics haxe.Exception }]
+							[FStatic:(value : Any) -> Any]
+								haxe.Exception
+								thrown:(value : Any) -> Any
+						[Binop:String]
+							[Const:String] "Invalid array index "
+							+
+							[Local index(7599):Int:Int]
+			[Var newlen(7600):Int]
+				[Binop:Int]
+					[Local index(7599):Int:Int]
+					+
+					[Const:Int] 1
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local newlen(7600):Int:Int]
+						>
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBytes_hl_UI16
+								size:Int
+				[Then:Int] [Block:Int]
+					[Var next(7601):Int]
+						[Binop:Int]
+							[Binop:Int]
+								[Field:Int]
+									[Const:hl.types.ArrayBytes_hl_UI16] this
+									[FInstance:Int]
+										hl.types.ArrayBytes_hl_UI16
+										size:Int
+								*
+								[Const:Int] 3
+							>>
+							[Const:Int] 1
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local next(7601):Int:Int]
+								<
+								[Local newlen(7600):Int:Int]
+						[Then:Int] [Binop:Int]
+							[Local next(7601):Int:Int]
+							=
+							[Local newlen(7600):Int:Int]
+					[Var this1(7602):hl.BytesAccess<hl.UI16>]
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+					[Var this1(7604):hl.Bytes]
+						[Call:hl.Bytes]
+							[Field:(size : Int) -> hl.Bytes]
+								[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
+								[FStatic:(size : Int) -> hl.Bytes]
+									hl._Bytes.Bytes_Impl_
+									alloc:(size : Int) -> hl.Bytes
+							[Binop:Int]
+								[Local next(7601):Int:Int]
+								<<
+								[Call:Int]
+									[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+									[Local this1(7602):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Var bytes2(7605):hl.Bytes] [Local this1(7604):hl.Bytes:hl.Bytes]
+					[Var this1(7606):hl.BytesAccess<hl.UI16>]
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+					[Var bsize(7607):Int]
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayBytes_hl_UI16] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							<<
+							[Call:Int]
+								[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+								[Local this1(7606):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Call:Void]
+						[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+							[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+							[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
+								hl._Bytes.Bytes_Impl_
+								blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
+						[Local bytes2(7605):hl.Bytes:hl.Bytes]
+						[Const:Int] 0
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+						[Const:Int] 0
+						[Local bsize(7607):Int:Int]
+					[Var this1(7608):hl.BytesAccess<hl.UI16>]
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+					[Call:Void]
+						[Field:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void]
+							[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+							[FStatic:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void]
+								hl._Bytes.Bytes_Impl_
+								fill:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void
+						[Local bytes2(7605):hl.Bytes:hl.Bytes]
+						[Local bsize(7607):Int:Int]
+						[Binop:Int]
+							[Parenthesis:Int]
+								[Binop:Int]
+									[Local next(7601):Int:Int]
+									<<
+									[Call:Int]
+										[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+										[Local this1(7608):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							-
+							[Local bsize(7607):Int:Int]
+						[Const:Int] 0
+					[Binop:hl.BytesAccess<hl.UI16>]
+						[Field:hl.BytesAccess<hl.UI16>]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:hl.BytesAccess<hl.UI16>]
+								hl.types.ArrayBytes_hl_UI16
+								bytes:hl.BytesAccess<hl.UI16>
+						=
+						[Local bytes2(7605):hl.Bytes:hl.Bytes]
+					[Binop:Int]
+						[Field:Int]
+							[Const:hl.types.ArrayBytes_hl_UI16] this
+							[FInstance:Int]
+								hl.types.ArrayBytes_hl_UI16
+								size:Int
+						=
+						[Local next(7601):Int:Int]
+			[Binop:Int]
+				[Field:Int]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				=
+				[Local newlen(7600):Int:Int]
+}

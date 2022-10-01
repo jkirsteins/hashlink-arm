@@ -1,0 +1,143 @@
+@:keep @:directlyUsed @:used @:dox(hide) @:noCompletion
+class haxe.NativeStackTrace {
+
+	@:ifFeature("haxe.NativeStackTrace.exceptionStack")
+	public static inline function saveStack[Function:(exception : Any) -> Void]
+		[Arg:Any] [Local exception(724):Any]
+		[Block:Void]
+
+	@:hlNative("std", "exception_stack")
+	public static function exceptionStack[Function:() -> hl.NativeArray<hl.Bytes>] [Block:Dynamic] [Return:Dynamic] [Const:hl.NativeArray<hl.Bytes>] null
+
+	public static function callStack[Function:() -> hl.NativeArray<hl.Bytes>]
+		[Block:Dynamic]
+			[Var stack(654):hl.NativeArray<hl.Bytes>]
+			[Try:Void]
+				[Block:Dynamic]
+					[Throw:Dynamic]
+						[New:haxe.Exception]
+							haxe.Exception
+							[Const:String] ""
+							[Const:Null<haxe.Exception>] null
+							[Meta:Null<Any>]
+								:implicitCast
+								[Cast:Null<Any>] [Cast:Any] [Const:String] "stack"
+				Catch [Local _g(9338):Dynamic]
+					[Block:hl.NativeArray<hl.Bytes>]
+						[Binop:hl.NativeArray<hl.Bytes>]
+							[Local stack(654):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+							=
+							[Call:hl.NativeArray<hl.Bytes>]
+								[Field:() -> hl.NativeArray<hl.Bytes>]
+									[TypeExpr haxe.NativeStackTrace:Class<haxe.NativeStackTrace>]
+									[FStatic:() -> hl.NativeArray<hl.Bytes>]
+										haxe.NativeStackTrace
+										exceptionStack:() -> hl.NativeArray<hl.Bytes>
+			[Var skip(655):Int] [Const:Int] 1
+			[Block:Void]
+				[Var _g(669):Int] [Const:Int] 0
+				[Var _g1(670):Int]
+					[Binop:Int]
+						[Call:Int]
+							[Ident:hl.NativeArray<hl.Bytes> -> Unknown<15>] $asize
+							[Local stack(654):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+						-
+						[Const:Int] 1
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(669):Int:Int]
+							<
+							[Local _g1(670):Int:Int]
+					[Block:Dynamic]
+						[Var i(659):Int]
+							[Unop:Int]
+								++
+								Postfix
+								[Local _g(669):Int:Int]
+						[Var b(666):hl.Bytes]
+							[Call:hl.Bytes]
+								[Ident:(hl.NativeArray<hl.Bytes>, Int) -> hl.Bytes] $aget
+								[Local stack(654):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+								[Local i(659):Int:Int]
+						[Var s(667):String]
+							[Call:String]
+								[Ident:Class<String> -> Unknown<11>] $new
+								[TypeExpr String:Class<String>]
+						[Binop:hl.Bytes]
+							[Field:hl.Bytes]
+								[Local s(667):String:String]
+								[FInstance:hl.Bytes]
+									String
+									bytes:hl.Bytes
+							=
+							[Local b(666):hl.Bytes:hl.Bytes]
+						[Binop:Int]
+							[Field:Int]
+								[Local s(667):String:String]
+								[FInstance:Int]
+									String
+									length:Int
+							=
+							[Call:Int]
+								[Field:(this : hl.Bytes, bytePos : Int) -> Int]
+									[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
+									[FStatic:(this : hl.Bytes, bytePos : Int) -> Int]
+										hl._Bytes.Bytes_Impl_
+										ucs2Length:(this : hl.Bytes, bytePos : Int) -> Int
+								[Local b(666):hl.Bytes:hl.Bytes]
+								[Const:Int] 0
+						[Var s(668):String] [Local s(667):String:String]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Call:Int]
+										[Field:(str : String, ?startIndex : Null<Int>) -> Int]
+											[Local s(668):String:String]
+											[FInstance:(str : String, ?startIndex : Null<Int>) -> Int]
+												String
+												indexOf:(str : String, ?startIndex : Null<Int>) -> Int
+										[Const:String] "NativeStackTrace.callStack"
+										[Const:Null<Int>] null
+									<
+									[Const:Int] 0
+							[Then:Dynamic] [Break:Dynamic]
+						[Unop:Int]
+							++
+							Prefix
+							[Local skip(655):Int:Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local skip(655):Int:Int]
+						<
+						[Call:Int]
+							[Ident:hl.NativeArray<hl.Bytes> -> Unknown<15>] $asize
+							[Local stack(654):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+				[Then:hl.NativeArray<hl.Bytes>] [Block:hl.NativeArray<hl.Bytes>]
+					[Var len(694):Int]
+						[Binop:Int]
+							[Call:Int]
+								[Ident:hl.NativeArray<hl.Bytes> -> Unknown<15>] $asize
+								[Local stack(654):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+							-
+							[Local skip(655):Int:Int]
+					[Var this1(695):hl.NativeArray<hl.Bytes>]
+						[Call:hl.NativeArray<hl.Bytes>]
+							[Ident:Int -> Unknown<17>] $aalloc
+							[Local len(694):Int:Int]
+					[Var n(696):hl.NativeArray<hl.Bytes>] [Local this1(695):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+					[Call:Void]
+						[Field:(this : hl.NativeArray<hl.Bytes>, pos : Int, src : hl.NativeArray<hl.Bytes>, srcPos : Int, srcLen : Int) -> Void]
+							[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+							[FStatic:(this : hl.NativeArray<hl.Bytes>, pos : Int, src : hl.NativeArray<hl.Bytes>, srcPos : Int, srcLen : Int) -> Void]
+								hl._NativeArray.NativeArray_Impl_
+								blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+						[Local n(696):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+						[Const:Int] 0
+						[Local stack(654):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+						[Local skip(655):Int:Int]
+						[Local len(694):Int:Int]
+					[Return:Dynamic] [Local n(696):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+				[Else:Dynamic] [Return:Dynamic] [Local stack(654):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]
+}

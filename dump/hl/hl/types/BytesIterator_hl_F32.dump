@@ -1,0 +1,67 @@
+@:directlyUsed @:used @:keep @:noDoc
+class hl.types.BytesIterator_hl_F32 extends haxe.iterators.ArrayIterator<hl.F32> {
+
+	public function new[Function:(a : hl.types.ArrayBytes_hl_F32) -> Void]
+		[Arg:hl.types.ArrayBytes_hl_F32] [Local a(7799):hl.types.ArrayBytes_hl_F32]
+		[Block:hl.types.ArrayBytes_hl_F32]
+			[Call:Void]
+				[Const:haxe.iterators.ArrayIterator<hl.F32>] super
+				[Cast:Dynamic] [Const:Unknown<25>] null
+			[Binop:hl.types.ArrayBytes_hl_F32]
+				[Field:hl.types.ArrayBytes_hl_F32]
+					[Const:hl.types.BytesIterator_hl_F32] this
+					[FInstance:hl.types.ArrayBytes_hl_F32]
+						hl.types.BytesIterator_hl_F32
+						a:hl.types.ArrayBytes_hl_F32
+				=
+				[Local a(7799):hl.types.ArrayBytes_hl_F32:hl.types.ArrayBytes_hl_F32]
+
+	var a:hl.types.ArrayBytes_hl_F32;
+
+	public function hasNext[Function:() -> Bool]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Field:Int]
+						[Const:hl.types.BytesIterator_hl_F32] this
+						[FInstance:Int]
+							haxe.iterators.ArrayIterator<hl.F32>
+							current:Int
+					<
+					[Field:Int]
+						[Field:hl.types.ArrayBytes_hl_F32]
+							[Const:hl.types.BytesIterator_hl_F32] this
+							[FInstance:hl.types.ArrayBytes_hl_F32]
+								hl.types.BytesIterator_hl_F32
+								a:hl.types.ArrayBytes_hl_F32
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+
+	public function next[Function:() -> hl.F32]
+		[Block:Dynamic]
+			[Var this1(7797):hl.BytesAccess<hl.F32>]
+				[Field:hl.BytesAccess<hl.F32>]
+					[Field:hl.types.ArrayBytes_hl_F32]
+						[Const:hl.types.BytesIterator_hl_F32] this
+						[FInstance:hl.types.ArrayBytes_hl_F32]
+							hl.types.BytesIterator_hl_F32
+							a:hl.types.ArrayBytes_hl_F32
+					[FInstance:hl.BytesAccess<hl.F32>]
+						hl.types.ArrayBytes_hl_F32
+						bytes:hl.BytesAccess<hl.F32>
+			[Var pos(7798):Int]
+				[Unop:Int]
+					++
+					Postfix
+					[Field:Int]
+						[Const:hl.types.BytesIterator_hl_F32] this
+						[FInstance:Int]
+							haxe.iterators.ArrayIterator<hl.F32>
+							current:Int
+			[Return:Dynamic]
+				[Call:hl.F32]
+					[Ident:(hl.BytesAccess<hl.F32>, Int) -> Unknown<26>] $bget
+					[Local this1(7797):hl.BytesAccess<hl.F32>:hl.BytesAccess<hl.F32>]
+					[Local pos(7798):Int:Int]
+}

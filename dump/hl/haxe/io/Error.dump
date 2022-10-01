@@ -1,0 +1,7 @@
+@:directlyUsed @:used
+enum haxe.io.Error {
+	Blocked;
+	Overflow;
+	OutsideBounds;
+	Custom(e:Dynamic);
+}

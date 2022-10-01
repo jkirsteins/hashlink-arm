@@ -1,0 +1,2 @@
+@:used @:coreType @:notNull @:runtimeValue
+abstract hl.UI16 from Int to Int {}

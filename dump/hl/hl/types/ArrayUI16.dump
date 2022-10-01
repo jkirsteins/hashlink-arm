@@ -1,0 +1,1 @@
+typedef hl.types.ArrayUI16 = hl.types.ArrayBytes_hl_UI16

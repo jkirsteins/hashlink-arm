@@ -1,0 +1,75 @@
+@:directlyUsed @:used @:keep @:generic
+class hl.types.BytesKeyValueIterator<T> extends haxe.iterators.ArrayKeyValueIterator<hl.types.BytesKeyValueIterator.T> {
+
+	public function new[Function:(a : hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>) -> Void]
+		[Arg:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>] [Local a(1900):hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+		[Block:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+			[Call:Void]
+				[Const:haxe.iterators.ArrayKeyValueIterator<hl.types.BytesKeyValueIterator.T>] super
+				[Cast:Dynamic] [Const:Unknown<27>] null
+			[Binop:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+				[Field:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+					[Const:hl.types.BytesKeyValueIterator<hl.types.BytesKeyValueIterator.T>] this
+					[FInstance:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+						hl.types.BytesKeyValueIterator<hl.types.BytesKeyValueIterator.T>
+						a:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>
+				=
+				[Local a(1900):hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+
+	var a:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>;
+
+	public function hasNext[Function:() -> Bool]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Field:Int]
+						[Const:hl.types.BytesKeyValueIterator<hl.types.BytesKeyValueIterator.T>] this
+						[FInstance:Int]
+							haxe.iterators.ArrayKeyValueIterator<hl.types.BytesKeyValueIterator.T>
+							current:Int
+					<
+					[Field:Int]
+						[Field:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+							[Const:hl.types.BytesKeyValueIterator<hl.types.BytesKeyValueIterator.T>] this
+							[FInstance:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+								hl.types.BytesKeyValueIterator<hl.types.BytesKeyValueIterator.T>
+								a:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+
+	public function next[Function:() -> { value : hl.types.BytesKeyValueIterator.T, key : Int }]
+		[Block:Dynamic]
+			[Var this1(1903):hl.BytesAccess<hl.types.BytesKeyValueIterator.T>]
+				[Field:hl.BytesAccess<hl.types.BytesKeyValueIterator.T>]
+					[Field:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+						[Const:hl.types.BytesKeyValueIterator<hl.types.BytesKeyValueIterator.T>] this
+						[FInstance:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>]
+							hl.types.BytesKeyValueIterator<hl.types.BytesKeyValueIterator.T>
+							a:hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>
+					[FInstance:hl.BytesAccess<hl.types.BytesKeyValueIterator.T>]
+						hl.types.ArrayBytes<hl.types.BytesKeyValueIterator.T>
+						bytes:hl.BytesAccess<hl.types.ArrayBytes.T>
+			[Var pos(1904):Int]
+				[Field:Int]
+					[Const:hl.types.BytesKeyValueIterator<hl.types.BytesKeyValueIterator.T>] this
+					[FInstance:Int]
+						haxe.iterators.ArrayKeyValueIterator<hl.types.BytesKeyValueIterator.T>
+						current:Int
+			[Var v(1905):hl.types.BytesKeyValueIterator.T]
+				[Call:hl.types.BytesKeyValueIterator.T]
+					[Ident:(hl.BytesAccess<hl.types.BytesKeyValueIterator.T>, Int) -> Unknown<26>] $bget
+					[Local this1(1903):hl.BytesAccess<hl.types.BytesKeyValueIterator.T>:hl.BytesAccess<hl.types.BytesKeyValueIterator.T>]
+					[Local pos(1904):Int:Int]
+			[Return:Dynamic]
+				[ObjectDecl:{ value : hl.types.BytesKeyValueIterator.T, key : Int }]
+					key: [Unop:Int]
+						++
+						Postfix
+						[Field:Int]
+							[Const:hl.types.BytesKeyValueIterator<hl.types.BytesKeyValueIterator.T>] this
+							[FInstance:Int]
+								haxe.iterators.ArrayKeyValueIterator<hl.types.BytesKeyValueIterator.T>
+								current:Int
+					value: [Local v(1905):hl.types.BytesKeyValueIterator.T:hl.types.BytesKeyValueIterator.T]
+}

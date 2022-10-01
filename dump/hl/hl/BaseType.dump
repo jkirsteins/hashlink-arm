@@ -1,0 +1,111 @@
+@:used @:keep
+class hl.BaseType {
+
+	public var __type__:hl.Type;
+
+	public var __meta__:Dynamic;
+
+	public var __implementedBy__:hl.NativeArray<hl.Type>;
+
+	public function check[Function:(v : Dynamic) -> Bool]
+		[Arg:Dynamic] [Local v(571):Dynamic]
+		[Block:Dynamic]
+			[Var t(575):hl.Type]
+				[Call:hl.Type]
+					[Ident:Dynamic -> Unknown<2>] $tdyntype
+					[Local v(571):Dynamic:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Call:hl.TypeKind]
+							[Ident:hl.Type -> Unknown<4>] $tkind
+							[Local t(575):hl.Type:hl.Type]
+						==
+						[Cast:hl.TypeKind] [Const:Int] 15
+				[Then:Void] [Block:Void]
+					[Var v2(579):Unknown<18>]
+						[Call:Dynamic]
+							[Field:(v : Dynamic) -> Dynamic]
+								[TypeExpr hl.Api:Class<hl.Api>]
+								[FStatic:(v : Dynamic) -> Dynamic]
+									hl.Api
+									getVirtualValue:(v : Dynamic) -> Dynamic
+							[Local v(571):Dynamic:Dynamic]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local v2(579):Unknown<18>:Unknown<18>]
+								!=
+								[Const:Unknown<18>] null
+						[Then:hl.Type] [Binop:hl.Type]
+							[Local t(575):hl.Type:hl.Type]
+							=
+							[Call:hl.Type]
+								[Ident:Dynamic -> Unknown<2>] $tdyntype
+								[Cast:Dynamic] [Local v2(579):Unknown<18>:Unknown<18>]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:hl.NativeArray<hl.Type>]
+							[Const:hl.BaseType] this
+							[FInstance:hl.NativeArray<hl.Type>]
+								hl.BaseType
+								__implementedBy__:hl.NativeArray<hl.Type>
+						==
+						[Const:hl.NativeArray<hl.Type>] null
+				[Then:Dynamic] [Block:Dynamic]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Call:Bool]
+								[Field:(this : hl.Type, t : hl.Type) -> Bool]
+									[TypeExpr hl._Type.Type_Impl_:{ Statics hl._Type.Type_Impl_ }]
+									[FStatic:(this : hl.Type, t : hl.Type) -> Bool]
+										hl._Type.Type_Impl_
+										safeCast:(this : hl.Type, t : hl.Type) -> Bool
+								[Local t(575):hl.Type:hl.Type]
+								[Field:hl.Type]
+									[Const:hl.BaseType] this
+									[FInstance:hl.Type]
+										hl.BaseType
+										__type__:hl.Type
+						[Then:Dynamic] [Return:Dynamic] [Const:Bool] true
+					[Return:Dynamic] [Const:Bool] false
+			[Block:Void]
+				[Var _g(588):Int] [Const:Int] 0
+				[Var _g1(589):hl.NativeArray<hl.Type>]
+					[Field:hl.NativeArray<hl.Type>]
+						[Const:hl.BaseType] this
+						[FInstance:hl.NativeArray<hl.Type>]
+							hl.BaseType
+							__implementedBy__:hl.NativeArray<hl.Type>
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(588):Int:Int]
+							<
+							[Call:Int]
+								[Ident:hl.NativeArray<hl.Type> -> Unknown<15>] $asize
+								[Local _g1(589):hl.NativeArray<hl.Type>:hl.NativeArray<hl.Type>]
+					[Block:Dynamic]
+						[Var i(587):hl.Type]
+							[Call:hl.Type]
+								[Ident:(hl.NativeArray<hl.Type>, Int) -> hl.Type] $aget
+								[Local _g1(589):hl.NativeArray<hl.Type>:hl.NativeArray<hl.Type>]
+								[Local _g(588):Int:Int]
+						[Unop:Int]
+							++
+							Prefix
+							[Local _g(588):Int:Int]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Call:Bool]
+									[Field:(this : hl.Type, t : hl.Type) -> Bool]
+										[TypeExpr hl._Type.Type_Impl_:{ Statics hl._Type.Type_Impl_ }]
+										[FStatic:(this : hl.Type, t : hl.Type) -> Bool]
+											hl._Type.Type_Impl_
+											safeCast:(this : hl.Type, t : hl.Type) -> Bool
+									[Local t(575):hl.Type:hl.Type]
+									[Local i(587):hl.Type:hl.Type]
+							[Then:Dynamic] [Return:Dynamic] [Const:Bool] true
+			[Return:Dynamic] [Const:Bool] false
+}

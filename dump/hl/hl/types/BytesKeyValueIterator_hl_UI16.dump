@@ -1,0 +1,75 @@
+@:directlyUsed @:used @:keep @:noDoc
+class hl.types.BytesKeyValueIterator_hl_UI16 extends haxe.iterators.ArrayKeyValueIterator<hl.UI16> {
+
+	public function new[Function:(a : hl.types.ArrayBytes_hl_UI16) -> Void]
+		[Arg:hl.types.ArrayBytes_hl_UI16] [Local a(7646):hl.types.ArrayBytes_hl_UI16]
+		[Block:hl.types.ArrayBytes_hl_UI16]
+			[Call:Void]
+				[Const:haxe.iterators.ArrayKeyValueIterator<hl.UI16>] super
+				[Cast:Dynamic] [Const:Unknown<27>] null
+			[Binop:hl.types.ArrayBytes_hl_UI16]
+				[Field:hl.types.ArrayBytes_hl_UI16]
+					[Const:hl.types.BytesKeyValueIterator_hl_UI16] this
+					[FInstance:hl.types.ArrayBytes_hl_UI16]
+						hl.types.BytesKeyValueIterator_hl_UI16
+						a:hl.types.ArrayBytes_hl_UI16
+				=
+				[Local a(7646):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+
+	var a:hl.types.ArrayBytes_hl_UI16;
+
+	public function hasNext[Function:() -> Bool]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Field:Int]
+						[Const:hl.types.BytesKeyValueIterator_hl_UI16] this
+						[FInstance:Int]
+							haxe.iterators.ArrayKeyValueIterator<hl.UI16>
+							current:Int
+					<
+					[Field:Int]
+						[Field:hl.types.ArrayBytes_hl_UI16]
+							[Const:hl.types.BytesKeyValueIterator_hl_UI16] this
+							[FInstance:hl.types.ArrayBytes_hl_UI16]
+								hl.types.BytesKeyValueIterator_hl_UI16
+								a:hl.types.ArrayBytes_hl_UI16
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+
+	public function next[Function:() -> { value : hl.UI16, key : Int }]
+		[Block:Dynamic]
+			[Var this1(7643):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Field:hl.types.ArrayBytes_hl_UI16]
+						[Const:hl.types.BytesKeyValueIterator_hl_UI16] this
+						[FInstance:hl.types.ArrayBytes_hl_UI16]
+							hl.types.BytesKeyValueIterator_hl_UI16
+							a:hl.types.ArrayBytes_hl_UI16
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var pos(7644):Int]
+				[Field:Int]
+					[Const:hl.types.BytesKeyValueIterator_hl_UI16] this
+					[FInstance:Int]
+						haxe.iterators.ArrayKeyValueIterator<hl.UI16>
+						current:Int
+			[Var v(7645):hl.UI16]
+				[Call:hl.UI16]
+					[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
+					[Local this1(7643):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7644):Int:Int]
+			[Return:Dynamic]
+				[ObjectDecl:{ value : hl.UI16, key : Int }]
+					key: [Unop:Int]
+						++
+						Postfix
+						[Field:Int]
+							[Const:hl.types.BytesKeyValueIterator_hl_UI16] this
+							[FInstance:Int]
+								haxe.iterators.ArrayKeyValueIterator<hl.UI16>
+								current:Int
+					value: [Local v(7645):hl.UI16:hl.UI16]
+}

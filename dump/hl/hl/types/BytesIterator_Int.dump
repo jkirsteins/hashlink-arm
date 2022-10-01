@@ -1,0 +1,67 @@
+@:directlyUsed @:used @:keep @:noDoc
+class hl.types.BytesIterator_Int extends haxe.iterators.ArrayIterator<Int> {
+
+	public function new[Function:(a : hl.types.ArrayBytes_Int) -> Void]
+		[Arg:hl.types.ArrayBytes_Int] [Local a(8097):hl.types.ArrayBytes_Int]
+		[Block:hl.types.ArrayBytes_Int]
+			[Call:Void]
+				[Const:haxe.iterators.ArrayIterator<Int>] super
+				[Cast:Dynamic] [Const:Unknown<25>] null
+			[Binop:hl.types.ArrayBytes_Int]
+				[Field:hl.types.ArrayBytes_Int]
+					[Const:hl.types.BytesIterator_Int] this
+					[FInstance:hl.types.ArrayBytes_Int]
+						hl.types.BytesIterator_Int
+						a:hl.types.ArrayBytes_Int
+				=
+				[Local a(8097):hl.types.ArrayBytes_Int:hl.types.ArrayBytes_Int]
+
+	var a:hl.types.ArrayBytes_Int;
+
+	public function hasNext[Function:() -> Bool]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Field:Int]
+						[Const:hl.types.BytesIterator_Int] this
+						[FInstance:Int]
+							haxe.iterators.ArrayIterator<Int>
+							current:Int
+					<
+					[Field:Int]
+						[Field:hl.types.ArrayBytes_Int]
+							[Const:hl.types.BytesIterator_Int] this
+							[FInstance:hl.types.ArrayBytes_Int]
+								hl.types.BytesIterator_Int
+								a:hl.types.ArrayBytes_Int
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+
+	public function next[Function:() -> Int]
+		[Block:Dynamic]
+			[Var this1(8095):hl.BytesAccess<Int>]
+				[Field:hl.BytesAccess<Int>]
+					[Field:hl.types.ArrayBytes_Int]
+						[Const:hl.types.BytesIterator_Int] this
+						[FInstance:hl.types.ArrayBytes_Int]
+							hl.types.BytesIterator_Int
+							a:hl.types.ArrayBytes_Int
+					[FInstance:hl.BytesAccess<Int>]
+						hl.types.ArrayBytes_Int
+						bytes:hl.BytesAccess<Int>
+			[Var pos(8096):Int]
+				[Unop:Int]
+					++
+					Postfix
+					[Field:Int]
+						[Const:hl.types.BytesIterator_Int] this
+						[FInstance:Int]
+							haxe.iterators.ArrayIterator<Int>
+							current:Int
+			[Return:Dynamic]
+				[Call:Int]
+					[Ident:(hl.BytesAccess<Int>, Int) -> Unknown<26>] $bget
+					[Local this1(8095):hl.BytesAccess<Int>:hl.BytesAccess<Int>]
+					[Local pos(8096):Int:Int]
+}

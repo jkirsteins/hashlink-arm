@@ -1,0 +1,1986 @@
+@:directlyUsed @:used @:keep
+class hl.types.ArrayObj<T> extends hl.types.ArrayBase {
+
+	public function new[Function:() -> Void]
+		[Block:hl.NativeArray<Dynamic>]
+			[Binop:Int]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				=
+				[Const:Int] 0
+			[Var this1(1224):hl.NativeArray<Dynamic>]
+				[Call:hl.NativeArray<Dynamic>]
+					[Ident:Int -> Unknown<17>] $aalloc
+					[Const:Int] 0
+			[Binop:hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				=
+				[Local this1(1224):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+
+	var array:hl.NativeArray<Dynamic>;
+
+	public function concat[Function:(a : hl.types.ArrayObj<hl.types.ArrayObj.T>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+		[Arg:hl.types.ArrayObj<hl.types.ArrayObj.T>] [Local a(1225):hl.types.ArrayObj<hl.types.ArrayObj.T>]
+		[Block:Dynamic]
+			[Var length(1228):Int]
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					+
+					[Field:Int]
+						[Local a(1225):hl.types.ArrayObj<hl.types.ArrayObj.T>:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+			[Var this1(1229):hl.NativeArray<Unknown<51>>]
+				[Call:hl.NativeArray<Unknown<51>>]
+					[Ident:Int -> Unknown<17>] $aalloc
+					[Local length(1228):Int:Int]
+			[Var arr(1230):hl.NativeArray<Unknown<51>>] [Local this1(1229):hl.NativeArray<Unknown<51>>:hl.NativeArray<Unknown<51>>]
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Unknown<51>>, pos : Int, src : hl.NativeArray<Unknown<51>>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Unknown<51>>, pos : Int, src : hl.NativeArray<Unknown<51>>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Local arr(1230):hl.NativeArray<Unknown<51>>:hl.NativeArray<Unknown<51>>]
+				[Const:Int] 0
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Const:Int] 0
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Unknown<51>>, pos : Int, src : hl.NativeArray<Unknown<51>>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Unknown<51>>, pos : Int, src : hl.NativeArray<Unknown<51>>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Local arr(1230):hl.NativeArray<Unknown<51>>:hl.NativeArray<Unknown<51>>]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				[Field:hl.NativeArray<Dynamic>]
+					[Local a(1225):hl.types.ArrayObj<hl.types.ArrayObj.T>:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Const:Int] 0
+				[Field:Int]
+					[Local a(1225):hl.types.ArrayObj<hl.types.ArrayObj.T>:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Return:Dynamic]
+				[Call:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+					[Field:(a : hl.NativeArray<hl.types.ArrayObj.T>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+						[TypeExpr hl.types.ArrayObj:Class<hl.types.ArrayObj>]
+						[FStatic:(a : hl.NativeArray<hl.types.ArrayObj.T>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+							hl.types.ArrayObj
+							alloc:(a : hl.NativeArray<alloc.T>) -> hl.types.ArrayObj<alloc.T>
+					[Cast:hl.NativeArray<hl.types.ArrayObj.T>] [Local arr(1230):hl.NativeArray<Unknown<51>>:hl.NativeArray<Unknown<51>>]
+
+	public function join[Function:(sep : String) -> String]
+		[Arg:String] [Local sep(1231):String]
+		[Block:Dynamic]
+			[Var b(1232):StringBuf] [New:StringBuf] StringBuf
+			[Block:Void]
+				[Var _g(1238):Int] [Const:Int] 0
+				[Var _g1(1239):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(1238):Int:Int]
+							<
+							[Local _g1(1239):Int:Int]
+					[Block:Dynamic]
+						[Var i(1233):Int]
+							[Unop:Int]
+								++
+								Postfix
+								[Local _g(1238):Int:Int]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Local i(1233):Int:Int]
+									>
+									[Const:Int] 0
+							[Then:Void] [Call:Void]
+								[Field:(x : String) -> Void]
+									[Local b(1232):StringBuf:StringBuf]
+									[FInstance:(x : String) -> Void]
+										StringBuf
+										add:(x : add.T) -> Void
+								[Local sep(1231):String:String]
+						[Var this1(1236):hl.NativeArray<Dynamic>]
+							[Field:hl.NativeArray<Dynamic>]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:hl.NativeArray<Dynamic>]
+									hl.types.ArrayObj<hl.types.ArrayObj.T>
+									array:hl.NativeArray<Dynamic>
+						[Call:Void]
+							[Field:(x : Unknown<52>) -> Void]
+								[Local b(1232):StringBuf:StringBuf]
+								[FInstance:(x : Unknown<52>) -> Void]
+									StringBuf
+									add:(x : add.T) -> Void
+							[Call:Dynamic]
+								[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+								[Local this1(1236):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+								[Local i(1233):Int:Int]
+			[Return:Dynamic]
+				[Call:String]
+					[Field:() -> String]
+						[Local b(1232):StringBuf:StringBuf]
+						[FInstance:() -> String]
+							StringBuf
+							toString:() -> String
+
+	function isArrayObj[Function:() -> Bool] [Block:Dynamic] [Return:Dynamic] [Const:Bool] true
+
+	public function pop[Function:() -> Null<hl.types.ArrayObj.T>]
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						==
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [Const:Null<hl.types.ArrayObj.T>] null
+			[Unop:Int]
+				--
+				Postfix
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var this1(1243):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[Var pos(1244):Int]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var v(1245):Null<hl.types.ArrayObj.T>]
+				[Call:Dynamic]
+					[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+					[Local this1(1243):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local pos(1244):Int:Int]
+			[Block:Dynamic]
+				[Var this1(1248):hl.NativeArray<Dynamic>]
+					[Field:hl.NativeArray<Dynamic>]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:hl.NativeArray<Dynamic>]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							array:hl.NativeArray<Dynamic>
+				[Var pos(1249):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[Var value(1250):Dynamic] [Const:Unknown<53>] null
+				[Call:Unknown<34>]
+					[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+					[Local this1(1248):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local pos(1249):Int:Int]
+					[Local value(1250):Dynamic:Dynamic]
+			[Return:Dynamic] [Local v(1245):Null<hl.types.ArrayObj.T>:Null<hl.types.ArrayObj.T>]
+
+	public function push[Function:(x : hl.types.ArrayObj.T) -> Int]
+		[Arg:hl.types.ArrayObj.T] [Local x(1251):hl.types.ArrayObj.T]
+		[Block:Dynamic]
+			[Var len(1252):Int]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var this1(1255):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Call:Int]
+							[Ident:hl.NativeArray<Dynamic> -> Unknown<15>] $asize
+							[Local this1(1255):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+						==
+						[Local len(1252):Int:Int]
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							__expand:(index : Int) -> Void
+					[Local len(1252):Int:Int]
+				[Else:Int] [Unop:Int]
+					++
+					Postfix
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+			[Block:Dynamic]
+				[Var this1(1270):hl.NativeArray<Dynamic>]
+					[Field:hl.NativeArray<Dynamic>]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:hl.NativeArray<Dynamic>]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							array:hl.NativeArray<Dynamic>
+				[Call:Unknown<34>]
+					[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+					[Local this1(1270):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local len(1252):Int:Int]
+					[Local x(1251):hl.types.ArrayObj.T:hl.types.ArrayObj.T]
+			[Return:Dynamic]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+
+	public function reverse[Function:() -> Void]
+		[Block:Void]
+			[Var _g(1294):Int] [Const:Int] 0
+			[Var _g1(1295):Int]
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					>>
+					[Const:Int] 1
+			[While:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local _g(1294):Int:Int]
+						<
+						[Local _g1(1295):Int:Int]
+				[Block:Dynamic]
+					[Var i(1273):Int]
+						[Unop:Int]
+							++
+							Postfix
+							[Local _g(1294):Int:Int]
+					[Var k(1274):Int]
+						[Binop:Int]
+							[Binop:Int]
+								[Field:Int]
+									[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+									[FInstance:Int]
+										hl.types.ArrayBase
+										length:Int
+								-
+								[Const:Int] 1
+							-
+							[Local i(1273):Int:Int]
+					[Var this1(1277):hl.NativeArray<Dynamic>]
+						[Field:hl.NativeArray<Dynamic>]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:hl.NativeArray<Dynamic>]
+								hl.types.ArrayObj<hl.types.ArrayObj.T>
+								array:hl.NativeArray<Dynamic>
+					[Var tmp(1279):Unknown<54>]
+						[Call:Dynamic]
+							[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+							[Local this1(1277):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+							[Local i(1273):Int:Int]
+					[Block:Dynamic]
+						[Var this1(1286):hl.NativeArray<Dynamic>]
+							[Field:hl.NativeArray<Dynamic>]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:hl.NativeArray<Dynamic>]
+									hl.types.ArrayObj<hl.types.ArrayObj.T>
+									array:hl.NativeArray<Dynamic>
+						[Var this2(1282):hl.NativeArray<Dynamic>]
+							[Field:hl.NativeArray<Dynamic>]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:hl.NativeArray<Dynamic>]
+									hl.types.ArrayObj<hl.types.ArrayObj.T>
+									array:hl.NativeArray<Dynamic>
+						[Var value(1288):Dynamic]
+							[Call:Dynamic]
+								[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+								[Local this2(1282):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+								[Local k(1274):Int:Int]
+						[Call:Unknown<34>]
+							[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+							[Local this1(1286):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+							[Local i(1273):Int:Int]
+							[Local value(1288):Dynamic:Dynamic]
+					[Block:Dynamic]
+						[Var this1(1291):hl.NativeArray<Dynamic>]
+							[Field:hl.NativeArray<Dynamic>]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:hl.NativeArray<Dynamic>]
+									hl.types.ArrayObj<hl.types.ArrayObj.T>
+									array:hl.NativeArray<Dynamic>
+						[Call:Unknown<34>]
+							[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+							[Local this1(1291):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+							[Local k(1274):Int:Int]
+							[Local tmp(1279):Unknown<54>:Unknown<54>]
+
+	public function shift[Function:() -> Null<hl.types.ArrayObj.T>]
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						==
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [Const:Null<hl.types.ArrayObj.T>] null
+			[Unop:Int]
+				--
+				Postfix
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var this1(1298):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[Var v(1300):Null<hl.types.ArrayObj.T>]
+				[Call:Dynamic]
+					[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+					[Local this1(1298):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Const:Int] 0
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Const:Int] 0
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Const:Int] 1
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Block:Dynamic]
+				[Var this1(1303):hl.NativeArray<Dynamic>]
+					[Field:hl.NativeArray<Dynamic>]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:hl.NativeArray<Dynamic>]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							array:hl.NativeArray<Dynamic>
+				[Var pos(1304):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[Var value(1305):Dynamic] [Const:Unknown<55>] null
+				[Call:Unknown<34>]
+					[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+					[Local this1(1303):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local pos(1304):Int:Int]
+					[Local value(1305):Dynamic:Dynamic]
+			[Return:Dynamic] [Local v(1300):Null<hl.types.ArrayObj.T>:Null<hl.types.ArrayObj.T>]
+
+	public function slice[Function:(pos : Int, ?end : Null<Int>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+		[Arg:Int] [Local pos(1306):Int]
+		[Arg:Null<Int>]
+			[Local end(1307):Null<Int>]
+			[Const:Null<Int>] null
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(1306):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Void] [Block:Void]
+					[Binop:Int]
+						[Local pos(1306):Int:Int]
+						=
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							+
+							[Local pos(1306):Int:Int]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pos(1306):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local pos(1306):Int:Int]
+							=
+							[Const:Int] 0
+			[Var pend(1308):Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local end(1307):Null<Int>:Null<Int>]
+						==
+						[Const:Null<Int>] null
+				[Then:Int] [Binop:Int]
+					[Local pend(1308):Int:Int]
+					=
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[Else:Void] [Block:Void]
+					[Binop:Int]
+						[Local pend(1308):Int:Int]
+						=
+						[Local end(1307):Null<Int>:Null<Int>]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pend(1308):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local pend(1308):Int:Int]
+							+=
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pend(1308):Int:Int]
+								>
+								[Field:Int]
+									[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+									[FInstance:Int]
+										hl.types.ArrayBase
+										length:Int
+						[Then:Int] [Binop:Int]
+							[Local pend(1308):Int:Int]
+							=
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+			[Var len(1309):Int]
+				[Binop:Int]
+					[Local pend(1308):Int:Int]
+					-
+					[Local pos(1306):Int:Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local len(1309):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [New:hl.types.ArrayObj<hl.types.ArrayObj.T>] hl.types.ArrayObj<hl.types.ArrayObj.T>
+			[Var this1(1312):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[Var this2(1315):hl.NativeArray<Dynamic>]
+				[Call:hl.NativeArray<Dynamic>]
+					[Ident:Int -> Unknown<17>] $aalloc
+					[Local len(1309):Int:Int]
+			[Var n(1316):hl.NativeArray<Dynamic>] [Local this2(1315):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Local n(1316):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+				[Const:Int] 0
+				[Local this1(1312):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+				[Local pos(1306):Int:Int]
+				[Local len(1309):Int:Int]
+			[Return:Dynamic]
+				[Call:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+					[Field:(a : hl.NativeArray<hl.types.ArrayObj.T>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+						[TypeExpr hl.types.ArrayObj:Class<hl.types.ArrayObj>]
+						[FStatic:(a : hl.NativeArray<hl.types.ArrayObj.T>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+							hl.types.ArrayObj
+							alloc:(a : hl.NativeArray<alloc.T>) -> hl.types.ArrayObj<alloc.T>
+					[Local n(1316):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+
+	public function sort[Function:(f : ((hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int)) -> Void]
+		[Arg:(hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int] [Local f(1319):(hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int]
+		[Block:Void]
+			[Call:Void]
+				[Field:(a : Array<hl.types.ArrayObj.T>, cmp : ((hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int)) -> Void]
+					[TypeExpr haxe.ds.ArraySort:Class<haxe.ds.ArraySort>]
+					[FStatic:(a : Array<hl.types.ArrayObj.T>, cmp : ((hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int)) -> Void]
+						haxe.ds.ArraySort
+						sort:(a : Array<sort.T>, cmp : ((sort.T, sort.T) -> Int)) -> Void
+				[Cast:Array<hl.types.ArrayObj.T>] [Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+				[Local f(1319):(hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int:(hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int]
+
+	public function splice[Function:(pos : Int, len : Int) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+		[Arg:Int] [Local pos(1404):Int]
+		[Arg:Int] [Local len(1405):Int]
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local len(1405):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [New:hl.types.ArrayObj<hl.types.ArrayObj.T>] hl.types.ArrayObj<hl.types.ArrayObj.T>
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(1404):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Void] [Block:Void]
+					[Binop:Int]
+						[Local pos(1404):Int:Int]
+						=
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							+
+							[Local pos(1404):Int:Int]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pos(1404):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local pos(1404):Int:Int]
+							=
+							[Const:Int] 0
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(1404):Int:Int]
+						>
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+				[Then:Int] [Block:Int]
+					[Binop:Int]
+						[Local pos(1404):Int:Int]
+						=
+						[Const:Int] 0
+					[Binop:Int]
+						[Local len(1405):Int:Int]
+						=
+						[Const:Int] 0
+				[Else:Void] [If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Binop:Int]
+								[Local pos(1404):Int:Int]
+								+
+								[Local len(1405):Int:Int]
+							>
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+					[Then:Void] [Block:Void]
+						[Binop:Int]
+							[Local len(1405):Int:Int]
+							=
+							[Binop:Int]
+								[Field:Int]
+									[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+									[FInstance:Int]
+										hl.types.ArrayBase
+										length:Int
+								-
+								[Local pos(1404):Int:Int]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Binop:Bool]
+									[Local len(1405):Int:Int]
+									<
+									[Const:Int] 0
+							[Then:Int] [Binop:Int]
+								[Local len(1405):Int:Int]
+								=
+								[Const:Int] 0
+			[Var a(1406):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[Var this1(1412):hl.NativeArray<Dynamic>]
+				[Call:hl.NativeArray<Dynamic>]
+					[Ident:Int -> Unknown<17>] $aalloc
+					[Local len(1405):Int:Int]
+			[Var n(1413):hl.NativeArray<Dynamic>] [Local this1(1412):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Local n(1413):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+				[Const:Int] 0
+				[Local a(1406):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+				[Local pos(1404):Int:Int]
+				[Local len(1405):Int:Int]
+			[Var ret(1414):hl.types.ArrayObj<hl.types.ArrayObj.T>]
+				[Call:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+					[Field:(a : hl.NativeArray<hl.types.ArrayObj.T>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+						[TypeExpr hl.types.ArrayObj:Class<hl.types.ArrayObj>]
+						[FStatic:(a : hl.NativeArray<hl.types.ArrayObj.T>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+							hl.types.ArrayObj
+							alloc:(a : hl.NativeArray<alloc.T>) -> hl.types.ArrayObj<alloc.T>
+					[Cast:hl.NativeArray<hl.types.ArrayObj.T>] [Local n(1413):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+			[Var end(1415):Int]
+				[Binop:Int]
+					[Local pos(1404):Int:Int]
+					+
+					[Local len(1405):Int:Int]
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Local a(1406):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+				[Local pos(1404):Int:Int]
+				[Local a(1406):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+				[Local end(1415):Int:Int]
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					-
+					[Local end(1415):Int:Int]
+			[Binop:Int]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				-=
+				[Local len(1405):Int:Int]
+			[While:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Unop:Int]
+							--
+							Prefix
+							[Local len(1405):Int:Int]
+						>=
+						[Const:Int] 0
+				[Block:Dynamic]
+					[Var pos(1419):Int]
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							+
+							[Local len(1405):Int:Int]
+					[Var value(1420):Dynamic] [Const:Unknown<56>] null
+					[Call:Unknown<34>]
+						[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+						[Local a(1406):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+						[Local pos(1419):Int:Int]
+						[Local value(1420):Dynamic:Dynamic]
+			[Return:Dynamic] [Local ret(1414):hl.types.ArrayObj<hl.types.ArrayObj.T>:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+
+	@:access(Std.toStringDepth)
+	public function toString[Function:() -> String]
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[TypeExpr Std:Class<Std>]
+							[FStatic:Int]
+								Std
+								toStringDepth:Int
+						>=
+						[Const:Int] 5
+				[Then:Dynamic] [Return:Dynamic] [Const:String] "..."
+			[Unop:Int]
+				++
+				Postfix
+				[Field:Int]
+					[TypeExpr Std:Class<Std>]
+					[FStatic:Int]
+						Std
+						toStringDepth:Int
+			[Var b(1423):StringBuf] [New:StringBuf] StringBuf
+			[Call:Void]
+				[Field:(c : Int) -> Void]
+					[Local b(1423):StringBuf:StringBuf]
+					[FInstance:(c : Int) -> Void]
+						StringBuf
+						addChar:(c : Int) -> Void
+				[Const:Int] 91
+			[Try:Void]
+				[Block:Void]
+					[Var _g(1429):Int] [Const:Int] 0
+					[Var _g1(1430):Int]
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+					[While:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local _g(1429):Int:Int]
+								<
+								[Local _g1(1430):Int:Int]
+						[Block:Dynamic]
+							[Var i(1424):Int]
+								[Unop:Int]
+									++
+									Postfix
+									[Local _g(1429):Int:Int]
+							[If:Void]
+								[Parenthesis:Bool]
+									[Binop:Bool]
+										[Local i(1424):Int:Int]
+										>
+										[Const:Int] 0
+								[Then:Void] [Call:Void]
+									[Field:(c : Int) -> Void]
+										[Local b(1423):StringBuf:StringBuf]
+										[FInstance:(c : Int) -> Void]
+											StringBuf
+											addChar:(c : Int) -> Void
+									[Const:Int] 44
+							[Var this1(1427):hl.NativeArray<Dynamic>]
+								[Field:hl.NativeArray<Dynamic>]
+									[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+									[FInstance:hl.NativeArray<Dynamic>]
+										hl.types.ArrayObj<hl.types.ArrayObj.T>
+										array:hl.NativeArray<Dynamic>
+							[Call:Void]
+								[Field:(x : Unknown<60>) -> Void]
+									[Local b(1423):StringBuf:StringBuf]
+									[FInstance:(x : Unknown<60>) -> Void]
+										StringBuf
+										add:(x : add.T) -> Void
+								[Call:Dynamic]
+									[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+									[Local this1(1427):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+									[Local i(1424):Int:Int]
+				Catch [Local _g(9409):Dynamic]
+					[Block:Void]
+						[Block:Void] [Const:Unknown<57>] null
+						[Var e(1431):Dynamic]
+							[Cast:Dynamic]
+								[Call:Any]
+									[Field:() -> Any]
+										[Call:haxe.Exception]
+											[Field:(value : Any) -> haxe.Exception]
+												[TypeExpr haxe.Exception:{ Statics haxe.Exception }]
+												[FStatic:(value : Any) -> haxe.Exception]
+													haxe.Exception
+													caught:(value : Any) -> haxe.Exception
+											[Local _g(9409):Dynamic:Dynamic]
+										[FInstance:() -> Any]
+											haxe.Exception
+											unwrap:() -> Any
+						[Block:Void]
+							[Unop:Int]
+								--
+								Postfix
+								[Field:Int]
+									[TypeExpr Std:Class<Std>]
+									[FStatic:Int]
+										Std
+										toStringDepth:Int
+							[Call:Unknown<59>]
+								[Ident:Dynamic -> Unknown<58>] $rethrow
+								[Local e(1431):Dynamic:Dynamic]
+			[Call:Void]
+				[Field:(c : Int) -> Void]
+					[Local b(1423):StringBuf:StringBuf]
+					[FInstance:(c : Int) -> Void]
+						StringBuf
+						addChar:(c : Int) -> Void
+				[Const:Int] 93
+			[Unop:Int]
+				--
+				Postfix
+				[Field:Int]
+					[TypeExpr Std:Class<Std>]
+					[FStatic:Int]
+						Std
+						toStringDepth:Int
+			[Return:Dynamic]
+				[Call:String]
+					[Field:() -> String]
+						[Local b(1423):StringBuf:StringBuf]
+						[FInstance:() -> String]
+							StringBuf
+							toString:() -> String
+
+	public function unshift[Function:(x : hl.types.ArrayObj.T) -> Void]
+		[Arg:hl.types.ArrayObj.T] [Local x(1435):hl.types.ArrayObj.T]
+		[Block:Dynamic]
+			[Var this1(1438):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						==
+						[Call:Int]
+							[Ident:hl.NativeArray<Dynamic> -> Unknown<15>] $asize
+							[Local this1(1438):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							__expand:(index : Int) -> Void
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[Else:Int] [Unop:Int]
+					++
+					Postfix
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Const:Int] 1
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Const:Int] 0
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					-
+					[Const:Int] 1
+			[Block:Dynamic]
+				[Var this1(1441):hl.NativeArray<Dynamic>]
+					[Field:hl.NativeArray<Dynamic>]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:hl.NativeArray<Dynamic>]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							array:hl.NativeArray<Dynamic>
+				[Call:Unknown<34>]
+					[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+					[Local this1(1441):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Const:Int] 0
+					[Local x(1435):hl.types.ArrayObj.T:hl.types.ArrayObj.T]
+
+	public function insert[Function:(pos : Int, x : hl.types.ArrayObj.T) -> Void]
+		[Arg:Int] [Local pos(1444):Int]
+		[Arg:hl.types.ArrayObj.T] [Local x(1445):hl.types.ArrayObj.T]
+		[Block:Dynamic]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(1444):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Void] [Block:Void]
+					[Binop:Int]
+						[Local pos(1444):Int:Int]
+						=
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							+
+							[Local pos(1444):Int:Int]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local pos(1444):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local pos(1444):Int:Int]
+							=
+							[Const:Int] 0
+				[Else:Void] [If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local pos(1444):Int:Int]
+							>
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+					[Then:Int] [Binop:Int]
+						[Local pos(1444):Int:Int]
+						=
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+			[Var this1(1448):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						==
+						[Call:Int]
+							[Ident:hl.NativeArray<Dynamic> -> Unknown<15>] $asize
+							[Local this1(1448):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							__expand:(index : Int) -> Void
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[Else:Int] [Unop:Int]
+					++
+					Postfix
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Binop:Int]
+					[Local pos(1444):Int:Int]
+					+
+					[Const:Int] 1
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Local pos(1444):Int:Int]
+				[Binop:Int]
+					[Binop:Int]
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						-
+						[Local pos(1444):Int:Int]
+					-
+					[Const:Int] 1
+			[Block:Dynamic]
+				[Var this1(1451):hl.NativeArray<Dynamic>]
+					[Field:hl.NativeArray<Dynamic>]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:hl.NativeArray<Dynamic>]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							array:hl.NativeArray<Dynamic>
+				[Call:Unknown<34>]
+					[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+					[Local this1(1451):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local pos(1444):Int:Int]
+					[Local x(1445):hl.types.ArrayObj.T:hl.types.ArrayObj.T]
+
+	public function contains[Function:(x : hl.types.ArrayObj.T) -> Bool]
+		[Arg:hl.types.ArrayObj.T] [Local x(1454):hl.types.ArrayObj.T]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Binop:Bool]
+					[Call:Int]
+						[Field:(x : hl.types.ArrayObj.T, ?fromIndex : Null<Int>) -> Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:(x : hl.types.ArrayObj.T, ?fromIndex : Null<Int>) -> Int]
+								hl.types.ArrayObj<hl.types.ArrayObj.T>
+								indexOf:(x : hl.types.ArrayObj.T, ?fromIndex : Null<Int>) -> Int
+						[Local x(1454):hl.types.ArrayObj.T:hl.types.ArrayObj.T]
+						[Const:Null<Int>] null
+					!=
+					[Const:Int] -1
+
+	public function remove[Function:(x : hl.types.ArrayObj.T) -> Bool]
+		[Arg:hl.types.ArrayObj.T] [Local x(1464):hl.types.ArrayObj.T]
+		[Block:Dynamic]
+			[Var i(1465):Int]
+				[Call:Int]
+					[Field:(x : hl.types.ArrayObj.T, ?fromIndex : Null<Int>) -> Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:(x : hl.types.ArrayObj.T, ?fromIndex : Null<Int>) -> Int]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							indexOf:(x : hl.types.ArrayObj.T, ?fromIndex : Null<Int>) -> Int
+					[Local x(1464):hl.types.ArrayObj.T:hl.types.ArrayObj.T]
+					[Const:Null<Int>] null
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local i(1465):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Dynamic] [Return:Dynamic] [Const:Bool] false
+			[Unop:Int]
+				--
+				Postfix
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Local i(1465):Int:Int]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Binop:Int]
+					[Local i(1465):Int:Int]
+					+
+					[Const:Int] 1
+				[Binop:Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+					-
+					[Local i(1465):Int:Int]
+			[Block:Dynamic]
+				[Var this1(1468):hl.NativeArray<Dynamic>]
+					[Field:hl.NativeArray<Dynamic>]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:hl.NativeArray<Dynamic>]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							array:hl.NativeArray<Dynamic>
+				[Var pos(1469):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[Var value(1470):Dynamic] [Const:Unknown<61>] null
+				[Call:Unknown<34>]
+					[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+					[Local this1(1468):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local pos(1469):Int:Int]
+					[Local value(1470):Dynamic:Dynamic]
+			[Return:Dynamic] [Const:Bool] true
+
+	public function indexOf[Function:(x : hl.types.ArrayObj.T, ?fromIndex : Null<Int>) -> Int]
+		[Arg:hl.types.ArrayObj.T] [Local x(1455):hl.types.ArrayObj.T]
+		[Arg:Null<Int>]
+			[Local fromIndex(1456):Null<Int>]
+			[Const:Null<Int>] null
+		[Block:Dynamic]
+			[Var i(1457):Int] [Local fromIndex(1456):Null<Int>:Null<Int>]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local i(1457):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Void] [Block:Void]
+					[Binop:Int]
+						[Local i(1457):Int:Int]
+						+=
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local i(1457):Int:Int]
+								<
+								[Const:Int] 0
+						[Then:Int] [Binop:Int]
+							[Local i(1457):Int:Int]
+							=
+							[Const:Int] 0
+			[Var length(1458):Int]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var array(1459):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[While:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local i(1457):Int:Int]
+						<
+						[Local length(1458):Int:Int]
+				[Block:Dynamic]
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Call:Dynamic]
+									[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+									[Local array(1459):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+									[Local i(1457):Int:Int]
+								==
+								[Local x(1455):hl.types.ArrayObj.T:hl.types.ArrayObj.T]
+						[Then:Dynamic] [Return:Dynamic] [Local i(1457):Int:Int]
+					[Unop:Int]
+						++
+						Prefix
+						[Local i(1457):Int:Int]
+			[Return:Dynamic] [Const:Int] -1
+
+	public function blit[Function:(pos : Int, src : hl.types.ArrayAccess, srcpos : Int, len : Int) -> Void]
+		[Arg:Int] [Local pos(1471):Int]
+		[Arg:hl.types.ArrayAccess] [Local src(1472):hl.types.ArrayAccess]
+		[Arg:Int] [Local srcpos(1473):Int]
+		[Arg:Int] [Local len(1474):Int]
+		[Block:Void]
+			[Var src(1475):hl.types.ArrayObj<hl.types.ArrayObj.T>] [Cast:hl.types.ArrayObj<hl.types.ArrayObj.T>] [Local src(1472):hl.types.ArrayAccess:hl.types.ArrayAccess]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Binop:Bool]
+							[Binop:Bool]
+								[Binop:Bool]
+									[Binop:Bool]
+										[Local pos(1471):Int:Int]
+										<
+										[Const:Int] 0
+									||
+									[Binop:Bool]
+										[Local srcpos(1473):Int:Int]
+										<
+										[Const:Int] 0
+								||
+								[Binop:Bool]
+									[Local len(1474):Int:Int]
+									<
+									[Const:Int] 0
+							||
+							[Binop:Bool]
+								[Binop:Int]
+									[Local pos(1471):Int:Int]
+									+
+									[Local len(1474):Int:Int]
+								>
+								[Field:Int]
+									[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+									[FInstance:Int]
+										hl.types.ArrayBase
+										length:Int
+						||
+						[Binop:Bool]
+							[Binop:Int]
+								[Local srcpos(1473):Int:Int]
+								+
+								[Local len(1474):Int:Int]
+							>
+							[Field:Int]
+								[Local src(1475):hl.types.ArrayObj<hl.types.ArrayObj.T>:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+				[Then:Dynamic] [Throw:Dynamic]
+					[Call:Any]
+						[Field:(value : Any) -> Any]
+							[TypeExpr haxe.Exception:{ Statics haxe.Exception }]
+							[FStatic:(value : Any) -> Any]
+								haxe.Exception
+								thrown:(value : Any) -> Any
+						[Field:haxe.io.Error]
+							[TypeExpr haxe.io.Error:Enum<haxe.io.Error>]
+							[FEnum:haxe.io.Error]
+								haxe.io.Error
+								OutsideBounds
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Local pos(1471):Int:Int]
+				[Field:hl.NativeArray<Dynamic>]
+					[Local src(1475):hl.types.ArrayObj<hl.types.ArrayObj.T>:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Local srcpos(1473):Int:Int]
+				[Local len(1474):Int:Int]
+
+	public function lastIndexOf[Function:(x : hl.types.ArrayObj.T, ?fromIndex : Null<Int>) -> Int]
+		[Arg:hl.types.ArrayObj.T] [Local x(1480):hl.types.ArrayObj.T]
+		[Arg:Null<Int>]
+			[Local fromIndex(1481):Null<Int>]
+			[Const:Null<Int>] null
+		[Block:Dynamic]
+			[Var len(1482):Int]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var i(1483):Int]
+				[If:Int]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local fromIndex(1481):Null<Int>:Null<Int>]
+							!=
+							[Const:Null<Int>] null
+					[Then:Null<Int>] [Local fromIndex(1481):Null<Int>:Null<Int>]
+					[Else:Int] [Binop:Int]
+						[Local len(1482):Int:Int]
+						-
+						[Const:Int] 1
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local i(1483):Int:Int]
+						>=
+						[Local len(1482):Int:Int]
+				[Then:Int] [Binop:Int]
+					[Local i(1483):Int:Int]
+					=
+					[Binop:Int]
+						[Local len(1482):Int:Int]
+						-
+						[Const:Int] 1
+				[Else:Void] [If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local i(1483):Int:Int]
+							<
+							[Const:Int] 0
+					[Then:Int] [Binop:Int]
+						[Local i(1483):Int:Int]
+						+=
+						[Local len(1482):Int:Int]
+			[While:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local i(1483):Int:Int]
+						>=
+						[Const:Int] 0
+				[Block:Dynamic]
+					[Var this1(1486):hl.NativeArray<Dynamic>]
+						[Field:hl.NativeArray<Dynamic>]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:hl.NativeArray<Dynamic>]
+								hl.types.ArrayObj<hl.types.ArrayObj.T>
+								array:hl.NativeArray<Dynamic>
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Call:Dynamic]
+									[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+									[Local this1(1486):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+									[Local i(1483):Int:Int]
+								==
+								[Local x(1480):hl.types.ArrayObj.T:hl.types.ArrayObj.T]
+						[Then:Dynamic] [Return:Dynamic] [Local i(1483):Int:Int]
+					[Unop:Int]
+						--
+						Prefix
+						[Local i(1483):Int:Int]
+			[Return:Dynamic] [Const:Int] -1
+
+	public function copy[Function:() -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+		[Block:Dynamic]
+			[Var length(1490):Int]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Var this1(1491):hl.NativeArray<Dynamic>]
+				[Call:hl.NativeArray<Dynamic>]
+					[Ident:Int -> Unknown<17>] $aalloc
+					[Local length(1490):Int:Int]
+			[Var n(1492):hl.NativeArray<Dynamic>] [Local this1(1491):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+			[Call:Void]
+				[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+					[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+					[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+						hl._NativeArray.NativeArray_Impl_
+						blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+				[Local n(1492):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+				[Const:Int] 0
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+				[Const:Int] 0
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+			[Return:Dynamic]
+				[Call:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+					[Field:(a : hl.NativeArray<hl.types.ArrayObj.T>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+						[TypeExpr hl.types.ArrayObj:Class<hl.types.ArrayObj>]
+						[FStatic:(a : hl.NativeArray<hl.types.ArrayObj.T>) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+							hl.types.ArrayObj
+							alloc:(a : hl.NativeArray<alloc.T>) -> hl.types.ArrayObj<alloc.T>
+					[Local n(1492):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+
+	public function iterator[Function:() -> haxe.iterators.ArrayIterator<hl.types.ArrayObj.T>]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[New:hl.types.ArrayObjIterator<hl.types.ArrayObj.T>]
+					hl.types.ArrayObjIterator<hl.types.ArrayObj.T>
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+
+	public function keyValueIterator[Function:() -> haxe.iterators.ArrayKeyValueIterator<hl.types.ArrayObj.T>]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[New:hl.types.ArrayObjKeyValueIterator<hl.types.ArrayObj.T>]
+					hl.types.ArrayObjKeyValueIterator<hl.types.ArrayObj.T>
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+
+	public function map<S>[Function:(f : (hl.types.ArrayObj.T -> map.S)) -> hl.types.ArrayDyn]
+		[Arg:hl.types.ArrayObj.T -> map.S] [Local f(1493):hl.types.ArrayObj.T -> map.S]
+		[Block:Dynamic]
+			[Var a(1494):hl.types.ArrayObj<Unknown<62>>] [New:hl.types.ArrayObj<Unknown<62>>] hl.types.ArrayObj<Unknown<62>>
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						>
+						[Const:Int] 0
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Local a(1494):hl.types.ArrayObj<Unknown<62>>:hl.types.ArrayObj<Unknown<62>>]
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayObj<Unknown<62>>
+							__expand:(index : Int) -> Void
+					[Binop:Int]
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						-
+						[Const:Int] 1
+			[Block:Void]
+				[Var _g(1505):Int] [Const:Int] 0
+				[Var _g1(1506):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(1505):Int:Int]
+							<
+							[Local _g1(1506):Int:Int]
+					[Block:Dynamic]
+						[Var i(1495):Int]
+							[Unop:Int]
+								++
+								Postfix
+								[Local _g(1505):Int:Int]
+						[Block:Dynamic]
+							[Var this1(1502):hl.NativeArray<Dynamic>]
+								[Field:hl.NativeArray<Dynamic>]
+									[Local a(1494):hl.types.ArrayObj<Unknown<62>>:hl.types.ArrayObj<Unknown<62>>]
+									[FInstance:hl.NativeArray<Dynamic>]
+										hl.types.ArrayObj<Unknown<62>>
+										array:hl.NativeArray<Dynamic>
+							[Var this2(1498):hl.NativeArray<Dynamic>]
+								[Field:hl.NativeArray<Dynamic>]
+									[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+									[FInstance:hl.NativeArray<Dynamic>]
+										hl.types.ArrayObj<hl.types.ArrayObj.T>
+										array:hl.NativeArray<Dynamic>
+							[Var value(1504):Dynamic]
+								[Call:map.S]
+									[Local f(1493):hl.types.ArrayObj.T -> map.S:hl.types.ArrayObj.T -> map.S]
+									[Call:Dynamic]
+										[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+										[Local this2(1498):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+										[Local i(1495):Int:Int]
+							[Call:Unknown<34>]
+								[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+								[Local this1(1502):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+								[Local i(1495):Int:Int]
+								[Local value(1504):Dynamic:Dynamic]
+			[Return:Dynamic]
+				[Call:hl.types.ArrayDyn]
+					[Field:(a : hl.types.ArrayBase, ?allowReinterpret : Bool) -> hl.types.ArrayDyn]
+						[TypeExpr hl.types.ArrayDyn:Class<hl.types.ArrayDyn>]
+						[FStatic:(a : hl.types.ArrayBase, ?allowReinterpret : Bool) -> hl.types.ArrayDyn]
+							hl.types.ArrayDyn
+							alloc:(a : hl.types.ArrayBase, ?allowReinterpret : Bool) -> hl.types.ArrayDyn
+					[Local a(1494):hl.types.ArrayObj<Unknown<62>>:hl.types.ArrayObj<Unknown<62>>]
+					[Const:Bool] true
+
+	public function filter[Function:(f : (hl.types.ArrayObj.T -> Bool)) -> hl.types.ArrayObj<hl.types.ArrayObj.T>]
+		[Arg:hl.types.ArrayObj.T -> Bool] [Local f(1507):hl.types.ArrayObj.T -> Bool]
+		[Block:Dynamic]
+			[Var a(1508):hl.types.ArrayObj<hl.types.ArrayObj.T>] [New:hl.types.ArrayObj<hl.types.ArrayObj.T>] hl.types.ArrayObj<hl.types.ArrayObj.T>
+			[Block:Void]
+				[Var _g(1515):Int] [Const:Int] 0
+				[Var _g1(1516):Int]
+					[Field:Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:Int]
+							hl.types.ArrayBase
+							length:Int
+				[While:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Local _g(1515):Int:Int]
+							<
+							[Local _g1(1516):Int:Int]
+					[Block:Dynamic]
+						[Var i(1509):Int]
+							[Unop:Int]
+								++
+								Postfix
+								[Local _g(1515):Int:Int]
+						[Var this1(1512):hl.NativeArray<Dynamic>]
+							[Field:hl.NativeArray<Dynamic>]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:hl.NativeArray<Dynamic>]
+									hl.types.ArrayObj<hl.types.ArrayObj.T>
+									array:hl.NativeArray<Dynamic>
+						[Var v(1514):hl.types.ArrayObj.T]
+							[Call:Dynamic]
+								[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+								[Local this1(1512):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+								[Local i(1509):Int:Int]
+						[If:Void]
+							[Parenthesis:Bool]
+								[Call:Bool]
+									[Local f(1507):hl.types.ArrayObj.T -> Bool:hl.types.ArrayObj.T -> Bool]
+									[Local v(1514):hl.types.ArrayObj.T:hl.types.ArrayObj.T]
+							[Then:Int] [Call:Int]
+								[Field:(x : hl.types.ArrayObj.T) -> Int]
+									[Local a(1508):hl.types.ArrayObj<hl.types.ArrayObj.T>:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+									[FInstance:(x : hl.types.ArrayObj.T) -> Int]
+										hl.types.ArrayObj<hl.types.ArrayObj.T>
+										push:(x : hl.types.ArrayObj.T) -> Int
+								[Local v(1514):hl.types.ArrayObj.T:hl.types.ArrayObj.T]
+			[Return:Dynamic] [Local a(1508):hl.types.ArrayObj<hl.types.ArrayObj.T>:hl.types.ArrayObj<hl.types.ArrayObj.T>]
+
+	public function resize[Function:(len : Int) -> Void]
+		[Arg:Int] [Local len(1517):Int]
+		[Block:Void]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+						<
+						[Local len(1517):Int:Int]
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							__expand:(index : Int) -> Void
+					[Binop:Int]
+						[Local len(1517):Int:Int]
+						-
+						[Const:Int] 1
+				[Else:Void] [If:Void]
+					[Parenthesis:Bool]
+						[Binop:Bool]
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							>
+							[Local len(1517):Int:Int]
+					[Then:Int] [Block:Int]
+						[Block:Void]
+							[Var _g(1524):Int]
+								[Field:Int]
+									[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+									[FInstance:Int]
+										hl.types.ArrayBase
+										length:Int
+							[Var _g1(1525):Int] [Local len(1517):Int:Int]
+							[While:Void]
+								[Parenthesis:Bool]
+									[Binop:Bool]
+										[Local _g(1524):Int:Int]
+										<
+										[Local _g1(1525):Int:Int]
+								[Block:Dynamic]
+									[Var i(1518):Int]
+										[Unop:Int]
+											++
+											Postfix
+											[Local _g(1524):Int:Int]
+									[Block:Dynamic]
+										[Var this1(1521):hl.NativeArray<Dynamic>]
+											[Field:hl.NativeArray<Dynamic>]
+												[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+												[FInstance:hl.NativeArray<Dynamic>]
+													hl.types.ArrayObj<hl.types.ArrayObj.T>
+													array:hl.NativeArray<Dynamic>
+										[Var value(1523):Dynamic] [Const:Unknown<63>] null
+										[Call:Unknown<34>]
+											[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+											[Local this1(1521):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+											[Local i(1518):Int:Int]
+											[Local value(1523):Dynamic:Dynamic]
+						[Binop:Int]
+							[Field:Int]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:Int]
+									hl.types.ArrayBase
+									length:Int
+							=
+							[Local len(1517):Int:Int]
+
+	function __expand[Function:(index : Int) -> Void]
+		[Arg:Int] [Local index(1256):Int]
+		[Block:Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local index(1256):Int:Int]
+						<
+						[Const:Int] 0
+				[Then:Dynamic] [Throw:Dynamic]
+					[Call:Any]
+						[Field:(value : Any) -> Any]
+							[TypeExpr haxe.Exception:{ Statics haxe.Exception }]
+							[FStatic:(value : Any) -> Any]
+								haxe.Exception
+								thrown:(value : Any) -> Any
+						[Binop:String]
+							[Const:String] "Invalid array index "
+							+
+							[Local index(1256):Int:Int]
+			[Var newlen(1257):Int]
+				[Binop:Int]
+					[Local index(1256):Int:Int]
+					+
+					[Const:Int] 1
+			[Var this1(1260):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[Var size(1261):Int]
+				[Call:Int]
+					[Ident:hl.NativeArray<Dynamic> -> Unknown<15>] $asize
+					[Local this1(1260):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local newlen(1257):Int:Int]
+						>
+						[Local size(1261):Int:Int]
+				[Then:hl.NativeArray<Dynamic>] [Block:hl.NativeArray<Dynamic>]
+					[Var next(1262):Int]
+						[Binop:Int]
+							[Binop:Int]
+								[Local size(1261):Int:Int]
+								*
+								[Const:Int] 3
+							>>
+							[Const:Int] 1
+					[If:Void]
+						[Parenthesis:Bool]
+							[Binop:Bool]
+								[Local next(1262):Int:Int]
+								<
+								[Local newlen(1257):Int:Int]
+						[Then:Int] [Binop:Int]
+							[Local next(1262):Int:Int]
+							=
+							[Local newlen(1257):Int:Int]
+					[Var this1(1266):hl.NativeArray<Dynamic>]
+						[Call:hl.NativeArray<Dynamic>]
+							[Ident:Int -> Unknown<17>] $aalloc
+							[Local next(1262):Int:Int]
+					[Var arr2(1267):hl.NativeArray<Dynamic>] [Local this1(1266):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Call:Void]
+						[Field:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+							[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+							[FStatic:(this : hl.NativeArray<Dynamic>, pos : Int, src : hl.NativeArray<Dynamic>, srcPos : Int, srcLen : Int) -> Void]
+								hl._NativeArray.NativeArray_Impl_
+								blit:(this : hl.NativeArray<hl.NativeArray.T>, pos : Int, src : hl.NativeArray<hl.NativeArray.T>, srcPos : Int, srcLen : Int) -> Void
+						[Local arr2(1267):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+						[Const:Int] 0
+						[Field:hl.NativeArray<Dynamic>]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:hl.NativeArray<Dynamic>]
+								hl.types.ArrayObj<hl.types.ArrayObj.T>
+								array:hl.NativeArray<Dynamic>
+						[Const:Int] 0
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+					[Binop:hl.NativeArray<Dynamic>]
+						[Field:hl.NativeArray<Dynamic>]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:hl.NativeArray<Dynamic>]
+								hl.types.ArrayObj<hl.types.ArrayObj.T>
+								array:hl.NativeArray<Dynamic>
+						=
+						[Local arr2(1267):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+			[Binop:Int]
+				[Field:Int]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				=
+				[Local newlen(1257):Int:Int]
+
+	public function getDyn[Function:(pos : Int) -> Dynamic]
+		[Arg:Int] [Local pos(1527):Int]
+		[Block:Dynamic]
+			[Var pos(1528):UInt] [Local pos(1527):Int:Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(1528):UInt:UInt]
+						>=
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+				[Then:Dynamic] [Return:Dynamic] [Const:Unknown<64>] null
+			[Var this1(1531):hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						array:hl.NativeArray<Dynamic>
+			[Return:Dynamic]
+				[Call:Dynamic]
+					[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
+					[Local this1(1531):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local pos(1528):UInt:UInt]
+
+	public function setDyn[Function:(pos : Int, v : Dynamic) -> Void]
+		[Arg:Int] [Local pos(1533):Int]
+		[Arg:Dynamic] [Local v(1534):Dynamic]
+		[Block:Dynamic]
+			[Var pos(1535):UInt] [Local pos(1533):Int:Int]
+			[If:Void]
+				[Parenthesis:Bool]
+					[Binop:Bool]
+						[Local pos(1535):UInt:UInt]
+						>=
+						[Field:Int]
+							[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+							[FInstance:Int]
+								hl.types.ArrayBase
+								length:Int
+				[Then:Void] [Call:Void]
+					[Field:(index : Int) -> Void]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:(index : Int) -> Void]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							__expand:(index : Int) -> Void
+					[Local pos(1535):UInt:UInt]
+			[Block:Dynamic]
+				[Var this1(1538):hl.NativeArray<Dynamic>]
+					[Field:hl.NativeArray<Dynamic>]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:hl.NativeArray<Dynamic>]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							array:hl.NativeArray<Dynamic>
+				[Var value(1540):Dynamic]
+					[Call:Dynamic]
+						[Field:(v : Dynamic, t : hl.Type) -> Dynamic]
+							[TypeExpr hl.Api:Class<hl.Api>]
+							[FStatic:(v : Dynamic, t : hl.Type) -> Dynamic]
+								hl.Api
+								safeCast:(v : Dynamic, t : hl.Type) -> Dynamic
+						[Local v(1534):Dynamic:Dynamic]
+						[Call:hl.Type]
+							[Field:(this : hl.NativeArray<Dynamic>) -> hl.Type]
+								[TypeExpr hl._NativeArray.NativeArray_Impl_:{ Statics hl._NativeArray.NativeArray_Impl_ }]
+								[FStatic:(this : hl.NativeArray<Dynamic>) -> hl.Type]
+									hl._NativeArray.NativeArray_Impl_
+									getType:(this : hl.NativeArray<hl.NativeArray.T>) -> hl.Type
+							[Field:hl.NativeArray<Dynamic>]
+								[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+								[FInstance:hl.NativeArray<Dynamic>]
+									hl.types.ArrayObj<hl.types.ArrayObj.T>
+									array:hl.NativeArray<Dynamic>
+				[Call:Unknown<34>]
+					[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
+					[Local this1(1538):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local pos(1535):UInt:UInt]
+					[Local value(1540):Dynamic:Dynamic]
+
+	public function pushDyn[Function:(v : Dynamic) -> Int]
+		[Arg:Dynamic] [Local v(1543):Dynamic]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Int]
+					[Field:(x : hl.types.ArrayObj.T) -> Int]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:(x : hl.types.ArrayObj.T) -> Int]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							push:(x : hl.types.ArrayObj.T) -> Int
+					[Local v(1543):Dynamic:Dynamic]
+
+	public function popDyn[Function:() -> Null<Dynamic>]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Null<hl.types.ArrayObj.T>]
+					[Field:() -> Null<hl.types.ArrayObj.T>]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:() -> Null<hl.types.ArrayObj.T>]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							pop:() -> Null<hl.types.ArrayObj.T>
+
+	public function shiftDyn[Function:() -> Null<Dynamic>]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Null<hl.types.ArrayObj.T>]
+					[Field:() -> Null<hl.types.ArrayObj.T>]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:() -> Null<hl.types.ArrayObj.T>]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							shift:() -> Null<hl.types.ArrayObj.T>
+
+	public function unshiftDyn[Function:(v : Dynamic) -> Void]
+		[Arg:Dynamic] [Local v(1545):Dynamic]
+		[Block:Void]
+			[Call:Void]
+				[Field:(x : hl.types.ArrayObj.T) -> Void]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:(x : hl.types.ArrayObj.T) -> Void]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						unshift:(x : hl.types.ArrayObj.T) -> Void
+				[Local v(1545):Dynamic:Dynamic]
+
+	public function insertDyn[Function:(pos : Int, v : Dynamic) -> Void]
+		[Arg:Int] [Local pos(1547):Int]
+		[Arg:Dynamic] [Local v(1548):Dynamic]
+		[Block:Void]
+			[Call:Void]
+				[Field:(pos : Int, x : hl.types.ArrayObj.T) -> Void]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:(pos : Int, x : hl.types.ArrayObj.T) -> Void]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						insert:(pos : Int, x : hl.types.ArrayObj.T) -> Void
+				[Local pos(1547):Int:Int]
+				[Local v(1548):Dynamic:Dynamic]
+
+	public function containsDyn[Function:(v : Dynamic) -> Bool]
+		[Arg:Dynamic] [Local v(1551):Dynamic]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Bool]
+					[Field:(x : hl.types.ArrayObj.T) -> Bool]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:(x : hl.types.ArrayObj.T) -> Bool]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							contains:(x : hl.types.ArrayObj.T) -> Bool
+					[Local v(1551):Dynamic:Dynamic]
+
+	public function removeDyn[Function:(v : Dynamic) -> Bool]
+		[Arg:Dynamic] [Local v(1553):Dynamic]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Bool]
+					[Field:(x : hl.types.ArrayObj.T) -> Bool]
+						[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+						[FInstance:(x : hl.types.ArrayObj.T) -> Bool]
+							hl.types.ArrayObj<hl.types.ArrayObj.T>
+							remove:(x : hl.types.ArrayObj.T) -> Bool
+					[Local v(1553):Dynamic:Dynamic]
+
+	public function sortDyn[Function:(f : ((Dynamic, Dynamic) -> Int)) -> Void]
+		[Arg:(Dynamic, Dynamic) -> Int] [Local f(1555):(Dynamic, Dynamic) -> Int]
+		[Block:Void]
+			[Call:Void]
+				[Field:(f : ((hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int)) -> Void]
+					[Const:hl.types.ArrayObj<hl.types.ArrayObj.T>] this
+					[FInstance:(f : ((hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int)) -> Void]
+						hl.types.ArrayObj<hl.types.ArrayObj.T>
+						sort:(f : ((hl.types.ArrayObj.T, hl.types.ArrayObj.T) -> Int)) -> Void
+				[Local f(1555):(Dynamic, Dynamic) -> Int:(Dynamic, Dynamic) -> Int]
+
+	@:has_untyped
+	public static function alloc<T>[Function:(a : hl.NativeArray<alloc.T>) -> hl.types.ArrayObj<alloc.T>]
+		[Arg:hl.NativeArray<alloc.T>] [Local a(1204):hl.NativeArray<alloc.T>]
+		[Block:Dynamic]
+			[Var arr(1205):hl.types.ArrayObj<alloc.T>]
+				[Call:hl.types.ArrayObj<alloc.T>]
+					[Ident:Class<hl.types.ArrayObj> -> Unknown<65>] $new
+					[TypeExpr hl.types.ArrayObj:Class<hl.types.ArrayObj>]
+			[Binop:hl.NativeArray<Dynamic>]
+				[Field:hl.NativeArray<Dynamic>]
+					[Local arr(1205):hl.types.ArrayObj<alloc.T>:hl.types.ArrayObj<alloc.T>]
+					[FInstance:hl.NativeArray<Dynamic>]
+						hl.types.ArrayObj<alloc.T>
+						array:hl.NativeArray<Dynamic>
+				=
+				[Local a(1204):hl.NativeArray<alloc.T>:hl.NativeArray<alloc.T>]
+			[Binop:Int]
+				[Field:Int]
+					[Local arr(1205):hl.types.ArrayObj<alloc.T>:hl.types.ArrayObj<alloc.T>]
+					[FInstance:Int]
+						hl.types.ArrayBase
+						length:Int
+				=
+				[Call:Int]
+					[Ident:hl.NativeArray<alloc.T> -> Unknown<15>] $asize
+					[Local a(1204):hl.NativeArray<alloc.T>:hl.NativeArray<alloc.T>]
+			[Return:Dynamic] [Local arr(1205):hl.types.ArrayObj<alloc.T>:hl.types.ArrayObj<alloc.T>]
+}

@@ -1,0 +1,19 @@
+@:used
+class Main {
+
+	@:keep
+	public static function main[Function:() -> Void]
+		[Block:Void]
+			[Call:Void]
+				[Field:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void]
+					[TypeExpr haxe.Log:Class<haxe.Log>]
+					[FStatic:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void]
+						haxe.Log
+						trace:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void
+				[Const:String] "Hello World"
+				[ObjectDecl:{ methodName : String, lineNumber : Int, fileName : String, className : String }]
+					fileName: [Const:String] "haxesrc/Main.hx"
+					lineNumber: [Const:Int] 7
+					className: [Const:String] "Main"
+					methodName: [Const:String] "main"
+}

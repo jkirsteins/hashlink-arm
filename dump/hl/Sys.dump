@@ -1,0 +1,59 @@
+@:keep @:directlyUsed @:used @:coreApi @:keepInit @:access(String)
+class Sys {
+
+	static var utf8Path:Bool;
+
+	public static function println[Function:(v : Dynamic) -> Void]
+		[Arg:Dynamic] [Local v(4179):Dynamic]
+		[Block:Void]
+			[Call:Void]
+				[Field:(v : hl.Bytes) -> Void]
+					[TypeExpr Sys:Class<Sys>]
+					[FStatic:(v : hl.Bytes) -> Void]
+						Sys
+						sys_print:(v : hl.Bytes) -> Void
+				[Field:hl.Bytes]
+					[Call:String]
+						[Field:(s : Dynamic) -> String]
+							[TypeExpr Std:Class<Std>]
+							[FStatic:(s : Dynamic) -> String]
+								Std
+								string:(s : Dynamic) -> String
+						[Local v(4179):Dynamic:Dynamic]
+					[FInstance:hl.Bytes]
+						String
+						bytes:hl.Bytes
+			[Call:Void]
+				[Field:(v : hl.Bytes) -> Void]
+					[TypeExpr Sys:Class<Sys>]
+					[FStatic:(v : hl.Bytes) -> Void]
+						Sys
+						sys_print:(v : hl.Bytes) -> Void
+				[Field:hl.Bytes]
+					[Const:String] "\n"
+					[FInstance:hl.Bytes]
+						String
+						bytes:hl.Bytes
+
+	@:hlNative("std", "sys_utf8_path")
+	static function sys_utf8_path[Function:() -> Bool] [Block:Dynamic] [Return:Dynamic] [Const:Bool] false
+
+	@:hlNative("std", "sys_print")
+	static function sys_print[Function:(v : hl.Bytes) -> Void]
+		[Arg:hl.Bytes] [Local v(4180):hl.Bytes]
+		[Block:Void]
+
+	static function __init__() [Binop:Bool]
+		[Field:Bool]
+			[TypeExpr Sys:Class<Sys>]
+			[FStatic:Bool]
+				Sys
+				utf8Path:Bool
+		=
+		[Call:Bool]
+			[Field:() -> Bool]
+				[TypeExpr Sys:Class<Sys>]
+				[FStatic:() -> Bool]
+					Sys
+					sys_utf8_path:() -> Bool
+}

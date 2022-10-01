@@ -1,0 +1,43 @@
+@:keep @:directlyUsed @:used
+class haxe.ValueException extends haxe.Exception {
+
+	public function new[Function:(value : Any, ?previous : Null<haxe.Exception>, ?native : Null<Any>) -> Void]
+		[Arg:Any] [Local value(1845):Any]
+		[Arg:Null<haxe.Exception>]
+			[Local previous(1846):Null<haxe.Exception>]
+			[Const:Null<haxe.Exception>] null
+		[Arg:Null<Any>]
+			[Local native(1847):Null<Any>]
+			[Const:Null<Any>] null
+		[Block:Any]
+			[Call:Void]
+				[Const:haxe.Exception] super
+				[Call:String]
+					[Field:(s : Dynamic) -> String]
+						[TypeExpr Std:Class<Std>]
+						[FStatic:(s : Dynamic) -> String]
+							Std
+							string:(s : Dynamic) -> String
+					[Cast:Dynamic] [Local value(1845):Any:Any]
+				[Local previous(1846):Null<haxe.Exception>:Null<haxe.Exception>]
+				[Local native(1847):Null<Any>:Null<Any>]
+			[Binop:Any]
+				[Field:Any]
+					[Const:haxe.ValueException] this
+					[FInstance:Any]
+						haxe.ValueException
+						value:Any
+				=
+				[Local value(1845):Any:Any]
+
+	public var value(default,null):Any;
+
+	function unwrap[Function:() -> Any]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Field:Any]
+					[Const:haxe.ValueException] this
+					[FInstance:Any]
+						haxe.ValueException
+						value:Any
+}

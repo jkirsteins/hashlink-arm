@@ -1,0 +1,3 @@
+@:keep
+class hl.CoreEnum extends hl.Enum {
+}
