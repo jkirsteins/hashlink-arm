@@ -124,12 +124,6 @@ class ByteReader
             fatalError("Supported version is 4")
         }
 
-        // Tables
-        let stringTable = SharedStorage(wrappedValue: [String]())
-        let typeTable = SharedStorage(wrappedValue: [HLType]())
-        let globalTable = SharedStorage(wrappedValue: [HLGlobal]())
-        let nativeTable = SharedStorage(wrappedValue: [HLNative]())
-        
         //
         let flags = try self.readVarInt()
         let nints = try self.readVarInt()
@@ -145,11 +139,19 @@ class ByteReader
         let constInts = try Array(repeating: 0, count: Int(nints)).map { _ in try self.readInt32() } 
         let constFloats = try Array(repeating: 0, count: Int(nfloats)).map { _ in try self.readDouble() } 
         
+        // Tables
+        let stringTable = SharedStorage(wrappedValue: [String]())
+        let typeTable = SharedStorage(wrappedValue: [HLType]())
+        let globalTable = SharedStorage(wrappedValue: [HLGlobal]())
+        let nativeTable = SharedStorage(wrappedValue: [HLNative]())
+        let functionTable = SharedStorage(wrappedValue: [HLFunction]())
+        
         // Resolvers
         let stringResolver = TableResolver(table: stringTable, count: nstrings)
         let typeResolver = TableResolver(table: typeTable, count: ntypes)
         let globalResolver = TableResolver(table: globalTable, count: nglobals)
         let nativeResolver = TableResolver(table: nativeTable, count: nnatives)
+        let functionResolver = TableResolver(table: functionTable, count: nfunctions)
         
         stringTable.wrappedValue = try self.readStrings(nstrings)
         
@@ -219,21 +221,34 @@ class ByteReader
         }
 
         // functions
-        _ = try Array(repeating: 0, count: Int(nfunctions)).enumerated().map {
+        let loadedFunctions = try Array(repeating: 0, count: Int(nfunctions)).enumerated().map {
             ix, _ in 
 
-            let type = typeResolver.getResolvable(try readIndex())
-            let findex = try readVarInt()
-            let nregs = try readVarInt()
-            let nops = try readVarInt()
+            let type = typeResolver.getResolvable(try self.readIndex())
+            let findex = try self.readVarInt()
+            let nregs = try self.readVarInt()
+            let nops = try self.readVarInt()
 
             let regs = try Array(repeating: 0, count: Int(nregs)).map { _ in 
-                typeResolver.getResolvable(try readIndex())
+                typeResolver.getResolvable(try self.readIndex())
             }
 
-            print("fun \(type.debugDescription) \(nregs) regs \(nops) ops")
+            let ops = try Array(repeating: 0, count: Int(nops)).map { _ in 
+                try HLOpCode.read(from: self)
+            }
+
+            print("fun \(findex) \(type.debugDescription) \(nregs) regs \(nops) ops")
             print("regs", regs)
 
+            return HLFunction(
+                type: type, 
+                findex: findex, 
+                regs: regs, 
+                ops: []
+            )
+            
+            // print(functionTable[24])
+            // fatalError("wip nfunctions loading")
             // let ops = try Array(repeating: 0, count: Int(nops)).map {
                 
             // }
@@ -243,9 +258,15 @@ class ByteReader
             // ? * nops	debuginfo	if has debug info, complicated encoding for file/line info for each instruction
             // var	nassigns	if has debug info && version >= 3
             // 2 * var * nassigns	assigns	tuples (variable name ref, opcode number)
-
-            fatalError("wip nfunctions loading")
+        }.sorted(by: { $0.findex < $1.findex })
+        
+        functionTable.wrappedValue = loadedFunctions
+        
+        print("==> Functions")
+        for (ix, rt) in functionTable.wrappedValue.enumerated() {
+            print("\(ix) : \(rt.debugDescription)")
         }
+        fatalError("")
 
         // constants
         _ = try Array(repeating: 0, count: Int(nconstants)).enumerated().map {
@@ -253,7 +274,7 @@ class ByteReader
 
             fatalError("wip nconstants loading")
         }
-        
+                
         
 
         fatalError("bim \(typeTable.wrappedValue.count)")

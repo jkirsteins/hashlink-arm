@@ -1,6 +1,7 @@
 typealias Reg = Int32
 typealias JumpOffset = Int32
 typealias RefInt = TableIndex
+typealias Ref = TableIndex
 typealias RefFloat = TableIndex
 typealias ValBool = Int32
 typealias RefBytes = TableIndex
@@ -14,6 +15,17 @@ typealias RefEnumConstruct = TableIndex
 // https://github.com/Gui-Yom/hlbc/blob/master/hlbc/src/opcodes.rs
 
 extension HLOpCode {
+    static func read_2reg_varReg(from reader: ByteReader) throws -> (Reg, Ref, [Reg]) {
+        let reg = try reader.readVarInt()
+        let ref = try reader.readIndex()
+        let count = try reader.readUInt8()
+        let regs: [Reg] = try (0..<count).map { _ in 
+            try reader.readVarInt()
+        }
+
+        return (reg, ref, regs)
+    }
+
     static func read(from reader: ByteReader) throws -> HLOpCode {
         let code = try reader.readUInt8()
         switch(code) {
@@ -49,10 +61,18 @@ extension HLOpCode {
             case 26: fatalError(" OCall2 ")
             case 27: fatalError(" OCall3 ")
             case 28: fatalError(" OCall4 ")
-            case 29: fatalError(" OCallN ")
-            case 30: fatalError(" OCallMethod ")
-            case 31: fatalError(" OCallThis ")
-            case 32: fatalError(" OCallClosure ")
+            case 29: 
+                let result = try HLOpCode.read_2reg_varReg(from: reader)
+                return .OCallN(dst: result.0, fun: result.1, args: result.2)
+            case 30: 
+                let result = try HLOpCode.read_2reg_varReg(from: reader)
+                return .OCallMethod(dst: result.0, field: result.1, args: result.2)
+            case 31: 
+                let result = try HLOpCode.read_2reg_varReg(from: reader)
+                return .OCallThis(dst: result.0, field: result.1, args: result.2)
+            case 32: 
+                let result = try HLOpCode.read_2reg_varReg(from: reader)
+                return .OCallClosure(dst: result.0, fun: result.1, args: result.2)
 
             case 33: fatalError(" OStaticClosure ")
             case 34: fatalError(" OInstanceClosure ")
@@ -63,7 +83,10 @@ extension HLOpCode {
             case 38: fatalError(" OField ")
             case 39: fatalError(" OSetField ")
             case 40: fatalError(" OGetThis ")
-            case 41: fatalError(" OSetThis ")
+            case 41: 
+                return .OSetThis(
+                    field: try reader.readIndex(), 
+                    src: try reader.readVarInt())
             case 42: fatalError(" ODynGet ")
             case 43: fatalError(" ODynSet ")
 
@@ -92,7 +115,9 @@ extension HLOpCode {
             case 65: fatalError(" OToVirtual ") 
 
             case 66: fatalError(" OLabel ")
-            case 67: fatalError(" ORet ")
+            case 67: 
+                let reg = try reader.readVarInt()
+                return .ORet(ret: reg)
             case 68: fatalError(" OThrow ")
             case 69: fatalError(" ORethrow ")
             case 70: fatalError(" OSwitch ")
@@ -119,7 +144,9 @@ extension HLOpCode {
             case 88: fatalError(" OUnref ")
             case 89: fatalError(" OSetref ")
 
-            case 90: fatalError(" OMakeEnum ")
+            case 90: 
+                let result = try HLOpCode.read_2reg_varReg(from: reader)
+                return .OMakeEnum(dst: result.0, construct: result.1, args: result.2)
             case 91: fatalError(" OEnumAlloc ")
             case 92: fatalError(" OEnumIndex ")
             case 93: fatalError(" OEnumField ")
@@ -203,7 +230,7 @@ enum HLOpCode {
     /// Call a closure with N arguments. Here *fun* is a register.
     ///
     /// *dst* = *fun*(*arg0*, *arg1*, ...)
-    case OCallClosure(dst: Reg, fun: Reg, args: [Reg])
+    case OCallClosure(dst: Reg, fun: RefFun, args: [Reg])
     /// Create a closure from a function reference.
     ///
     /// *dst* = *fun*
