@@ -42,7 +42,8 @@ struct ModuleHeader : CustomDebugStringConvertible {
     let constInts: [Int32]
     // [f64]
     let constFloats: [Double]
-    let constStrings: [String]
+    
+    let stringResolver: TableResolver<String>
 
     var debugDescription: String {
 return """
@@ -60,7 +61,7 @@ entry @\(entrypoint)
 ??? objects protos (not types)
 \(nconstants) constant values
 strings
-\(constStrings.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
+\(stringResolver.table.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
 """
     }
 }
@@ -79,6 +80,10 @@ class ByteReader
     
     init(_ data: Data) {
         self.data = data
+    }
+
+    func readIndex() throws -> TableIndex {
+        return TableIndex(try readVarInt())
     }
 
     func readVarInt() throws -> Int32 {
@@ -119,6 +124,11 @@ class ByteReader
             fatalError("Supported version is 4")
         }
 
+        // Tables
+        let stringTable = SharedStorage(wrappedValue: [String]())
+        let typeTable = SharedStorage(wrappedValue: [HLType]())
+        
+        //
         let flags = try self.readVarInt()
         let nints = try self.readVarInt()
         let nfloats = try self.readVarInt()
@@ -133,34 +143,74 @@ class ByteReader
         let constInts = try Array(repeating: 0, count: Int(nints)).map { _ in try self.readInt32() } 
         let constFloats = try Array(repeating: 0, count: Int(nfloats)).map { _ in try self.readDouble() } 
         
-        let constStrings = try self.readStrings(nstrings)
-
+        // Resolvers
+        let stringResolver = TableResolver(table: stringTable, count: nstrings)
+        let typeResolver = TableResolver(table: typeTable, count: ntypes)
+        
+        stringTable.wrappedValue = try self.readStrings(nstrings)
+        
         if sig.v >= 5 {
             fatalError("byte reading not implemented")
         }
-        // 24
+        
         let hasdebug = (flags & 1 != 0)
+        let debugEntries: [String]
         if hasdebug {
             let debugEntryCount = try self.readVarInt()
-            let debugEntries = try self.readStrings(debugEntryCount)
-            // print("Got it in \(skipped): \(x)")
-            fatalError("Got \(debugEntries) \(debugEntryCount)")
-            // print(try self.readVarInt())
-            // print(try self.readVarInt())
-            // print(try self.readVarInt())
-            let _debugEntryStringSize = try self.readInt32()
-            // print("Debug entries \(debugEntries)")
-            for _ in 0..<3 { print(try self.readString().count) }
-            let debugStrings = try Array(repeating: 0, count: Int(24)).map { _ in try self.readString() } 
-            print(" \(debugStrings)")
-            fatalError("Yo \(debugEntries) \(_debugEntryStringSize)")
+            debugEntries = try self.readStrings(debugEntryCount)
+        } else {
+            debugEntries = []
         }
 
-        // print("ntypes", ntypes)
-        // fatalError("wat")
+        // only need _resolvableTypes for debug printing
+        let _resolvableTypes = try Array(repeating: 0, count: Int(ntypes)).enumerated().map {
+            ix, _ in 
+
+            let type = try HLType.read(from: self, strings: stringResolver, types: typeResolver)
+            typeTable.wrappedValue += [type]
+            
+            let result = typeResolver.getResolvable(ix)// HLTypeWithIndex(index: ix, type: type)
+            // print(String(reflecting: result))
+            return result
+        }
+
+        for rt in _resolvableTypes {
+            print("\(rt.ix): \(rt.value.debugDescription)")
+        }
+
+        // globals
+        _ = try Array(repeating: 0, count: Int(nglobals)).enumerated().map {
+            ix, _ in 
+
+            fatalError("wip nglobals loading")
+        }
+
+        // natives
+        _ = try Array(repeating: 0, count: Int(nnatives)).enumerated().map {
+            ix, _ in 
+
+            fatalError("wip nnatives loading")
+        }
+
+        // functions
+        _ = try Array(repeating: 0, count: Int(nfunctions)).enumerated().map {
+            ix, _ in 
+
+            fatalError("wip nfunctions loading")
+        }
+
+        // constants
+        _ = try Array(repeating: 0, count: Int(nconstants)).enumerated().map {
+            ix, _ in 
+
+            fatalError("wip nconstants loading")
+        }
+        
+        
+
+        fatalError("bim \(typeTable.wrappedValue.count)")
 
         /*
-        
 ntypes * type	types	types definitions
 var * nglobals	globals	types of each globals
 nnatives * native	natives	Native functions to be loaded from external libraries
@@ -184,7 +234,7 @@ nconstants* constant	constants	Constant definitions
             entrypoint: entrypoint,
             constInts: constInts,
             constFloats: constFloats,
-            constStrings: constStrings)
+            stringResolver: stringResolver)
 
         return result
     }
@@ -213,7 +263,18 @@ nconstants* constant	constants	Constant definitions
         return strings
     }
 
-    private func readString() throws -> String {
+    public func readString(length: Int) throws -> String {
+        let bytes = try Array(repeating: 0, count: length).map { _ in try self.readUInt8() }
+        guard let str = String(bytes: bytes, encoding: .ascii) else {
+            fatalError("Could not read string of length \(length)")
+        }
+        guard try self.peekUInt8() != 0 else {
+            fatalError("Expected no zero terminator")
+        }
+        return str
+    }
+
+    public func readString() throws -> String {
         var bytes = [UInt8]()
         while (try peekUInt8() != 0) {
             bytes += [try readUInt8()]
