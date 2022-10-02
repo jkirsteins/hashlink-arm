@@ -13,6 +13,128 @@ typealias RefEnumConstruct = TableIndex
 
 // https://github.com/Gui-Yom/hlbc/blob/master/hlbc/src/opcodes.rs
 
+extension HLOpCode {
+    static func read(from reader: ByteReader) throws -> HLOpCode {
+        let code = try reader.readUInt8()
+        switch(code) {
+            case 0: fatalError(" OMov ")
+            case 1: fatalError(" OInt ")
+            case 2: fatalError(" OFloat ")
+            case 3: fatalError(" OBool ")
+            case 4: fatalError(" OBytes ")
+            case 5: fatalError(" OString ")
+            case 6: fatalError(" ONull ")
+
+            case 7: fatalError(" OAdd ")
+            case 8: fatalError(" OSub ")
+            case 9: fatalError(" OMul ")
+            case 10: fatalError(" OSDiv ")
+            case 11: fatalError(" OUDiv ")
+            case 12: fatalError(" OSMod ")
+            case 13: fatalError(" OUMod ")
+            case 14: fatalError(" OShl ")
+            case 15: fatalError(" OSShr ")
+            case 16: fatalError(" OUShr ")
+            case 17: fatalError(" OAnd ")
+            case 18: fatalError(" OOr ")
+            case 19: fatalError(" OXor ") 
+
+            case 20: fatalError(" ONeg ")
+            case 21: fatalError(" ONot ")
+            case 22: fatalError(" OIncr ")
+            case 23: fatalError(" ODecr ")
+
+            case 24: fatalError(" OCall0 ")
+            case 25: fatalError(" OCall1 ")
+            case 26: fatalError(" OCall2 ")
+            case 27: fatalError(" OCall3 ")
+            case 28: fatalError(" OCall4 ")
+            case 29: fatalError(" OCallN ")
+            case 30: fatalError(" OCallMethod ")
+            case 31: fatalError(" OCallThis ")
+            case 32: fatalError(" OCallClosure ")
+
+            case 33: fatalError(" OStaticClosure ")
+            case 34: fatalError(" OInstanceClosure ")
+            case 35: fatalError(" OVirtualClosure ")
+
+            case 36: fatalError(" OGetGlobal ")
+            case 37: fatalError(" OSetGlobal ")
+            case 38: fatalError(" OField ")
+            case 39: fatalError(" OSetField ")
+            case 40: fatalError(" OGetThis ")
+            case 41: fatalError(" OSetThis ")
+            case 42: fatalError(" ODynGet ")
+            case 43: fatalError(" ODynSet ")
+
+            case 44: fatalError(" OJTrue ")
+            case 45: fatalError(" OJFalse ")
+            case 46: fatalError(" OJNull ")
+            case 47: fatalError(" OJNotNull ")
+            case 48: fatalError(" OJSLt ")
+            case 49: fatalError(" OJSGte ")
+            case 50: fatalError(" OJSGt ")
+            case 51: fatalError(" OJSLte ")
+            case 52: fatalError(" OJULt ")
+            case 53: fatalError(" OJUGte ")
+            case 54: fatalError(" OJNotLt ")
+            case 55: fatalError(" OJNotGte ")
+            case 56: fatalError(" OJEq ")
+            case 57: fatalError(" OJNotEq ")
+            case 58: fatalError(" OJAlways ")
+
+            case 59: fatalError(" OToDyn ")
+            case 60: fatalError(" OToSFloat ")
+            case 61: fatalError(" OToUFloat ")
+            case 62: fatalError(" OToInt ")
+            case 63: fatalError(" OSafeCast ")
+            case 64: fatalError(" OUnsafeCast ")
+            case 65: fatalError(" OToVirtual ") 
+
+            case 66: fatalError(" OLabel ")
+            case 67: fatalError(" ORet ")
+            case 68: fatalError(" OThrow ")
+            case 69: fatalError(" ORethrow ")
+            case 70: fatalError(" OSwitch ")
+            case 71: fatalError(" ONullCheck ")
+            case 72: fatalError(" OTrap ")
+            case 73: fatalError(" OEndTrap ") 
+
+            case 74: fatalError(" OGetI8 ")
+            case 75: fatalError(" OGetI16 ")
+            case 76: fatalError(" OGetMem ")
+            case 77: fatalError(" OGetArray ")
+            case 78: fatalError(" OSetI8 ")
+            case 79: fatalError(" OSetI16 ")
+            case 80: fatalError(" OSetMem ")
+            case 81: fatalError(" OSetArray ")
+
+            case 82: fatalError(" ONew ")
+            case 83: fatalError(" OArraySize ")
+            case 84: fatalError(" OType ")
+            case 85: fatalError(" OGetType ")
+            case 86: fatalError(" OGetTID ") 
+
+            case 87: fatalError(" ORef ")
+            case 88: fatalError(" OUnref ")
+            case 89: fatalError(" OSetref ")
+
+            case 90: fatalError(" OMakeEnum ")
+            case 91: fatalError(" OEnumAlloc ")
+            case 92: fatalError(" OEnumIndex ")
+            case 93: fatalError(" OEnumField ")
+            case 94: fatalError(" OSetEnumField ")
+
+            case 95: fatalError(" OAssert ")
+            case 96: fatalError(" ORefData ")
+            case 97: fatalError(" ORefOffset ")
+            case 98: fatalError(" ONop ")
+            default:
+            fatalError("Unknown opcode \(code)")
+        }
+    }
+}
+
 enum HLOpCode {
     /// Copy value from *src* into *dst*
     case OMov(dst: Reg, src: Reg)
