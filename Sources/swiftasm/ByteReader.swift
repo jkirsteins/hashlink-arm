@@ -128,6 +128,7 @@ class ByteReader
         let stringTable = SharedStorage(wrappedValue: [String]())
         let typeTable = SharedStorage(wrappedValue: [HLType]())
         let globalTable = SharedStorage(wrappedValue: [HLGlobal]())
+        let nativeTable = SharedStorage(wrappedValue: [HLNative]())
         
         //
         let flags = try self.readVarInt()
@@ -148,6 +149,7 @@ class ByteReader
         let stringResolver = TableResolver(table: stringTable, count: nstrings)
         let typeResolver = TableResolver(table: typeTable, count: ntypes)
         let globalResolver = TableResolver(table: globalTable, count: nglobals)
+        let nativeResolver = TableResolver(table: nativeTable, count: nnatives)
         
         stringTable.wrappedValue = try self.readStrings(nstrings)
         
@@ -197,10 +199,23 @@ class ByteReader
         }
 
         // natives
-        _ = try Array(repeating: 0, count: Int(nnatives)).enumerated().map {
+        let _natives = try Array(repeating: 0, count: Int(nnatives)).enumerated().map {
             ix, _ in 
 
-            fatalError("wip nnatives loading")
+            let lib = stringResolver.getResolvable(try readIndex())
+            let name = stringResolver.getResolvable(try readIndex())
+            let type = typeResolver.getResolvable(try readIndex())
+            let findex = try readVarInt()
+            
+            let native = HLNative(lib: lib, name: name, type: type, findex: findex)
+            nativeTable.wrappedValue += [native]
+
+            return native
+        }
+
+        print("==> Natives")
+        for (ix, rt) in _natives.enumerated() {
+            print("\(ix) : \(rt.debugDescription)")
         }
 
         // functions
