@@ -222,6 +222,28 @@ class ByteReader
         _ = try Array(repeating: 0, count: Int(nfunctions)).enumerated().map {
             ix, _ in 
 
+            let type = typeResolver.getResolvable(try readIndex())
+            let findex = try readVarInt()
+            let nregs = try readVarInt()
+            let nops = try readVarInt()
+
+            let regs = try Array(repeating: 0, count: Int(nregs)).map { _ in 
+                typeResolver.getResolvable(try readIndex())
+            }
+
+            print("fun \(type.debugDescription) \(nregs) regs \(nops) ops")
+            print("regs", regs)
+
+            // let ops = try Array(repeating: 0, count: Int(nops)).map {
+                
+            // }
+            
+            // var * nregs	regs	registers types
+            // nops * opcode	ops	instructions
+            // ? * nops	debuginfo	if has debug info, complicated encoding for file/line info for each instruction
+            // var	nassigns	if has debug info && version >= 3
+            // 2 * var * nassigns	assigns	tuples (variable name ref, opcode number)
+
             fatalError("wip nfunctions loading")
         }
 
