@@ -127,6 +127,7 @@ class ByteReader
         // Tables
         let stringTable = SharedStorage(wrappedValue: [String]())
         let typeTable = SharedStorage(wrappedValue: [HLType]())
+        let globalTable = SharedStorage(wrappedValue: [HLGlobal]())
         
         //
         let flags = try self.readVarInt()
@@ -146,6 +147,7 @@ class ByteReader
         // Resolvers
         let stringResolver = TableResolver(table: stringTable, count: nstrings)
         let typeResolver = TableResolver(table: typeTable, count: ntypes)
+        let globalResolver = TableResolver(table: globalTable, count: nglobals)
         
         stringTable.wrappedValue = try self.readStrings(nstrings)
         
@@ -169,20 +171,29 @@ class ByteReader
             let type = try HLType.read(from: self, strings: stringResolver, types: typeResolver)
             typeTable.wrappedValue += [type]
             
-            let result = typeResolver.getResolvable(ix)// HLTypeWithIndex(index: ix, type: type)
-            // print(String(reflecting: result))
-            return result
+            return typeResolver.getResolvable(ix)
         }
 
+        print("==> Types")
         for rt in _resolvableTypes {
             print("\(rt.ix): \(rt.value.debugDescription)")
         }
 
         // globals
-        _ = try Array(repeating: 0, count: Int(nglobals)).enumerated().map {
+        let _resolvableGlobals = try Array(repeating: 0, count: Int(nglobals)).enumerated().map {
             ix, _ in 
 
-            fatalError("wip nglobals loading")
+            let globalTypeIx = try readIndex()
+            let type = typeResolver.getResolvable(globalTypeIx)
+            let global = HLGlobal(type: type)
+            globalTable.wrappedValue += [global]
+
+            return global
+        }
+
+        print("==> Globals")
+        for rt in _resolvableGlobals {
+            print(rt.debugDescription)
         }
 
         // natives
