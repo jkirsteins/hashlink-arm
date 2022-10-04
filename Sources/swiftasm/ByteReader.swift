@@ -19,50 +19,50 @@ struct Constants {
 
 }
 
-struct ModuleHeader : CustomDebugStringConvertible {
+struct ModuleHeader: CustomDebugStringConvertible {
     let signature: ModuleSignature
     var version: UInt8 { signature.v }
 
-    let	flags: Int32
-    let	nints: Int32
-    let	nfloats: Int32
-    let	nstrings: Int32
-    
-    // only v5 upwards
-    let	nbytes: Int32
+    let flags: Int32
+    let nints: Int32
+    let nfloats: Int32
+    let nstrings: Int32
 
-    let	ntypes: Int32
-    let	nglobals: Int32
-    let	nnatives: Int32
-    let	nfunctions: Int32
-    let	nconstants: Int32
-    let	entrypoint: Int32
+    // only v5 upwards
+    let nbytes: Int32
+
+    let ntypes: Int32
+    let nglobals: Int32
+    let nnatives: Int32
+    let nfunctions: Int32
+    let nconstants: Int32
+    let entrypoint: Int32
 
     // [i32]
     let constInts: [Int32]
     // [f64]
     let constFloats: [Double]
-    
+
     let stringResolver: TableResolver<String>
 
     var debugDescription: String {
-return """
-hl v\(version)
-entry @\(entrypoint)
-\(nstrings) strings
-\(0) bytes
-\(nints) ints
-\(constInts.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
-\(nfloats) floats
-\(constFloats.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
-\(nglobals) globals
-\(nnatives) natives
-\(nfunctions) functions
-??? objects protos (not types)
-\(nconstants) constant values
-strings
-\(stringResolver.table.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
-"""
+        return """
+            hl v\(version)
+            entry @\(entrypoint)
+            \(nstrings) strings
+            \(0) bytes
+            \(nints) ints
+            \(constInts.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
+            \(nfloats) floats
+            \(constFloats.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
+            \(nglobals) globals
+            \(nnatives) natives
+            \(nfunctions) functions
+            ??? objects protos (not types)
+            \(nconstants) constant values
+            strings
+            \(stringResolver.table.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
+            """
     }
 }
 
@@ -73,56 +73,80 @@ struct ModuleSignature {
     let v: UInt8
 }
 
-class ByteReader
-{
+class ByteReader {
     let data: Data
     var pointer = 0
-    
-    init(_ data: Data) {
-        self.data = data
-    }
 
-    func readIndex() throws -> TableIndex {
-        return TableIndex(try readVarInt())
-    }
+    init(_ data: Data) { self.data = data }
+
+    func readIndex() throws -> TableIndex { return TableIndex(try readVarInt()) }
 
     func readVarInt() throws -> Int32 {
         let b = try readOctetAsInt32()
         if b & 0x80 == 0 {
             return b & 0x7F
-        } else if b & 0x40 == 0 {
-            let v = (try readOctetAsInt32()) | ((b & 31) << 8);
-            
-            if b & 0x20 == 0 { return v } else { return -v }
-        } else {
+        }
+        else if b & 0x40 == 0 {
+            let v = (try readOctetAsInt32()) | ((b & 31) << 8)
+
+            if b & 0x20 == 0 {
+                return v
+            }
+            else {
+                return -v
+            }
+        }
+        else {
             let c = try readOctetAsInt32()
             let d = try readOctetAsInt32()
             let e = try readOctetAsInt32()
-            let v = ((b & 31) << 24) | (c << 16) | (d << 8) | e;
-            
-            if b & 0x20 == 0 { return v } else { return -v }
+            let v = ((b & 31) << 24) | (c << 16) | (d << 8) | e
+
+            if b & 0x20 == 0 {
+                return v
+            }
+            else {
+                return -v
+            }
         }
+    }
+
+    func readReg() throws -> Reg {
+        try readVarInt()    
+    }
+
+    func readJumpOffset() throws -> JumpOffset {
+        try readVarInt()    
+    }
+
+    func readBool() throws -> Int32 {
+        try readVarInt()    
+    }
+
+    func readRef() throws -> Ref {
+        try readIndex()    
     }
 
     func readHeader() throws -> ModuleHeader {
         guard self.pointer == 0 else {
             fatalError("Don't read the header if pointer not at start")
         }
-        
+
         let sig = ModuleSignature(
-            h: try self.readUInt8(), 
-            l: try self.readUInt8(), 
-            b: try self.readUInt8(), 
-            v: try self.readUInt8())
+            h: try self.readUInt8(),
+            l: try self.readUInt8(),
+            b: try self.readUInt8(),
+            v: try self.readUInt8()
+        )
 
         let firstB = String(bytes: [sig.h, sig.l, sig.b], encoding: .ascii)!
         guard firstB == "HLB" else {
-            fatalError("Invalid header (first three bytes must be HLB but got \(firstB))")
+            fatalError(
+                "Invalid header (first three bytes must be HLB but got \(firstB))"
+            )
         }
 
-        guard sig.v == 4 else {
-            fatalError("Supported version is 4")
-        }
+        guard sig.v == 4 else { fatalError("Supported version is 4") }
 
         //
         let flags = try self.readVarInt()
@@ -136,79 +160,83 @@ class ByteReader
         let nfunctions = try self.readVarInt()
         let nconstants = sig.v >= 4 ? try self.readVarInt() : 0
         let entrypoint = try self.readVarInt()
-        let constInts = try Array(repeating: 0, count: Int(nints)).map { _ in try self.readInt32() } 
-        let constFloats = try Array(repeating: 0, count: Int(nfloats)).map { _ in try self.readDouble() } 
-        
+        let constInts = try Array(repeating: 0, count: Int(nints)).map { _ in
+            try self.readInt32()
+        }
+        let constFloats = try Array(repeating: 0, count: Int(nfloats)).map { _ in
+            try self.readDouble()
+        }
+
         // Tables
         let stringTable = SharedStorage(wrappedValue: [String]())
         let typeTable = SharedStorage(wrappedValue: [HLType]())
         let globalTable = SharedStorage(wrappedValue: [HLGlobal]())
         let nativeTable = SharedStorage(wrappedValue: [HLNative]())
         let functionTable = SharedStorage(wrappedValue: [HLFunction]())
-        
+
         // Resolvers
         let stringResolver = TableResolver(table: stringTable, count: nstrings)
         let typeResolver = TableResolver(table: typeTable, count: ntypes)
         let globalResolver = TableResolver(table: globalTable, count: nglobals)
         let nativeResolver = TableResolver(table: nativeTable, count: nnatives)
         let functionResolver = TableResolver(table: functionTable, count: nfunctions)
-        
+
         stringTable.wrappedValue = try self.readStrings(nstrings)
-        
-        if sig.v >= 5 {
-            fatalError("byte reading not implemented")
-        }
-        
+
+        if sig.v >= 5 { fatalError("byte reading not implemented") }
+
         let hasdebug = (flags & 1 != 0)
         let debugEntries: [String]
         if hasdebug {
             let debugEntryCount = try self.readVarInt()
             debugEntries = try self.readStrings(debugEntryCount)
-        } else {
+        }
+        else {
             debugEntries = []
         }
 
         // only need _resolvableTypes for debug printing
-        let _resolvableTypes = try Array(repeating: 0, count: Int(ntypes)).enumerated().map {
-            ix, _ in 
+        let _resolvableTypes = try Array(repeating: 0, count: Int(ntypes)).enumerated()
+            .map { ix, _ in
 
-            let type = try HLType.read(from: self, strings: stringResolver, types: typeResolver)
-            typeTable.wrappedValue += [type]
-            
-            return typeResolver.getResolvable(ix)
-        }
+                let type = try HLType.read(
+                    from: self,
+                    strings: stringResolver,
+                    types: typeResolver
+                )
+                typeTable.wrappedValue += [type]
+
+                return typeResolver.getResolvable(ix)
+            }
 
         print("==> Types")
-        for rt in _resolvableTypes {
-            print("\(rt.ix): \(rt.value.debugDescription)")
-        }
+        for rt in _resolvableTypes { print("\(rt.ix): \(rt.value.debugDescription)") }
 
         // globals
-        let _resolvableGlobals = try Array(repeating: 0, count: Int(nglobals)).enumerated().map {
-            ix, _ in 
+        let _resolvableGlobals = try Array(repeating: 0, count: Int(nglobals))
+            .enumerated().map { ix, _ in
 
-            let globalTypeIx = try readIndex()
-            let type = typeResolver.getResolvable(globalTypeIx)
-            let global = HLGlobal(type: type)
-            globalTable.wrappedValue += [global]
+                let globalTypeIx = try readIndex()
+                let type = typeResolver.getResolvable(globalTypeIx)
+                let global = HLGlobal(type: type)
+                globalTable.wrappedValue += [global]
 
-            return global
-        }
+                return global
+            }
 
         print("==> Globals")
-        for rt in _resolvableGlobals {
-            print(rt.debugDescription)
-        }
+        for rt in _resolvableGlobals { print(rt.debugDescription) }
 
         // natives
         let _natives = try Array(repeating: 0, count: Int(nnatives)).enumerated().map {
-            ix, _ in 
+            ix,
+            _ in
 
             let lib = stringResolver.getResolvable(try readIndex())
             let name = stringResolver.getResolvable(try readIndex())
             let type = typeResolver.getResolvable(try readIndex())
             let findex = try readVarInt()
-            
+
             let native = HLNative(lib: lib, name: name, type: type, findex: findex)
             nativeTable.wrappedValue += [native]
 
@@ -221,61 +249,113 @@ class ByteReader
         }
 
         // functions
-        let loadedFunctions = try Array(repeating: 0, count: Int(nfunctions)).enumerated().map {
-            ix, _ in 
+        let loadedFunctions = try Array(repeating: 0, count: Int(nfunctions))
+            .enumerated().map { ix, _ in
 
-            let type = typeResolver.getResolvable(try self.readIndex())
-            let findex = try self.readVarInt()
-            let nregs = try self.readVarInt()
-            let nops = try self.readVarInt()
+                let type = typeResolver.getResolvable(try self.readIndex())
+                let findex = try self.readVarInt()
+                let nregs = try self.readVarInt()
+                let nops = try self.readVarInt()
 
-            let regs = try Array(repeating: 0, count: Int(nregs)).map { _ in 
-                typeResolver.getResolvable(try self.readIndex())
-            }
+                print(
+                    "fun \(findex) \(type.debugDescription) \(nregs) regs \(nops) ops"
+                )
 
-            let ops = try Array(repeating: 0, count: Int(nops)).map { _ in 
-                try HLOpCode.read(from: self)
-            }
+                let regs = try Array(repeating: 0, count: Int(nregs)).map { _ in
+                    typeResolver.getResolvable(try self.readIndex())
+                }
 
-            print("fun \(findex) \(type.debugDescription) \(nregs) regs \(nops) ops")
-            print("regs", regs)
+                let ops = try Array(repeating: 0, count: Int(nops)).map { _ in
+                    try HLOpCode.read(from: self)
+                }
 
-            return HLFunction(
-                type: type, 
-                findex: findex, 
-                regs: regs, 
-                ops: []
-            )
-            
-            // print(functionTable[24])
-            // fatalError("wip nfunctions loading")
-            // let ops = try Array(repeating: 0, count: Int(nops)).map {
-                
-            // }
-            
-            // var * nregs	regs	registers types
-            // nops * opcode	ops	instructions
-            // ? * nops	debuginfo	if has debug info, complicated encoding for file/line info for each instruction
-            // var	nassigns	if has debug info && version >= 3
-            // 2 * var * nassigns	assigns	tuples (variable name ref, opcode number)
-        }.sorted(by: { $0.findex < $1.findex })
-        
+                print("ops", ops)
+                print("\n==>\n")
+
+                // debug info. Not clear how to use this
+                // see: https://github.com/Gui-Yom/hlbc/blob/967c0f186e4c21861ad7010be1114a031d67dd7d/src/deser.rs#L229
+                if hasdebug {
+                    var tmp = []  
+                    var currfile: Int32 = -1
+                    var currline: Int32 = 0
+                    var i = 0
+                    while i < nops {
+                        var c = Int32(try self.readUInt8())
+                        if c & 1 != 0 {
+                            c >>= 1
+                            currfile = (c << 8) | Int32(try self.readUInt8())
+                        }
+                        else if c & 2 != 0 {
+                            let delta = c >> 6
+                            var count = (c >> 2) & 15
+                            while count > 0 {
+                                count -= 1
+                                tmp.append((currfile, currline))
+                                i += 1
+                            }
+                            currline += delta
+                        }
+                        else if c & 4 != 0 {
+                            currline += c >> 3
+                            tmp.append((currfile, currline))
+                            i += 1
+                        }
+                        else {
+                            let b2 = Int32(try self.readUInt8())
+                            let b3 = Int32(try self.readUInt8())
+                            currline = (c >> 3) | (b2 << 5) | (b3 << 13)
+                            tmp.append((currfile, currline))
+                            i += 1
+                        }
+                    }
+                    //print("Got debuginfo", tmp)
+                }
+
+                let nassigns: Int32
+                if hasdebug && sig.v >= 3 {
+                    nassigns = try self.readVarInt()
+                } else {
+                    nassigns = 0
+                }
+
+                let assigns = try Array(repeating: 0, count: Int(nassigns)).map { _ in
+                    HLFunctionAssign(
+                        variableName: stringResolver.getResolvable(try self.readIndex()),
+                        opcodeId: try self.readVarInt()
+                    )
+                }
+
+                return HLFunction(type: type, findex: findex, regs: regs, ops: ops, assigns: assigns)
+
+                // print(functionTable[24])
+                // fatalError("wip nfunctions loading")
+                // let ops = try Array(repeating: 0, count: Int(nops)).map {
+
+                // }
+
+                // var * nregs	regs	registers types
+                // nops * opcode	ops	instructions
+                // ? * nops	debuginfo	if has debug info, complicated encoding for file/line info for each instruction
+                // var	nassigns	if has debug info && version >= 3
+                // 2 * var * nassigns	assigns	tuples (variable name ref, opcode number)
+            }.sorted(by: { $0.findex < $1.findex })
+
         functionTable.wrappedValue = loadedFunctions
-        
+
         print("==> Functions")
         for (ix, rt) in functionTable.wrappedValue.enumerated() {
             print("\(ix) : \(rt.debugDescription)")
+            for op in rt.ops {
+                print("    \(op.debugDescription)")
+            }
         }
         fatalError("")
 
         // constants
-        _ = try Array(repeating: 0, count: Int(nconstants)).enumerated().map {
-            ix, _ in 
+        _ = try Array(repeating: 0, count: Int(nconstants)).enumerated().map { ix, _ in
 
             fatalError("wip nconstants loading")
         }
-                
-        
 
         fatalError("bim \(typeTable.wrappedValue.count)")
 
@@ -287,10 +367,9 @@ nfunctions* function	functions	Function definitions
 nconstants* constant	constants	Constant definitions
         */
 
-
         let result = ModuleHeader(
-            signature: sig, 
-            flags: flags, 
+            signature: sig,
+            flags: flags,
             nints: nints,
             nfloats: nfloats,
             nstrings: nstrings,
@@ -303,14 +382,13 @@ nconstants* constant	constants	Constant definitions
             entrypoint: entrypoint,
             constInts: constInts,
             constFloats: constFloats,
-            stringResolver: stringResolver)
+            stringResolver: stringResolver
+        )
 
         return result
     }
 
-    private func skip(_ amount: Int) {
-        self.pointer += amount
-    }
+    private func skip(_ amount: Int) { self.pointer += amount }
 
     private func readStrings(_ count: Int32) throws -> [String] {
         try readStrings(Int(count))
@@ -319,21 +397,27 @@ nconstants* constant	constants	Constant definitions
     private func readStrings(_ count: Int) throws -> [String] {
         let stringDataSize = try self.readUInt32()
         let expectedPostDataPointer = UInt32(pointer) + UInt32(stringDataSize)
-        let strings = try Array(repeating: 0, count: count).map { _ in try self.readString() } 
+        let strings = try Array(repeating: 0, count: count).map { _ in
+            try self.readString()
+        }
         guard expectedPostDataPointer == pointer else {
             fatalError("Invalid string read")
         }
         for i in 0..<count {
             let siz = try self.readVarInt()
             guard siz == strings[strings.startIndex.advanced(by: Int(i))].count else {
-                fatalError("Invalid file. String length encoding doesn't match at index \(i)")
+                fatalError(
+                    "Invalid file. String length encoding doesn't match at index \(i)"
+                )
             }
         }
         return strings
     }
 
     public func readString(length: Int) throws -> String {
-        let bytes = try Array(repeating: 0, count: length).map { _ in try self.readUInt8() }
+        let bytes = try Array(repeating: 0, count: length).map { _ in
+            try self.readUInt8()
+        }
         guard let str = String(bytes: bytes, encoding: .ascii) else {
             fatalError("Could not read string of length \(length)")
         }
@@ -345,77 +429,56 @@ nconstants* constant	constants	Constant definitions
 
     public func readString() throws -> String {
         var bytes = [UInt8]()
-        while (try peekUInt8() != 0) {
-            bytes += [try readUInt8()]
-        } 
+        while try peekUInt8() != 0 { bytes += [try readUInt8()] }
 
-        try readUInt8() // skip the 0 terminator
-        
+        try readUInt8()  // skip the 0 terminator
+
         guard let result = String(bytes: bytes, encoding: .ascii) else {
             fatalError("Failed to decode string")
         }
 
-        return result 
+        return result
     }
 
-    private func parseLEUIntX<Result>(_: Result.Type, advance: Bool = true) throws -> Result
-            where Result: UnsignedInteger
+    private func parseLEUIntX<Result>(_: Result.Type, advance: Bool = true) throws
+        -> Result where Result: UnsignedInteger
     {
         let expected = MemoryLayout<Result>.size
 
-        guard data.count >= pointer + expected else { fatalError("Not enough data before seeking") }
+        guard data.count >= pointer + expected else {
+            fatalError("Not enough data before seeking")
+        }
 
         let result = self.data[
-            self.data.startIndex.advanced(by: pointer)..<self.data.startIndex.advanced(by: pointer+expected)]
+            self.data.startIndex.advanced(
+                by: pointer
+            )..<self.data.startIndex.advanced(by: pointer + expected)
+        ]
 
-        defer { 
-            if advance {
-                pointer += expected 
-            }
-        }
+        defer { if advance { pointer += expected } }
         guard result.count >= expected else { fatalError("Not enough data") }
 
-        return result
-                .prefix(expected)
-                .reversed()
-                .reduce(0, { soFar, new in
-                        (soFar << 8) | Result(new)
-                })
+        return result.prefix(expected).reversed().reduce(
+            0,
+            { soFar, new in (soFar << 8) | Result(new) }
+        )
     }
 
-    func readOctetAsInt32() throws -> Int32 {
-        return Int32(try readUInt8())
-    }
+    func readOctetAsInt32() throws -> Int32 { return Int32(try readUInt8()) }
 
-    func readUInt32() throws -> UInt32 {
-        try parseLEUIntX(UInt32.self)
-    }
+    func readUInt32() throws -> UInt32 { try parseLEUIntX(UInt32.self) }
 
-    func readUInt64() throws -> UInt64 {
-        try parseLEUIntX(UInt64.self)
-    }
+    func readUInt64() throws -> UInt64 { try parseLEUIntX(UInt64.self) }
 
-    func readInt32() throws -> Int32 {
-        Int32(bitPattern: try readUInt32())
-    }
+    func readInt32() throws -> Int32 { Int32(bitPattern: try readUInt32()) }
 
-    func readDouble() throws -> Double {
-        Double(bitPattern: try readUInt64())
-    }
+    func readDouble() throws -> Double { Double(bitPattern: try readUInt64()) }
 
-    func readUInt8() throws -> UInt8 {
-        try parseLEUIntX(UInt8.self)
-    }
+    func readUInt8() throws -> UInt8 { try parseLEUIntX(UInt8.self) }
 
-    func readUInt16() throws -> UInt16 {
-        try parseLEUIntX(UInt16.self)
-    }
+    func readUInt16() throws -> UInt16 { try parseLEUIntX(UInt16.self) }
 
-    func readInt16() throws -> Int16 {
-        Int16(bitPattern: try readUInt16())
-    }
+    func readInt16() throws -> Int16 { Int16(bitPattern: try readUInt16()) }
 
-    func peekUInt8() throws -> UInt8 {
-        try parseLEUIntX(UInt8.self, advance: false)
-    }
+    func peekUInt8() throws -> UInt8 { try parseLEUIntX(UInt8.self, advance: false) }
 }

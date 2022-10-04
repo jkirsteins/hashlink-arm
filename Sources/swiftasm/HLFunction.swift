@@ -4,8 +4,9 @@ struct HLFunction: CustomDebugStringConvertible {
     let findex: Int32 
     let regs: [Resolvable<HLType>]
     let ops: [HLOpCode]
+    let assigns: [HLFunctionAssign]
 
     var debugDescription: String {
-        "fun<\(type.debugDescription)@\(findex) \(regs.count) regs \(ops.count) ops>"
+        "fun@\(findex)<\(type.debugDescription) \(regs.count) regs \(ops.count) ops \(assigns.count) assigns>"
     }
 }

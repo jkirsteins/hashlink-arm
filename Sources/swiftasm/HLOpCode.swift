@@ -19,145 +19,303 @@ extension HLOpCode {
         let reg = try reader.readVarInt()
         let ref = try reader.readIndex()
         let count = try reader.readUInt8()
-        let regs: [Reg] = try (0..<count).map { _ in 
-            try reader.readVarInt()
-        }
+        let regs: [Reg] = try (0..<count).map { _ in try reader.readVarInt() }
 
         return (reg, ref, regs)
     }
 
     static func read(from reader: ByteReader) throws -> HLOpCode {
         let code = try reader.readUInt8()
-        switch(code) {
-            case 0: fatalError(" OMov ")
-            case 1: fatalError(" OInt ")
-            case 2: fatalError(" OFloat ")
-            case 3: fatalError(" OBool ")
-            case 4: fatalError(" OBytes ")
-            case 5: fatalError(" OString ")
-            case 6: fatalError(" ONull ")
+        switch code {
+        case 0: return .OMov(dst: try reader.readReg(), src: try reader.readReg())
+        case 1: return .OInt(dst: try reader.readReg(), ptr: try reader.readRef())
+        case 2: return .OFloat(dst: try reader.readReg(), ptr: try reader.readRef())
+        case 3: return .OBool(dst: try reader.readReg(), value: try reader.readBool())
+        case 4: return .OBytes(dst: try reader.readReg(), ptr: try reader.readRef())
+        case 5: return .OString(dst: try reader.readReg(), ptr: try reader.readRef())
+        case 6: return .ONull(dst: try reader.readReg())
 
-            case 7: fatalError(" OAdd ")
-            case 8: fatalError(" OSub ")
-            case 9: fatalError(" OMul ")
-            case 10: fatalError(" OSDiv ")
-            case 11: fatalError(" OUDiv ")
-            case 12: fatalError(" OSMod ")
-            case 13: fatalError(" OUMod ")
-            case 14: fatalError(" OShl ")
-            case 15: fatalError(" OSShr ")
-            case 16: fatalError(" OUShr ")
-            case 17: fatalError(" OAnd ")
-            case 18: fatalError(" OOr ")
-            case 19: fatalError(" OXor ") 
+        case 7:
+            return .OAdd(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 8:
+            return .OSub(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 9:
+            return .OMul(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 10:
+            return .OSDiv(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 11:
+            return .OUDiv(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 12:
+            return .OSMod(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 13:
+            return .OUMod(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 14:
+            return .OShl(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 15:
+            return .OSShr(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 16:
+            return .OUShr(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 17:
+            return .OAnd(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 18:
+            return .OOr(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
+        case 19:
+            return .OXor(
+                dst: try reader.readReg(),
+                a: try reader.readReg(),
+                b: try reader.readReg()
+            )
 
-            case 20: fatalError(" ONeg ")
-            case 21: fatalError(" ONot ")
-            case 22: fatalError(" OIncr ")
-            case 23: fatalError(" ODecr ")
+        case 20: return .ONeg(dst: try reader.readReg(), src: try reader.readReg())
+        case 21: return .ONot(dst: try reader.readReg(), src: try reader.readReg())
+        case 22: return .OIncr(dst: try reader.readReg())
+        case 23: return .ODecr(dst: try reader.readReg())
 
-            case 24: fatalError(" OCall0 ")
-            case 25: fatalError(" OCall1 ")
-            case 26: fatalError(" OCall2 ")
-            case 27: fatalError(" OCall3 ")
-            case 28: fatalError(" OCall4 ")
-            case 29: 
-                let result = try HLOpCode.read_2reg_varReg(from: reader)
-                return .OCallN(dst: result.0, fun: result.1, args: result.2)
-            case 30: 
-                let result = try HLOpCode.read_2reg_varReg(from: reader)
-                return .OCallMethod(dst: result.0, field: result.1, args: result.2)
-            case 31: 
-                let result = try HLOpCode.read_2reg_varReg(from: reader)
-                return .OCallThis(dst: result.0, field: result.1, args: result.2)
-            case 32: 
-                let result = try HLOpCode.read_2reg_varReg(from: reader)
-                return .OCallClosure(dst: result.0, fun: result.1, args: result.2)
+        case 24: return .OCall0(dst: try reader.readReg(), fun: try reader.readRef())
+        case 25:
+            return .OCall1(
+                dst: try reader.readReg(),
+                fun: try reader.readRef(),
+                arg0: try reader.readReg()
+            )
+        case 26:
+            return .OCall2(
+                dst: try reader.readReg(),
+                fun: try reader.readRef(),
+                arg0: try reader.readReg(),
+                arg1: try reader.readReg()
+            )
+        case 27:
+            return .OCall3(
+                dst: try reader.readReg(),
+                fun: try reader.readRef(),
+                arg0: try reader.readReg(),
+                arg1: try reader.readReg(),
+                arg2: try reader.readReg()
+            )
+        case 28:
+            return .OCall4(
+                dst: try reader.readReg(),
+                fun: try reader.readRef(),
+                arg0: try reader.readReg(),
+                arg1: try reader.readReg(),
+                arg2: try reader.readReg(),
+                arg3: try reader.readReg()
+            )
+        case 29:
+            let result = try HLOpCode.read_2reg_varReg(from: reader)
+            return .OCallN(dst: result.0, fun: result.1, args: result.2)
+        case 30:
+            let result = try HLOpCode.read_2reg_varReg(from: reader)
+            return .OCallMethod(dst: result.0, field: result.1, args: result.2)
+        case 31:
+            let result = try HLOpCode.read_2reg_varReg(from: reader)
+            return .OCallThis(dst: result.0, field: result.1, args: result.2)
+        case 32:
+            let result = try HLOpCode.read_2reg_varReg(from: reader)
+            return .OCallClosure(dst: result.0, fun: result.1, args: result.2)
 
-            case 33: fatalError(" OStaticClosure ")
-            case 34: fatalError(" OInstanceClosure ")
-            case 35: fatalError(" OVirtualClosure ")
+        case 33: return .OStaticClosure(dst: try reader.readReg(), fun: try reader.readRef())
+        case 34: return .OInstanceClosure(dst: try reader.readReg(), fun: try reader.readRef(), obj: try reader.readReg())
+        case 35: return .OVirtualClosure(dst: try reader.readReg(), obj: try reader.readReg(), field: try reader.readReg())
 
-            case 36: fatalError(" OGetGlobal ")
-            case 37: fatalError(" OSetGlobal ")
-            case 38: fatalError(" OField ")
-            case 39: fatalError(" OSetField ")
-            case 40: fatalError(" OGetThis ")
-            case 41: 
-                return .OSetThis(
-                    field: try reader.readIndex(), 
-                    src: try reader.readVarInt())
-            case 42: fatalError(" ODynGet ")
-            case 43: fatalError(" ODynSet ")
+        case 36:
+            return .OGetGlobal(dst: try reader.readReg(), global: try reader.readRef())
+        case 37: return .OSetGlobal(global: try reader.readRef(), src: try reader.readReg())
+        case 38:
+            return .OField(
+                dst: try reader.readReg(),
+                obj: try reader.readReg(),
+                field: try reader.readRef()
+            )
+        case 39:
+            return .OSetField(
+                obj: try reader.readReg(),
+                field: try reader.readRef(),
+                src: try reader.readReg()
+            )
+        case 40:
+            return .OGetThis(dst: try reader.readReg(), field: try reader.readRef())
+        case 41:
+            return .OSetThis(
+                field: try reader.readIndex(),
+                src: try reader.readVarInt()
+            )
+        case 42: return .ODynGet(dst: try reader.readReg(), obj: try reader.readReg(), field: try reader.readRef())
+        case 43: return .ODynSet(obj: try reader.readReg(), field: try reader.readRef(), src: try reader.readReg())
 
-            case 44: fatalError(" OJTrue ")
-            case 45: fatalError(" OJFalse ")
-            case 46: fatalError(" OJNull ")
-            case 47: fatalError(" OJNotNull ")
-            case 48: fatalError(" OJSLt ")
-            case 49: fatalError(" OJSGte ")
-            case 50: fatalError(" OJSGt ")
-            case 51: fatalError(" OJSLte ")
-            case 52: fatalError(" OJULt ")
-            case 53: fatalError(" OJUGte ")
-            case 54: fatalError(" OJNotLt ")
-            case 55: fatalError(" OJNotGte ")
-            case 56: fatalError(" OJEq ")
-            case 57: fatalError(" OJNotEq ")
-            case 58: fatalError(" OJAlways ")
+        case 44: return .OJTrue(cond: try reader.readReg(), offset: try reader.readJumpOffset())
+        case 45: return .OJFalse(cond: try reader.readReg(), offset: try reader.readJumpOffset())
+        case 46: return .OJNull(reg: try reader.readReg(), offset: try reader.readJumpOffset())
+        case 47:
+            return .OJNotNull(
+                reg: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 48:
+            return .OJSLt(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 49:
+            return .OJSGte(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 50:
+            return .OJSGt(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 51:
+            return .OJSLte(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 52:
+            return .OJULt(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 53:
+            return .OJUGte(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 54:
+            return .OJNotLt(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 55:
+            return .OJNotGte(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 56:
+            return .OJEq(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 57:
+            return .OJNotEq(
+                a: try reader.readReg(),
+                b: try reader.readReg(),
+                offset: try reader.readJumpOffset()
+            )
+        case 58: return .OJAlways(offset: try reader.readJumpOffset())
+        case 59: return .OToDyn(dst: try reader.readReg(), src: try reader.readReg())
+        case 60: return .OToSFloat(dst: try reader.readReg(), src: try reader.readReg())
+        case 61: return .OToUFloat(dst: try reader.readReg(), src: try reader.readReg())
+        case 62: return .OToInt(dst: try reader.readReg(), src: try reader.readReg())
+        case 63: return .OSafeCast(dst: try reader.readReg(), src: try reader.readReg())
+        case 64:
+            return .OUnsafeCast(dst: try reader.readReg(), src: try reader.readReg())
+        case 65:
+            return .OToVirtual(dst: try reader.readReg(), src: try reader.readReg())
+        case 66: return .OLabel
+        case 67: 
+            let reg = try reader.readVarInt()
+            return .ORet(ret: reg)
+        case 68: return .OThrow(exc: try reader.readReg())
+        case 69: return .ORethrow(exc: try reader.readReg())
+        case 70:
+            let reg = try reader.readReg()
+            let noffsets = try reader.readVarInt()
+            let offsets = try (0..<noffsets).map { _ in try reader.readJumpOffset() }
+            let end = try reader.readJumpOffset()
+            return .OSwitch(reg: reg, offsets: offsets, end: end)
+        case 71: return .ONullCheck(reg: try reader.readReg())
+        case 72: return .OTrap(exc: try reader.readReg(), offset: try reader.readJumpOffset()) 
+        case 73: return .OEndTrap(exc: try reader.readReg()) 
 
-            case 59: fatalError(" OToDyn ")
-            case 60: fatalError(" OToSFloat ")
-            case 61: fatalError(" OToUFloat ")
-            case 62: fatalError(" OToInt ")
-            case 63: fatalError(" OSafeCast ")
-            case 64: fatalError(" OUnsafeCast ")
-            case 65: fatalError(" OToVirtual ") 
+        case 74: return .OGetI8(dst: try reader.readReg(), bytes: try reader.readReg(), index: try reader.readReg()) 
+        case 75: return .OGetI16(dst: try reader.readReg(), bytes: try reader.readReg(), index: try reader.readReg()) 
+        case 76: return .OGetMem(dst: try reader.readReg(), bytes: try reader.readReg(), index: try reader.readReg()) 
+        case 77: return .OGetArray(dst: try reader.readReg(), array: try reader.readReg(), index: try reader.readReg())
+        case 78: return .OSetI8(bytes: try reader.readReg(), index: try reader.readReg(), src: try reader.readReg()) 
+        case 79: return .OSetI16(bytes: try reader.readReg(), index: try reader.readReg(), src: try reader.readReg()) 
+        case 80: return .OSetMem(bytes: try reader.readReg(), index: try reader.readReg(), src: try reader.readReg()) 
+        case 81: return .OSetArray(bytes: try reader.readReg(), index: try reader.readReg(), src: try reader.readReg()) 
+        case 82: return .ONew(dst: try reader.readReg()) 
+        case 83:
+            return .OArraySize(dst: try reader.readReg(), array: try reader.readReg())
+        case 84: return .OType(dst: try reader.readReg(), ty: try reader.readRef()) 
+        case 85: return .OGetType(dst: try reader.readReg(), src: try reader.readReg()) 
+        case 86: return .OGetTID(dst: try reader.readReg(), src: try reader.readReg()) 
+        case 87: return .ORef(dst: try reader.readReg(), src: try reader.readReg()) 
+        case 88: return .OUnref(dst: try reader.readReg(), src: try reader.readReg()) 
+        case 89: return .OSetref(dst: try reader.readReg(), value: try reader.readReg()) 
+        case 90:
+            let result = try HLOpCode.read_2reg_varReg(from: reader) 
+            return .OMakeEnum(dst: result.0, construct: result.1, args: result.2)
+        case 91: return .OEnumAlloc(dst: try reader.readReg(), construct: try reader.readRef()) 
+        case 92: return .OEnumIndex(dst: try reader.readReg(), value: try reader.readReg()) 
+        case 93: return .OEnumField(dst: try reader.readReg(), value: try reader.readReg(), construct: try reader.readRef(), field: try reader.readRef())
+        case 94: return .OSetEnumField(value: try reader.readReg(), field: try reader.readRef(), src: try reader.readReg())
 
-            case 66: fatalError(" OLabel ")
-            case 67: 
-                let reg = try reader.readVarInt()
-                return .ORet(ret: reg)
-            case 68: fatalError(" OThrow ")
-            case 69: fatalError(" ORethrow ")
-            case 70: fatalError(" OSwitch ")
-            case 71: fatalError(" ONullCheck ")
-            case 72: fatalError(" OTrap ")
-            case 73: fatalError(" OEndTrap ") 
-
-            case 74: fatalError(" OGetI8 ")
-            case 75: fatalError(" OGetI16 ")
-            case 76: fatalError(" OGetMem ")
-            case 77: fatalError(" OGetArray ")
-            case 78: fatalError(" OSetI8 ")
-            case 79: fatalError(" OSetI16 ")
-            case 80: fatalError(" OSetMem ")
-            case 81: fatalError(" OSetArray ")
-
-            case 82: fatalError(" ONew ")
-            case 83: fatalError(" OArraySize ")
-            case 84: fatalError(" OType ")
-            case 85: fatalError(" OGetType ")
-            case 86: fatalError(" OGetTID ") 
-
-            case 87: fatalError(" ORef ")
-            case 88: fatalError(" OUnref ")
-            case 89: fatalError(" OSetref ")
-
-            case 90: 
-                let result = try HLOpCode.read_2reg_varReg(from: reader)
-                return .OMakeEnum(dst: result.0, construct: result.1, args: result.2)
-            case 91: fatalError(" OEnumAlloc ")
-            case 92: fatalError(" OEnumIndex ")
-            case 93: fatalError(" OEnumField ")
-            case 94: fatalError(" OSetEnumField ")
-
-            case 95: fatalError(" OAssert ")
-            case 96: fatalError(" ORefData ")
-            case 97: fatalError(" ORefOffset ")
-            case 98: fatalError(" ONop ")
-            default:
-            fatalError("Unknown opcode \(code)")
+        case 95: return .OAssert
+        case 96: return .ORefData(dst: try reader.readReg(), src: try reader.readReg())
+        case 97: return .ORefOffset(dst: try reader.readReg(), reg: try reader.readReg(), offset: try reader.readReg())
+        case 98: return .ONop
+        default: fatalError("Unknown opcode \(code)")
         }
     }
 }
@@ -290,8 +448,7 @@ enum HLOpCode {
     /// Select a jump offset based on the integer value
     case OSwitch(reg: Reg, offsets: [JumpOffset], end: JumpOffset)
     case ONullCheck(reg: Reg)
-    case OTrap(exc: Reg,
-        offset: JumpOffset)
+    case OTrap(exc: Reg, offset: JumpOffset)
     case OEndTrap(exc: Reg)
 
     case OGetI8(dst: Reg, bytes: Reg, index: Reg)
@@ -326,4 +483,4 @@ enum HLOpCode {
     case ONop
 
     //  case OLast
-} 
+}
