@@ -42,17 +42,22 @@ extension HLOpCode: CustomDebugStringConvertible {
         case .OCallN(let dst, let fun, let args):
             return "reg\(dst) = fun@\(fun)(...<\(args.count) args>)"
 
-        case .OCallMethod(let dst, let field, let args): fatalError("OCallMethod")
-        case .OCallThis(let dst, let field, let args): fatalError("OCallThis")
+        case .OCallMethod(let dst, let field, let args):
+            return "reg\(dst) = <\(field)>(\(args))"
+        case .OCallThis(let dst, let field, let args): 
+            return "reg\(dst) = this.<\(field)>(\(args))"
         case .OCallClosure(let dst, let fun, let args): 
             return "reg\(dst) = reg\(fun)(<\(args.count)> args)"
-        case .OStaticClosure(let dst, let fun): fatalError("OStaticClosure")
+        case .OStaticClosure(let dst, let fun): 
+            return "staticclosure(dst \(dst) fun \(fun))"
         case .OInstanceClosure(let dst, let fun, let obj):
-            fatalError("OInstanceClosure")
+            return "instanceclosure(dst \(dst) fun \(fun) obj \(obj))"
         case .OVirtualClosure(let dst, let obj, let field):
-            fatalError("OVirtualClosure")
-        case .OGetGlobal(let dst, let global): fatalError("OGetGlobal")
-        case .OSetGlobal(let global, let src): fatalError("OSetGlobal")
+            return "instanceclosure(dst \(dst) obj \(obj) field \(field))"
+        case .OGetGlobal(let dst, let global): 
+            return "reg\(dst) = global\(global)"
+        case .OSetGlobal(let global, let src): 
+            return "global\(global) = reg\(src)"
         case .OField(let dst, let obj, let field): 
             return "reg\(dst) = reg\(obj).<\(field)>"
         case .OSetField(let obj, let field, let src):
@@ -60,74 +65,120 @@ extension HLOpCode: CustomDebugStringConvertible {
             fatalError("OSetField")
         case .OGetThis(let dst, let field): return "reg\(dst) = this.<\(field)>"
         case .OSetThis(let field, let src): return "this.<\(field)> = reg\(src)"
-        case .ODynGet(let dst, let obj, let field): fatalError("ODynGet")
-        case .ODynSet(let obj, let field, let src): fatalError("ODynSet")
+        case .ODynGet(let dst, let obj, let field): 
+            return "reg\(dst) = obj\(obj).<\(field)>"
+        case .ODynSet(let obj, let field, let src): 
+            return "obj\(obj).<\(field)> = reg\(src)"
         /// Jump by an offset if the condition is true
-        case .OJTrue(let cond, let offset): fatalError("OJTrue")
+        case .OJTrue(let cond, let offset): 
+            return "if reg\(cond) == true jump to \(offset)"
         /// Jump by an offset if the condition is false
-        case .OJFalse(let cond, let offset): fatalError("OJFalse")
-        case .OJNull(let reg, let offset): fatalError("OJNull")
-        case .OJNotNull(let reg, let offset): fatalError("OJNotNull")
-        case .OJSLt(let a, let b, let offset): fatalError("OJSLt")
-        case .OJSGte(let a, let b, let offset): fatalError("OJSGte")
-        case .OJSGt(let a, let b, let offset): fatalError("OJSGt")
-        case .OJSLte(let a, let b, let offset): fatalError("OJSLte")
-        case .OJULt(let a, let b, let offset): fatalError("OJULt")
-        case .OJUGte(let a, let b, let offset): fatalError("OJUGte")
-        case .OJNotLt(let a, let b, let offset): fatalError("OJNotLt")
-        case .OJNotGte(let a, let b, let offset): fatalError("OJNotGte")
-        case .OJEq(let a, let b, let offset): fatalError("OJEq")
-        case .OJNotEq(let a, let b, let offset): fatalError("OJNotEq")
-        case .OJAlways(let offset): fatalError("OJAlways")
+        case .OJFalse(let cond, let offset): 
+            return "if reg\(cond) == false jump to \(offset)"
+        case .OJNull(let reg, let offset): 
+            return "if reg\(reg) == null jump to \(offset)"
+        case .OJNotNull(let reg, let offset): 
+            return "if reg\(reg) != null jump to \(offset)"
+        case .OJSLt(let a, let b, let offset): 
+            return "if s(reg\(a)) < s(reg\(b)) jump to \(offset)"
+        case .OJSGte(let a, let b, let offset): 
+            return "if s(reg\(a)) >= s(reg\(b)) jump to \(offset)"
+        case .OJSGt(let a, let b, let offset): 
+            return "if s(reg\(a)) > s(reg\(b)) jump to \(offset)"
+        case .OJSLte(let a, let b, let offset): 
+            return "if s(reg\(a)) <= s(reg\(b)) jump to \(offset)"
+        case .OJULt(let a, let b, let offset): 
+            return "if u(reg\(a)) < u(reg\(b)) jump to \(offset)"
+        case .OJUGte(let a, let b, let offset): 
+            return "if u(reg\(a)) >= u(reg\(b)) jump to \(offset)"
+        case .OJNotLt(let a, let b, let offset): 
+            return "if reg\(a) >= reg\(b) jump to \(offset)"
+        case .OJNotGte(let a, let b, let offset): 
+            return "if reg\(a) < reg\(b) jump to \(offset)"
+        case .OJEq(let a, let b, let offset): 
+            return "if reg\(a) == reg\(b) jump to \(offset)"
+        case .OJNotEq(let a, let b, let offset): 
+            return "if reg\(a) != reg\(b) jump to \(offset)"
+        case .OJAlways(let offset): 
+            return "jump to \(offset)"
 
-        case .OToDyn(let dst, let src): fatalError("OToDyn")
-        case .OToSFloat(let dst, let src): fatalError("OToSFloat")
-        case .OToUFloat(let dst, let src): fatalError("OToUFloat")
-        case .OToInt(let dst, let src): fatalError("OToInt")
-        case .OSafeCast(let dst, let src): fatalError("OSafeCast")
-        case .OUnsafeCast(let dst, let src): fatalError("OUnsafeCast")
-        case .OToVirtual(let dst, let src): fatalError("OToVirtual")
+        case .OToDyn(let dst, let src): 
+            return "reg\(dst) = cast<dyn> reg\(src)"
+        case .OToSFloat(let dst, let src): 
+            return "reg\(dst) = cast<sfloat> reg\(src)"
+        case .OToUFloat(let dst, let src): 
+            return "reg\(dst) = cast<ufloat> reg\(src)"
+        case .OToInt(let dst, let src):
+            return "reg\(dst) = cast<int> reg\(src)"
+        case .OSafeCast(let dst, let src): 
+            return "reg\(dst) = safe cast reg\(src)"
+        case .OUnsafeCast(let dst, let src): 
+            return "reg\(dst) = unsafe cast reg\(src)"
+        case .OToVirtual(let dst, let src): 
+            return "reg\(dst) = cast<virt> reg\(src)"
 
         case .OLabel: return "label"
         case .ORet(let ret): return "ret reg\(ret)"
-        case .OThrow(let exc): fatalError("OThrow")
-        case .ORethrow(let exc): fatalError("ORethrow")
-        case .OSwitch(let reg, let offsets, let end): fatalError("OSwitch")
+        case .OThrow(let exc): 
+            return "throw \(exc)"
+        case .ORethrow(let exc): 
+            return "rethrow \(exc)"
+        case .OSwitch(let reg, let offsets, let end):
+            return "switch(reg\(reg), offsets \(offsets), end \(end))"
         case .ONullCheck(let reg):
             return "if reg\(reg) == null throw exc"
-        case .OTrap(let exc, let offset): fatalError("OTrap")
-        case .OEndTrap(let exc): fatalError("OEndTrap")
-
-        case .OGetI8(let dst, let bytes, let index): fatalError("OGetI8")
-        case .OGetI16(let dst, let bytes, let index): fatalError("OGetI16")
-        case .OGetMem(let dst, let bytes, let index): fatalError("OGetMem")
-        case .OGetArray(let dst, let array, let index): fatalError("OGetArray")
-        case .OSetI8(let bytes, let index, let src): fatalError("OSetI8")
-        case .OSetI16(let bytes, let index, let src): fatalError("OSetI16")
-        case .OSetMem(let bytes, let index, let src): fatalError("OSetMem")
-        case .OSetArray(let bytes, let index, let src): fatalError("OSetArray")
+        case .OTrap(let exc, let offset): 
+            return "try reg\(exc) jump to \(offset)"
+        case .OEndTrap(let exc):
+            return "catch reg\(exc)"
+        case .OGetI8(let dst, let bytes, let index): 
+            return "geti8(reg\(dst), reg\(bytes), index \(index))"
+        case .OGetI16(let dst, let bytes, let index): 
+            return "geti16(reg\(dst), reg\(bytes), index \(index))"
+        case .OGetMem(let dst, let bytes, let index): 
+            return "getmem(reg\(dst), reg\(bytes), index \(index))"
+        case .OGetArray(let dst, let array, let index): 
+            return "getarray(reg\(dst), array\(array), index \(index))"
+        case .OSetI8(let bytes, let index, let src): 
+            return "seti8(reg\(bytes), index \(index), src\(src))"
+        case .OSetI16(let bytes, let index, let src): 
+            return "seti16(reg\(bytes), index \(index), src\(src))"
+        case .OSetMem(let bytes, let index, let src): 
+            return "setmem(reg\(bytes), index \(index), src\(src))"
+        case .OSetArray(let bytes, let index, let array): 
+            return "setarray(reg\(bytes), index \(index), array\(array))"
 
         case .ONew(let dst): return "reg\(dst) = new"
-        case .OArraySize(let dst, let array): fatalError("OArraySize")
-        case .OType(let dst, let ty): fatalError("OType")
-        case .OGetType(let dst, let src): fatalError("OGetType")
-        case .OGetTID(let dst, let src): fatalError("OGetTID")
+        case .OArraySize(let dst, let array): 
+            return "arraysize(dst \(dst), array \(array))"
+        case .OType(let dst, let ty): 
+            return "type(dst \(dst), ty \(ty))"
+        case .OGetType(let dst, let src): 
+            return "gettype(dst \(dst), src \(src))"
+        case .OGetTID(let dst, let src): 
+            return "gettid(dst \(dst), src \(src))"
 
         case .ORef(let dst, let src): return "reg\(dst) = &reg\(src)"
-        case .OUnref(let dst, let src): fatalError("OUnref")
-        case .OSetref(let dst, let value): fatalError("OSetref")
+        case .OUnref(let dst, let src): return "reg\(dst) = *reg\(src)"
+        case .OSetref(let dst, let value): 
+            return "setref(dst \(dst) value \(value))"
 
         /// Allocate and initialize an enum variant
-        case .OMakeEnum(let dst, let construct, let args): fatalError("OMakeEnum")
-        case .OEnumAlloc(let dst, let construct): fatalError("OEnumAlloc")
-        case .OEnumIndex(let dst, let value): fatalError("OEnumIndex")
+        case .OMakeEnum(let dst, let construct, let args): 
+            return "makeenum(dst \(dst), construct \(construct), args \(args))"
+        case .OEnumAlloc(let dst, let construct): 
+            return "enumalloc(dst \(dst), construct \(construct))"
+        case .OEnumIndex(let dst, let value): 
+            return "enumindex(dst \(dst), value \(value))"
         case .OEnumField(let dst, let value, let construct, let field):
-            fatalError("OEnumField")
-        case .OSetEnumField(let value, let field, let src): fatalError("OSetEnumField")
-
+            return "enumfield(dst \(dst), value \(value), construct \(construct), field \(field))"
+        case .OSetEnumField(let value, let field, let src): 
+            return "setenumfield(value \(value), field \(field), src \(src))"
         case .OAssert: return "assert"
-        case .ORefData(let dst, let src): fatalError("ORefData")
-        case .ORefOffset(let dst, let reg, let offset): fatalError("ORefOffset")
+        case .ORefData(let dst, let src): 
+            return "refdata(dst\(dst), src\(src))"
+        case .ORefOffset(let dst, let reg, let offset): 
+            return "refoffset(dst\(dst), reg\(reg), offset\(offset))"
         case .ONop: return "nop"
         }
     }

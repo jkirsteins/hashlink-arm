@@ -265,8 +265,8 @@ class ByteReader {
                     typeResolver.getResolvable(try self.readIndex())
                 }
 
-                let ops = try Array(repeating: 0, count: Int(nops)).map { _ in
-                    try HLOpCode.read(from: self)
+                let ops = try Array(repeating: 0, count: Int(nops)).enumerated().map { pos, _ in
+                    try HLOpCode.read(for: UInt32(pos), from: self)
                 }
 
                 print("ops", ops)

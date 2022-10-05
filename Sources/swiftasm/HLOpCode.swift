@@ -1,4 +1,5 @@
 typealias Reg = Int32
+// JumpOffset can be negative (backwards jump)
 typealias JumpOffset = Int32
 typealias RefInt = TableIndex
 typealias Ref = TableIndex
@@ -14,6 +15,9 @@ typealias RefEnumConstruct = TableIndex
 
 // https://github.com/Gui-Yom/hlbc/blob/master/hlbc/src/opcodes.rs
 
+// position in function (for calculating jumps)
+typealias OpCodePosition = UInt32
+
 extension HLOpCode {
     static func read_2reg_varReg(from reader: ByteReader) throws -> (Reg, Ref, [Reg]) {
         let reg = try reader.readVarInt()
@@ -24,7 +28,7 @@ extension HLOpCode {
         return (reg, ref, regs)
     }
 
-    static func read(from reader: ByteReader) throws -> HLOpCode {
+    static func read(for pos: OpCodePosition, from reader: ByteReader) throws -> HLOpCode {
         let code = try reader.readUInt8()
         switch code {
         case 0: return .OMov(dst: try reader.readReg(), src: try reader.readReg())
@@ -192,75 +196,75 @@ extension HLOpCode {
         case 42: return .ODynGet(dst: try reader.readReg(), obj: try reader.readReg(), field: try reader.readRef())
         case 43: return .ODynSet(obj: try reader.readReg(), field: try reader.readRef(), src: try reader.readReg())
 
-        case 44: return .OJTrue(cond: try reader.readReg(), offset: try reader.readJumpOffset())
-        case 45: return .OJFalse(cond: try reader.readReg(), offset: try reader.readJumpOffset())
-        case 46: return .OJNull(reg: try reader.readReg(), offset: try reader.readJumpOffset())
+        case 44: return .OJTrue(cond: try reader.readReg(), offset: try reader.readJumpOffset() + Int32(pos) + 1)
+        case 45: return .OJFalse(cond: try reader.readReg(), offset: try reader.readJumpOffset() + Int32(pos) + 1)
+        case 46: return .OJNull(reg: try reader.readReg(), offset: try reader.readJumpOffset() + Int32(pos) + 1)
         case 47:
             return .OJNotNull(
                 reg: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 48:
             return .OJSLt(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 49:
             return .OJSGte(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 50:
             return .OJSGt(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 51:
             return .OJSLte(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 52:
             return .OJULt(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 53:
             return .OJUGte(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 54:
             return .OJNotLt(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 55:
             return .OJNotGte(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 56:
             return .OJEq(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
         case 57:
             return .OJNotEq(
                 a: try reader.readReg(),
                 b: try reader.readReg(),
-                offset: try reader.readJumpOffset()
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
             )
-        case 58: return .OJAlways(offset: try reader.readJumpOffset())
+        case 58: return .OJAlways(offset: try reader.readJumpOffset() + Int32(pos) + 1)
         case 59: return .OToDyn(dst: try reader.readReg(), src: try reader.readReg())
         case 60: return .OToSFloat(dst: try reader.readReg(), src: try reader.readReg())
         case 61: return .OToUFloat(dst: try reader.readReg(), src: try reader.readReg())
@@ -283,7 +287,7 @@ extension HLOpCode {
             let end = try reader.readJumpOffset()
             return .OSwitch(reg: reg, offsets: offsets, end: end)
         case 71: return .ONullCheck(reg: try reader.readReg())
-        case 72: return .OTrap(exc: try reader.readReg(), offset: try reader.readJumpOffset()) 
+        case 72: return .OTrap(exc: try reader.readReg(), offset: try reader.readJumpOffset() + Int32(pos) + 1) 
         case 73: return .OEndTrap(exc: try reader.readReg()) 
 
         case 74: return .OGetI8(dst: try reader.readReg(), bytes: try reader.readReg(), index: try reader.readReg()) 
