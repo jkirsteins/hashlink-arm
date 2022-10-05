@@ -173,6 +173,7 @@ class ByteReader {
         let globalTable = SharedStorage(wrappedValue: [HLGlobal]())
         let nativeTable = SharedStorage(wrappedValue: [HLNative]())
         let functionTable = SharedStorage(wrappedValue: [HLFunction]())
+        let constantTable = SharedStorage(wrappedValue: [HLConstant]())
 
         // Resolvers
         let stringResolver = TableResolver(table: stringTable, count: nstrings)
@@ -180,6 +181,7 @@ class ByteReader {
         let globalResolver = TableResolver(table: globalTable, count: nglobals)
         let nativeResolver = TableResolver(table: nativeTable, count: nnatives)
         let functionResolver = TableResolver(table: functionTable, count: nfunctions)
+        let constantResolver = TableResolver(table: constantTable, count: nconstants)
 
         stringTable.wrappedValue = try self.readStrings(nstrings)
 
@@ -326,18 +328,6 @@ class ByteReader {
                 }
 
                 return HLFunction(type: type, findex: findex, regs: regs, ops: ops, assigns: assigns)
-
-                // print(functionTable[24])
-                // fatalError("wip nfunctions loading")
-                // let ops = try Array(repeating: 0, count: Int(nops)).map {
-
-                // }
-
-                // var * nregs	regs	registers types
-                // nops * opcode	ops	instructions
-                // ? * nops	debuginfo	if has debug info, complicated encoding for file/line info for each instruction
-                // var	nassigns	if has debug info && version >= 3
-                // 2 * var * nassigns	assigns	tuples (variable name ref, opcode number)
             }.sorted(by: { $0.findex < $1.findex })
 
         functionTable.wrappedValue = loadedFunctions
@@ -349,23 +339,18 @@ class ByteReader {
                 print("    \(op.debugDescription)")
             }
         }
-        fatalError("")
-
+        
         // constants
-        _ = try Array(repeating: 0, count: Int(nconstants)).enumerated().map { ix, _ in
-
-            fatalError("wip nconstants loading")
+        constantTable.wrappedValue = try Array(repeating: 0, count: Int(nconstants)).enumerated().map { ix, _ in
+            let global = try self.readIndex()
+            let nfields = try self.readVarInt()
+            let fields = try Array(repeating: 0, count: Int(nfields)).map { _ in
+                return try self.readIndex()
+            }
+            return HLConstant(
+                global: globalResolver.getResolvable(global),
+                fields: fields)
         }
-
-        fatalError("bim \(typeTable.wrappedValue.count)")
-
-        /*
-ntypes * type	types	types definitions
-var * nglobals	globals	types of each globals
-nnatives * native	natives	Native functions to be loaded from external libraries
-nfunctions* function	functions	Function definitions
-nconstants* constant	constants	Constant definitions
-        */
 
         let result = ModuleHeader(
             signature: sig,
