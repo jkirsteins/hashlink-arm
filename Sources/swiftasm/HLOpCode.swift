@@ -18,6 +18,108 @@ typealias RefEnumConstruct = TableIndex
 // position in function (for calculating jumps)
 typealias OpCodePosition = UInt32
 
+enum HLOpCodeId: UInt32 {
+    case OMov
+    case OInt
+    case OFloat
+    case OBool
+    case OBytes
+    case OString
+    case ONull
+    case OAdd
+    case OSub
+    case OMul
+    case OSDiv
+    case OUDiv
+    case OSMod
+    case OUMod
+    case OShl
+    case OSShr
+    case OUShr
+    case OAnd
+    case OOr  // 18
+    case OXor
+    case ONeg  // 20
+    case ONot
+    case OIncr
+    case ODecr
+    case OCall0
+    case OCall1
+    case OCall2
+    case OCall3
+    case OCall4
+    case OCallN
+    case OCallMethod
+    case OCallThis
+    case OCallClosure
+    case OStaticClosure
+    case OInstanceClosure
+    case OVirtualClosure
+    case OGetGlobal
+    case OSetGlobal
+    case OField
+    case OSetField
+    case OGetThis
+    case OSetThis
+    case ODynGet
+    case ODynSet
+    case OJTrue
+    case OJFalse
+    case OJNull
+    case OJNotNull
+    case OJSLt
+    case OJSGte
+    case OJSGt  // 50
+    case OJSLte
+    case OJULt
+    case OJUGte
+    case OJNotLt
+    case OJNotGte
+    case OJEq
+    case OJNotEq
+    case OJAlways
+    case OToDyn
+    case OToSFloat
+    case OToUFloat
+    case OToInt
+    case OSafeCast
+    case OUnsafeCast
+    case OToVirtual
+    case OLabel  // 66
+    case ORet
+    case OThrow
+    case ORethrow
+    case OSwitch
+    case ONullCheck
+    case OTrap
+    case OEndTrap
+    case OGetI8
+    case OGetI16
+    case OGetMem
+    case OGetArray
+    case OSetI8
+    case OSetI16
+    case OSetMem
+    case OSetArray
+    case ONew
+    case OArraySize
+    case OType
+    case OGetType
+    case OGetTID
+    case ORef
+    case OUnref
+    case OSetref
+    case OMakeEnum
+    case OEnumAlloc
+    case OEnumIndex
+    case OEnumField
+    case OSetEnumField
+    case OAssert  // 95
+    case ORefData
+    case ORefOffset
+    case ONop  // 98
+}
+
 extension HLOpCode {
     static func read_2reg_varReg(from reader: ByteReader) throws -> (Reg, Ref, [Reg]) {
         let reg = try reader.readVarInt()
@@ -28,7 +130,9 @@ extension HLOpCode {
         return (reg, ref, regs)
     }
 
-    static func read(for pos: OpCodePosition, from reader: ByteReader) throws -> HLOpCode {
+    static func read(for pos: OpCodePosition, from reader: ByteReader) throws
+        -> HLOpCode
+    {
         let code = try reader.readUInt8()
         switch code {
         case 0: return .OMov(dst: try reader.readReg(), src: try reader.readReg())
@@ -167,13 +271,25 @@ extension HLOpCode {
             let result = try HLOpCode.read_2reg_varReg(from: reader)
             return .OCallClosure(dst: result.0, fun: result.1, args: result.2)
 
-        case 33: return .OStaticClosure(dst: try reader.readReg(), fun: try reader.readRef())
-        case 34: return .OInstanceClosure(dst: try reader.readReg(), fun: try reader.readRef(), obj: try reader.readReg())
-        case 35: return .OVirtualClosure(dst: try reader.readReg(), obj: try reader.readReg(), field: try reader.readReg())
+        case 33:
+            return .OStaticClosure(dst: try reader.readReg(), fun: try reader.readRef())
+        case 34:
+            return .OInstanceClosure(
+                dst: try reader.readReg(),
+                fun: try reader.readRef(),
+                obj: try reader.readReg()
+            )
+        case 35:
+            return .OVirtualClosure(
+                dst: try reader.readReg(),
+                obj: try reader.readReg(),
+                field: try reader.readReg()
+            )
 
         case 36:
             return .OGetGlobal(dst: try reader.readReg(), global: try reader.readRef())
-        case 37: return .OSetGlobal(global: try reader.readRef(), src: try reader.readReg())
+        case 37:
+            return .OSetGlobal(global: try reader.readRef(), src: try reader.readReg())
         case 38:
             return .OField(
                 dst: try reader.readReg(),
@@ -193,12 +309,34 @@ extension HLOpCode {
                 field: try reader.readIndex(),
                 src: try reader.readVarInt()
             )
-        case 42: return .ODynGet(dst: try reader.readReg(), obj: try reader.readReg(), field: try reader.readRef())
-        case 43: return .ODynSet(obj: try reader.readReg(), field: try reader.readRef(), src: try reader.readReg())
+        case 42:
+            return .ODynGet(
+                dst: try reader.readReg(),
+                obj: try reader.readReg(),
+                field: try reader.readRef()
+            )
+        case 43:
+            return .ODynSet(
+                obj: try reader.readReg(),
+                field: try reader.readRef(),
+                src: try reader.readReg()
+            )
 
-        case 44: return .OJTrue(cond: try reader.readReg(), offset: try reader.readJumpOffset() + Int32(pos) + 1)
-        case 45: return .OJFalse(cond: try reader.readReg(), offset: try reader.readJumpOffset() + Int32(pos) + 1)
-        case 46: return .OJNull(reg: try reader.readReg(), offset: try reader.readJumpOffset() + Int32(pos) + 1)
+        case 44:
+            return .OJTrue(
+                cond: try reader.readReg(),
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
+            )
+        case 45:
+            return .OJFalse(
+                cond: try reader.readReg(),
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
+            )
+        case 46:
+            return .OJNull(
+                reg: try reader.readReg(),
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
+            )
         case 47:
             return .OJNotNull(
                 reg: try reader.readReg(),
@@ -275,7 +413,7 @@ extension HLOpCode {
         case 65:
             return .OToVirtual(dst: try reader.readReg(), src: try reader.readReg())
         case 66: return .OLabel
-        case 67: 
+        case 67:
             let reg = try reader.readVarInt()
             return .ORet(ret: reg)
         case 68: return .OThrow(exc: try reader.readReg())
@@ -287,37 +425,102 @@ extension HLOpCode {
             let end = try reader.readJumpOffset()
             return .OSwitch(reg: reg, offsets: offsets, end: end)
         case 71: return .ONullCheck(reg: try reader.readReg())
-        case 72: return .OTrap(exc: try reader.readReg(), offset: try reader.readJumpOffset() + Int32(pos) + 1) 
-        case 73: return .OEndTrap(exc: try reader.readReg()) 
+        case 72:
+            return .OTrap(
+                exc: try reader.readReg(),
+                offset: try reader.readJumpOffset() + Int32(pos) + 1
+            )
+        case 73: return .OEndTrap(exc: try reader.readReg())
 
-        case 74: return .OGetI8(dst: try reader.readReg(), bytes: try reader.readReg(), index: try reader.readReg()) 
-        case 75: return .OGetI16(dst: try reader.readReg(), bytes: try reader.readReg(), index: try reader.readReg()) 
-        case 76: return .OGetMem(dst: try reader.readReg(), bytes: try reader.readReg(), index: try reader.readReg()) 
-        case 77: return .OGetArray(dst: try reader.readReg(), array: try reader.readReg(), index: try reader.readReg())
-        case 78: return .OSetI8(bytes: try reader.readReg(), index: try reader.readReg(), src: try reader.readReg()) 
-        case 79: return .OSetI16(bytes: try reader.readReg(), index: try reader.readReg(), src: try reader.readReg()) 
-        case 80: return .OSetMem(bytes: try reader.readReg(), index: try reader.readReg(), src: try reader.readReg()) 
-        case 81: return .OSetArray(bytes: try reader.readReg(), index: try reader.readReg(), src: try reader.readReg()) 
-        case 82: return .ONew(dst: try reader.readReg()) 
+        case 74:
+            return .OGetI8(
+                dst: try reader.readReg(),
+                bytes: try reader.readReg(),
+                index: try reader.readReg()
+            )
+        case 75:
+            return .OGetI16(
+                dst: try reader.readReg(),
+                bytes: try reader.readReg(),
+                index: try reader.readReg()
+            )
+        case 76:
+            return .OGetMem(
+                dst: try reader.readReg(),
+                bytes: try reader.readReg(),
+                index: try reader.readReg()
+            )
+        case 77:
+            return .OGetArray(
+                dst: try reader.readReg(),
+                array: try reader.readReg(),
+                index: try reader.readReg()
+            )
+        case 78:
+            return .OSetI8(
+                bytes: try reader.readReg(),
+                index: try reader.readReg(),
+                src: try reader.readReg()
+            )
+        case 79:
+            return .OSetI16(
+                bytes: try reader.readReg(),
+                index: try reader.readReg(),
+                src: try reader.readReg()
+            )
+        case 80:
+            return .OSetMem(
+                bytes: try reader.readReg(),
+                index: try reader.readReg(),
+                src: try reader.readReg()
+            )
+        case 81:
+            return .OSetArray(
+                bytes: try reader.readReg(),
+                index: try reader.readReg(),
+                src: try reader.readReg()
+            )
+        case 82: return .ONew(dst: try reader.readReg())
         case 83:
             return .OArraySize(dst: try reader.readReg(), array: try reader.readReg())
-        case 84: return .OType(dst: try reader.readReg(), ty: try reader.readRef()) 
-        case 85: return .OGetType(dst: try reader.readReg(), src: try reader.readReg()) 
-        case 86: return .OGetTID(dst: try reader.readReg(), src: try reader.readReg()) 
-        case 87: return .ORef(dst: try reader.readReg(), src: try reader.readReg()) 
-        case 88: return .OUnref(dst: try reader.readReg(), src: try reader.readReg()) 
-        case 89: return .OSetref(dst: try reader.readReg(), value: try reader.readReg()) 
+        case 84: return .OType(dst: try reader.readReg(), ty: try reader.readRef())
+        case 85: return .OGetType(dst: try reader.readReg(), src: try reader.readReg())
+        case 86: return .OGetTID(dst: try reader.readReg(), src: try reader.readReg())
+        case 87: return .ORef(dst: try reader.readReg(), src: try reader.readReg())
+        case 88: return .OUnref(dst: try reader.readReg(), src: try reader.readReg())
+        case 89: return .OSetref(dst: try reader.readReg(), value: try reader.readReg())
         case 90:
-            let result = try HLOpCode.read_2reg_varReg(from: reader) 
+            let result = try HLOpCode.read_2reg_varReg(from: reader)
             return .OMakeEnum(dst: result.0, construct: result.1, args: result.2)
-        case 91: return .OEnumAlloc(dst: try reader.readReg(), construct: try reader.readRef()) 
-        case 92: return .OEnumIndex(dst: try reader.readReg(), value: try reader.readReg()) 
-        case 93: return .OEnumField(dst: try reader.readReg(), value: try reader.readReg(), construct: try reader.readRef(), field: try reader.readRef())
-        case 94: return .OSetEnumField(value: try reader.readReg(), field: try reader.readRef(), src: try reader.readReg())
+        case 91:
+            return .OEnumAlloc(
+                dst: try reader.readReg(),
+                construct: try reader.readRef()
+            )
+        case 92:
+            return .OEnumIndex(dst: try reader.readReg(), value: try reader.readReg())
+        case 93:
+            return .OEnumField(
+                dst: try reader.readReg(),
+                value: try reader.readReg(),
+                construct: try reader.readRef(),
+                field: try reader.readRef()
+            )
+        case 94:
+            return .OSetEnumField(
+                value: try reader.readReg(),
+                field: try reader.readRef(),
+                src: try reader.readReg()
+            )
 
         case 95: return .OAssert
         case 96: return .ORefData(dst: try reader.readReg(), src: try reader.readReg())
-        case 97: return .ORefOffset(dst: try reader.readReg(), reg: try reader.readReg(), offset: try reader.readReg())
+        case 97:
+            return .ORefOffset(
+                dst: try reader.readReg(),
+                reg: try reader.readReg(),
+                offset: try reader.readReg()
+            )
         case 98: return .ONop
         default: fatalError("Unknown opcode \(code)")
         }

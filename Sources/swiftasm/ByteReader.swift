@@ -329,7 +329,12 @@ class ByteReader {
             entrypoint: entrypoint,
             constInts: constInts,
             constFloats: constFloats,
-            stringResolver: stringResolver
+            stringResolver: stringResolver,
+            typeResolver: typeResolver,
+            globalResolver: globalResolver,
+            nativeResolver: nativeResolver,
+            functionResolver: functionResolver,
+            constantResolver: constantResolver
         )
 
         return result

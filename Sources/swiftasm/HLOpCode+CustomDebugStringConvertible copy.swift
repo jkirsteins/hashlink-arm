@@ -1,5 +1,9 @@
 extension HLOpCode: CustomDebugStringConvertible {
     var debugDescription: String {
+        "\(id): \(debugDescriptionInternal)"
+    }
+
+    fileprivate var debugDescriptionInternal: String {
         switch self {
         case .OMov(let dst, let src): return "reg\(dst) = reg\(src)"
         case .OInt(let dst, let ptr): return "reg\(dst) = i \(ptr)"

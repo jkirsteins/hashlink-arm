@@ -95,7 +95,16 @@ struct SwiftAsm: ParsableCommand {
         let reader = ByteReader(file)
 
         let head = try! reader.readModule()
+        let compiler = M1Compiler()
         print(String(reflecting: head))
+        print("==> Compiling functions")
+        for funIx in 0..<head.nfunctions {
+            let fun = head.functionResolver.get(Int(funIx))
+            let bytes = compiler.compile(native: fun)
+            print("Compiled \(fun.debugDescription)")
+            print(bytes)
+            fatalError()
+        }
 
         return
 

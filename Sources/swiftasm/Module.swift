@@ -23,6 +23,11 @@ struct Module: CustomDebugStringConvertible {
     let constFloats: [Double]
 
     let stringResolver: TableResolver<String>
+    let typeResolver: TableResolver<HLType>
+    let globalResolver: TableResolver<HLGlobal>
+    let nativeResolver: TableResolver<HLNative>
+    let functionResolver: TableResolver<HLFunction>
+    let constantResolver: TableResolver<HLConstant>
 
     var debugDescription: String {
         return """
