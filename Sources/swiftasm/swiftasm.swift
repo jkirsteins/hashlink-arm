@@ -94,8 +94,9 @@ struct SwiftAsm: ParsableCommand {
         let file = try! Data(contentsOf: URL(fileURLWithPath: hlFileIn))
         let reader = ByteReader(file)
 
-        let head = try! reader.readHeader()
+        let head = try! reader.readModule()
         print(String(reflecting: head))
+
         return
 
         let builder = OpBuilder()

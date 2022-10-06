@@ -19,53 +19,6 @@ struct Constants {
 
 }
 
-struct ModuleHeader: CustomDebugStringConvertible {
-    let signature: ModuleSignature
-    var version: UInt8 { signature.v }
-
-    let flags: Int32
-    let nints: Int32
-    let nfloats: Int32
-    let nstrings: Int32
-
-    // only v5 upwards
-    let nbytes: Int32
-
-    let ntypes: Int32
-    let nglobals: Int32
-    let nnatives: Int32
-    let nfunctions: Int32
-    let nconstants: Int32
-    let entrypoint: Int32
-
-    // [i32]
-    let constInts: [Int32]
-    // [f64]
-    let constFloats: [Double]
-
-    let stringResolver: TableResolver<String>
-
-    var debugDescription: String {
-        return """
-            hl v\(version)
-            entry @\(entrypoint)
-            \(nstrings) strings
-            \(0) bytes
-            \(nints) ints
-            \(constInts.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
-            \(nfloats) floats
-            \(constFloats.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
-            \(nglobals) globals
-            \(nnatives) natives
-            \(nfunctions) functions
-            ??? objects protos (not types)
-            \(nconstants) constant values
-            strings
-            \(stringResolver.table.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
-            """
-    }
-}
-
 struct ModuleSignature {
     let h: UInt8
     let l: UInt8
@@ -111,23 +64,15 @@ class ByteReader {
         }
     }
 
-    func readReg() throws -> Reg {
-        try readVarInt()    
-    }
+    func readReg() throws -> Reg { try readVarInt() }
 
-    func readJumpOffset() throws -> JumpOffset {
-        try readVarInt()    
-    }
+    func readJumpOffset() throws -> JumpOffset { try readVarInt() }
 
-    func readBool() throws -> Int32 {
-        try readVarInt()    
-    }
+    func readBool() throws -> Int32 { try readVarInt() }
 
-    func readRef() throws -> Ref {
-        try readIndex()    
-    }
+    func readRef() throws -> Ref { try readIndex() }
 
-    func readHeader() throws -> ModuleHeader {
+    func readModule() throws -> Module {
         guard self.pointer == 0 else {
             fatalError("Don't read the header if pointer not at start")
         }
@@ -239,7 +184,17 @@ class ByteReader {
             let type = typeResolver.getResolvable(try readIndex())
             let findex = try readVarInt()
 
-            let native = HLNative(lib: lib, name: name, type: type, findex: findex)
+            //
+            let rlib = ResolvedLibrary(name: lib.value)
+            let rfun = rlib.get(name.value)
+
+            let native = HLNative(
+                lib: lib,
+                name: name,
+                type: type,
+                findex: findex,
+                memory: rfun
+            )
             nativeTable.wrappedValue += [native]
 
             return native
@@ -249,7 +204,7 @@ class ByteReader {
         for (ix, rt) in _natives.enumerated() {
             print("\(ix) : \(rt.debugDescription)")
         }
-
+        
         // functions
         let loadedFunctions = try Array(repeating: 0, count: Int(nfunctions))
             .enumerated().map { ix, _ in
@@ -267,17 +222,18 @@ class ByteReader {
                     typeResolver.getResolvable(try self.readIndex())
                 }
 
-                let ops = try Array(repeating: 0, count: Int(nops)).enumerated().map { pos, _ in
-                    try HLOpCode.read(for: UInt32(pos), from: self)
+                let ops = try Array(repeating: 0, count: Int(nops)).enumerated().map {
+                    pos,
+                    _ in try HLOpCode.read(for: UInt32(pos), from: self)
                 }
 
                 print("ops", ops)
                 print("\n==>\n")
 
-                // debug info. Not clear how to use this
+                // debug info
                 // see: https://github.com/Gui-Yom/hlbc/blob/967c0f186e4c21861ad7010be1114a031d67dd7d/src/deser.rs#L229
                 if hasdebug {
-                    var tmp = []  
+                    var tmp: [(Int32, Int32)] = []
                     var currfile: Int32 = -1
                     var currline: Int32 = 0
                     var i = 0
@@ -310,24 +266,32 @@ class ByteReader {
                             i += 1
                         }
                     }
-                    //print("Got debuginfo", tmp)
                 }
 
                 let nassigns: Int32
                 if hasdebug && sig.v >= 3 {
                     nassigns = try self.readVarInt()
-                } else {
+                }
+                else {
                     nassigns = 0
                 }
 
                 let assigns = try Array(repeating: 0, count: Int(nassigns)).map { _ in
                     HLFunctionAssign(
-                        variableName: stringResolver.getResolvable(try self.readIndex()),
+                        variableName: stringResolver.getResolvable(
+                            try self.readIndex()
+                        ),
                         opcodeId: try self.readVarInt()
                     )
                 }
 
-                return HLFunction(type: type, findex: findex, regs: regs, ops: ops, assigns: assigns)
+                return HLFunction(
+                    type: type,
+                    findex: findex,
+                    regs: regs,
+                    ops: ops,
+                    assigns: assigns
+                )
             }.sorted(by: { $0.findex < $1.findex })
 
         functionTable.wrappedValue = loadedFunctions
@@ -335,24 +299,22 @@ class ByteReader {
         print("==> Functions")
         for (ix, rt) in functionTable.wrappedValue.enumerated() {
             print("\(ix) : \(rt.debugDescription)")
-            for op in rt.ops {
-                print("    \(op.debugDescription)")
-            }
+            for op in rt.ops { print("    \(op.debugDescription)") }
         }
-        
         // constants
-        constantTable.wrappedValue = try Array(repeating: 0, count: Int(nconstants)).enumerated().map { ix, _ in
-            let global = try self.readIndex()
-            let nfields = try self.readVarInt()
-            let fields = try Array(repeating: 0, count: Int(nfields)).map { _ in
-                return try self.readIndex()
+        constantTable.wrappedValue = try Array(repeating: 0, count: Int(nconstants))
+            .enumerated().map { ix, _ in let global = try self.readIndex()
+                let nfields = try self.readVarInt()
+                let fields = try Array(repeating: 0, count: Int(nfields)).map { _ in
+                    return try self.readIndex()
+                }
+                return HLConstant(
+                    global: globalResolver.getResolvable(global),
+                    fields: fields
+                )
             }
-            return HLConstant(
-                global: globalResolver.getResolvable(global),
-                fields: fields)
-        }
 
-        let result = ModuleHeader(
+        let result = Module(
             signature: sig,
             flags: flags,
             nints: nints,
