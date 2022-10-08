@@ -1,5 +1,7 @@
 public protocol Register {
     associatedtype Shift
+
+    var rawValue: UInt8 { get }
 }
 
 public enum Shift64 : Int {
@@ -51,8 +53,20 @@ public enum Register64 : UInt8, Register {
     case sp = 31
 }
 
-public enum Register32 : UInt8, Register {
-    public typealias Shift = Shift32
+enum ExtendOp32 {
+    case sxtw(Register32.Shift?)    // ExtendSigned32To64
+    case uxtw(Register32.Shift?)    // ExtendUnsigned32To64
+}
+
+enum IndexingMode {
+    // If specified, the offset we can use must be in the range -256 to 255
+    case pre
+    case post
+}
+
+enum Register32 : UInt8, Register {
+    typealias Shift = Shift32
+    typealias ExtendOp = ExtendOp32    
 
     case w0 = 0
     case w1 = 1
@@ -85,7 +99,7 @@ public enum Register32 : UInt8, Register {
     case w28 = 28
 }
 
-public enum Op {
+enum Op {
     case nop
     case ret 
 
@@ -97,7 +111,6 @@ public enum Op {
     case movk64(Register64, UInt16, Register64.Shift?)
 
     /* 
-    
     # LDR (immediate)
     
     Loads a word or doubleword from memory and writes it to a register. 
@@ -111,13 +124,24 @@ public enum Op {
         - https://developer.arm.com/documentation/ddi0596/2021-06/Index-by-Encoding/Loads-and-Stores?lang=en#ldst_pos
         - https://developer.arm.com/documentation/ddi0596/2021-06/Base-Instructions/LDR--immediate---Load-Register--immediate--?lang=en        
     */
-    case ldr32(Register32, Register64)  // e.g. w0 <- [x1]
-    case ldr64(Register64, Register64)  // e.g. x0 <- [x1]
+    case ldr(LdrMode)
 }
 
-public enum EmitterM1Error: Error {
+enum LdrMode {
+    case _32(Register32, Register64, Offset?)   // e.g. w0 <- [x1]
+    case _64(Register64, Register64, Offset?)   // e.g. x0 <- [x1]
+}
+
+enum Offset {
+    case immediate(Int16)
+    case reg64(Register64, Register64.Shift?, IndexingMode?)
+    case reg32(Register32, Register32.ExtendOp, IndexingMode?)
+}
+
+public enum EmitterM1Error: Error, Equatable {
     case invalidShift
     case unsupportedOp
+    case invalidOffset(_ reason: String)
 }
 
 public class EmitterM1
@@ -131,15 +155,51 @@ public class EmitterM1
         return result
     }
 
-    public static func emit(for op: Op) throws -> [UInt8] {
+    static func emit(for op: Op) throws -> [UInt8] {
         switch(op) {
             case .nop:
             return [0x1f, 0x20, 0x03, 0xd5]
             case .ret:
             return [0xc0, 0x03, 0x5f, 0xd6]
 
-            case .ldr32(let target, let src):
-                let size: Int64 = 0b10 
+// Register32, Register64, Offset?)   // e.g. w0 <- [x1]
+//     case _64(Register64, Register64, Offset?)   // e.g. x0 <- [x1]
+
+            case .ldr(let ldrMode):
+                let size: Int64
+                let Rt: any Register
+                let Rn: Register64
+                let offset: Offset?
+                switch(ldrMode) {
+                    case ._32(let _rt, let _rn, let _offset):
+                        size = 0b10
+                        Rt = _rt
+                        Rn = _rn
+                        offset = _offset
+                    case ._64(let _rt, let _rn, let _offset):
+                        size = 0b11
+                        Rt = _rt
+                        Rn = _rn
+                        offset = _offset
+                }
+
+                let is32b = size == 0b10
+
+                switch(offset) {
+                    case .immediate(let imm):
+                    guard imm >= -256 else {
+                        throw EmitterM1Error.invalidOffset("Offset can't be less than -256")
+                    }
+                    guard (!is32b) || (imm <= 255 && imm >= -256) || (imm >= 0 && imm <= 16380 && imm % 4 == 0) else {
+                        throw EmitterM1Error.invalidOffset("Offset in 32-bit mode must be a multiple of 4 in range 0...16380")
+                    }
+                    guard (is32b) || (imm <= 255 && imm >= -256) || (imm >= 0 && imm <= 32760 && imm % 8 == 0) else {
+                        throw EmitterM1Error.invalidOffset("Offset in 64-bit mode must be a multiple of 8 in range 0...32760")
+                    }
+                    default:
+                    break
+                }
+                
                 let sizeOffset: Int64 = 30
                 let v: Int64 = 0
                 let vOffset: Int64 = 26
@@ -147,25 +207,10 @@ public class EmitterM1
                 let opcOffset: Int64 = 22
                 let mask: Int64 = 0b0011_1001_0000_0000_0000_0000_0000_0000
 
-                let encodedRt: Int64 = (Int64)(0b11111 & target.rawValue)
-                let encodedRn: Int64 = (Int64)((0b11111 & src.rawValue) << 5)
+                let encodedRt: Int64 = (Int64)(0b11111 & Rt.rawValue)
+                let encodedRn: Int64 = (Int64)((0b11111 & Rn.rawValue) << 5)
 
                 let encoded: Int64  = (size << sizeOffset) | (v << vOffset) | (opc << opcOffset) | mask | encodedRt | encodedRn
-                return returnAsArray(encoded)
-            case .ldr64(let target, let src):
-                let size: Int64 = 0b11 // 10 - 32bit
-                let sizeOffset: Int64 = 30
-                let v: Int64 = 0
-                let vOffset: Int64 = 26
-                let opc: Int64 = 0b01
-                let opcOffset: Int64 = 22
-                let mask: Int64 = 0b0011_1001_0000_0000_0000_0000_0000_0000
-
-                let encodedRt: Int64 = (Int64)(0b11111 & target.rawValue)
-                let encodedRn: Int64 = (Int64)((0b11111 & src.rawValue) << 5)
-
-                let encoded: Int64  = (size << sizeOffset) | (v << vOffset) | (opc << opcOffset) | mask | encodedRt | encodedRn
-                print("encoded \(encoded)")
                 return returnAsArray(encoded)
             case .movk64(let register, let val, let shift):
                 // xx1x 0010 1xxi iiii iiii iiii iiid dddd

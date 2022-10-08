@@ -16,16 +16,38 @@ final class EmitterM1Tests: XCTestCase {
         )
     }
 
-    func testLdr_base_unsignedImmediate() throws {
+    func testLdr_base_noOffset() throws {
         XCTAssertEqual(
-            try! EmitterM1.emit(for: .ldr32(.w2, .x1)), 
+            try! EmitterM1.emit(for: .ldr(._32(.w2, .x1, nil))), 
             [0x22, 0x00, 0x40, 0xb9]
         )
         
         XCTAssertEqual(
-            try! EmitterM1.emit(for: .ldr64(.x2, .x1)), 
+            try! EmitterM1.emit(for: .ldr(._64(.x2, .x1, nil))), 
             [0x22, 0x00, 0x40, 0xf9]
         )
+    }
+
+    func testLdr_invalidOffset() throws {
+        /* 
+        Invalid offsets are:
+        - When using pre/post indexing mode, the offset we can use must be in the range -256 to 255.
+        - The offset may range from -256 to 255 for 32-bit and 64-bit accesses. 
+        - Larger offsets are a bit more limited: for 32-bit it must be multiple of 4 in the range 0 to 16380, 
+          for 64-bit it must be a multiple of 8 in the range of 0 to 32760.
+        */
+        XCTAssertThrowsError(try EmitterM1.emit(for: .ldr(._64(.x2, .x1, .immediate(257))))) { error in
+            XCTAssertEqual(error as! EmitterM1Error, EmitterM1Error.invalidOffset("Offset in 64-bit mode must be a multiple of 8 in range 0...32760"))
+        }
+        XCTAssertThrowsError(try EmitterM1.emit(for: .ldr(._32(.w2, .x1, .immediate(257))))) { error in
+            XCTAssertEqual(error as! EmitterM1Error, EmitterM1Error.invalidOffset("Offset in 32-bit mode must be a multiple of 4 in range 0...16380"))
+        }
+        XCTAssertThrowsError(try EmitterM1.emit(for: .ldr(._64(.x2, .x1, .immediate(-257))))) { error in
+            XCTAssertEqual(error as! EmitterM1Error, EmitterM1Error.invalidOffset("Offset can\'t be less than -256"))
+        }
+        XCTAssertThrowsError(try EmitterM1.emit(for: .ldr(._64(.x2, .x1, .immediate(404))))) { error in
+            XCTAssertEqual(error as! EmitterM1Error, EmitterM1Error.invalidOffset("Offset in 64-bit mode must be a multiple of 8 in range 0...32760"))
+        }
     }
 
     func testMovk64() throws {
