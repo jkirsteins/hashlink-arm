@@ -95,6 +95,9 @@ public enum Op {
     // https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/MOVZ
     case movz32(Register32, UInt16, Register32.Shift?)
     case movz64(Register64, UInt16, Register64.Shift?)
+
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOVK--Move-wide-with-keep-
+    case movk64(Register64, UInt16, Register64.Shift?)
 }
 
 public enum EmitterM1Error: Error {
@@ -102,53 +105,39 @@ public enum EmitterM1Error: Error {
     case unsupportedOp
 }
 
-// good movz x0, 0
-// 0x00      0x00      0x80      0xd2     
-// 0000 0000 0000 0000 1000 0000 1101 0010
-
-// bad movz x0, 0
-// 0x00      0x00      0x80      0x42     
-// 0000 0000 0000 0000 1000 0000 0100 0010
-
-// ref 
-// x10x 0010 1xxi iiii iiii iiii iiid dddd  -  movz Rd HALF
-
-// good movz x1, 0
-// 0x01      0x00      0x80      0xd2
-// 0000 0001 0000 0000 1000 0000 1101 0010
-    
-// good movz x0, 1
-// 0x20      0x00      0x80      0xd2
-// 0010 0000 0000 0000 1000 0000 1101 0010
-
-// bad movz x0, 1
-// 0x20      0x00      0x80      0x42
-// 0010 0000 0000 0000 1000 0000 0100 0010
-
-// bad movz x0, 1 (2)
-// 0x20      0x00      0xe0      0xd2
-// 0010 0000 0000 0000 1110 0000 1101 0010
-
-// good movz64 x15, 65535, lsl 0
-// 0xef      0xff      0x9f      0xd2
-// 1100 1111 1111 1111 1001 1111 1101 0010
-
-// good movz64 x15, 65535, lsl 0
-// 0xef      0xff      0x9f      0xd2
-// 1100 1111 111-1111110011111110-1 0010
-            
-// bad movz64 x15, 65535, lsl 0
-// 0xef      0xff      0x80      0xd2
-// 1110 1111 111-1111110000000110-1 0010
-
 public class EmitterM1
 {
+    private static func returnAsArray(_ val: Int64) -> [UInt8] {
+        let length: Int = 4 * MemoryLayout<UInt8>.size  
+        return withUnsafeBytes(of: val) { bytes in
+            Array(bytes.prefix(length))
+        }
+    }
+
     public static func emit(for op: Op) throws -> [UInt8] {
         switch(op) {
             case .nop:
             return [0x1f, 0x20, 0x03, 0xd5]
             case .ret:
             return [0xc0, 0x03, 0x5f, 0xd6]
+            case .movk64(let register, let val, let shift):
+                // xx1x 0010 1xxi iiii iiii iiii iiid dddd
+                let encodedR: Int64 = (Int64)(0b11111 & register.rawValue)
+                let encodedVal: Int64 = (Int64(val) << 5) & 0b0001_1111_1111_1111_1110_0000
+                let mask: Int64     = 0b1111_0010_1000_0000_0000_0000_0000_0000
+                let hwMask: Int64   = 0b0000_0000_0110_0000_0000_0000_0000_0000
+                
+                let shiftVal: Int64
+
+                if let shift = shift {
+                    let shiftValPre = (Int64)((shift.rawValue / 16) << 21) 
+                    shiftVal = shiftValPre & hwMask
+                } else {
+                    shiftVal = 0
+                }
+
+                let encoded: Int64  = encodedR | encodedVal | shiftVal | mask                
+                return returnAsArray(encoded)
             case .movz64(let register, let val, let shift):
                 // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOVZ--Move-wide-with-zero-?lang=en#MOVZ_32_movewide
 
@@ -163,20 +152,12 @@ public class EmitterM1
                 if let shift = shift {
                     let shiftValPre = (Int64)((shift.rawValue / 16) << 21) 
                     shiftVal = shiftValPre & hwMask
-                    // print("ShiftvalPre:")
-                    // print(String(shiftValPre, radix: 2).leftPadding(toLength: 32, withPad: "0"))
                 } else {
                     shiftVal = 0
                 }
 
                 let encoded: Int64  = encodedR | encodedVal | shiftVal | mask                
-                let length: Int = 4 * MemoryLayout<UInt8>.size  
-                let a = withUnsafeBytes(of: encoded) { bytes in
-                    Array(bytes.prefix(length))
-                }
-
-                let result = Array(a)//.reversed()) 
-                return result
+                return returnAsArray(encoded)
             default:
             throw EmitterM1Error.unsupportedOp
         }

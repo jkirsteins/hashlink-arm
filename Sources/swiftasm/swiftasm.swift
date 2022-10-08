@@ -99,9 +99,11 @@ struct SwiftAsm: ParsableCommand {
         print(String(reflecting: head))
         print("==> Compiling functions")
         for funIx in 0..<head.nfunctions {
-            let fun = head.functionResolver.get(Int(funIx))
+            let fun: HLFunction = head.functionResolver.get(Int(funIx))
+            print("Compiling \(fun.debugDescription)")
+            print("    regs: \([fun.regs.map { $0.value.debugName }])")
             let bytes = compiler.compile(native: fun)
-            print("Compiled \(fun.debugDescription)")
+            print("    done \(fun.debugDescription)")
             print(bytes)
             fatalError()
         }

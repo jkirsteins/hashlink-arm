@@ -117,7 +117,7 @@ struct HLTypeObjData : CustomDebugStringConvertible{
 
     var debugDescription: String {
 """
-\(name.debugDescription)
+\(name.debugDescription) \(superName == nil ? "" : "extends \(superName!.debugDescription)")
 global: \(global)
 fields: \(fields.count > 0 ? "\n" : "")\((fields.map { "  \($0.debugDescription)" }).joined(separator: "\n"))
 protos: \(protos.count > 0 ? "\n" : "")\(protos.map { "  \($0.debugDescription)" }.joined(separator: "\n"))

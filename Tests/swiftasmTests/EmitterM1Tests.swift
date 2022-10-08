@@ -16,6 +16,21 @@ final class EmitterM1Tests: XCTestCase {
         )
     }
 
+    func testMovk64() throws {
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .movk64(.x0, 1, nil)), 
+            [0x20, 0x00, 0x80, 0xf2]
+        )
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .movk64(.x1, 2, ._0)), 
+            [0x41, 0x00, 0x80, 0xf2]
+        )
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .movk64(.x2, 2, ._16)), 
+            [0x42, 0x00, 0xa0, 0xf2]
+        )
+    }
+
     func testMovz64() throws {
         XCTAssertEqual(
             try! EmitterM1.emit(for: .movz64(.x0, 1, ._0)), 
