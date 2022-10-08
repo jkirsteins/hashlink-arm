@@ -46,46 +46,43 @@ public enum Register64 : UInt8, Register {
     case x26 = 26
     case x27 = 27
     case x28 = 28
-    case x29 = 29
-    case x30 = 30
-    case x31 = 31
+    case x29_fp = 29   // frame pointer
+    case x30_lr = 30   // /link register
+    case sp = 31
 }
 
-public enum Register32 : Register {
+public enum Register32 : UInt8, Register {
     public typealias Shift = Shift32
 
-    case w0
-    case w1
-    case w2
-    case w3
-    case w4
-    case w5
-    case w6
-    case w7
-    case w8
-    case w9
-    case w10
-    case w11
-    case w12
-    case w13
-    case w14
-    case w15
-    case w16
-    case w17
-    case w18
-    case w19
-    case w20
-    case w21
-    case w22
-    case w23
-    case w24
-    case w25
-    case w26
-    case w27
-    case w28
-    case w29
-    case w30
-    case w31
+    case w0 = 0
+    case w1 = 1
+    case w2 = 2
+    case w3 = 3
+    case w4 = 4
+    case w5 = 5
+    case w6 = 6
+    case w7 = 7
+    case w8 = 8
+    case w9 = 9
+    case w10 = 10
+    case w11 = 11
+    case w12 = 12
+    case w13 = 13
+    case w14 = 14
+    case w15 = 15
+    case w16 = 16
+    case w17 = 17
+    case w18 = 18
+    case w19 = 19
+    case w20 = 20
+    case w21 = 21
+    case w22 = 22
+    case w23 = 23
+    case w24 = 24
+    case w25 = 25
+    case w26 = 26
+    case w27 = 27
+    case w28 = 28
 }
 
 public enum Op {
@@ -98,6 +95,24 @@ public enum Op {
 
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOVK--Move-wide-with-keep-
     case movk64(Register64, UInt16, Register64.Shift?)
+
+    /* 
+    
+    # LDR (immediate)
+    
+    Loads a word or doubleword from memory and writes it to a register. 
+    
+    The address that is used for the load is calculated from a base register and an immediate offset. 
+
+    Overview:
+      - https://thinkingeek.com/2016/11/13/exploring-aarch64-assembler-chapter-5/
+    
+    Encoding:
+        - https://developer.arm.com/documentation/ddi0596/2021-06/Index-by-Encoding/Loads-and-Stores?lang=en#ldst_pos
+        - https://developer.arm.com/documentation/ddi0596/2021-06/Base-Instructions/LDR--immediate---Load-Register--immediate--?lang=en        
+    */
+    case ldr32(Register32, Register64)  // e.g. w0 <- [x1]
+    case ldr64(Register64, Register64)  // e.g. x0 <- [x1]
 }
 
 public enum EmitterM1Error: Error {
@@ -109,9 +124,11 @@ public class EmitterM1
 {
     private static func returnAsArray(_ val: Int64) -> [UInt8] {
         let length: Int = 4 * MemoryLayout<UInt8>.size  
-        return withUnsafeBytes(of: val) { bytes in
+        let result = withUnsafeBytes(of: val) { bytes in
             Array(bytes.prefix(length))
         }
+        print("Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })")
+        return result
     }
 
     public static func emit(for op: Op) throws -> [UInt8] {
@@ -120,6 +137,36 @@ public class EmitterM1
             return [0x1f, 0x20, 0x03, 0xd5]
             case .ret:
             return [0xc0, 0x03, 0x5f, 0xd6]
+
+            case .ldr32(let target, let src):
+                let size: Int64 = 0b10 
+                let sizeOffset: Int64 = 30
+                let v: Int64 = 0
+                let vOffset: Int64 = 26
+                let opc: Int64 = 0b01
+                let opcOffset: Int64 = 22
+                let mask: Int64 = 0b0011_1001_0000_0000_0000_0000_0000_0000
+
+                let encodedRt: Int64 = (Int64)(0b11111 & target.rawValue)
+                let encodedRn: Int64 = (Int64)((0b11111 & src.rawValue) << 5)
+
+                let encoded: Int64  = (size << sizeOffset) | (v << vOffset) | (opc << opcOffset) | mask | encodedRt | encodedRn
+                return returnAsArray(encoded)
+            case .ldr64(let target, let src):
+                let size: Int64 = 0b11 // 10 - 32bit
+                let sizeOffset: Int64 = 30
+                let v: Int64 = 0
+                let vOffset: Int64 = 26
+                let opc: Int64 = 0b01
+                let opcOffset: Int64 = 22
+                let mask: Int64 = 0b0011_1001_0000_0000_0000_0000_0000_0000
+
+                let encodedRt: Int64 = (Int64)(0b11111 & target.rawValue)
+                let encodedRn: Int64 = (Int64)((0b11111 & src.rawValue) << 5)
+
+                let encoded: Int64  = (size << sizeOffset) | (v << vOffset) | (opc << opcOffset) | mask | encodedRt | encodedRn
+                print("encoded \(encoded)")
+                return returnAsArray(encoded)
             case .movk64(let register, let val, let shift):
                 // xx1x 0010 1xxi iiii iiii iiii iiid dddd
                 let encodedR: Int64 = (Int64)(0b11111 & register.rawValue)

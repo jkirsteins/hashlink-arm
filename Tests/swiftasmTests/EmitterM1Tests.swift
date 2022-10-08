@@ -16,6 +16,18 @@ final class EmitterM1Tests: XCTestCase {
         )
     }
 
+    func testLdr_base_unsignedImmediate() throws {
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .ldr32(.w2, .x1)), 
+            [0x22, 0x00, 0x40, 0xb9]
+        )
+        
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .ldr64(.x2, .x1)), 
+            [0x22, 0x00, 0x40, 0xf9]
+        )
+    }
+
     func testMovk64() throws {
         XCTAssertEqual(
             try! EmitterM1.emit(for: .movk64(.x0, 1, nil)), 
