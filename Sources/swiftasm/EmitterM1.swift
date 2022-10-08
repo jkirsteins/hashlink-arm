@@ -2,6 +2,7 @@ public protocol Register {
     associatedtype Shift
 
     var rawValue: UInt8 { get }
+    var is32: Bool { get }
 }
 
 public enum Shift64 : Int {
@@ -16,8 +17,10 @@ public enum Shift32 : Int {
     case _16 = 16
 }
 
-public enum Register64 : UInt8, Register {
-    public typealias Shift = Shift64
+enum Register64 : UInt8, Register {
+    typealias Shift = Shift64
+
+    var is32: Bool { false }
 
     case x0 = 0
     case x1 = 1
@@ -67,6 +70,8 @@ enum IndexingMode {
 enum Register32 : UInt8, Register {
     typealias Shift = Shift32
     typealias ExtendOp = ExtendOp32    
+    
+    var is32: Bool { true }
 
     case w0 = 0
     case w1 = 1
@@ -142,6 +147,7 @@ public enum EmitterM1Error: Error, Equatable {
     case invalidShift
     case unsupportedOp
     case invalidOffset(_ reason: String)
+    case invalidValue(_ reason: String)
 }
 
 public class EmitterM1
@@ -161,39 +167,21 @@ public class EmitterM1
             return [0x1f, 0x20, 0x03, 0xd5]
             case .ret:
             return [0xc0, 0x03, 0x5f, 0xd6]
-
-// Register32, Register64, Offset?)   // e.g. w0 <- [x1]
-//     case _64(Register64, Register64, Offset?)   // e.g. x0 <- [x1]
-
-            case .ldr(let ldrMode):
-                let size: Int64
-                let Rt: any Register
-                let Rn: Register64
-                let offset: Offset?
-                switch(ldrMode) {
-                    case ._32(let _rt, let _rn, let _offset):
-                        size = 0b10
-                        Rt = _rt
-                        Rn = _rn
-                        offset = _offset
-                    case ._64(let _rt, let _rn, let _offset):
-                        size = 0b11
-                        Rt = _rt
-                        Rn = _rn
-                        offset = _offset
-                }
-
-                let is32b = size == 0b10
-
+            
+            case    
+            .ldr(._32(let Rt as any Register, let Rn as any Register, let offset)),
+            .ldr(._64(let Rt as any Register, let Rn as any Register, let offset)):
+                let size: Int64 = Rt.is32 ? 0b10 : 0b11
+                
                 switch(offset) {
                     case .immediate(let imm):
                     guard imm >= -256 else {
                         throw EmitterM1Error.invalidOffset("Offset can't be less than -256")
                     }
-                    guard (!is32b) || (imm <= 255 && imm >= -256) || (imm >= 0 && imm <= 16380 && imm % 4 == 0) else {
+                    guard (!Rt.is32) || (imm <= 255 && imm >= -256) || (imm >= 0 && imm <= 16380 && imm % 4 == 0) else {
                         throw EmitterM1Error.invalidOffset("Offset in 32-bit mode must be a multiple of 4 in range 0...16380")
                     }
-                    guard (is32b) || (imm <= 255 && imm >= -256) || (imm >= 0 && imm <= 32760 && imm % 8 == 0) else {
+                    guard (Rt.is32) || (imm <= 255 && imm >= -256) || (imm >= 0 && imm <= 32760 && imm % 8 == 0) else {
                         throw EmitterM1Error.invalidOffset("Offset in 64-bit mode must be a multiple of 8 in range 0...32760")
                     }
                     default:
