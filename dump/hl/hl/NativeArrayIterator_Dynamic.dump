@@ -57,13 +57,13 @@ class hl.NativeArrayIterator_Dynamic {
 	@:maybeUsed
 	public inline function next[Function:() -> Dynamic]
 		[Block:Dynamic]
-			[Var this1(4206):hl.NativeArray<Dynamic>]
+			[Var this1(4209):hl.NativeArray<Dynamic>]
 				[Field:hl.NativeArray<Dynamic>]
 					[Const:hl.NativeArrayIterator_Dynamic] this
 					[FInstance:hl.NativeArray<Dynamic>]
 						hl.NativeArrayIterator_Dynamic
 						arr:hl.NativeArray<Dynamic>
-			[Var pos(4207):Int]
+			[Var pos(4210):Int]
 				[Unop:Int]
 					++
 					Postfix
@@ -75,6 +75,6 @@ class hl.NativeArrayIterator_Dynamic {
 			[Return:Dynamic]
 				[Call:Dynamic]
 					[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
-					[Local this1(4206):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
-					[Local pos(4207):Int:Int]
+					[Local this1(4209):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+					[Local pos(4210):Int:Int]
 }

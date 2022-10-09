@@ -2,12 +2,12 @@
 class Date {
 
 	public function new[Function:(year : Int, month : Int, day : Int, hour : Int, min : Int, sec : Int) -> Void]
-		[Arg:Int] [Local year(4841):Int]
-		[Arg:Int] [Local month(4842):Int]
-		[Arg:Int] [Local day(4843):Int]
-		[Arg:Int] [Local hour(4844):Int]
-		[Arg:Int] [Local min(4845):Int]
-		[Arg:Int] [Local sec(4846):Int]
+		[Arg:Int] [Local year(4844):Int]
+		[Arg:Int] [Local month(4845):Int]
+		[Arg:Int] [Local day(4846):Int]
+		[Arg:Int] [Local hour(4847):Int]
+		[Arg:Int] [Local min(4848):Int]
+		[Arg:Int] [Local sec(4849):Int]
 		[Block:Int]
 			[Binop:Int]
 				[Field:Int]
@@ -22,75 +22,75 @@ class Date {
 						[FStatic:(year : Int, month : Int, day : Int, hours : Int, minutes : Int, seconds : Int) -> Int]
 							Date
 							date_new:(year : Int, month : Int, day : Int, hours : Int, minutes : Int, seconds : Int) -> Int
-					[Local year(4841):Int:Int]
-					[Local month(4842):Int:Int]
-					[Local day(4843):Int:Int]
-					[Local hour(4844):Int:Int]
-					[Local min(4845):Int:Int]
-					[Local sec(4846):Int:Int]
+					[Local year(4844):Int:Int]
+					[Local month(4845):Int:Int]
+					[Local day(4846):Int:Int]
+					[Local hour(4847):Int:Int]
+					[Local min(4848):Int:Int]
+					[Local sec(4849):Int:Int]
 
 	var t:Int;
 
 	@:keep
 	public function toString[Function:() -> String]
 		[Block:Dynamic]
-			[Var outLen(4973):Int] [Const:Int] 0
-			[Var bytes(9453):Int]
+			[Var outLen(4976):Int] [Const:Int] 0
+			[Var bytes(9474):Int]
 				[Field:Int]
 					[Const:Date] this
 					[FInstance:Int]
 						Date
 						t:Int
-			[Var this1(4979):hl.Ref<Int>]
+			[Var this1(4982):hl.Ref<Int>]
 				[Call:hl.Ref<Int>]
 					[Ident:Int -> Unknown<0>] $ref
-					[Local outLen(4973):Int:Int]
-			[Var bytes(4980):hl.Bytes]
+					[Local outLen(4976):Int:Int]
+			[Var bytes(4983):hl.Bytes]
 				[Call:hl.Bytes]
 					[Field:(t : Int, outLen : hl.Ref<Int>) -> hl.Bytes]
 						[TypeExpr Date:Class<Date>]
 						[FStatic:(t : Int, outLen : hl.Ref<Int>) -> hl.Bytes]
 							Date
 							date_to_string:(t : Int, outLen : hl.Ref<Int>) -> hl.Bytes
-					[Local bytes(9453):Int:Int]
+					[Local bytes(9474):Int:Int]
 					[Meta:hl.Ref<Int>]
 						:implicitCast
-						[Local this1(4979):hl.Ref<Int>:hl.Ref<Int>]
-			[Var s(4985):String]
+						[Local this1(4982):hl.Ref<Int>:hl.Ref<Int>]
+			[Var s(4988):String]
 				[Call:String]
 					[Ident:Class<String> -> Unknown<1>] $new
 					[TypeExpr String:Class<String>]
 			[Binop:hl.Bytes]
 				[Field:hl.Bytes]
-					[Local s(4985):String:String]
+					[Local s(4988):String:String]
 					[FInstance:hl.Bytes]
 						String
 						bytes:hl.Bytes
 				=
-				[Local bytes(4980):hl.Bytes:hl.Bytes]
+				[Local bytes(4983):hl.Bytes:hl.Bytes]
 			[Binop:Int]
 				[Field:Int]
-					[Local s(4985):String:String]
+					[Local s(4988):String:String]
 					[FInstance:Int]
 						String
 						length:Int
 				=
-				[Local outLen(4973):Int:Int]
-			[Return:Dynamic] [Local s(4985):String:String]
+				[Local outLen(4976):Int:Int]
+			[Return:Dynamic] [Local s(4988):String:String]
 
 	@:hlNative
 	static function date_new[Function:(year : Int, month : Int, day : Int, hours : Int, minutes : Int, seconds : Int) -> Int]
-		[Arg:Int] [Local year(4847):Int]
-		[Arg:Int] [Local month(4848):Int]
-		[Arg:Int] [Local day(4849):Int]
-		[Arg:Int] [Local hours(4850):Int]
-		[Arg:Int] [Local minutes(4851):Int]
-		[Arg:Int] [Local seconds(4852):Int]
+		[Arg:Int] [Local year(4850):Int]
+		[Arg:Int] [Local month(4851):Int]
+		[Arg:Int] [Local day(4852):Int]
+		[Arg:Int] [Local hours(4853):Int]
+		[Arg:Int] [Local minutes(4854):Int]
+		[Arg:Int] [Local seconds(4855):Int]
 		[Block:Dynamic] [Return:Dynamic] [Const:Int] 0
 
 	@:hlNative
 	static function date_to_string[Function:(t : Int, outLen : hl.Ref<Int>) -> hl.Bytes]
-		[Arg:Int] [Local t(4974):Int]
-		[Arg:hl.Ref<Int>] [Local outLen(4975):hl.Ref<Int>]
+		[Arg:Int] [Local t(4977):Int]
+		[Arg:hl.Ref<Int>] [Local outLen(4978):hl.Ref<Int>]
 		[Block:Dynamic] [Return:Dynamic] [Const:hl.Bytes] null
 }

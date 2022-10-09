@@ -1,0 +1,48 @@
+@:directlyUsed @:used
+class Path2 extends Path {
+
+	public function new[Function:() -> Void]
+		[Block:Point]
+			[Binop:Point]
+				[Field:Point]
+					[Const:Path2] this
+					[FInstance:Point]
+						Path
+						target:Point
+				=
+				[ObjectDecl:{ y : Int, x : Int }]
+					x: [Const:Int] 0
+					y: [Const:Int] 0
+			[Binop:Point]
+				[Field:Point]
+					[Const:Path2] this
+					[FInstance:Point]
+						Path
+						start:Point
+				=
+				[ObjectDecl:{ y : Int, x : Int }]
+					x: [Const:Int] 0
+					y: [Const:Int] 0
+			[Binop:Point]
+				[Field:Point]
+					[Const:Path2] this
+					[FInstance:Point]
+						Path
+						current:Point
+				=
+				[ObjectDecl:{ y : Int, x : Int }]
+					x: [Const:Int] 0
+					y: [Const:Int] 0
+			[Binop:Point]
+				[Field:Point]
+					[Const:Path2] this
+					[FInstance:Point]
+						Path2
+						childfield:Point
+				=
+				[ObjectDecl:{ y : Int, x : Int }]
+					x: [Const:Int] 0
+					y: [Const:Int] 0
+
+	var childfield:Point;
+}

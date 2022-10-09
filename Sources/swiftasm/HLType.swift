@@ -108,7 +108,7 @@ extension Resolvable<HLType> {
 
 struct HLTypeObjData : CustomDebugStringConvertible{
     let	name: Resolvable<String>
-    let	superName: Resolvable<String>?
+    let	superType: Resolvable<HLType>?
     let	global: Int32
 
     let fields: [HLTypeField]
@@ -117,7 +117,7 @@ struct HLTypeObjData : CustomDebugStringConvertible{
 
     var debugDescription: String {
 """
-\(name.debugDescription) \(superName == nil ? "" : "extends \(superName!.debugDescription)")
+\(name.debugDescription) \(superType == nil ? "" : "extends \(superType!.debugDescription)")
 global: \(global)
 fields: \(fields.count > 0 ? "\n" : "")\((fields.map { "  \($0.debugDescription)" }).joined(separator: "\n"))
 protos: \(protos.count > 0 ? "\n" : "")\(protos.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
@@ -309,8 +309,8 @@ enum HLType : CustomDebugStringConvertible {
         types: TableResolver<HLType>) throws -> HLTypeObjData {
         
         let name = strings.getResolvable(try reader.readIndex())
-        let superNameIx = try reader.readIndex()
-        let superName = superNameIx >= 0 ? strings.getResolvable(superNameIx) : nil
+        let superTypeIx = try reader.readIndex()
+        let superType = superTypeIx >= 0 ? types.getResolvable(superTypeIx) : nil
         let global = try reader.readVarInt()
         let nfields = try reader.readVarInt()
         let nprotos = try reader.readVarInt()
@@ -358,7 +358,7 @@ enum HLType : CustomDebugStringConvertible {
 
         return HLTypeObjData(
             name: name,
-            superName: superName, 
+            superType: superType, 
             global: global,
             fields: fields,
             protos: protos,

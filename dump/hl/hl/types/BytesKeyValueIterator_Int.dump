@@ -2,7 +2,7 @@
 class hl.types.BytesKeyValueIterator_Int extends haxe.iterators.ArrayKeyValueIterator<Int> {
 
 	public function new[Function:(a : hl.types.ArrayBytes_Int) -> Void]
-		[Arg:hl.types.ArrayBytes_Int] [Local a(8093):hl.types.ArrayBytes_Int]
+		[Arg:hl.types.ArrayBytes_Int] [Local a(8096):hl.types.ArrayBytes_Int]
 		[Block:hl.types.ArrayBytes_Int]
 			[Call:Void]
 				[Const:haxe.iterators.ArrayKeyValueIterator<Int>] super
@@ -14,7 +14,7 @@ class hl.types.BytesKeyValueIterator_Int extends haxe.iterators.ArrayKeyValueIte
 						hl.types.BytesKeyValueIterator_Int
 						a:hl.types.ArrayBytes_Int
 				=
-				[Local a(8093):hl.types.ArrayBytes_Int:hl.types.ArrayBytes_Int]
+				[Local a(8096):hl.types.ArrayBytes_Int:hl.types.ArrayBytes_Int]
 
 	var a:hl.types.ArrayBytes_Int;
 
@@ -40,7 +40,7 @@ class hl.types.BytesKeyValueIterator_Int extends haxe.iterators.ArrayKeyValueIte
 
 	public function next[Function:() -> { value : Int, key : Int }]
 		[Block:Dynamic]
-			[Var this1(8090):hl.BytesAccess<Int>]
+			[Var this1(8093):hl.BytesAccess<Int>]
 				[Field:hl.BytesAccess<Int>]
 					[Field:hl.types.ArrayBytes_Int]
 						[Const:hl.types.BytesKeyValueIterator_Int] this
@@ -50,17 +50,17 @@ class hl.types.BytesKeyValueIterator_Int extends haxe.iterators.ArrayKeyValueIte
 					[FInstance:hl.BytesAccess<Int>]
 						hl.types.ArrayBytes_Int
 						bytes:hl.BytesAccess<Int>
-			[Var pos(8091):Int]
+			[Var pos(8094):Int]
 				[Field:Int]
 					[Const:hl.types.BytesKeyValueIterator_Int] this
 					[FInstance:Int]
 						haxe.iterators.ArrayKeyValueIterator<Int>
 						current:Int
-			[Var v(8092):Int]
+			[Var v(8095):Int]
 				[Call:Int]
 					[Ident:(hl.BytesAccess<Int>, Int) -> Unknown<26>] $bget
-					[Local this1(8090):hl.BytesAccess<Int>:hl.BytesAccess<Int>]
-					[Local pos(8091):Int:Int]
+					[Local this1(8093):hl.BytesAccess<Int>:hl.BytesAccess<Int>]
+					[Local pos(8094):Int:Int]
 			[Return:Dynamic]
 				[ObjectDecl:{ value : Int, key : Int }]
 					key: [Unop:Int]
@@ -71,5 +71,5 @@ class hl.types.BytesKeyValueIterator_Int extends haxe.iterators.ArrayKeyValueIte
 							[FInstance:Int]
 								haxe.iterators.ArrayKeyValueIterator<Int>
 								current:Int
-					value: [Local v(8092):Int:Int]
+					value: [Local v(8095):Int:Int]
 }

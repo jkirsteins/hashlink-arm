@@ -4,7 +4,7 @@ class Sys {
 	static var utf8Path:Bool;
 
 	public static function println[Function:(v : Dynamic) -> Void]
-		[Arg:Dynamic] [Local v(4179):Dynamic]
+		[Arg:Dynamic] [Local v(4182):Dynamic]
 		[Block:Void]
 			[Call:Void]
 				[Field:(v : hl.Bytes) -> Void]
@@ -19,7 +19,7 @@ class Sys {
 							[FStatic:(s : Dynamic) -> String]
 								Std
 								string:(s : Dynamic) -> String
-						[Local v(4179):Dynamic:Dynamic]
+						[Local v(4182):Dynamic:Dynamic]
 					[FInstance:hl.Bytes]
 						String
 						bytes:hl.Bytes
@@ -40,7 +40,7 @@ class Sys {
 
 	@:hlNative("std", "sys_print")
 	static function sys_print[Function:(v : hl.Bytes) -> Void]
-		[Arg:hl.Bytes] [Local v(4180):hl.Bytes]
+		[Arg:hl.Bytes] [Local v(4183):hl.Bytes]
 		[Block:Void]
 
 	static function __init__() [Binop:Bool]

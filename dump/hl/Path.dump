@@ -1,0 +1,9 @@
+@:used
+class Path {
+
+	var start:Point;
+
+	var target:Point;
+
+	var current:Point;
+}

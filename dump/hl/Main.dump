@@ -4,16 +4,40 @@ class Main {
 	@:keep
 	public static function main[Function:() -> Void]
 		[Block:Void]
+			[Var user(4098):{ pos : Array<{ y : Int, x : Int }>, name : String, age : Int }]
+				[ObjectDecl:{ pos : Array<{ y : Int, x : Int }>, name : String, age : Int }]
+					name: [Const:String] "Nicolas"
+					age: [Const:Int] 32
+					pos: [ArrayDecl:Array<{ y : Int, x : Int }>]
+						[ObjectDecl:{ y : Int, x : Int }]
+							x: [Const:Int] 0
+							y: [Const:Int] 0
+						[ObjectDecl:{ y : Int, x : Int }]
+							x: [Const:Int] 1
+							y: [Const:Int] -1
+			[Var x_x(8492):Int] [Const:Int] 0
+			[Var x_y(8493):Int] [Const:Int] 0
+			[Var x_z(8494):Int] [Const:Int] 0
+			[Var x(4100):Path2] [New:Path2] Path2
 			[Call:Void]
 				[Field:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void]
 					[TypeExpr haxe.Log:Class<haxe.Log>]
 					[FStatic:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void]
 						haxe.Log
 						trace:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void
-				[Const:String] "Hello World"
+				[Binop:String]
+					[Const:String] "Hello World "
+					+
+					[Call:String]
+						[Field:(s : Dynamic) -> String]
+							[TypeExpr Std:Class<Std>]
+							[FStatic:(s : Dynamic) -> String]
+								Std
+								string:(s : Dynamic) -> String
+						[Local user(4098):{ pos : Array<{ y : Int, x : Int }>, name : String, age : Int }:{ pos : Array<{ y : Int, x : Int }>, name : String, age : Int }]
 				[ObjectDecl:{ methodName : String, lineNumber : Int, fileName : String, className : String }]
 					fileName: [Const:String] "haxesrc/Main.hx"
-					lineNumber: [Const:Int] 7
+					lineNumber: [Const:Int] 37
 					className: [Const:String] "Main"
 					methodName: [Const:String] "main"
 }

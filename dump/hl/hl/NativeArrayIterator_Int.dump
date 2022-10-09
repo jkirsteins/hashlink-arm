@@ -2,7 +2,7 @@
 class hl.NativeArrayIterator_Int {
 
 	public inline function new[Function:(arr : hl.NativeArray<Int>) -> Void]
-		[Arg:hl.NativeArray<Int>] [Local arr(4261):hl.NativeArray<Int>]
+		[Arg:hl.NativeArray<Int>] [Local arr(4264):hl.NativeArray<Int>]
 		[Block:Int]
 			[Binop:hl.NativeArray<Int>]
 				[Field:hl.NativeArray<Int>]
@@ -11,7 +11,7 @@ class hl.NativeArrayIterator_Int {
 						hl.NativeArrayIterator_Int
 						arr:hl.NativeArray<Int>
 				=
-				[Local arr(4261):hl.NativeArray<Int>:hl.NativeArray<Int>]
+				[Local arr(4264):hl.NativeArray<Int>:hl.NativeArray<Int>]
 			[Binop:Int]
 				[Field:Int]
 					[Const:hl.NativeArrayIterator_Int] this
@@ -29,7 +29,7 @@ class hl.NativeArrayIterator_Int {
 				=
 				[Call:Int]
 					[Ident:hl.NativeArray<Int> -> Unknown<15>] $asize
-					[Local arr(4261):hl.NativeArray<Int>:hl.NativeArray<Int>]
+					[Local arr(4264):hl.NativeArray<Int>:hl.NativeArray<Int>]
 
 	var arr:hl.NativeArray<Int>;
 
@@ -57,13 +57,13 @@ class hl.NativeArrayIterator_Int {
 	@:maybeUsed
 	public inline function next[Function:() -> Int]
 		[Block:Dynamic]
-			[Var this1(4262):hl.NativeArray<Int>]
+			[Var this1(4265):hl.NativeArray<Int>]
 				[Field:hl.NativeArray<Int>]
 					[Const:hl.NativeArrayIterator_Int] this
 					[FInstance:hl.NativeArray<Int>]
 						hl.NativeArrayIterator_Int
 						arr:hl.NativeArray<Int>
-			[Var pos(4263):Int]
+			[Var pos(4266):Int]
 				[Unop:Int]
 					++
 					Postfix
@@ -75,6 +75,6 @@ class hl.NativeArrayIterator_Int {
 			[Return:Dynamic]
 				[Call:Int]
 					[Ident:(hl.NativeArray<Int>, Int) -> Int] $aget
-					[Local this1(4262):hl.NativeArray<Int>:hl.NativeArray<Int>]
-					[Local pos(4263):Int:Int]
+					[Local this1(4265):hl.NativeArray<Int>:hl.NativeArray<Int>]
+					[Local pos(4266):Int:Int]
 }
