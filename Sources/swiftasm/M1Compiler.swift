@@ -3,6 +3,17 @@ class M1Compiler {
         let result = ByteBuffer(incrementSize: 32)
 
         /*
+        Prologue
+        stp    x29, x30, [sp, #-16]!
+        mov    x29, sp
+        */
+
+        /*
+        Epilogue (excluding return)
+        ldp x29, x30, [sp], 16
+        */
+
+        /*
         ldr    X1, [x0, #0]     // point to field        
         ldr    x2, #1           // length
         mov    x0, #1           // 1 = stdout
@@ -15,6 +26,7 @@ class M1Compiler {
         // string obj has first field bytes
         // let offset = 0
         // EmitterM1.emit(for: .ldr(._64(.x0, 1)))
+        
 
         for op in native.ops {
             switch op {

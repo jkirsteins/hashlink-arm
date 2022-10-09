@@ -3,6 +3,30 @@ import XCTest
 
 final class EmitterM1Tests: XCTestCase {
     
+    func testStp() throws {
+        XCTAssertThrowsError(try EmitterM1.emit(for: .stp((.x0, .x1), .immediate(10)))) { error in
+            XCTAssertEqual(error as! EmitterM1Error, EmitterM1Error.invalidOffset(
+                "STP can only have .reg64offset offset"
+                )
+            )
+        }
+
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .stp((.x10, .x12), .reg64offset(.sp, 16, .pre))), 
+            [0xea, 0x33, 0x81, 0xa9]
+        )
+
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .stp((.x10, .x12), .reg64offset(.sp, 16, .post))), 
+            [0xea, 0x33, 0x81, 0xa8]
+        )
+
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .stp((.x10, .x12), .reg64offset(.sp, 16, nil))), 
+            [0xea, 0x33, 0x01, 0xa9]
+        )
+    }
+
     func testBl() throws {
         XCTAssertThrowsError(try EmitterM1.emit(for: .bl(0x3FFFFFF + 1))) { error in
             XCTAssertEqual(error as! EmitterM1Error, EmitterM1Error.invalidValue(

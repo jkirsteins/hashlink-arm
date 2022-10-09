@@ -119,6 +119,8 @@ enum Op {
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOVK--Move-wide-with-keep-
     case movk64(Register64, UInt16, Register64.Shift?)
 
+    case stp((Register64, Register64), Offset)
+
     /* 
     # LDR (immediate)
     
@@ -143,7 +145,8 @@ enum LdrMode {
 
 enum Offset {
     case immediate(Int16)
-    case reg64(Register64, Register64.Shift?, IndexingMode?)
+    case reg64offset(Register64, Int64, IndexingMode?)
+    case reg64shift(Register64, Register64.Shift?)
     case reg32(Register32, Register32.ExtendOp, IndexingMode?)
 }
 
@@ -171,6 +174,42 @@ public class EmitterM1
 
     static func emit(for op: Op) throws -> [UInt8] {
         switch(op) {
+            case .stp(let pair, let offset):
+            guard case .reg64offset(let Rn, let offsetCount, let ixMode ) = offset else {
+                throw EmitterM1Error.invalidOffset("STP can only have .reg64offset offset")
+            }
+
+            let imm7Mask: Int64 = 0b1111111
+            guard (offsetCount & imm7Mask) == offsetCount else {
+                throw EmitterM1Error.invalidOffset("STP offset \(offsetCount) must fit in 7 bits")
+            }
+
+            let divisor: Int64 = 8 // 64-bit ops. 32-bit ops have divisor 4
+            if offsetCount % divisor != 0 {
+                throw EmitterM1Error.invalidOffset("Offset immediate for STP 64-bit op must be a multiple of \(divisor)")
+            }
+
+            let (Rt1, Rt2) = pair
+            let encodedRt1: Int64 = encodeReg(Rt1, shift: 0) 
+            let encodedRt2: Int64 = encodeReg(Rt2, shift: 10) 
+            let encodedRn: Int64 = encodeReg(Rn, shift: 5) 
+            let opc: Int64 = 0b10;
+            let opcOffset: Int64 = 30
+
+            let mask: Int64 
+            switch(ixMode) {
+                case nil:
+                    mask = 0b0010_1001_0000_0000_0000_0000_0000_0000
+                case .pre:
+                    mask = 0b0010_1001_1000_0000_0000_0000_0000_0000
+                case .post:
+                    mask = 0b0010_1000_1000_0000_0000_0000_0000_0000
+            }
+            
+            let imm: Int64 = ((offsetCount / divisor) & imm7Mask) << 15
+            
+            let encoded = encodedRt1 | encodedRt2 | encodedRn | (opc << opcOffset) | mask | imm
+            return returnAsArray(encoded)
             case .bl(let imm26):
                 guard (imm26 & 0x3FFFFFF) == imm26 else {
                     throw EmitterM1Error.invalidValue("BL requires the immediate to fit in 26 bits")
