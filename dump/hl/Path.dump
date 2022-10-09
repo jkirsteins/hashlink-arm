@@ -1,9 +1,24 @@
 @:used
 class Path {
 
-	var start:Point;
+	@:compilerGenerated
+	public function new[Function:() -> Void]
+		[Block:Int]
+			[Binop:Int]
+				[Field:Int]
+					[Const:Path] this
+					[FInstance:Int]
+						Path
+						test:Int
+				=
+				[Const:Int] 57005
 
-	var target:Point;
+	@:value(0xDEAD)
+	public var test:Int;
 
-	var current:Point;
+	public var start:Point;
+
+	public var target:Point;
+
+	public var current:Point;
 }

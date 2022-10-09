@@ -1,24 +1,96 @@
 @:used
 class Main {
 
-	@:keep
-	public static function main[Function:() -> Void]
+	public static function pathTest[Function:() -> Void]
 		[Block:Void]
-			[Var user(4098):{ pos : Array<{ y : Int, x : Int }>, name : String, age : Int }]
-				[ObjectDecl:{ pos : Array<{ y : Int, x : Int }>, name : String, age : Int }]
-					name: [Const:String] "Nicolas"
-					age: [Const:Int] 32
-					pos: [ArrayDecl:Array<{ y : Int, x : Int }>]
-						[ObjectDecl:{ y : Int, x : Int }]
-							x: [Const:Int] 0
-							y: [Const:Int] 0
-						[ObjectDecl:{ y : Int, x : Int }]
-							x: [Const:Int] 1
-							y: [Const:Int] -1
-			[Var x_x(8492):Int] [Const:Int] 0
-			[Var x_y(8493):Int] [Const:Int] 0
-			[Var x_z(8494):Int] [Const:Int] 0
-			[Var x(4100):Path2] [New:Path2] Path2
+			[Var p(4098):Path2] [New:Path2] Path2
+			[Binop:Int]
+				[Field:Int]
+					[Field:Point]
+						[Local p(4098):Path2:Path2]
+						[FInstance:Point]
+							Path
+							target:Point
+					[FAnon:Int] x:Int
+				=
+				[Binop:Int]
+					[Field:Int]
+						[Field:Point]
+							[Local p(4098):Path2:Path2]
+							[FInstance:Point]
+								Path
+								target:Point
+						[FAnon:Int] y:Int
+					=
+					[Const:Int] 101
+			[Binop:Int]
+				[Field:Int]
+					[Field:Point]
+						[Local p(4098):Path2:Path2]
+						[FInstance:Point]
+							Path
+							start:Point
+					[FAnon:Int] x:Int
+				=
+				[Binop:Int]
+					[Field:Int]
+						[Field:Point]
+							[Local p(4098):Path2:Path2]
+							[FInstance:Point]
+								Path
+								start:Point
+						[FAnon:Int] y:Int
+					=
+					[Const:Int] 202
+			[Binop:Int]
+				[Field:Int]
+					[Field:Point]
+						[Local p(4098):Path2:Path2]
+						[FInstance:Point]
+							Path
+							current:Point
+					[FAnon:Int] x:Int
+				=
+				[Binop:Int]
+					[Field:Int]
+						[Field:Point]
+							[Local p(4098):Path2:Path2]
+							[FInstance:Point]
+								Path
+								current:Point
+						[FAnon:Int] y:Int
+					=
+					[Const:Int] 303
+			[Binop:Int]
+				[Field:Int]
+					[Field:Point]
+						[Local p(4098):Path2:Path2]
+						[FInstance:Point]
+							Path2
+							childfield:Point
+					[FAnon:Int] x:Int
+				=
+				[Binop:Int]
+					[Field:Int]
+						[Field:Point]
+							[Local p(4098):Path2:Path2]
+							[FInstance:Point]
+								Path
+								current:Point
+						[FAnon:Int] y:Int
+					=
+					[Const:Int] 404
+			[Call:Void]
+				[Field:(p : Path2) -> Void]
+					[TypeExpr Main:Class<Main>]
+					[FStatic:(p : Path2) -> Void]
+						Main
+						pathTest2:(p : Path2) -> Void
+				[Local p(4098):Path2:Path2]
+
+	public static function pathTest2[Function:(p : Path2) -> Void]
+		[Arg:Path2] [Local p(4099):Path2]
+		[Block:Void]
 			[Call:Void]
 				[Field:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void]
 					[TypeExpr haxe.Log:Class<haxe.Log>]
@@ -26,7 +98,7 @@ class Main {
 						haxe.Log
 						trace:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void
 				[Binop:String]
-					[Const:String] "Hello World "
+					[Const:String] "received path "
 					+
 					[Call:String]
 						[Field:(s : Dynamic) -> String]
@@ -34,10 +106,32 @@ class Main {
 							[FStatic:(s : Dynamic) -> String]
 								Std
 								string:(s : Dynamic) -> String
-						[Local user(4098):{ pos : Array<{ y : Int, x : Int }>, name : String, age : Int }:{ pos : Array<{ y : Int, x : Int }>, name : String, age : Int }]
+						[Local p(4099):Path2:Path2]
 				[ObjectDecl:{ methodName : String, lineNumber : Int, fileName : String, className : String }]
 					fileName: [Const:String] "haxesrc/Main.hx"
-					lineNumber: [Const:Int] 37
+					lineNumber: [Const:Int] 107
+					className: [Const:String] "Main"
+					methodName: [Const:String] "pathTest2"
+
+	@:keep
+	public static function main[Function:() -> Void]
+		[Block:Void]
+			[Call:Void]
+				[Field:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void]
+					[TypeExpr haxe.Log:Class<haxe.Log>]
+					[FStatic:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void]
+						haxe.Log
+						trace:(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void
+				[Const:String] "Hello World"
+				[ObjectDecl:{ methodName : String, lineNumber : Int, fileName : String, className : String }]
+					fileName: [Const:String] "haxesrc/Main.hx"
+					lineNumber: [Const:Int] 111
 					className: [Const:String] "Main"
 					methodName: [Const:String] "main"
+			[Call:Void]
+				[Field:() -> Void]
+					[TypeExpr Main:Class<Main>]
+					[FStatic:() -> Void]
+						Main
+						pathTest:() -> Void
 }

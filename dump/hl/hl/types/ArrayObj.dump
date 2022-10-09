@@ -838,7 +838,7 @@ class hl.types.ArrayObj<T> extends hl.types.ArrayBase {
 									[Ident:(hl.NativeArray<Dynamic>, Int) -> Dynamic] $aget
 									[Local this1(1427):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
 									[Local i(1424):Int:Int]
-				Catch [Local _g(9430):Dynamic]
+				Catch [Local _g(9411):Dynamic]
 					[Block:Void]
 						[Block:Void] [Const:Unknown<57>] null
 						[Var e(1431):Dynamic]
@@ -851,7 +851,7 @@ class hl.types.ArrayObj<T> extends hl.types.ArrayBase {
 												[FStatic:(value : Any) -> haxe.Exception]
 													haxe.Exception
 													caught:(value : Any) -> haxe.Exception
-											[Local _g(9430):Dynamic:Dynamic]
+											[Local _g(9411):Dynamic:Dynamic]
 										[FInstance:() -> Any]
 											haxe.Exception
 											unwrap:() -> Any

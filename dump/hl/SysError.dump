@@ -2,7 +2,7 @@
 class SysError {
 
 	public function new[Function:(msg : String) -> Void]
-		[Arg:String] [Local msg(4184):String]
+		[Arg:String] [Local msg(4183):String]
 		[Block:String]
 			[Binop:String]
 				[Field:String]
@@ -11,7 +11,7 @@ class SysError {
 						SysError
 						msg:String
 				=
-				[Local msg(4184):String:String]
+				[Local msg(4183):String:String]
 
 	public var msg:String;
 

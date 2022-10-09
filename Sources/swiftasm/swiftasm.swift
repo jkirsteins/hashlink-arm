@@ -98,6 +98,14 @@ struct SwiftAsm: ParsableCommand {
         let compiler = M1Compiler()
         print(String(reflecting: head))
         print("==> Compiling functions")
+
+        let pathTest = head.functionResolver.get(29)
+        let pathTest2 = head.functionResolver.get(30)
+
+        let pathTestCompiled = compiler.compile(native: pathTest)
+        let pathTest2Compiled = compiler.compile(native: pathTest2)
+
+        fatalError("boop")
         for funIx in 0..<head.nfunctions {
             let fun: HLFunction = head.functionResolver.get(Int(funIx))
             print("Compiling \(fun.debugDescription)")

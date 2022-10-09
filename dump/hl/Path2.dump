@@ -2,7 +2,16 @@
 class Path2 extends Path {
 
 	public function new[Function:() -> Void]
-		[Block:Point]
+		[Block:Void]
+			[Binop:Int]
+				[Field:Int]
+					[Const:Path2] this
+					[FInstance:Int]
+						Path2
+						test2:Int
+				=
+				[Const:Int] 48879
+			[Call:Void] [Const:Path] super
 			[Binop:Point]
 				[Field:Point]
 					[Const:Path2] this
@@ -44,5 +53,8 @@ class Path2 extends Path {
 					x: [Const:Int] 0
 					y: [Const:Int] 0
 
-	var childfield:Point;
+	@:value(0xBEEF)
+	public var test2:Int;
+
+	public var childfield:Point;
 }

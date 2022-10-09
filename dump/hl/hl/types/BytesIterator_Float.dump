@@ -2,7 +2,7 @@
 class hl.types.BytesIterator_Float extends haxe.iterators.ArrayIterator<Float> {
 
 	public function new[Function:(a : hl.types.ArrayBytes_Float) -> Void]
-		[Arg:hl.types.ArrayBytes_Float] [Local a(7951):hl.types.ArrayBytes_Float]
+		[Arg:hl.types.ArrayBytes_Float] [Local a(7950):hl.types.ArrayBytes_Float]
 		[Block:hl.types.ArrayBytes_Float]
 			[Call:Void]
 				[Const:haxe.iterators.ArrayIterator<Float>] super
@@ -14,7 +14,7 @@ class hl.types.BytesIterator_Float extends haxe.iterators.ArrayIterator<Float> {
 						hl.types.BytesIterator_Float
 						a:hl.types.ArrayBytes_Float
 				=
-				[Local a(7951):hl.types.ArrayBytes_Float:hl.types.ArrayBytes_Float]
+				[Local a(7950):hl.types.ArrayBytes_Float:hl.types.ArrayBytes_Float]
 
 	var a:hl.types.ArrayBytes_Float;
 
@@ -40,7 +40,7 @@ class hl.types.BytesIterator_Float extends haxe.iterators.ArrayIterator<Float> {
 
 	public function next[Function:() -> Float]
 		[Block:Dynamic]
-			[Var this1(7949):hl.BytesAccess<Float>]
+			[Var this1(7948):hl.BytesAccess<Float>]
 				[Field:hl.BytesAccess<Float>]
 					[Field:hl.types.ArrayBytes_Float]
 						[Const:hl.types.BytesIterator_Float] this
@@ -50,7 +50,7 @@ class hl.types.BytesIterator_Float extends haxe.iterators.ArrayIterator<Float> {
 					[FInstance:hl.BytesAccess<Float>]
 						hl.types.ArrayBytes_Float
 						bytes:hl.BytesAccess<Float>
-			[Var pos(7950):Int]
+			[Var pos(7949):Int]
 				[Unop:Int]
 					++
 					Postfix
@@ -62,6 +62,6 @@ class hl.types.BytesIterator_Float extends haxe.iterators.ArrayIterator<Float> {
 			[Return:Dynamic]
 				[Call:Float]
 					[Ident:(hl.BytesAccess<Float>, Int) -> Unknown<26>] $bget
-					[Local this1(7949):hl.BytesAccess<Float>:hl.BytesAccess<Float>]
-					[Local pos(7950):Int:Int]
+					[Local this1(7948):hl.BytesAccess<Float>:hl.BytesAccess<Float>]
+					[Local pos(7949):Int:Int]
 }

@@ -22,7 +22,7 @@ class haxe.NativeStackTrace {
 							[Meta:Null<Any>]
 								:implicitCast
 								[Cast:Null<Any>] [Cast:Any] [Const:String] "stack"
-				Catch [Local _g(9359):Dynamic]
+				Catch [Local _g(9340):Dynamic]
 					[Block:hl.NativeArray<hl.Bytes>]
 						[Binop:hl.NativeArray<hl.Bytes>]
 							[Local stack(654):hl.NativeArray<hl.Bytes>:hl.NativeArray<hl.Bytes>]

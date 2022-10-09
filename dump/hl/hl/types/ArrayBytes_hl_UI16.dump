@@ -32,19 +32,19 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 	var size:Int;
 
 	public function concat[Function:(a : hl.types.ArrayBytes_hl_UI16) -> hl.types.ArrayBytes_hl_UI16]
-		[Arg:hl.types.ArrayBytes_hl_UI16] [Local a(7744):hl.types.ArrayBytes_hl_UI16]
+		[Arg:hl.types.ArrayBytes_hl_UI16] [Local a(7743):hl.types.ArrayBytes_hl_UI16]
 		[Block:Dynamic]
-			[Var ac(7743):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Var ac(7742):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
 			[Binop:Int]
 				[Field:Int]
-					[Local ac(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[Local ac(7742):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 					[FInstance:Int]
 						hl.types.ArrayBase
 						length:Int
 				=
 				[Binop:Int]
 					[Field:Int]
-						[Local ac(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local ac(7742):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 						[FInstance:Int]
 							hl.types.ArrayBytes_hl_UI16
 							size:Int
@@ -57,17 +57,17 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								length:Int
 						+
 						[Field:Int]
-							[Local a(7744):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+							[Local a(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 							[FInstance:Int]
 								hl.types.ArrayBase
 								length:Int
-			[Var this1(7745):hl.BytesAccess<hl.UI16>]
+			[Var this1(7744):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var this1(7747):hl.Bytes]
+			[Var this1(7746):hl.Bytes]
 				[Call:hl.Bytes]
 					[Field:(size : Int) -> hl.Bytes]
 						[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
@@ -76,29 +76,29 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							alloc:(size : Int) -> hl.Bytes
 					[Binop:Int]
 						[Field:Int]
-							[Local ac(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+							[Local ac(7742):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 							[FInstance:Int]
 								hl.types.ArrayBase
 								length:Int
 						<<
 						[Call:Int]
 							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-							[Local this1(7745):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Local this1(7744):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 			[Binop:hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
-					[Local ac(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[Local ac(7742):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
 				=
-				[Local this1(7747):hl.Bytes:hl.Bytes]
-			[Var this1(7748):hl.BytesAccess<hl.UI16>]
+				[Local this1(7746):hl.Bytes:hl.Bytes]
+			[Var this1(7747):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var offset(7749):Int]
+			[Var offset(7748):Int]
 				[Binop:Int]
 					[Field:Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -108,7 +108,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7748):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+						[Local this1(7747):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 			[Call:Void]
 				[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
 					[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
@@ -117,7 +117,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
-						[Local ac(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local ac(7742):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
@@ -128,8 +128,8 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
 				[Const:Int] 0
-				[Local offset(7749):Int:Int]
-			[Var this1(7750):hl.BytesAccess<hl.UI16>]
+				[Local offset(7748):Int:Int]
+			[Var this1(7749):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -143,36 +143,36 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
-						[Local ac(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local ac(7742):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
-				[Local offset(7749):Int:Int]
+				[Local offset(7748):Int:Int]
 				[Field:hl.BytesAccess<hl.UI16>]
-					[Local a(7744):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[Local a(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
 				[Const:Int] 0
 				[Binop:Int]
 					[Field:Int]
-						[Local a(7744):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local a(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 						[FInstance:Int]
 							hl.types.ArrayBase
 							length:Int
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7750):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Return:Dynamic] [Local ac(7743):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local this1(7749):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Return:Dynamic] [Local ac(7742):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 
 	public function join[Function:(sep : String) -> String]
-		[Arg:String] [Local sep(7741):String]
+		[Arg:String] [Local sep(7740):String]
 		[Block:Dynamic]
-			[Var s(7737):StringBuf] [New:StringBuf] StringBuf
+			[Var s(7736):StringBuf] [New:StringBuf] StringBuf
 			[Block:Void]
-				[Var _g(7738):Int] [Const:Int] 0
-				[Var _g1(7739):Int]
+				[Var _g(7737):Int] [Const:Int] 0
+				[Var _g1(7738):Int]
 					[Field:Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:Int]
@@ -181,29 +181,29 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 				[While:Void]
 					[Parenthesis:Bool]
 						[Binop:Bool]
-							[Local _g(7738):Int:Int]
+							[Local _g(7737):Int:Int]
 							<
-							[Local _g1(7739):Int:Int]
+							[Local _g1(7738):Int:Int]
 					[Block:Dynamic]
-						[Var i(7740):Int]
+						[Var i(7739):Int]
 							[Unop:Int]
 								++
 								Postfix
-								[Local _g(7738):Int:Int]
+								[Local _g(7737):Int:Int]
 						[If:Void]
 							[Parenthesis:Bool]
 								[Binop:Bool]
-									[Local i(7740):Int:Int]
+									[Local i(7739):Int:Int]
 									>
 									[Const:Int] 0
 							[Then:Void] [Call:Void]
 								[Field:(x : String) -> Void]
-									[Local s(7737):StringBuf:StringBuf]
+									[Local s(7736):StringBuf:StringBuf]
 									[FInstance:(x : String) -> Void]
 										StringBuf
 										add:(x : add.T) -> Void
-								[Local sep(7741):String:String]
-						[Var this1(7742):hl.BytesAccess<hl.UI16>]
+								[Local sep(7740):String:String]
+						[Var this1(7741):hl.BytesAccess<hl.UI16>]
 							[Field:hl.BytesAccess<hl.UI16>]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:hl.BytesAccess<hl.UI16>]
@@ -211,18 +211,18 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									bytes:hl.BytesAccess<hl.UI16>
 						[Call:Void]
 							[Field:(x : hl.UI16) -> Void]
-								[Local s(7737):StringBuf:StringBuf]
+								[Local s(7736):StringBuf:StringBuf]
 								[FInstance:(x : hl.UI16) -> Void]
 									StringBuf
 									add:(x : add.T) -> Void
 							[Call:hl.UI16]
 								[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-								[Local this1(7742):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-								[Local i(7740):Int:Int]
+								[Local this1(7741):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+								[Local i(7739):Int:Int]
 			[Return:Dynamic]
 				[Call:String]
 					[Field:() -> String]
-						[Local s(7737):StringBuf:StringBuf]
+						[Local s(7736):StringBuf:StringBuf]
 						[FInstance:() -> String]
 							StringBuf
 							toString:() -> String
@@ -248,13 +248,13 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FInstance:Int]
 						hl.types.ArrayBase
 						length:Int
-			[Var this1(7735):hl.BytesAccess<hl.UI16>]
+			[Var this1(7734):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var pos(7736):Int]
+			[Var pos(7735):Int]
 				[Field:Int]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:Int]
@@ -263,13 +263,13 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 			[Return:Dynamic]
 				[Call:hl.UI16]
 					[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-					[Local this1(7735):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-					[Local pos(7736):Int:Int]
+					[Local this1(7734):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7735):Int:Int]
 
 	public function push[Function:(x : hl.UI16) -> Int]
-		[Arg:hl.UI16] [Local x(7734):hl.UI16]
+		[Arg:hl.UI16] [Local x(7733):hl.UI16]
 		[Block:Dynamic]
-			[Var len(7732):Int]
+			[Var len(7731):Int]
 				[Field:Int]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:Int]
@@ -284,14 +284,14 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								hl.types.ArrayBytes_hl_UI16
 								size:Int
 						==
-						[Local len(7732):Int:Int]
+						[Local len(7731):Int:Int]
 				[Then:Void] [Call:Void]
 					[Field:(index : Int) -> Void]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:(index : Int) -> Void]
 							hl.types.ArrayBytes_hl_UI16
 							__expand:(index : Int) -> Void
-					[Local len(7732):Int:Int]
+					[Local len(7731):Int:Int]
 				[Else:Int] [Unop:Int]
 					++
 					Postfix
@@ -301,7 +301,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							hl.types.ArrayBase
 							length:Int
 			[Block:hl.UI16]
-				[Var this1(7733):hl.BytesAccess<hl.UI16>]
+				[Var this1(7732):hl.BytesAccess<hl.UI16>]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
@@ -309,9 +309,9 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							bytes:hl.BytesAccess<hl.UI16>
 				[Call:Unknown<30>]
 					[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
-					[Local this1(7733):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-					[Local len(7732):Int:Int]
-					[Local x(7734):hl.UI16:hl.UI16]
+					[Local this1(7732):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local len(7731):Int:Int]
+					[Local x(7733):hl.UI16:hl.UI16]
 			[Return:Dynamic]
 				[Field:Int]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -321,8 +321,8 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 
 	public function reverse[Function:() -> Void]
 		[Block:Void]
-			[Var _g(7722):Int] [Const:Int] 0
-			[Var _g1(7723):Int]
+			[Var _g(7721):Int] [Const:Int] 0
+			[Var _g1(7722):Int]
 				[Binop:Int]
 					[Field:Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -334,16 +334,16 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 			[While:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local _g(7722):Int:Int]
+						[Local _g(7721):Int:Int]
 						<
-						[Local _g1(7723):Int:Int]
+						[Local _g1(7722):Int:Int]
 				[Block:Dynamic]
-					[Var i(7724):Int]
+					[Var i(7723):Int]
 						[Unop:Int]
 							++
 							Postfix
-							[Local _g(7722):Int:Int]
-					[Var k(7725):Int]
+							[Local _g(7721):Int:Int]
+					[Var k(7724):Int]
 						[Binop:Int]
 							[Binop:Int]
 								[Field:Int]
@@ -354,43 +354,43 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								-
 								[Const:Int] 1
 							-
-							[Local i(7724):Int:Int]
-					[Var this1(7726):hl.BytesAccess<hl.UI16>]
+							[Local i(7723):Int:Int]
+					[Var this1(7725):hl.BytesAccess<hl.UI16>]
 						[Field:hl.BytesAccess<hl.UI16>]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
 							[FInstance:hl.BytesAccess<hl.UI16>]
 								hl.types.ArrayBytes_hl_UI16
 								bytes:hl.BytesAccess<hl.UI16>
-					[Var tmp(7727):hl.UI16]
+					[Var tmp(7726):hl.UI16]
 						[Call:hl.UI16]
 							[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-							[Local this1(7726):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-							[Local i(7724):Int:Int]
+							[Local this1(7725):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Local i(7723):Int:Int]
 					[Block:hl.UI16]
-						[Var this1(7728):hl.BytesAccess<hl.UI16>]
+						[Var this1(7727):hl.BytesAccess<hl.UI16>]
 							[Field:hl.BytesAccess<hl.UI16>]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:hl.BytesAccess<hl.UI16>]
 									hl.types.ArrayBytes_hl_UI16
 									bytes:hl.BytesAccess<hl.UI16>
-						[Var this2(7729):hl.BytesAccess<hl.UI16>]
+						[Var this2(7728):hl.BytesAccess<hl.UI16>]
 							[Field:hl.BytesAccess<hl.UI16>]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:hl.BytesAccess<hl.UI16>]
 									hl.types.ArrayBytes_hl_UI16
 									bytes:hl.BytesAccess<hl.UI16>
-						[Var value(7730):hl.UI16]
+						[Var value(7729):hl.UI16]
 							[Call:hl.UI16]
 								[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-								[Local this2(7729):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-								[Local k(7725):Int:Int]
+								[Local this2(7728):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+								[Local k(7724):Int:Int]
 						[Call:Unknown<30>]
 							[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
-							[Local this1(7728):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-							[Local i(7724):Int:Int]
-							[Local value(7730):hl.UI16:hl.UI16]
+							[Local this1(7727):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Local i(7723):Int:Int]
+							[Local value(7729):hl.UI16:hl.UI16]
 					[Block:hl.UI16]
-						[Var this1(7731):hl.BytesAccess<hl.UI16>]
+						[Var this1(7730):hl.BytesAccess<hl.UI16>]
 							[Field:hl.BytesAccess<hl.UI16>]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:hl.BytesAccess<hl.UI16>]
@@ -398,9 +398,9 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									bytes:hl.BytesAccess<hl.UI16>
 						[Call:Unknown<30>]
 							[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
-							[Local this1(7731):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-							[Local k(7725):Int:Int]
-							[Local tmp(7727):hl.UI16:hl.UI16]
+							[Local this1(7730):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Local k(7724):Int:Int]
+							[Local tmp(7726):hl.UI16:hl.UI16]
 
 	public function shift[Function:() -> Null<hl.UI16>]
 		[Block:Dynamic]
@@ -415,16 +415,16 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						==
 						[Const:Int] 0
 				[Then:Dynamic] [Return:Dynamic] [Const:Null<hl.UI16>] null
-			[Var this1(7718):hl.BytesAccess<hl.UI16>]
+			[Var this1(7717):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var v(7719):hl.UI16]
+			[Var v(7718):hl.UI16]
 				[Call:hl.UI16]
 					[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-					[Local this1(7718):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local this1(7717):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 					[Const:Int] 0
 			[Unop:Int]
 				--
@@ -434,33 +434,33 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FInstance:Int]
 						hl.types.ArrayBase
 						length:Int
-			[Var tmp(11661):hl.Bytes]
+			[Var tmp(11642):hl.Bytes]
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp1(11662):hl.BytesAccess<hl.UI16>]
+			[Var tmp1(11643):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var this1(7720):hl.BytesAccess<hl.UI16>]
+			[Var this1(7719):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp2(11663):Int]
+			[Var tmp2(11644):Int]
 				[Binop:Int]
 					[Const:Int] 1
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7720):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var this1(7721):hl.BytesAccess<hl.UI16>]
+						[Local this1(7719):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7720):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -472,10 +472,10 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
 						hl._Bytes.Bytes_Impl_
 						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
-				[Local tmp(11661):hl.Bytes:hl.Bytes]
+				[Local tmp(11642):hl.Bytes:hl.Bytes]
 				[Const:Int] 0
-				[Local tmp1(11662):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-				[Local tmp2(11663):Int:Int]
+				[Local tmp1(11643):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp2(11644):Int:Int]
 				[Binop:Int]
 					[Field:Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -485,16 +485,16 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7721):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Return:Dynamic] [Local v(7719):hl.UI16:hl.UI16]
+						[Local this1(7720):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Return:Dynamic] [Local v(7718):hl.UI16:hl.UI16]
 
 	public function blit[Function:(pos : Int, src : hl.types.ArrayAccess, srcpos : Int, len : Int) -> Void]
-		[Arg:Int] [Local pos(7712):Int]
-		[Arg:hl.types.ArrayAccess] [Local src(7710):hl.types.ArrayAccess]
-		[Arg:Int] [Local srcpos(7713):Int]
-		[Arg:Int] [Local len(7714):Int]
+		[Arg:Int] [Local pos(7711):Int]
+		[Arg:hl.types.ArrayAccess] [Local src(7709):hl.types.ArrayAccess]
+		[Arg:Int] [Local srcpos(7712):Int]
+		[Arg:Int] [Local len(7713):Int]
 		[Block:Void]
-			[Var src(7711):hl.types.ArrayBytes_hl_UI16] [Cast:hl.types.ArrayBytes_hl_UI16] [Local src(7710):hl.types.ArrayAccess:hl.types.ArrayAccess]
+			[Var src(7710):hl.types.ArrayBytes_hl_UI16] [Cast:hl.types.ArrayBytes_hl_UI16] [Local src(7709):hl.types.ArrayAccess:hl.types.ArrayAccess]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
@@ -502,25 +502,25 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							[Binop:Bool]
 								[Binop:Bool]
 									[Binop:Bool]
-										[Local pos(7712):Int:Int]
+										[Local pos(7711):Int:Int]
 										<
 										[Const:Int] 0
 									||
 									[Binop:Bool]
-										[Local srcpos(7713):Int:Int]
+										[Local srcpos(7712):Int:Int]
 										<
 										[Const:Int] 0
 								||
 								[Binop:Bool]
-									[Local len(7714):Int:Int]
+									[Local len(7713):Int:Int]
 									<
 									[Const:Int] 0
 							||
 							[Binop:Bool]
 								[Binop:Int]
-									[Local pos(7712):Int:Int]
+									[Local pos(7711):Int:Int]
 									+
-									[Local len(7714):Int:Int]
+									[Local len(7713):Int:Int]
 								>
 								[Field:Int]
 									[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -530,12 +530,12 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						||
 						[Binop:Bool]
 							[Binop:Int]
-								[Local srcpos(7713):Int:Int]
+								[Local srcpos(7712):Int:Int]
 								+
-								[Local len(7714):Int:Int]
+								[Local len(7713):Int:Int]
 							>
 							[Field:Int]
-								[Local src(7711):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+								[Local src(7710):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 								[FInstance:Int]
 									hl.types.ArrayBase
 									length:Int
@@ -551,46 +551,46 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							[FEnum:haxe.io.Error]
 								haxe.io.Error
 								OutsideBounds
-			[Var tmp(11678):hl.Bytes]
+			[Var tmp(11659):hl.Bytes]
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7714):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11660):Int]
+				[Binop:Int]
+					[Local pos(7711):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7714):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var src(11662):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Local src(7710):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
 			[Var this1(7715):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp1(11679):Int]
+			[Var tmp2(11663):Int]
 				[Binop:Int]
-					[Local pos(7712):Int:Int]
+					[Local srcpos(7712):Int:Int]
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
 						[Local this1(7715):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var src(11681):hl.BytesAccess<hl.UI16>]
-				[Field:hl.BytesAccess<hl.UI16>]
-					[Local src(7711):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
-					[FInstance:hl.BytesAccess<hl.UI16>]
-						hl.types.ArrayBytes_hl_UI16
-						bytes:hl.BytesAccess<hl.UI16>
 			[Var this1(7716):hl.BytesAccess<hl.UI16>]
-				[Field:hl.BytesAccess<hl.UI16>]
-					[Const:hl.types.ArrayBytes_hl_UI16] this
-					[FInstance:hl.BytesAccess<hl.UI16>]
-						hl.types.ArrayBytes_hl_UI16
-						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp2(11682):Int]
-				[Binop:Int]
-					[Local srcpos(7713):Int:Int]
-					<<
-					[Call:Int]
-						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7716):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var this1(7717):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -602,32 +602,32 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
 						hl._Bytes.Bytes_Impl_
 						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
-				[Local tmp(11678):hl.Bytes:hl.Bytes]
-				[Local tmp1(11679):Int:Int]
-				[Local src(11681):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-				[Local tmp2(11682):Int:Int]
+				[Local tmp(11659):hl.Bytes:hl.Bytes]
+				[Local tmp1(11660):Int:Int]
+				[Local src(11662):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp2(11663):Int:Int]
 				[Binop:Int]
-					[Local len(7714):Int:Int]
+					[Local len(7713):Int:Int]
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7717):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+						[Local this1(7716):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 
 	public function slice[Function:(pos : Int, ?end : Null<Int>) -> hl.types.ArrayBytes_hl_UI16]
-		[Arg:Int] [Local pos(7703):Int]
+		[Arg:Int] [Local pos(7702):Int]
 		[Arg:Null<Int>]
-			[Local end(7705):Null<Int>]
+			[Local end(7704):Null<Int>]
 			[Const:Null<Int>] null
 		[Block:Dynamic]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local pos(7703):Int:Int]
+						[Local pos(7702):Int:Int]
 						<
 						[Const:Int] 0
 				[Then:Void] [Block:Void]
 					[Binop:Int]
-						[Local pos(7703):Int:Int]
+						[Local pos(7702):Int:Int]
 						=
 						[Binop:Int]
 							[Field:Int]
@@ -636,26 +636,26 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									hl.types.ArrayBase
 									length:Int
 							+
-							[Local pos(7703):Int:Int]
+							[Local pos(7702):Int:Int]
 					[If:Void]
 						[Parenthesis:Bool]
 							[Binop:Bool]
-								[Local pos(7703):Int:Int]
+								[Local pos(7702):Int:Int]
 								<
 								[Const:Int] 0
 						[Then:Int] [Binop:Int]
-							[Local pos(7703):Int:Int]
+							[Local pos(7702):Int:Int]
 							=
 							[Const:Int] 0
-			[Var pend(7704):Int]
+			[Var pend(7703):Int]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local end(7705):Null<Int>:Null<Int>]
+						[Local end(7704):Null<Int>:Null<Int>]
 						==
 						[Const:Null<Int>] null
 				[Then:Int] [Binop:Int]
-					[Local pend(7704):Int:Int]
+					[Local pend(7703):Int:Int]
 					=
 					[Field:Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -664,17 +664,17 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							length:Int
 				[Else:Void] [Block:Void]
 					[Binop:Int]
-						[Local pend(7704):Int:Int]
+						[Local pend(7703):Int:Int]
 						=
-						[Local end(7705):Null<Int>:Null<Int>]
+						[Local end(7704):Null<Int>:Null<Int>]
 					[If:Void]
 						[Parenthesis:Bool]
 							[Binop:Bool]
-								[Local pend(7704):Int:Int]
+								[Local pend(7703):Int:Int]
 								<
 								[Const:Int] 0
 						[Then:Int] [Binop:Int]
-							[Local pend(7704):Int:Int]
+							[Local pend(7703):Int:Int]
 							+=
 							[Field:Int]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -684,7 +684,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[If:Void]
 						[Parenthesis:Bool]
 							[Binop:Bool]
-								[Local pend(7704):Int:Int]
+								[Local pend(7703):Int:Int]
 								>
 								[Field:Int]
 									[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -692,62 +692,62 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 										hl.types.ArrayBase
 										length:Int
 						[Then:Int] [Binop:Int]
-							[Local pend(7704):Int:Int]
+							[Local pend(7703):Int:Int]
 							=
 							[Field:Int]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:Int]
 									hl.types.ArrayBase
 									length:Int
-			[Var len(7706):Int]
+			[Var len(7705):Int]
 				[Binop:Int]
-					[Local pend(7704):Int:Int]
+					[Local pend(7703):Int:Int]
 					-
-					[Local pos(7703):Int:Int]
+					[Local pos(7702):Int:Int]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local len(7706):Int:Int]
+						[Local len(7705):Int:Int]
 						<
 						[Const:Int] 0
 				[Then:Dynamic] [Return:Dynamic] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
-			[Var a(7707):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Var a(7706):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
 			[Binop:Int]
 				[Field:Int]
-					[Local a(7707):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[Local a(7706):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 					[FInstance:Int]
 						hl.types.ArrayBase
 						length:Int
 				=
 				[Binop:Int]
 					[Field:Int]
-						[Local a(7707):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local a(7706):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 						[FInstance:Int]
 							hl.types.ArrayBytes_hl_UI16
 							size:Int
 					=
-					[Local len(7706):Int:Int]
-			[Var tmp(11692):hl.Bytes]
+					[Local len(7705):Int:Int]
+			[Var tmp(11673):hl.Bytes]
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
-			[Var this1(7708):hl.BytesAccess<hl.UI16>]
+			[Var this1(7707):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp1(11693):Int]
+			[Var tmp1(11674):Int]
 				[Binop:Int]
-					[Local pos(7703):Int:Int]
+					[Local pos(7702):Int:Int]
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7708):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var this1(7709):hl.BytesAccess<hl.UI16>]
+						[Local this1(7707):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7708):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -755,7 +755,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						bytes:hl.BytesAccess<hl.UI16>
 			[Binop:hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
-					[Local a(7707):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[Local a(7706):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
@@ -766,18 +766,18 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FStatic:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes]
 							hl._Bytes.Bytes_Impl_
 							sub:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes
-					[Local tmp(11692):hl.Bytes:hl.Bytes]
-					[Local tmp1(11693):Int:Int]
+					[Local tmp(11673):hl.Bytes:hl.Bytes]
+					[Local tmp1(11674):Int:Int]
 					[Binop:Int]
-						[Local len(7706):Int:Int]
+						[Local len(7705):Int:Int]
 						<<
 						[Call:Int]
 							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-							[Local this1(7709):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Return:Dynamic] [Local a(7707):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+							[Local this1(7708):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Return:Dynamic] [Local a(7706):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 
 	public function sort[Function:(f : ((hl.UI16, hl.UI16) -> Int)) -> Void]
-		[Arg:(hl.UI16, hl.UI16) -> Int] [Local f(7702):(hl.UI16, hl.UI16) -> Int]
+		[Arg:(hl.UI16, hl.UI16) -> Int] [Local f(7701):(hl.UI16, hl.UI16) -> Int]
 		[Block:Void]
 			[If:Void]
 				[Parenthesis:Bool]
@@ -807,7 +807,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FInstance:Int]
 							hl.types.ArrayBase
 							length:Int
-					[Cast:(Int, Int) -> Int] [Local f(7702):(hl.UI16, hl.UI16) -> Int:(hl.UI16, hl.UI16) -> Int]
+					[Cast:(Int, Int) -> Int] [Local f(7701):(hl.UI16, hl.UI16) -> Int:(hl.UI16, hl.UI16) -> Int]
 				[Else:Void] [Call:Void]
 					[Field:(this : hl.Bytes, pos : Int, length : Int, f : ((Float, Float) -> Int)) -> Void]
 						[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
@@ -826,28 +826,28 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FInstance:Int]
 							hl.types.ArrayBase
 							length:Int
-					[Cast:(Float, Float) -> Int] [Local f(7702):(hl.UI16, hl.UI16) -> Int:(hl.UI16, hl.UI16) -> Int]
+					[Cast:(Float, Float) -> Int] [Local f(7701):(hl.UI16, hl.UI16) -> Int:(hl.UI16, hl.UI16) -> Int]
 
 	public function splice[Function:(pos : Int, len : Int) -> hl.types.ArrayBytes_hl_UI16]
-		[Arg:Int] [Local pos(7694):Int]
-		[Arg:Int] [Local len(7693):Int]
+		[Arg:Int] [Local pos(7693):Int]
+		[Arg:Int] [Local len(7692):Int]
 		[Block:Dynamic]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local len(7693):Int:Int]
+						[Local len(7692):Int:Int]
 						<
 						[Const:Int] 0
 				[Then:Dynamic] [Return:Dynamic] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local pos(7694):Int:Int]
+						[Local pos(7693):Int:Int]
 						<
 						[Const:Int] 0
 				[Then:Void] [Block:Void]
 					[Binop:Int]
-						[Local pos(7694):Int:Int]
+						[Local pos(7693):Int:Int]
 						=
 						[Binop:Int]
 							[Field:Int]
@@ -856,21 +856,21 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									hl.types.ArrayBase
 									length:Int
 							+
-							[Local pos(7694):Int:Int]
+							[Local pos(7693):Int:Int]
 					[If:Void]
 						[Parenthesis:Bool]
 							[Binop:Bool]
-								[Local pos(7694):Int:Int]
+								[Local pos(7693):Int:Int]
 								<
 								[Const:Int] 0
 						[Then:Int] [Binop:Int]
-							[Local pos(7694):Int:Int]
+							[Local pos(7693):Int:Int]
 							=
 							[Const:Int] 0
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local pos(7694):Int:Int]
+						[Local pos(7693):Int:Int]
 						>
 						[Field:Int]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -879,20 +879,20 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								length:Int
 				[Then:Int] [Block:Int]
 					[Binop:Int]
-						[Local pos(7694):Int:Int]
+						[Local pos(7693):Int:Int]
 						=
 						[Const:Int] 0
 					[Binop:Int]
-						[Local len(7693):Int:Int]
+						[Local len(7692):Int:Int]
 						=
 						[Const:Int] 0
 				[Else:Void] [If:Void]
 					[Parenthesis:Bool]
 						[Binop:Bool]
 							[Binop:Int]
-								[Local pos(7694):Int:Int]
+								[Local pos(7693):Int:Int]
 								+
-								[Local len(7693):Int:Int]
+								[Local len(7692):Int:Int]
 							>
 							[Field:Int]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -901,7 +901,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									length:Int
 					[Then:Void] [Block:Void]
 						[Binop:Int]
-							[Local len(7693):Int:Int]
+							[Local len(7692):Int:Int]
 							=
 							[Binop:Int]
 								[Field:Int]
@@ -910,46 +910,46 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 										hl.types.ArrayBase
 										length:Int
 								-
-								[Local pos(7694):Int:Int]
+								[Local pos(7693):Int:Int]
 						[If:Void]
 							[Parenthesis:Bool]
 								[Binop:Bool]
-									[Local len(7693):Int:Int]
+									[Local len(7692):Int:Int]
 									<
 									[Const:Int] 0
 							[Then:Int] [Binop:Int]
-								[Local len(7693):Int:Int]
+								[Local len(7692):Int:Int]
 								=
 								[Const:Int] 0
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local len(7693):Int:Int]
+						[Local len(7692):Int:Int]
 						==
 						[Const:Int] 0
 				[Then:Dynamic] [Return:Dynamic] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
-			[Var ret(7695):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
-			[Var tmp(11708):hl.Bytes]
+			[Var ret(7694):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Var tmp(11689):hl.Bytes]
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
-			[Var this1(7696):hl.BytesAccess<hl.UI16>]
+			[Var this1(7695):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp1(11709):Int]
+			[Var tmp1(11690):Int]
 				[Binop:Int]
-					[Local pos(7694):Int:Int]
+					[Local pos(7693):Int:Int]
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7696):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var this1(7697):hl.BytesAccess<hl.UI16>]
+						[Local this1(7695):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7696):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -957,7 +957,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						bytes:hl.BytesAccess<hl.UI16>
 			[Binop:hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
-					[Local ret(7695):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[Local ret(7694):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
@@ -968,74 +968,74 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FStatic:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes]
 							hl._Bytes.Bytes_Impl_
 							sub:(this : hl.Bytes, pos : Int, size : Int) -> hl.Bytes
-					[Local tmp(11708):hl.Bytes:hl.Bytes]
-					[Local tmp1(11709):Int:Int]
+					[Local tmp(11689):hl.Bytes:hl.Bytes]
+					[Local tmp1(11690):Int:Int]
 					[Binop:Int]
-						[Local len(7693):Int:Int]
+						[Local len(7692):Int:Int]
 						<<
 						[Call:Int]
 							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-							[Local this1(7697):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Local this1(7696):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 			[Binop:Int]
 				[Field:Int]
-					[Local ret(7695):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[Local ret(7694):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 					[FInstance:Int]
 						hl.types.ArrayBytes_hl_UI16
 						size:Int
 				=
 				[Binop:Int]
 					[Field:Int]
-						[Local ret(7695):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local ret(7694):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 						[FInstance:Int]
 							hl.types.ArrayBase
 							length:Int
 					=
-					[Local len(7693):Int:Int]
-			[Var end(7698):Int]
+					[Local len(7692):Int:Int]
+			[Var end(7697):Int]
 				[Binop:Int]
-					[Local pos(7694):Int:Int]
+					[Local pos(7693):Int:Int]
 					+
-					[Local len(7693):Int:Int]
-			[Var tmp(11713):hl.Bytes]
+					[Local len(7692):Int:Int]
+			[Var tmp(11694):hl.Bytes]
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7698):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11695):Int]
+				[Binop:Int]
+					[Local pos(7693):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7698):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var tmp2(11697):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
 			[Var this1(7699):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp1(11714):Int]
+			[Var tmp3(11698):Int]
 				[Binop:Int]
-					[Local pos(7694):Int:Int]
+					[Local end(7697):Int:Int]
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
 						[Local this1(7699):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var tmp2(11716):hl.BytesAccess<hl.UI16>]
-				[Field:hl.BytesAccess<hl.UI16>]
-					[Const:hl.types.ArrayBytes_hl_UI16] this
-					[FInstance:hl.BytesAccess<hl.UI16>]
-						hl.types.ArrayBytes_hl_UI16
-						bytes:hl.BytesAccess<hl.UI16>
 			[Var this1(7700):hl.BytesAccess<hl.UI16>]
-				[Field:hl.BytesAccess<hl.UI16>]
-					[Const:hl.types.ArrayBytes_hl_UI16] this
-					[FInstance:hl.BytesAccess<hl.UI16>]
-						hl.types.ArrayBytes_hl_UI16
-						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp3(11717):Int]
-				[Binop:Int]
-					[Local end(7698):Int:Int]
-					<<
-					[Call:Int]
-						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7700):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var this1(7701):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1047,10 +1047,10 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
 						hl._Bytes.Bytes_Impl_
 						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
-				[Local tmp(11713):hl.Bytes:hl.Bytes]
-				[Local tmp1(11714):Int:Int]
-				[Local tmp2(11716):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-				[Local tmp3(11717):Int:Int]
+				[Local tmp(11694):hl.Bytes:hl.Bytes]
+				[Local tmp1(11695):Int:Int]
+				[Local tmp2(11697):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp3(11698):Int:Int]
 				[Binop:Int]
 					[Binop:Int]
 						[Field:Int]
@@ -1059,11 +1059,11 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								hl.types.ArrayBase
 								length:Int
 						-
-						[Local end(7698):Int:Int]
+						[Local end(7697):Int:Int]
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7701):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+						[Local this1(7700):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 			[Binop:Int]
 				[Field:Int]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -1071,22 +1071,22 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						hl.types.ArrayBase
 						length:Int
 				-=
-				[Local len(7693):Int:Int]
-			[Return:Dynamic] [Local ret(7695):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+				[Local len(7692):Int:Int]
+			[Return:Dynamic] [Local ret(7694):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 
 	public function toString[Function:() -> String]
 		[Block:Dynamic]
-			[Var b(7688):StringBuf] [New:StringBuf] StringBuf
+			[Var b(7687):StringBuf] [New:StringBuf] StringBuf
 			[Call:Void]
 				[Field:(c : Int) -> Void]
-					[Local b(7688):StringBuf:StringBuf]
+					[Local b(7687):StringBuf:StringBuf]
 					[FInstance:(c : Int) -> Void]
 						StringBuf
 						addChar:(c : Int) -> Void
 				[Const:Int] 91
 			[Block:Void]
-				[Var _g(7689):Int] [Const:Int] 0
-				[Var _g1(7690):Int]
+				[Var _g(7688):Int] [Const:Int] 0
+				[Var _g1(7689):Int]
 					[Field:Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:Int]
@@ -1095,29 +1095,29 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 				[While:Void]
 					[Parenthesis:Bool]
 						[Binop:Bool]
-							[Local _g(7689):Int:Int]
+							[Local _g(7688):Int:Int]
 							<
-							[Local _g1(7690):Int:Int]
+							[Local _g1(7689):Int:Int]
 					[Block:Dynamic]
-						[Var i(7691):Int]
+						[Var i(7690):Int]
 							[Unop:Int]
 								++
 								Postfix
-								[Local _g(7689):Int:Int]
+								[Local _g(7688):Int:Int]
 						[If:Void]
 							[Parenthesis:Bool]
 								[Binop:Bool]
-									[Local i(7691):Int:Int]
+									[Local i(7690):Int:Int]
 									>
 									[Const:Int] 0
 							[Then:Void] [Call:Void]
 								[Field:(c : Int) -> Void]
-									[Local b(7688):StringBuf:StringBuf]
+									[Local b(7687):StringBuf:StringBuf]
 									[FInstance:(c : Int) -> Void]
 										StringBuf
 										addChar:(c : Int) -> Void
 								[Const:Int] 44
-						[Var this1(7692):hl.BytesAccess<hl.UI16>]
+						[Var this1(7691):hl.BytesAccess<hl.UI16>]
 							[Field:hl.BytesAccess<hl.UI16>]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1125,17 +1125,17 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									bytes:hl.BytesAccess<hl.UI16>
 						[Call:Void]
 							[Field:(x : hl.UI16) -> Void]
-								[Local b(7688):StringBuf:StringBuf]
+								[Local b(7687):StringBuf:StringBuf]
 								[FInstance:(x : hl.UI16) -> Void]
 									StringBuf
 									add:(x : add.T) -> Void
 							[Call:hl.UI16]
 								[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-								[Local this1(7692):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-								[Local i(7691):Int:Int]
+								[Local this1(7691):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+								[Local i(7690):Int:Int]
 			[Call:Void]
 				[Field:(c : Int) -> Void]
-					[Local b(7688):StringBuf:StringBuf]
+					[Local b(7687):StringBuf:StringBuf]
 					[FInstance:(c : Int) -> Void]
 						StringBuf
 						addChar:(c : Int) -> Void
@@ -1143,13 +1143,13 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 			[Return:Dynamic]
 				[Call:String]
 					[Field:() -> String]
-						[Local b(7688):StringBuf:StringBuf]
+						[Local b(7687):StringBuf:StringBuf]
 						[FInstance:() -> String]
 							StringBuf
 							toString:() -> String
 
 	public function unshift[Function:(x : hl.UI16) -> Void]
-		[Arg:hl.UI16] [Local x(7687):hl.UI16]
+		[Arg:hl.UI16] [Local x(7686):hl.UI16]
 		[Block:hl.UI16]
 			[If:Void]
 				[Parenthesis:Bool]
@@ -1184,27 +1184,27 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FInstance:Int]
 							hl.types.ArrayBase
 							length:Int
-			[Var tmp(11729):hl.Bytes]
+			[Var tmp(11710):hl.Bytes]
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
-			[Var this1(7684):hl.BytesAccess<hl.UI16>]
+			[Var this1(7683):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp1(11730):Int]
+			[Var tmp1(11711):Int]
 				[Binop:Int]
 					[Const:Int] 1
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7684):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var this1(7685):hl.BytesAccess<hl.UI16>]
+						[Local this1(7683):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7684):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1216,8 +1216,8 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
 						hl._Bytes.Bytes_Impl_
 						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
-				[Local tmp(11729):hl.Bytes:hl.Bytes]
-				[Local tmp1(11730):Int:Int]
+				[Local tmp(11710):hl.Bytes:hl.Bytes]
+				[Local tmp1(11711):Int:Int]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1236,9 +1236,9 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7685):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+						[Local this1(7684):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 			[Block:hl.UI16]
-				[Var this1(7686):hl.BytesAccess<hl.UI16>]
+				[Var this1(7685):hl.BytesAccess<hl.UI16>]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1246,23 +1246,23 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							bytes:hl.BytesAccess<hl.UI16>
 				[Call:Unknown<30>]
 					[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
-					[Local this1(7686):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local this1(7685):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 					[Const:Int] 0
-					[Local x(7687):hl.UI16:hl.UI16]
+					[Local x(7686):hl.UI16:hl.UI16]
 
 	public function insert[Function:(pos : Int, x : hl.UI16) -> Void]
-		[Arg:Int] [Local pos(7678):Int]
-		[Arg:hl.UI16] [Local x(7683):hl.UI16]
+		[Arg:Int] [Local pos(7677):Int]
+		[Arg:hl.UI16] [Local x(7682):hl.UI16]
 		[Block:hl.UI16]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local pos(7678):Int:Int]
+						[Local pos(7677):Int:Int]
 						<
 						[Const:Int] 0
 				[Then:Void] [Block:Void]
 					[Binop:Int]
-						[Local pos(7678):Int:Int]
+						[Local pos(7677):Int:Int]
 						=
 						[Binop:Int]
 							[Field:Int]
@@ -1271,21 +1271,21 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									hl.types.ArrayBase
 									length:Int
 							+
-							[Local pos(7678):Int:Int]
+							[Local pos(7677):Int:Int]
 					[If:Void]
 						[Parenthesis:Bool]
 							[Binop:Bool]
-								[Local pos(7678):Int:Int]
+								[Local pos(7677):Int:Int]
 								<
 								[Const:Int] 0
 						[Then:Int] [Binop:Int]
-							[Local pos(7678):Int:Int]
+							[Local pos(7677):Int:Int]
 							=
 							[Const:Int] 0
 				[Else:Void] [If:Void]
 					[Parenthesis:Bool]
 						[Binop:Bool]
-							[Local pos(7678):Int:Int]
+							[Local pos(7677):Int:Int]
 							>
 							[Field:Int]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -1293,7 +1293,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									hl.types.ArrayBase
 									length:Int
 					[Then:Int] [Binop:Int]
-						[Local pos(7678):Int:Int]
+						[Local pos(7677):Int:Int]
 						=
 						[Field:Int]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -1333,49 +1333,49 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FInstance:Int]
 							hl.types.ArrayBase
 							length:Int
-			[Var tmp(11740):hl.Bytes]
+			[Var tmp(11721):hl.Bytes]
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7678):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11722):Int]
+				[Binop:Int]
+					[Binop:Int]
+						[Local pos(7677):Int:Int]
+						+
+						[Const:Int] 1
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7678):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var tmp2(11725):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
 			[Var this1(7679):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp1(11741):Int]
+			[Var tmp3(11726):Int]
 				[Binop:Int]
-					[Binop:Int]
-						[Local pos(7678):Int:Int]
-						+
-						[Const:Int] 1
+					[Local pos(7677):Int:Int]
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
 						[Local this1(7679):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var tmp2(11744):hl.BytesAccess<hl.UI16>]
-				[Field:hl.BytesAccess<hl.UI16>]
-					[Const:hl.types.ArrayBytes_hl_UI16] this
-					[FInstance:hl.BytesAccess<hl.UI16>]
-						hl.types.ArrayBytes_hl_UI16
-						bytes:hl.BytesAccess<hl.UI16>
 			[Var this1(7680):hl.BytesAccess<hl.UI16>]
-				[Field:hl.BytesAccess<hl.UI16>]
-					[Const:hl.types.ArrayBytes_hl_UI16] this
-					[FInstance:hl.BytesAccess<hl.UI16>]
-						hl.types.ArrayBytes_hl_UI16
-						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp3(11745):Int]
-				[Binop:Int]
-					[Local pos(7678):Int:Int]
-					<<
-					[Call:Int]
-						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7680):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var this1(7681):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1387,10 +1387,10 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
 						hl._Bytes.Bytes_Impl_
 						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
-				[Local tmp(11740):hl.Bytes:hl.Bytes]
-				[Local tmp1(11741):Int:Int]
-				[Local tmp2(11744):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-				[Local tmp3(11745):Int:Int]
+				[Local tmp(11721):hl.Bytes:hl.Bytes]
+				[Local tmp1(11722):Int:Int]
+				[Local tmp2(11725):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp3(11726):Int:Int]
 				[Binop:Int]
 					[Binop:Int]
 						[Binop:Int]
@@ -1400,15 +1400,15 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									hl.types.ArrayBase
 									length:Int
 							-
-							[Local pos(7678):Int:Int]
+							[Local pos(7677):Int:Int]
 						-
 						[Const:Int] 1
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7681):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+						[Local this1(7680):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 			[Block:hl.UI16]
-				[Var this1(7682):hl.BytesAccess<hl.UI16>]
+				[Var this1(7681):hl.BytesAccess<hl.UI16>]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1416,12 +1416,12 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							bytes:hl.BytesAccess<hl.UI16>
 				[Call:Unknown<30>]
 					[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
-					[Local this1(7682):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-					[Local pos(7678):Int:Int]
-					[Local x(7683):hl.UI16:hl.UI16]
+					[Local this1(7681):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7677):Int:Int]
+					[Local x(7682):hl.UI16:hl.UI16]
 
 	public function contains[Function:(x : hl.UI16) -> Bool]
-		[Arg:hl.UI16] [Local x(7677):hl.UI16]
+		[Arg:hl.UI16] [Local x(7676):hl.UI16]
 		[Block:Dynamic]
 			[Return:Dynamic]
 				[Binop:Bool]
@@ -1431,27 +1431,27 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							[FInstance:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
 								hl.types.ArrayBytes_hl_UI16
 								indexOf:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int
-						[Local x(7677):hl.UI16:hl.UI16]
+						[Local x(7676):hl.UI16:hl.UI16]
 						[Const:Null<Int>] null
 					!=
 					[Const:Int] -1
 
 	public function remove[Function:(x : hl.UI16) -> Bool]
-		[Arg:hl.UI16] [Local x(7672):hl.UI16]
+		[Arg:hl.UI16] [Local x(7671):hl.UI16]
 		[Block:Dynamic]
-			[Var idx(7673):Int]
+			[Var idx(7672):Int]
 				[Call:Int]
 					[Field:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
 							hl.types.ArrayBytes_hl_UI16
 							indexOf:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int
-					[Local x(7672):hl.UI16:hl.UI16]
+					[Local x(7671):hl.UI16:hl.UI16]
 					[Const:Null<Int>] null
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local idx(7673):Int:Int]
+						[Local idx(7672):Int:Int]
 						<
 						[Const:Int] 0
 				[Then:Dynamic] [Return:Dynamic] [Const:Bool] false
@@ -1463,49 +1463,49 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FInstance:Int]
 						hl.types.ArrayBase
 						length:Int
-			[Var tmp(11753):hl.Bytes]
+			[Var tmp(11734):hl.Bytes]
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
+			[Var this1(7673):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
+			[Var tmp1(11735):Int]
+				[Binop:Int]
+					[Local idx(7672):Int:Int]
+					<<
+					[Call:Int]
+						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
+						[Local this1(7673):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var tmp2(11737):hl.BytesAccess<hl.UI16>]
+				[Field:hl.BytesAccess<hl.UI16>]
+					[Const:hl.types.ArrayBytes_hl_UI16] this
+					[FInstance:hl.BytesAccess<hl.UI16>]
+						hl.types.ArrayBytes_hl_UI16
+						bytes:hl.BytesAccess<hl.UI16>
 			[Var this1(7674):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp1(11754):Int]
-				[Binop:Int]
-					[Local idx(7673):Int:Int]
-					<<
-					[Call:Int]
-						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7674):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var tmp2(11756):hl.BytesAccess<hl.UI16>]
-				[Field:hl.BytesAccess<hl.UI16>]
-					[Const:hl.types.ArrayBytes_hl_UI16] this
-					[FInstance:hl.BytesAccess<hl.UI16>]
-						hl.types.ArrayBytes_hl_UI16
-						bytes:hl.BytesAccess<hl.UI16>
-			[Var this1(7675):hl.BytesAccess<hl.UI16>]
-				[Field:hl.BytesAccess<hl.UI16>]
-					[Const:hl.types.ArrayBytes_hl_UI16] this
-					[FInstance:hl.BytesAccess<hl.UI16>]
-						hl.types.ArrayBytes_hl_UI16
-						bytes:hl.BytesAccess<hl.UI16>
-			[Var tmp3(11757):Int]
+			[Var tmp3(11738):Int]
 				[Binop:Int]
 					[Binop:Int]
-						[Local idx(7673):Int:Int]
+						[Local idx(7672):Int:Int]
 						+
 						[Const:Int] 1
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7675):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var this1(7676):hl.BytesAccess<hl.UI16>]
+						[Local this1(7674):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7675):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1517,10 +1517,10 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
 						hl._Bytes.Bytes_Impl_
 						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
-				[Local tmp(11753):hl.Bytes:hl.Bytes]
-				[Local tmp1(11754):Int:Int]
-				[Local tmp2(11756):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-				[Local tmp3(11757):Int:Int]
+				[Local tmp(11734):hl.Bytes:hl.Bytes]
+				[Local tmp1(11735):Int:Int]
+				[Local tmp2(11737):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+				[Local tmp3(11738):Int:Int]
 				[Binop:Int]
 					[Binop:Int]
 						[Field:Int]
@@ -1529,37 +1529,37 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								hl.types.ArrayBase
 								length:Int
 						-
-						[Local idx(7673):Int:Int]
+						[Local idx(7672):Int:Int]
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7676):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+						[Local this1(7675):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 			[Return:Dynamic] [Const:Bool] true
 
 	public function indexOf[Function:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
-		[Arg:hl.UI16] [Local x(7671):hl.UI16]
+		[Arg:hl.UI16] [Local x(7670):hl.UI16]
 		[Arg:Null<Int>]
-			[Local fromIndex(7665):Null<Int>]
+			[Local fromIndex(7664):Null<Int>]
 			[Const:Null<Int>] null
 		[Block:Dynamic]
-			[Var idx(7666):Int]
+			[Var idx(7665):Int]
 				[If:Int]
 					[Parenthesis:Bool]
 						[Binop:Bool]
-							[Local fromIndex(7665):Null<Int>:Null<Int>]
+							[Local fromIndex(7664):Null<Int>:Null<Int>]
 							==
 							[Const:Null<Int>] null
 					[Then:Int] [Const:Int] 0
-					[Else:Null<Int>] [Local fromIndex(7665):Null<Int>:Null<Int>]
+					[Else:Null<Int>] [Local fromIndex(7664):Null<Int>:Null<Int>]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local idx(7666):Int:Int]
+						[Local idx(7665):Int:Int]
 						<
 						[Const:Int] 0
 				[Then:Void] [Block:Void]
 					[Binop:Int]
-						[Local idx(7666):Int:Int]
+						[Local idx(7665):Int:Int]
 						+=
 						[Field:Int]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -1569,16 +1569,16 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[If:Void]
 						[Parenthesis:Bool]
 							[Binop:Bool]
-								[Local idx(7666):Int:Int]
+								[Local idx(7665):Int:Int]
 								<
 								[Const:Int] 0
 						[Then:Int] [Binop:Int]
-							[Local idx(7666):Int:Int]
+							[Local idx(7665):Int:Int]
 							=
 							[Const:Int] 0
 			[Block:Void]
-				[Var _g(7667):Int] [Local idx(7666):Int:Int]
-				[Var _g1(7668):Int]
+				[Var _g(7666):Int] [Local idx(7665):Int:Int]
+				[Var _g1(7667):Int]
 					[Field:Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:Int]
@@ -1587,16 +1587,16 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 				[While:Void]
 					[Parenthesis:Bool]
 						[Binop:Bool]
-							[Local _g(7667):Int:Int]
+							[Local _g(7666):Int:Int]
 							<
-							[Local _g1(7668):Int:Int]
+							[Local _g1(7667):Int:Int]
 					[Block:Dynamic]
-						[Var i(7669):Int]
+						[Var i(7668):Int]
 							[Unop:Int]
 								++
 								Postfix
-								[Local _g(7667):Int:Int]
-						[Var this1(7670):hl.BytesAccess<hl.UI16>]
+								[Local _g(7666):Int:Int]
+						[Var this1(7669):hl.BytesAccess<hl.UI16>]
 							[Field:hl.BytesAccess<hl.UI16>]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1607,68 +1607,68 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								[Binop:Bool]
 									[Call:hl.UI16]
 										[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-										[Local this1(7670):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-										[Local i(7669):Int:Int]
+										[Local this1(7669):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+										[Local i(7668):Int:Int]
 									==
-									[Local x(7671):hl.UI16:hl.UI16]
-							[Then:Dynamic] [Return:Dynamic] [Local i(7669):Int:Int]
+									[Local x(7670):hl.UI16:hl.UI16]
+							[Then:Dynamic] [Return:Dynamic] [Local i(7668):Int:Int]
 			[Return:Dynamic] [Const:Int] -1
 
 	public function lastIndexOf[Function:(x : hl.UI16, ?fromIndex : Null<Int>) -> Int]
-		[Arg:hl.UI16] [Local x(7664):hl.UI16]
+		[Arg:hl.UI16] [Local x(7663):hl.UI16]
 		[Arg:Null<Int>]
-			[Local fromIndex(7661):Null<Int>]
+			[Local fromIndex(7660):Null<Int>]
 			[Const:Null<Int>] null
 		[Block:Dynamic]
-			[Var len(7660):Int]
+			[Var len(7659):Int]
 				[Field:Int]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:Int]
 						hl.types.ArrayBase
 						length:Int
-			[Var i(7662):Int]
+			[Var i(7661):Int]
 				[If:Int]
 					[Parenthesis:Bool]
 						[Binop:Bool]
-							[Local fromIndex(7661):Null<Int>:Null<Int>]
+							[Local fromIndex(7660):Null<Int>:Null<Int>]
 							!=
 							[Const:Null<Int>] null
-					[Then:Null<Int>] [Local fromIndex(7661):Null<Int>:Null<Int>]
+					[Then:Null<Int>] [Local fromIndex(7660):Null<Int>:Null<Int>]
 					[Else:Int] [Binop:Int]
-						[Local len(7660):Int:Int]
+						[Local len(7659):Int:Int]
 						-
 						[Const:Int] 1
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local i(7662):Int:Int]
+						[Local i(7661):Int:Int]
 						>=
-						[Local len(7660):Int:Int]
+						[Local len(7659):Int:Int]
 				[Then:Int] [Binop:Int]
-					[Local i(7662):Int:Int]
+					[Local i(7661):Int:Int]
 					=
 					[Binop:Int]
-						[Local len(7660):Int:Int]
+						[Local len(7659):Int:Int]
 						-
 						[Const:Int] 1
 				[Else:Void] [If:Void]
 					[Parenthesis:Bool]
 						[Binop:Bool]
-							[Local i(7662):Int:Int]
+							[Local i(7661):Int:Int]
 							<
 							[Const:Int] 0
 					[Then:Int] [Binop:Int]
-						[Local i(7662):Int:Int]
+						[Local i(7661):Int:Int]
 						+=
-						[Local len(7660):Int:Int]
+						[Local len(7659):Int:Int]
 			[While:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local i(7662):Int:Int]
+						[Local i(7661):Int:Int]
 						>=
 						[Const:Int] 0
 				[Block:Dynamic]
-					[Var this1(7663):hl.BytesAccess<hl.UI16>]
+					[Var this1(7662):hl.BytesAccess<hl.UI16>]
 						[Field:hl.BytesAccess<hl.UI16>]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
 							[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1679,30 +1679,30 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							[Binop:Bool]
 								[Call:hl.UI16]
 									[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-									[Local this1(7663):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-									[Local i(7662):Int:Int]
+									[Local this1(7662):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+									[Local i(7661):Int:Int]
 								==
-								[Local x(7664):hl.UI16:hl.UI16]
-						[Then:Dynamic] [Return:Dynamic] [Local i(7662):Int:Int]
+								[Local x(7663):hl.UI16:hl.UI16]
+						[Then:Dynamic] [Return:Dynamic] [Local i(7661):Int:Int]
 					[Unop:Int]
 						--
 						Prefix
-						[Local i(7662):Int:Int]
+						[Local i(7661):Int:Int]
 			[Return:Dynamic] [Const:Int] -1
 
 	public function copy[Function:() -> hl.types.ArrayBytes_hl_UI16]
 		[Block:Dynamic]
-			[Var a(7655):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Var a(7654):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
 			[Binop:Int]
 				[Field:Int]
-					[Local a(7655):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[Local a(7654):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 					[FInstance:Int]
 						hl.types.ArrayBase
 						length:Int
 				=
 				[Binop:Int]
 					[Field:Int]
-						[Local a(7655):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local a(7654):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 						[FInstance:Int]
 							hl.types.ArrayBytes_hl_UI16
 							size:Int
@@ -1712,13 +1712,13 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FInstance:Int]
 							hl.types.ArrayBase
 							length:Int
-			[Var this1(7656):hl.BytesAccess<hl.UI16>]
+			[Var this1(7655):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var this1(7658):hl.Bytes]
+			[Var this1(7657):hl.Bytes]
 				[Call:hl.Bytes]
 					[Field:(size : Int) -> hl.Bytes]
 						[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
@@ -1734,16 +1734,16 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						<<
 						[Call:Int]
 							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-							[Local this1(7656):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+							[Local this1(7655):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 			[Binop:hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
-					[Local a(7655):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+					[Local a(7654):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
 				=
-				[Local this1(7658):hl.Bytes:hl.Bytes]
-			[Var this1(7659):hl.BytesAccess<hl.UI16>]
+				[Local this1(7657):hl.Bytes:hl.Bytes]
+			[Var this1(7658):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1757,7 +1757,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
 				[Cast:hl.Bytes]
 					[Field:hl.BytesAccess<hl.UI16>]
-						[Local a(7655):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local a(7654):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
@@ -1777,8 +1777,8 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					<<
 					[Call:Int]
 						[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-						[Local this1(7659):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Return:Dynamic] [Local a(7655):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+						[Local this1(7658):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Return:Dynamic] [Local a(7654):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 
 	public function iterator[Function:() -> haxe.iterators.ArrayIterator<hl.UI16>]
 		[Block:Dynamic]
@@ -1795,9 +1795,9 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 
 	public function map<S>[Function:(f : (hl.UI16 -> map.S)) -> hl.types.ArrayDyn]
-		[Arg:hl.UI16 -> map.S] [Local f(7643):hl.UI16 -> map.S]
+		[Arg:hl.UI16 -> map.S] [Local f(7642):hl.UI16 -> map.S]
 		[Block:Dynamic]
-			[Var a(7638):hl.types.ArrayObj<Unknown<32>>] [New:hl.types.ArrayObj<Unknown<32>>] hl.types.ArrayObj<Unknown<32>>
+			[Var a(7637):hl.types.ArrayObj<Unknown<32>>] [New:hl.types.ArrayObj<Unknown<32>>] hl.types.ArrayObj<Unknown<32>>
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
@@ -1810,7 +1810,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[Const:Int] 0
 				[Then:Void] [Call:Void]
 					[Field:(index : Int) -> Void]
-						[Local a(7638):hl.types.ArrayObj<Unknown<32>>:hl.types.ArrayObj<Unknown<32>>]
+						[Local a(7637):hl.types.ArrayObj<Unknown<32>>:hl.types.ArrayObj<Unknown<32>>]
 						[FInstance:(index : Int) -> Void]
 							hl.types.ArrayObj<Unknown<32>>
 							__expand:(index : Int) -> Void
@@ -1823,8 +1823,8 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						-
 						[Const:Int] 1
 			[Block:Void]
-				[Var _g(7639):Int] [Const:Int] 0
-				[Var _g1(7640):Int]
+				[Var _g(7638):Int] [Const:Int] 0
+				[Var _g1(7639):Int]
 					[Field:Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:Int]
@@ -1833,40 +1833,40 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 				[While:Void]
 					[Parenthesis:Bool]
 						[Binop:Bool]
-							[Local _g(7639):Int:Int]
+							[Local _g(7638):Int:Int]
 							<
-							[Local _g1(7640):Int:Int]
+							[Local _g1(7639):Int:Int]
 					[Block:Dynamic]
-						[Var i(7641):Int]
+						[Var i(7640):Int]
 							[Unop:Int]
 								++
 								Postfix
-								[Local _g(7639):Int:Int]
+								[Local _g(7638):Int:Int]
 						[Block:Dynamic]
-							[Var this1(7642):hl.NativeArray<Dynamic>]
+							[Var this1(7641):hl.NativeArray<Dynamic>]
 								[Field:hl.NativeArray<Dynamic>]
-									[Local a(7638):hl.types.ArrayObj<Unknown<32>>:hl.types.ArrayObj<Unknown<32>>]
+									[Local a(7637):hl.types.ArrayObj<Unknown<32>>:hl.types.ArrayObj<Unknown<32>>]
 									[FInstance:hl.NativeArray<Dynamic>]
 										hl.types.ArrayObj<Unknown<32>>
 										array:hl.NativeArray<Dynamic>
-							[Var this2(7644):hl.BytesAccess<hl.UI16>]
+							[Var this2(7643):hl.BytesAccess<hl.UI16>]
 								[Field:hl.BytesAccess<hl.UI16>]
 									[Const:hl.types.ArrayBytes_hl_UI16] this
 									[FInstance:hl.BytesAccess<hl.UI16>]
 										hl.types.ArrayBytes_hl_UI16
 										bytes:hl.BytesAccess<hl.UI16>
-							[Var value(7645):Dynamic]
+							[Var value(7644):Dynamic]
 								[Call:map.S]
-									[Local f(7643):hl.UI16 -> map.S:hl.UI16 -> map.S]
+									[Local f(7642):hl.UI16 -> map.S:hl.UI16 -> map.S]
 									[Call:hl.UI16]
 										[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-										[Local this2(7644):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-										[Local i(7641):Int:Int]
+										[Local this2(7643):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+										[Local i(7640):Int:Int]
 							[Call:Unknown<34>]
 								[Ident:(hl.NativeArray<Dynamic>, Int, Dynamic) -> Unknown<33>] $aset
-								[Local this1(7642):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
-								[Local i(7641):Int:Int]
-								[Local value(7645):Dynamic:Dynamic]
+								[Local this1(7641):hl.NativeArray<Dynamic>:hl.NativeArray<Dynamic>]
+								[Local i(7640):Int:Int]
+								[Local value(7644):Dynamic:Dynamic]
 			[Return:Dynamic]
 				[Call:hl.types.ArrayDyn]
 					[Field:(a : hl.types.ArrayBase, ?allowReinterpret : Bool) -> hl.types.ArrayDyn]
@@ -1874,16 +1874,16 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FStatic:(a : hl.types.ArrayBase, ?allowReinterpret : Bool) -> hl.types.ArrayDyn]
 							hl.types.ArrayDyn
 							alloc:(a : hl.types.ArrayBase, ?allowReinterpret : Bool) -> hl.types.ArrayDyn
-					[Local a(7638):hl.types.ArrayObj<Unknown<32>>:hl.types.ArrayObj<Unknown<32>>]
+					[Local a(7637):hl.types.ArrayObj<Unknown<32>>:hl.types.ArrayObj<Unknown<32>>]
 					[Const:Bool] true
 
 	public function filter[Function:(f : (hl.UI16 -> Bool)) -> hl.types.ArrayBytes_hl_UI16]
-		[Arg:hl.UI16 -> Bool] [Local f(7637):hl.UI16 -> Bool]
+		[Arg:hl.UI16 -> Bool] [Local f(7636):hl.UI16 -> Bool]
 		[Block:Dynamic]
-			[Var a(7631):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
+			[Var a(7630):hl.types.ArrayBytes_hl_UI16] [New:hl.types.ArrayBytes_hl_UI16] hl.types.ArrayBytes_hl_UI16
 			[Block:Void]
-				[Var _g(7632):Int] [Const:Int] 0
-				[Var _g1(7633):Int]
+				[Var _g(7631):Int] [Const:Int] 0
+				[Var _g1(7632):Int]
 					[Field:Int]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:Int]
@@ -1892,42 +1892,42 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 				[While:Void]
 					[Parenthesis:Bool]
 						[Binop:Bool]
-							[Local _g(7632):Int:Int]
+							[Local _g(7631):Int:Int]
 							<
-							[Local _g1(7633):Int:Int]
+							[Local _g1(7632):Int:Int]
 					[Block:Dynamic]
-						[Var i(7634):Int]
+						[Var i(7633):Int]
 							[Unop:Int]
 								++
 								Postfix
-								[Local _g(7632):Int:Int]
-						[Var this1(7635):hl.BytesAccess<hl.UI16>]
+								[Local _g(7631):Int:Int]
+						[Var this1(7634):hl.BytesAccess<hl.UI16>]
 							[Field:hl.BytesAccess<hl.UI16>]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:hl.BytesAccess<hl.UI16>]
 									hl.types.ArrayBytes_hl_UI16
 									bytes:hl.BytesAccess<hl.UI16>
-						[Var v(7636):hl.UI16]
+						[Var v(7635):hl.UI16]
 							[Call:hl.UI16]
 								[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-								[Local this1(7635):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-								[Local i(7634):Int:Int]
+								[Local this1(7634):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+								[Local i(7633):Int:Int]
 						[If:Void]
 							[Parenthesis:Bool]
 								[Call:Bool]
-									[Local f(7637):hl.UI16 -> Bool:hl.UI16 -> Bool]
-									[Local v(7636):hl.UI16:hl.UI16]
+									[Local f(7636):hl.UI16 -> Bool:hl.UI16 -> Bool]
+									[Local v(7635):hl.UI16:hl.UI16]
 							[Then:Int] [Call:Int]
 								[Field:(x : hl.UI16) -> Int]
-									[Local a(7631):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+									[Local a(7630):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 									[FInstance:(x : hl.UI16) -> Int]
 										hl.types.ArrayBytes_hl_UI16
 										push:(x : hl.UI16) -> Int
-								[Local v(7636):hl.UI16:hl.UI16]
-			[Return:Dynamic] [Local a(7631):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+								[Local v(7635):hl.UI16:hl.UI16]
+			[Return:Dynamic] [Local a(7630):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 
 	public function resize[Function:(len : Int) -> Void]
-		[Arg:Int] [Local len(7628):Int]
+		[Arg:Int] [Local len(7627):Int]
 		[Block:Void]
 			[If:Void]
 				[Parenthesis:Bool]
@@ -1938,7 +1938,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								hl.types.ArrayBase
 								length:Int
 						<
-						[Local len(7628):Int:Int]
+						[Local len(7627):Int:Int]
 				[Then:Void] [Call:Void]
 					[Field:(index : Int) -> Void]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -1946,7 +1946,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							hl.types.ArrayBytes_hl_UI16
 							__expand:(index : Int) -> Void
 					[Binop:Int]
-						[Local len(7628):Int:Int]
+						[Local len(7627):Int:Int]
 						-
 						[Const:Int] 1
 				[Else:Void] [If:Void]
@@ -1958,29 +1958,29 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									hl.types.ArrayBase
 									length:Int
 							>
-							[Local len(7628):Int:Int]
+							[Local len(7627):Int:Int]
 					[Then:Int] [Block:Int]
-						[Var tmp(11792):hl.Bytes]
+						[Var tmp(11773):hl.Bytes]
 							[Cast:hl.Bytes]
 								[Field:hl.BytesAccess<hl.UI16>]
 									[Const:hl.types.ArrayBytes_hl_UI16] this
 									[FInstance:hl.BytesAccess<hl.UI16>]
 										hl.types.ArrayBytes_hl_UI16
 										bytes:hl.BytesAccess<hl.UI16>
-						[Var this1(7629):hl.BytesAccess<hl.UI16>]
+						[Var this1(7628):hl.BytesAccess<hl.UI16>]
 							[Field:hl.BytesAccess<hl.UI16>]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:hl.BytesAccess<hl.UI16>]
 									hl.types.ArrayBytes_hl_UI16
 									bytes:hl.BytesAccess<hl.UI16>
-						[Var tmp1(11793):Int]
+						[Var tmp1(11774):Int]
 							[Binop:Int]
-								[Local len(7628):Int:Int]
+								[Local len(7627):Int:Int]
 								<<
 								[Call:Int]
 									[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-									[Local this1(7629):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-						[Var this1(7630):hl.BytesAccess<hl.UI16>]
+									[Local this1(7628):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+						[Var this1(7629):hl.BytesAccess<hl.UI16>]
 							[Field:hl.BytesAccess<hl.UI16>]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
 								[FInstance:hl.BytesAccess<hl.UI16>]
@@ -1992,8 +1992,8 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								[FStatic:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void]
 									hl._Bytes.Bytes_Impl_
 									fill:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void
-							[Local tmp(11792):hl.Bytes:hl.Bytes]
-							[Local tmp1(11793):Int:Int]
+							[Local tmp(11773):hl.Bytes:hl.Bytes]
+							[Local tmp1(11774):Int:Int]
 							[Binop:Int]
 								[Binop:Int]
 									[Field:Int]
@@ -2002,11 +2002,11 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 											hl.types.ArrayBase
 											length:Int
 									-
-									[Local len(7628):Int:Int]
+									[Local len(7627):Int:Int]
 								<<
 								[Call:Int]
 									[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-									[Local this1(7630):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+									[Local this1(7629):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 							[Const:Int] 0
 						[Binop:Int]
 							[Field:Int]
@@ -2015,16 +2015,16 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									hl.types.ArrayBase
 									length:Int
 							=
-							[Local len(7628):Int:Int]
+							[Local len(7627):Int:Int]
 
 	public function getDyn[Function:(pos : Int) -> Dynamic]
-		[Arg:Int] [Local pos(7624):Int]
+		[Arg:Int] [Local pos(7623):Int]
 		[Block:Dynamic]
-			[Var pos(7625):UInt] [Local pos(7624):Int:Int]
+			[Var pos(7624):UInt] [Local pos(7623):Int:Int]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local pos(7625):UInt:UInt]
+						[Local pos(7624):UInt:UInt]
 						>=
 						[Field:Int]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -2032,7 +2032,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								hl.types.ArrayBase
 								length:Int
 				[Then:Dynamic] [Block:Dynamic]
-					[Var this1(7626):hl.BytesAccess<hl.UI16>]
+					[Var this1(7625):hl.BytesAccess<hl.UI16>]
 						[Field:hl.BytesAccess<hl.UI16>]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
 							[FInstance:hl.BytesAccess<hl.UI16>]
@@ -2041,8 +2041,8 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[Return:Dynamic]
 						[Call:hl.UI16]
 							[Ident:hl.BytesAccess<hl.UI16> -> Unknown<35>] $bytes_nullvalue
-							[Local this1(7626):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-			[Var this1(7627):hl.BytesAccess<hl.UI16>]
+							[Local this1(7625):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+			[Var this1(7626):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
 					[FInstance:hl.BytesAccess<hl.UI16>]
@@ -2051,18 +2051,18 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 			[Return:Dynamic]
 				[Call:hl.UI16]
 					[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-					[Local this1(7627):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-					[Local pos(7625):UInt:UInt]
+					[Local this1(7626):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7624):UInt:UInt]
 
 	public function setDyn[Function:(pos : Int, v : Dynamic) -> Void]
-		[Arg:Int] [Local pos(7619):Int]
-		[Arg:Dynamic] [Local v(7622):Dynamic]
+		[Arg:Int] [Local pos(7618):Int]
+		[Arg:Dynamic] [Local v(7621):Dynamic]
 		[Block:hl.UI16]
-			[Var pos(7620):UInt] [Local pos(7619):Int:Int]
+			[Var pos(7619):UInt] [Local pos(7618):Int:Int]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local pos(7620):UInt:UInt]
+						[Local pos(7619):UInt:UInt]
 						>=
 						[Field:Int]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -2075,23 +2075,23 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FInstance:(index : Int) -> Void]
 							hl.types.ArrayBytes_hl_UI16
 							__expand:(index : Int) -> Void
-					[Local pos(7620):UInt:UInt]
+					[Local pos(7619):UInt:UInt]
 			[Block:hl.UI16]
-				[Var this1(7621):hl.BytesAccess<hl.UI16>]
+				[Var this1(7620):hl.BytesAccess<hl.UI16>]
 					[Field:hl.BytesAccess<hl.UI16>]
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:hl.BytesAccess<hl.UI16>]
 							hl.types.ArrayBytes_hl_UI16
 							bytes:hl.BytesAccess<hl.UI16>
-				[Var value(7623):hl.UI16] [Cast:hl.UI16] [Local v(7622):Dynamic:Dynamic]
+				[Var value(7622):hl.UI16] [Cast:hl.UI16] [Local v(7621):Dynamic:Dynamic]
 				[Call:Unknown<30>]
 					[Ident:(hl.BytesAccess<hl.UI16>, Int, hl.UI16) -> Unknown<29>] $bset
-					[Local this1(7621):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-					[Local pos(7620):UInt:UInt]
-					[Local value(7623):hl.UI16:hl.UI16]
+					[Local this1(7620):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7619):UInt:UInt]
+					[Local value(7622):hl.UI16:hl.UI16]
 
 	public function pushDyn[Function:(v : Dynamic) -> Int]
-		[Arg:Dynamic] [Local v(7618):Dynamic]
+		[Arg:Dynamic] [Local v(7617):Dynamic]
 		[Block:Dynamic]
 			[Return:Dynamic]
 				[Call:Int]
@@ -2100,7 +2100,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[FInstance:(x : hl.UI16) -> Int]
 							hl.types.ArrayBytes_hl_UI16
 							push:(x : hl.UI16) -> Int
-					[Local v(7618):Dynamic:Dynamic]
+					[Local v(7617):Dynamic:Dynamic]
 
 	public function popDyn[Function:() -> Null<Dynamic>]
 		[Block:Dynamic]
@@ -2123,7 +2123,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							shift:() -> Null<hl.UI16>
 
 	public function unshiftDyn[Function:(v : Dynamic) -> Void]
-		[Arg:Dynamic] [Local v(7617):Dynamic]
+		[Arg:Dynamic] [Local v(7616):Dynamic]
 		[Block:Void]
 			[Call:Void]
 				[Field:(x : hl.UI16) -> Void]
@@ -2131,11 +2131,11 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FInstance:(x : hl.UI16) -> Void]
 						hl.types.ArrayBytes_hl_UI16
 						unshift:(x : hl.UI16) -> Void
-				[Local v(7617):Dynamic:Dynamic]
+				[Local v(7616):Dynamic:Dynamic]
 
 	public function insertDyn[Function:(pos : Int, v : Dynamic) -> Void]
-		[Arg:Int] [Local pos(7615):Int]
-		[Arg:Dynamic] [Local v(7616):Dynamic]
+		[Arg:Int] [Local pos(7614):Int]
+		[Arg:Dynamic] [Local v(7615):Dynamic]
 		[Block:Void]
 			[Call:Void]
 				[Field:(pos : Int, x : hl.UI16) -> Void]
@@ -2143,22 +2143,10 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FInstance:(pos : Int, x : hl.UI16) -> Void]
 						hl.types.ArrayBytes_hl_UI16
 						insert:(pos : Int, x : hl.UI16) -> Void
-				[Local pos(7615):Int:Int]
-				[Local v(7616):Dynamic:Dynamic]
+				[Local pos(7614):Int:Int]
+				[Local v(7615):Dynamic:Dynamic]
 
 	public function containsDyn[Function:(v : Dynamic) -> Bool]
-		[Arg:Dynamic] [Local v(7614):Dynamic]
-		[Block:Dynamic]
-			[Return:Dynamic]
-				[Call:Bool]
-					[Field:(x : hl.UI16) -> Bool]
-						[Const:hl.types.ArrayBytes_hl_UI16] this
-						[FInstance:(x : hl.UI16) -> Bool]
-							hl.types.ArrayBytes_hl_UI16
-							contains:(x : hl.UI16) -> Bool
-					[Local v(7614):Dynamic:Dynamic]
-
-	public function removeDyn[Function:(v : Dynamic) -> Bool]
 		[Arg:Dynamic] [Local v(7613):Dynamic]
 		[Block:Dynamic]
 			[Return:Dynamic]
@@ -2167,11 +2155,23 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[Const:hl.types.ArrayBytes_hl_UI16] this
 						[FInstance:(x : hl.UI16) -> Bool]
 							hl.types.ArrayBytes_hl_UI16
-							remove:(x : hl.UI16) -> Bool
+							contains:(x : hl.UI16) -> Bool
 					[Local v(7613):Dynamic:Dynamic]
 
+	public function removeDyn[Function:(v : Dynamic) -> Bool]
+		[Arg:Dynamic] [Local v(7612):Dynamic]
+		[Block:Dynamic]
+			[Return:Dynamic]
+				[Call:Bool]
+					[Field:(x : hl.UI16) -> Bool]
+						[Const:hl.types.ArrayBytes_hl_UI16] this
+						[FInstance:(x : hl.UI16) -> Bool]
+							hl.types.ArrayBytes_hl_UI16
+							remove:(x : hl.UI16) -> Bool
+					[Local v(7612):Dynamic:Dynamic]
+
 	public function sortDyn[Function:(f : ((Dynamic, Dynamic) -> Int)) -> Void]
-		[Arg:(Dynamic, Dynamic) -> Int] [Local f(7612):(Dynamic, Dynamic) -> Int]
+		[Arg:(Dynamic, Dynamic) -> Int] [Local f(7611):(Dynamic, Dynamic) -> Int]
 		[Block:Void]
 			[Call:Void]
 				[Field:(f : ((hl.UI16, hl.UI16) -> Int)) -> Void]
@@ -2179,15 +2179,15 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[FInstance:(f : ((hl.UI16, hl.UI16) -> Int)) -> Void]
 						hl.types.ArrayBytes_hl_UI16
 						sort:(f : ((hl.UI16, hl.UI16) -> Int)) -> Void
-				[Local f(7612):(Dynamic, Dynamic) -> Int:(Dynamic, Dynamic) -> Int]
+				[Local f(7611):(Dynamic, Dynamic) -> Int:(Dynamic, Dynamic) -> Int]
 
 	function __expand[Function:(index : Int) -> Void]
-		[Arg:Int] [Local index(7602):Int]
+		[Arg:Int] [Local index(7601):Int]
 		[Block:Int]
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local index(7602):Int:Int]
+						[Local index(7601):Int:Int]
 						<
 						[Const:Int] 0
 				[Then:Dynamic] [Throw:Dynamic]
@@ -2200,16 +2200,16 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						[Binop:String]
 							[Const:String] "Invalid array index "
 							+
-							[Local index(7602):Int:Int]
-			[Var newlen(7603):Int]
+							[Local index(7601):Int:Int]
+			[Var newlen(7602):Int]
 				[Binop:Int]
-					[Local index(7602):Int:Int]
+					[Local index(7601):Int:Int]
 					+
 					[Const:Int] 1
 			[If:Void]
 				[Parenthesis:Bool]
 					[Binop:Bool]
-						[Local newlen(7603):Int:Int]
+						[Local newlen(7602):Int:Int]
 						>
 						[Field:Int]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -2217,7 +2217,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								hl.types.ArrayBytes_hl_UI16
 								size:Int
 				[Then:Int] [Block:Int]
-					[Var next(7604):Int]
+					[Var next(7603):Int]
 						[Binop:Int]
 							[Binop:Int]
 								[Field:Int]
@@ -2232,20 +2232,20 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 					[If:Void]
 						[Parenthesis:Bool]
 							[Binop:Bool]
-								[Local next(7604):Int:Int]
+								[Local next(7603):Int:Int]
 								<
-								[Local newlen(7603):Int:Int]
+								[Local newlen(7602):Int:Int]
 						[Then:Int] [Binop:Int]
-							[Local next(7604):Int:Int]
+							[Local next(7603):Int:Int]
 							=
-							[Local newlen(7603):Int:Int]
-					[Var this1(7605):hl.BytesAccess<hl.UI16>]
+							[Local newlen(7602):Int:Int]
+					[Var this1(7604):hl.BytesAccess<hl.UI16>]
 						[Field:hl.BytesAccess<hl.UI16>]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
 							[FInstance:hl.BytesAccess<hl.UI16>]
 								hl.types.ArrayBytes_hl_UI16
 								bytes:hl.BytesAccess<hl.UI16>
-					[Var this1(7607):hl.Bytes]
+					[Var this1(7606):hl.Bytes]
 						[Call:hl.Bytes]
 							[Field:(size : Int) -> hl.Bytes]
 								[TypeExpr hl._Bytes.Bytes_Impl_:Abstract<hl.Bytes>]
@@ -2253,19 +2253,19 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 									hl._Bytes.Bytes_Impl_
 									alloc:(size : Int) -> hl.Bytes
 							[Binop:Int]
-								[Local next(7604):Int:Int]
+								[Local next(7603):Int:Int]
 								<<
 								[Call:Int]
 									[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-									[Local this1(7605):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-					[Var bytes2(7608):hl.Bytes] [Local this1(7607):hl.Bytes:hl.Bytes]
-					[Var this1(7609):hl.BytesAccess<hl.UI16>]
+									[Local this1(7604):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Var bytes2(7607):hl.Bytes] [Local this1(7606):hl.Bytes:hl.Bytes]
+					[Var this1(7608):hl.BytesAccess<hl.UI16>]
 						[Field:hl.BytesAccess<hl.UI16>]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
 							[FInstance:hl.BytesAccess<hl.UI16>]
 								hl.types.ArrayBytes_hl_UI16
 								bytes:hl.BytesAccess<hl.UI16>
-					[Var bsize(7610):Int]
+					[Var bsize(7609):Int]
 						[Binop:Int]
 							[Field:Int]
 								[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -2275,14 +2275,14 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							<<
 							[Call:Int]
 								[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-								[Local this1(7609):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+								[Local this1(7608):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 					[Call:Void]
 						[Field:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
 							[TypeExpr hl._Bytes.Bytes_Impl_:{ Statics hl._Bytes.Bytes_Impl_ }]
 							[FStatic:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void]
 								hl._Bytes.Bytes_Impl_
 								blit:(this : hl.Bytes, pos : Int, src : hl.Bytes, srcPos : Int, len : Int) -> Void
-						[Local bytes2(7608):hl.Bytes:hl.Bytes]
+						[Local bytes2(7607):hl.Bytes:hl.Bytes]
 						[Const:Int] 0
 						[Field:hl.BytesAccess<hl.UI16>]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -2290,8 +2290,8 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								hl.types.ArrayBytes_hl_UI16
 								bytes:hl.BytesAccess<hl.UI16>
 						[Const:Int] 0
-						[Local bsize(7610):Int:Int]
-					[Var this1(7611):hl.BytesAccess<hl.UI16>]
+						[Local bsize(7609):Int:Int]
+					[Var this1(7610):hl.BytesAccess<hl.UI16>]
 						[Field:hl.BytesAccess<hl.UI16>]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
 							[FInstance:hl.BytesAccess<hl.UI16>]
@@ -2303,18 +2303,18 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 							[FStatic:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void]
 								hl._Bytes.Bytes_Impl_
 								fill:(this : hl.Bytes, pos : Int, size : Int, v : Int) -> Void
-						[Local bytes2(7608):hl.Bytes:hl.Bytes]
-						[Local bsize(7610):Int:Int]
+						[Local bytes2(7607):hl.Bytes:hl.Bytes]
+						[Local bsize(7609):Int:Int]
 						[Binop:Int]
 							[Parenthesis:Int]
 								[Binop:Int]
-									[Local next(7604):Int:Int]
+									[Local next(7603):Int:Int]
 									<<
 									[Call:Int]
 										[Ident:hl.BytesAccess<hl.UI16> -> Unknown<28>] $bytes_sizebits
-										[Local this1(7611):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+										[Local this1(7610):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
 							-
-							[Local bsize(7610):Int:Int]
+							[Local bsize(7609):Int:Int]
 						[Const:Int] 0
 					[Binop:hl.BytesAccess<hl.UI16>]
 						[Field:hl.BytesAccess<hl.UI16>]
@@ -2323,7 +2323,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								hl.types.ArrayBytes_hl_UI16
 								bytes:hl.BytesAccess<hl.UI16>
 						=
-						[Local bytes2(7608):hl.Bytes:hl.Bytes]
+						[Local bytes2(7607):hl.Bytes:hl.Bytes]
 					[Binop:Int]
 						[Field:Int]
 							[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -2331,7 +2331,7 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 								hl.types.ArrayBytes_hl_UI16
 								size:Int
 						=
-						[Local next(7604):Int:Int]
+						[Local next(7603):Int:Int]
 			[Binop:Int]
 				[Field:Int]
 					[Const:hl.types.ArrayBytes_hl_UI16] this
@@ -2339,5 +2339,5 @@ class hl.types.ArrayBytes_hl_UI16 extends hl.types.ArrayBase {
 						hl.types.ArrayBase
 						length:Int
 				=
-				[Local newlen(7603):Int:Int]
+				[Local newlen(7602):Int:Int]
 }

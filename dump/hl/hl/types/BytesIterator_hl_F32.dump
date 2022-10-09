@@ -2,7 +2,7 @@
 class hl.types.BytesIterator_hl_F32 extends haxe.iterators.ArrayIterator<hl.F32> {
 
 	public function new[Function:(a : hl.types.ArrayBytes_hl_F32) -> Void]
-		[Arg:hl.types.ArrayBytes_hl_F32] [Local a(7802):hl.types.ArrayBytes_hl_F32]
+		[Arg:hl.types.ArrayBytes_hl_F32] [Local a(7801):hl.types.ArrayBytes_hl_F32]
 		[Block:hl.types.ArrayBytes_hl_F32]
 			[Call:Void]
 				[Const:haxe.iterators.ArrayIterator<hl.F32>] super
@@ -14,7 +14,7 @@ class hl.types.BytesIterator_hl_F32 extends haxe.iterators.ArrayIterator<hl.F32>
 						hl.types.BytesIterator_hl_F32
 						a:hl.types.ArrayBytes_hl_F32
 				=
-				[Local a(7802):hl.types.ArrayBytes_hl_F32:hl.types.ArrayBytes_hl_F32]
+				[Local a(7801):hl.types.ArrayBytes_hl_F32:hl.types.ArrayBytes_hl_F32]
 
 	var a:hl.types.ArrayBytes_hl_F32;
 
@@ -40,7 +40,7 @@ class hl.types.BytesIterator_hl_F32 extends haxe.iterators.ArrayIterator<hl.F32>
 
 	public function next[Function:() -> hl.F32]
 		[Block:Dynamic]
-			[Var this1(7800):hl.BytesAccess<hl.F32>]
+			[Var this1(7799):hl.BytesAccess<hl.F32>]
 				[Field:hl.BytesAccess<hl.F32>]
 					[Field:hl.types.ArrayBytes_hl_F32]
 						[Const:hl.types.BytesIterator_hl_F32] this
@@ -50,7 +50,7 @@ class hl.types.BytesIterator_hl_F32 extends haxe.iterators.ArrayIterator<hl.F32>
 					[FInstance:hl.BytesAccess<hl.F32>]
 						hl.types.ArrayBytes_hl_F32
 						bytes:hl.BytesAccess<hl.F32>
-			[Var pos(7801):Int]
+			[Var pos(7800):Int]
 				[Unop:Int]
 					++
 					Postfix
@@ -62,6 +62,6 @@ class hl.types.BytesIterator_hl_F32 extends haxe.iterators.ArrayIterator<hl.F32>
 			[Return:Dynamic]
 				[Call:hl.F32]
 					[Ident:(hl.BytesAccess<hl.F32>, Int) -> Unknown<26>] $bget
-					[Local this1(7800):hl.BytesAccess<hl.F32>:hl.BytesAccess<hl.F32>]
-					[Local pos(7801):Int:Int]
+					[Local this1(7799):hl.BytesAccess<hl.F32>:hl.BytesAccess<hl.F32>]
+					[Local pos(7800):Int:Int]
 }

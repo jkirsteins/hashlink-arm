@@ -2,7 +2,7 @@
 class hl.types.BytesKeyValueIterator_hl_UI16 extends haxe.iterators.ArrayKeyValueIterator<hl.UI16> {
 
 	public function new[Function:(a : hl.types.ArrayBytes_hl_UI16) -> Void]
-		[Arg:hl.types.ArrayBytes_hl_UI16] [Local a(7649):hl.types.ArrayBytes_hl_UI16]
+		[Arg:hl.types.ArrayBytes_hl_UI16] [Local a(7648):hl.types.ArrayBytes_hl_UI16]
 		[Block:hl.types.ArrayBytes_hl_UI16]
 			[Call:Void]
 				[Const:haxe.iterators.ArrayKeyValueIterator<hl.UI16>] super
@@ -14,7 +14,7 @@ class hl.types.BytesKeyValueIterator_hl_UI16 extends haxe.iterators.ArrayKeyValu
 						hl.types.BytesKeyValueIterator_hl_UI16
 						a:hl.types.ArrayBytes_hl_UI16
 				=
-				[Local a(7649):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
+				[Local a(7648):hl.types.ArrayBytes_hl_UI16:hl.types.ArrayBytes_hl_UI16]
 
 	var a:hl.types.ArrayBytes_hl_UI16;
 
@@ -40,7 +40,7 @@ class hl.types.BytesKeyValueIterator_hl_UI16 extends haxe.iterators.ArrayKeyValu
 
 	public function next[Function:() -> { value : hl.UI16, key : Int }]
 		[Block:Dynamic]
-			[Var this1(7646):hl.BytesAccess<hl.UI16>]
+			[Var this1(7645):hl.BytesAccess<hl.UI16>]
 				[Field:hl.BytesAccess<hl.UI16>]
 					[Field:hl.types.ArrayBytes_hl_UI16]
 						[Const:hl.types.BytesKeyValueIterator_hl_UI16] this
@@ -50,17 +50,17 @@ class hl.types.BytesKeyValueIterator_hl_UI16 extends haxe.iterators.ArrayKeyValu
 					[FInstance:hl.BytesAccess<hl.UI16>]
 						hl.types.ArrayBytes_hl_UI16
 						bytes:hl.BytesAccess<hl.UI16>
-			[Var pos(7647):Int]
+			[Var pos(7646):Int]
 				[Field:Int]
 					[Const:hl.types.BytesKeyValueIterator_hl_UI16] this
 					[FInstance:Int]
 						haxe.iterators.ArrayKeyValueIterator<hl.UI16>
 						current:Int
-			[Var v(7648):hl.UI16]
+			[Var v(7647):hl.UI16]
 				[Call:hl.UI16]
 					[Ident:(hl.BytesAccess<hl.UI16>, Int) -> Unknown<26>] $bget
-					[Local this1(7646):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
-					[Local pos(7647):Int:Int]
+					[Local this1(7645):hl.BytesAccess<hl.UI16>:hl.BytesAccess<hl.UI16>]
+					[Local pos(7646):Int:Int]
 			[Return:Dynamic]
 				[ObjectDecl:{ value : hl.UI16, key : Int }]
 					key: [Unop:Int]
@@ -71,5 +71,5 @@ class hl.types.BytesKeyValueIterator_hl_UI16 extends haxe.iterators.ArrayKeyValu
 							[FInstance:Int]
 								haxe.iterators.ArrayKeyValueIterator<hl.UI16>
 								current:Int
-					value: [Local v(7648):hl.UI16:hl.UI16]
+					value: [Local v(7647):hl.UI16:hl.UI16]
 }
