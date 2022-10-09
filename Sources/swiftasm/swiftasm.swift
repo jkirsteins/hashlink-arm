@@ -99,15 +99,31 @@ struct SwiftAsm: ParsableCommand {
         print(String(reflecting: head))
         print("==> Compiling functions")
 
-        let pathTest = head.functionResolver.get(29)
-        let pathTest2 = head.functionResolver.get(30)
+        // TODO: unify functions and natives in one function table
 
-        let pathTestCompiled = compiler.compile(native: pathTest)
-        let pathTest2Compiled = compiler.compile(native: pathTest2)
+        // entrypoint initializes types, memory, and all that good stuff
+        let funcs = [
+            // Type_init
+            head.functionResolver.table.first { $0.findex == 295 }!,
+            // entrypoint
+            head.functionResolver.table.first { $0.findex == 404 }!,
+            // pathTest
+            head.functionResolver.table.first { $0.findex == 29 }!,
+            // pathTest2
+            head.functionResolver.table.first { $0.findex == 30 }!
+        ]
+
+        for f in funcs {
+            let _ = compiler.compile(native: f)
+        }
+        // let entrypointCompiled = compiler.compile(native: entrypoint)
+        // let entrypointCompiled = compiler.compile(native: entrypoint)
+        // let pathTestCompiled = compiler.compile(native: pathTest)
+        // let pathTest2Compiled = compiler.compile(native: pathTest2)
 
         fatalError("boop")
         for funIx in 0..<head.nfunctions {
-            let fun: HLFunction = head.functionResolver.get(Int(funIx))
+            let fun: HLFunction = head.functionResolver.table.first { $0.findex == funIx }!
             print("Compiling \(fun.debugDescription)")
             print("    regs: \([fun.regs.map { $0.value.debugName }])")
             let bytes = compiler.compile(native: fun)
@@ -124,9 +140,9 @@ struct SwiftAsm: ParsableCommand {
         builder.append(.ret)
 
         print("Building entrypoint")
-        let entrypoint = builder.buildEntrypoint()
+        let entrypoint2 = builder.buildEntrypoint()
         print("Going for it")
-        let result = entrypoint()
+        let result = entrypoint2()
         print("Got", result)
     }
 }

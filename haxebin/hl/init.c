@@ -16,6 +16,10 @@ void Type_init(void);
 extern hl_type t$$Date;
 extern hl_type t$Date;
 hl__Class Type_initClass(hl_type*,hl_type*,vbyte*);
+extern hl_type t$$Path;
+extern hl_type t$Path;
+extern hl_type t$$Path2;
+extern hl_type t$Path2;
 extern hl_type t$$Main;
 extern hl_type t$Main;
 extern hl_type t$$Std;
@@ -127,7 +131,7 @@ extern $Sys g$_Sys;
 void Main_main(void);
 
 void fun$init() {
-	String r6; 
+	String r6;
 	hl__Class r4;
 	venum *r10;
 	hl_type *r1, *r2;
@@ -148,6 +152,14 @@ void fun$init() {
 	r1 = &t$$Date;
 	r2 = &t$Date;
 	r3 = (vbyte*)USTR("Date");
+	r4 = Type_initClass(r1,r2,r3);
+	r1 = &t$$Path;
+	r2 = &t$Path;
+	r3 = (vbyte*)USTR("Path");
+	r4 = Type_initClass(r1,r2,r3);
+	r1 = &t$$Path2;
+	r2 = &t$Path2;
+	r3 = (vbyte*)USTR("Path2");
 	r4 = Type_initClass(r1,r2,r3);
 	r1 = &t$$Main;
 	r2 = &t$Main;

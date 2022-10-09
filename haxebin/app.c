@@ -11,6 +11,8 @@ void fun$init(void);
 #  include <hl/BaseType.c>
 #  include <_std/String.c>
 #  include <_std/Date.c>
+#  include <_std/Path.c>
+#  include <_std/Path2.c>
 #  include <hl/types/ArrayAccess.c>
 #  include <hl/types/ArrayBase.c>
 #  include <hl/types/ArrayBytes_Int.c>

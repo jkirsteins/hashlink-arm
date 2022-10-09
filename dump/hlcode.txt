@@ -416,11 +416,11 @@ entry @404
 	@6 : 404
 	@7 : 14
 	@8 : 15
-	@9 : 107
+	@9 : 108
 	@10 : 4
 	@11 : 9
 	@12 : 11
-	@13 : 111
+	@13 : 112
 	@14 : 10
 	@15 : 1
 	@16 : 6
@@ -702,46 +702,46 @@ entry @404
 		.21    @1A setthis [5],3
 		.23    @1B ret 2
 	fun@29(1Dh) ():void
-	; Main.hx:68 (Main.pathTest)
+	; Main.hx:69 (Main.pathTest)
 		r0 Path2
 		r1 void
 		r2 virtual(x:i32,y:i32)
 		r3 virtual(x:i32,y:i32)
 		r4 i32
-		.68    @0 new 0
-		.68    @1 call 1, Path2.new(0)
-		.69    @2 field 2,0[2]
-		.69    @3 nullcheck 2
-		.69    @4 field 3,0[2]
-		.69    @5 nullcheck 3
-		.69    @6 int 4,@3
-		.69    @7 setfield 3[1],4
-		.69    @8 setfield 2[0],4
-		.70    @9 field 2,0[1]
-		.70    @A nullcheck 2
-		.70    @B field 3,0[1]
-		.70    @C nullcheck 3
-		.70    @D int 4,@4
-		.70    @E setfield 3[1],4
-		.70    @F setfield 2[0],4
-		.71    @10 field 2,0[3]
-		.71    @11 nullcheck 2
-		.71    @12 field 3,0[3]
-		.71    @13 nullcheck 3
-		.71    @14 int 4,@5
-		.71    @15 setfield 3[1],4
-		.71    @16 setfield 2[0],4
-		.72    @17 field 2,0[5]
-		.72    @18 nullcheck 2
-		.72    @19 field 3,0[3]
-		.72    @1A nullcheck 3
-		.72    @1B int 4,@6
-		.72    @1C setfield 3[1],4
-		.72    @1D setfield 2[0],4
-		.73    @1E call 1, Main.pathTest2(0)
-		.74    @1F ret 1
+		.69    @0 new 0
+		.69    @1 call 1, Path2.new(0)
+		.70    @2 field 2,0[2]
+		.70    @3 nullcheck 2
+		.70    @4 field 3,0[2]
+		.70    @5 nullcheck 3
+		.70    @6 int 4,@3
+		.70    @7 setfield 3[1],4
+		.70    @8 setfield 2[0],4
+		.71    @9 field 2,0[1]
+		.71    @A nullcheck 2
+		.71    @B field 3,0[1]
+		.71    @C nullcheck 3
+		.71    @D int 4,@4
+		.71    @E setfield 3[1],4
+		.71    @F setfield 2[0],4
+		.72    @10 field 2,0[3]
+		.72    @11 nullcheck 2
+		.72    @12 field 3,0[3]
+		.72    @13 nullcheck 3
+		.72    @14 int 4,@5
+		.72    @15 setfield 3[1],4
+		.72    @16 setfield 2[0],4
+		.73    @17 field 2,0[5]
+		.73    @18 nullcheck 2
+		.73    @19 field 3,0[3]
+		.73    @1A nullcheck 3
+		.73    @1B int 4,@6
+		.73    @1C setfield 3[1],4
+		.73    @1D setfield 2[0],4
+		.74    @1E call 1, Main.pathTest2(0)
+		.75    @1F ret 1
 	fun@30(1Eh) (Path2):void
-	; Main.hx:107 (Main.pathTest2)
+	; Main.hx:108 (Main.pathTest2)
 		r0 Path2
 		r1 void
 		r2 (dyn,virtual(className:String,customParams:hl.types.ArrayDyn,fileName:String,lineNumber:i32,methodName:String)):void
@@ -751,26 +751,26 @@ entry @404
 		r6 virtual(className:String,fileName:String,lineNumber:i32,methodName:String)
 		r7 i32
 		r8 virtual(className:String,customParams:hl.types.ArrayDyn,fileName:String,lineNumber:i32,methodName:String)
-		.107   @0 global 3, 9
-		.107   @1 field 2,3[6]
-		.107   @2 nullcheck 2
-		.107   @3 global 4, 10
-		.107   @4 call 5, Std.string(0)
-		.107   @5 call 4, String.__add__(4,5)
-		.107   @6 new 6
-		.107   @7 global 5, 11
-		.107   @8 setfield 6[1],5
-		.107   @9 int 7,@9
-		.107   @A setfield 6[2],7
-		.107   @B global 5, 12
-		.107   @C setfield 6[0],5
-		.107   @D global 5, 13
-		.107   @E setfield 6[3],5
-		.107   @F tovirtual 8,6
-		.107   @10 callclosure 1, 2(4,8)
-		.107   @11 ret 1
+		.108   @0 global 3, 9
+		.108   @1 field 2,3[6]
+		.108   @2 nullcheck 2
+		.108   @3 global 4, 10
+		.108   @4 call 5, Std.string(0)
+		.108   @5 call 4, String.__add__(4,5)
+		.108   @6 new 6
+		.108   @7 global 5, 11
+		.108   @8 setfield 6[1],5
+		.108   @9 int 7,@9
+		.108   @A setfield 6[2],7
+		.108   @B global 5, 12
+		.108   @C setfield 6[0],5
+		.108   @D global 5, 13
+		.108   @E setfield 6[3],5
+		.108   @F tovirtual 8,6
+		.108   @10 callclosure 1, 2(4,8)
+		.108   @11 ret 1
 	fun@225(E1h) ():void
-	; Main.hx:111 (Main.main)
+	; Main.hx:112 (Main.main)
 		r0 void
 		r1 (dyn,virtual(className:String,customParams:hl.types.ArrayDyn,fileName:String,lineNumber:i32,methodName:String)):void
 		r2 haxe.$Log
@@ -779,23 +779,23 @@ entry @404
 		r5 String
 		r6 i32
 		r7 virtual(className:String,customParams:hl.types.ArrayDyn,fileName:String,lineNumber:i32,methodName:String)
-		.111   @0 global 2, 9
-		.111   @1 field 1,2[6]
-		.111   @2 nullcheck 1
-		.111   @3 global 3, 14
-		.111   @4 new 4
-		.111   @5 global 5, 11
-		.111   @6 setfield 4[1],5
-		.111   @7 int 6,@13
-		.111   @8 setfield 4[2],6
-		.111   @9 global 5, 12
-		.111   @A setfield 4[0],5
-		.111   @B global 5, 15
-		.111   @C setfield 4[3],5
-		.111   @D tovirtual 7,4
-		.111   @E callclosure 0, 1(3,7)
-		.112   @F call 0, Main.pathTest()
-		.113   @10 ret 0
+		.112   @0 global 2, 9
+		.112   @1 field 1,2[6]
+		.112   @2 nullcheck 1
+		.112   @3 global 3, 14
+		.112   @4 new 4
+		.112   @5 global 5, 11
+		.112   @6 setfield 4[1],5
+		.112   @7 int 6,@13
+		.112   @8 setfield 4[2],6
+		.112   @9 global 5, 12
+		.112   @A setfield 4[0],5
+		.112   @B global 5, 15
+		.112   @C setfield 4[3],5
+		.112   @D tovirtual 7,4
+		.112   @E callclosure 0, 1(3,7)
+		.113   @F call 0, Main.pathTest()
+		.114   @10 ret 0
 	fun@227(E3h) (dyn,dyn):bool
 	; /usr/local/lib/haxe/std/hl/_std/Std.hx:58 (Std.isOfType)
 		r0 dyn

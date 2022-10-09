@@ -2,6 +2,39 @@ import XCTest
 @testable import swiftasm
 
 final class EmitterM1Tests: XCTestCase {
+    
+    func testBl() throws {
+        XCTAssertThrowsError(try EmitterM1.emit(for: .bl(0x3FFFFFF + 1))) { error in
+            XCTAssertEqual(error as! EmitterM1Error, EmitterM1Error.invalidValue(
+                "BL requires the immediate to fit in 26 bits"
+                )
+            )
+        }
+
+        XCTAssertThrowsError(try EmitterM1.emit(for: .bl(141))) { error in
+            XCTAssertEqual(error as! EmitterM1Error, EmitterM1Error.invalidValue(
+                "BL requires the immediate to be a multiple of 4"
+                )
+            )
+        }
+
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .bl(140)), 
+            [0x23, 0x00, 0x00, 0x94]
+        )
+    }
+
+    func testBlr() throws {
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .blr(.x0)), 
+            [0x00, 0x00, 0x3f, 0xd6]
+        ) 
+
+        XCTAssertEqual(
+            try! EmitterM1.emit(for: .blr(.x8)), 
+            [0x00, 0x01, 0x3f, 0xd6]
+        )
+    }
     func testRet() throws {
         XCTAssertEqual(
             try! EmitterM1.emit(for: .ret), 

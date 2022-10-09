@@ -108,6 +108,10 @@ enum Op {
     case nop
     case ret 
 
+    // case bl
+    case blr(Register64)
+    case bl(Int32)  // 26 bits max
+    
     // https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/MOVZ
     case movz32(Register32, UInt16, Register32.Shift?)
     case movz64(Register64, UInt16, Register64.Shift?)
@@ -161,8 +165,25 @@ public class EmitterM1
         return result
     }
 
+    static func encodeReg(_ reg: any Register, shift: Int64) -> Int64 {
+        (Int64(0b11111) & Int64(reg.rawValue)) << shift
+    }
+
     static func emit(for op: Op) throws -> [UInt8] {
         switch(op) {
+            case .bl(let imm26):
+                guard (imm26 & 0x3FFFFFF) == imm26 else {
+                    throw EmitterM1Error.invalidValue("BL requires the immediate to fit in 26 bits")
+                }
+                guard imm26 % 4 == 0 else {
+                    throw EmitterM1Error.invalidValue("BL requires the immediate to be a multiple of 4")
+                }
+                let mask: Int64 = 0b1001_0100_0000_0000_0000_0000_0000_0000
+                return returnAsArray(mask | Int64(imm26 / 4))
+            case .blr(let Rn):
+                let mask:Int64 = 0b1101_0110_0011_1111_0000_0000_0000_0000
+                let encodedRn = encodeReg(Rn, shift: 5)
+                return returnAsArray(mask | encodedRn)
             case .nop:
             return [0x1f, 0x20, 0x03, 0xd5]
             case .ret:
@@ -195,14 +216,14 @@ public class EmitterM1
                 let opcOffset: Int64 = 22
                 let mask: Int64 = 0b0011_1001_0000_0000_0000_0000_0000_0000
 
-                let encodedRt: Int64 = (Int64)(0b11111 & Rt.rawValue)
-                let encodedRn: Int64 = (Int64)((0b11111 & Rn.rawValue) << 5)
+                let encodedRt = encodeReg(Rt, shift: 0)
+                let encodedRn = encodeReg(Rn, shift: 5)
 
                 let encoded: Int64  = (size << sizeOffset) | (v << vOffset) | (opc << opcOffset) | mask | encodedRt | encodedRn
                 return returnAsArray(encoded)
             case .movk64(let register, let val, let shift):
                 // xx1x 0010 1xxi iiii iiii iiii iiid dddd
-                let encodedR: Int64 = (Int64)(0b11111 & register.rawValue)
+                let encodedR = encodeReg(register, shift: 0)
                 let encodedVal: Int64 = (Int64(val) << 5) & 0b0001_1111_1111_1111_1110_0000
                 let mask: Int64     = 0b1111_0010_1000_0000_0000_0000_0000_0000
                 let hwMask: Int64   = 0b0000_0000_0110_0000_0000_0000_0000_0000
@@ -222,7 +243,7 @@ public class EmitterM1
                 // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOVZ--Move-wide-with-zero-?lang=en#MOVZ_32_movewide
 
                 // x10x 0010 1xxi iiii iiii iiii iiid dddd  -  movz Rd HALF
-                let encodedR: Int64 = (Int64)(0b11111 & register.rawValue)
+                let encodedR = encodeReg(register, shift: 0)
                 let encodedVal: Int64 = (Int64(val) << 5) & 0b0001_1111_1111_1111_1110_0000
                 let mask: Int64     = 0b1101_0010_1000_0000_0000_0000_0000_0000
                 let hwMask: Int64   = 0b0000_0000_0110_0000_0000_0000_0000_0000
