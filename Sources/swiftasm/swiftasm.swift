@@ -114,7 +114,7 @@ struct SwiftAsm: ParsableCommand {
         ]
 
         for f in funcs {
-            let _ = compiler.compile(native: f)
+            let _ = try compiler.compile(native: f)
         }
         // let entrypointCompiled = compiler.compile(native: entrypoint)
         // let entrypointCompiled = compiler.compile(native: entrypoint)
@@ -126,7 +126,7 @@ struct SwiftAsm: ParsableCommand {
             let fun: HLFunction = head.functionResolver.table.first { $0.findex == funIx }!
             print("Compiling \(fun.debugDescription)")
             print("    regs: \([fun.regs.map { $0.value.debugName }])")
-            let bytes = compiler.compile(native: fun)
+            let bytes = try compiler.compile(native: fun)
             print("    done \(fun.debugDescription)")
             print(bytes)
             fatalError()

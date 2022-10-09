@@ -1,21 +1,18 @@
-class ByteBuffer
-{
+class ByteBuffer {
     let incrementSize: Int
     var position: Int = 0
     private(set) var buffer: [UInt8] = []
 
-    init(incrementSize: Int) {
-        self.incrementSize = incrementSize
-    }
+    init(incrementSize: Int) { self.incrementSize = incrementSize }
 
-    func createChunk() -> [UInt8] {
-        Array(repeating: UInt8(0), count: incrementSize)
-    }
+    func createChunk() -> [UInt8] { Array(repeating: UInt8(0), count: incrementSize) }
 
     func ensureSpace(_ size: Int) {
-        while (position + size > buffer.count) {
-            buffer = buffer + createChunk()
-        }
+        while position + size > buffer.count { buffer = buffer + createChunk() }
+    }
+
+    func push(_ vals: [UInt8]...) {
+        vals.forEach { val in val.forEach { self.push($0) } }
     }
 
     func push(_ val: UInt8) {
