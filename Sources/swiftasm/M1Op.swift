@@ -2,6 +2,13 @@ enum M1Op {
     case nop
     case ret
 
+    /* 
+    Form PC-relative address adds an immediate value to the PC value to form a PC-relative address, and writes the result to the destination register.
+
+    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ADR--Form-PC-relative-address-?lang=en 
+    */
+    case adr64(Register64, Int)
+
     // case bl
     case blr(Register64)
     case bl(Int32)  // 26 bits max

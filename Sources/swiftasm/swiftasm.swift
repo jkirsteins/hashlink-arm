@@ -75,21 +75,38 @@ class OpBuilder
     }
 }
 
-extension OpBuilder
-{
-    @discardableResult
-    func append(_ op: M1Op) -> OpBuilder
-    {
-        let data = try! EmitterM1.emit(for: op)
-        return self.append(data)
-    }
-}
-
 @main
 struct SwiftAsm: ParsableCommand {
     @Argument var hlFileIn: String
+
+    func testrun() throws {
+
+        let builder = OpBuilder()
+        
+        builder.append(.movz64(.x0, 1, ._0))
+        // mov    X0, #1              // 1 = StdOut
+        // adr    X1, helloworld2     // string to print
+        // mov    X2, helloworld2_len // length of our string
+        // mov    X16, #4             // Unix write system call
+        // svc    #0x80               // Call kernel to output the string
+
+        // return 
+        builder.append(.nop)
+        builder.append(.movz64(.x0, 3, ._0))
+        builder.append(.ret)
+
+        builder.debugPrint()
+        print("Building entrypoint")
+        let entrypoint2 = builder.buildEntrypoint()
+        print("Going for it")
+        let result = entrypoint2()
+        print("Got", result)
+    }
     
     mutating func run() throws {
+
+        try testrun()
+        return 
 
         let file = try! Data(contentsOf: URL(fileURLWithPath: hlFileIn))
         let reader = ByteReader(file)
@@ -133,16 +150,5 @@ struct SwiftAsm: ParsableCommand {
         }
 
         return
-
-        let builder = OpBuilder()
-        builder.append(.nop)
-        builder.append(.movz64(.x0, 23, ._0))
-        builder.append(.ret)
-
-        print("Building entrypoint")
-        let entrypoint2 = builder.buildEntrypoint()
-        print("Going for it")
-        let result = entrypoint2()
-        print("Got", result)
     }
 }

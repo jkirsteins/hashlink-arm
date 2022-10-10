@@ -3,6 +3,20 @@ import XCTest
 @testable import swiftasm
 
 final class EmitterM1Tests: XCTestCase {
+    func testAdr() throws {
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .adr64(.x1, 16)),
+            [0x81, 0x00, 0x00, 0x10]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .adr64(.x1, 153)),
+            [0xc1, 0x04, 0x00, 0x30]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .adr64(.x21, -5426)),
+            [0x75, 0x56, 0xff, 0x50]
+        )
+    }
     func testLdp() throws {
         XCTAssertEqual(
             try EmitterM1.emit(for: .ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))),

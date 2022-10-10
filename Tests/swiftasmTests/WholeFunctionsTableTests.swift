@@ -116,6 +116,8 @@ final class WholeFunctionsTableTests: XCTestCase {
         }
     }
 
+    // TODO: add helper for adding debug printing
+
     func testRequireReady_findexGap() throws {
         let nativeTable = SharedStorage(wrappedValue: [HLNative]())
         let functionTable = SharedStorage(wrappedValue: [HLCompiledFunction]())

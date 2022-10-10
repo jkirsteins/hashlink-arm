@@ -5,6 +5,26 @@ public protocol Register {
     var is32: Bool { get }
 }
 
+extension OpBuilder
+{
+    @discardableResult
+    func append(_ op: M1Op) -> OpBuilder
+    {
+        let data = try! EmitterM1.emit(for: op)
+        return self.append(data)
+    }
+
+    @discardableResult
+    func append(_ ops: M1Op...) -> OpBuilder
+    {
+        for op in ops {
+            let data = try! EmitterM1.emit(for: op)
+            self.append(data)
+        }
+        return self
+    }
+}
+
 // TODO: wrong, fix w Shift64_Real
 public enum Shift64: Int {
     case _0 = 0
@@ -126,6 +146,7 @@ enum Offset {
 public enum EmitterM1Error: Error, Equatable {
     case invalidShift
     case unsupportedOp
+    case invalidRegister(_ reason: String)
     case invalidOffset(_ reason: String)
     case invalidValue(_ reason: String)
 }
@@ -183,7 +204,22 @@ public class EmitterM1 {
 
     static func emit(for op: M1Op) throws -> [UInt8] {
         switch op {
-            
+
+            // bad
+            // 0001_0000_0000_0000_0000_0010_000_00001
+            //
+            // good
+            // 0001_0000_0000_0000_0000_0000_100_00001
+        case .adr64(let Rd, let offset):
+            guard Rd != .sp else {
+                throw EmitterM1Error.invalidRegister("Rd can not be SP for adr")
+            }
+            let immlo: Int64 = (Int64(offset) & 0b11) << 29
+            let immhi: Int64 = (Int64(offset) & 0b111111111111111111100) << 3
+            let encodedRd = encodeReg(Rd, shift: 0)
+            let mask: Int64 = 1 << 28
+            let encoded = mask | encodedRd | immlo | immhi 
+            return returnAsArray(encoded)
         case .orr64(let Rd, let WZr, let Rn, let shift) where WZr == .sp && shift == nil:
             fallthrough
         case .movr64(let Rd, let Rn) where Rd == .sp || Rn == .sp: 
