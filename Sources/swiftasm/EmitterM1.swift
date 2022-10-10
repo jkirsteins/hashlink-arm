@@ -225,6 +225,10 @@ public class EmitterM1 {
 
     // 0b0b10101010000000100000001111100000
 
+    func emit(for op: Op) throws -> [UInt8] {
+        try Self.emit(for: op)
+    }
+
     static func emit(for op: Op) throws -> [UInt8] {
         switch op {
             
