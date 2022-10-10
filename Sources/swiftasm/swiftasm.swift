@@ -78,7 +78,7 @@ class OpBuilder
 extension OpBuilder
 {
     @discardableResult
-    func append(_ op: Op) -> OpBuilder
+    func append(_ op: M1Op) -> OpBuilder
     {
         let data = try! EmitterM1.emit(for: op)
         return self.append(data)
