@@ -83,7 +83,10 @@ struct SwiftAsm: ParsableCommand {
 
         let builder = OpBuilder()
         
-        builder.append(.movz64(.x0, 1, ._0))
+        builder.append(
+            .movz64(.x0, 1, ._0)
+            
+        )
         // mov    X0, #1              // 1 = StdOut
         // adr    X1, helloworld2     // string to print
         // mov    X2, helloworld2_len // length of our string

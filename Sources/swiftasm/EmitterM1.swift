@@ -205,11 +205,11 @@ public class EmitterM1 {
     static func emit(for op: M1Op) throws -> [UInt8] {
         switch op {
 
-            // bad
-            // 0001_0000_0000_0000_0000_0010_000_00001
-            //
-            // good
-            // 0001_0000_0000_0000_0000_0000_100_00001
+        case .svc(let imm16):
+            //                              imm16
+            let mask: Int64 = 0b11010100000_0000000000000000_00001
+            let encoded = mask | Int64(bitPattern: UInt64(imm16)) << 5
+            return returnAsArray(encoded)
         case .adr64(let Rd, let offset):
             guard Rd != .sp else {
                 throw EmitterM1Error.invalidRegister("Rd can not be SP for adr")

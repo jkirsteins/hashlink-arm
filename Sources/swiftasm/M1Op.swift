@@ -2,6 +2,12 @@ enum M1Op {
     case nop
     case ret
 
+    /* Supervisor call
+    
+    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SVC--Supervisor-Call-?lang=en
+    */
+    case svc(UInt16)
+
     /* 
     Form PC-relative address adds an immediate value to the PC value to form a PC-relative address, and writes the result to the destination register.
 
