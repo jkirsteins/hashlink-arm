@@ -139,6 +139,9 @@ enum Op {
 
     case stp((Register64, Register64), Offset)
 
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LDP--Load-Pair-of-Registers-?lang=en
+    case ldp((Register64, Register64), Offset)
+
     /*
     # LDR (immediate)
 
@@ -242,6 +245,40 @@ public class EmitterM1 {
             let encodedRm = encodeReg(Rm, shift: 16) 
             let imm6: Int64 = 0
             let encoded = mask | encodedRm | encodedRd | encodedRn | imm6
+            return returnAsArray(encoded)
+        case .ldp(let pair, let offset):
+            guard case .reg64offset(let Rn, let offsetCount, let ixMode) = offset else {
+                throw EmitterM1Error.invalidOffset(
+                    "LDP can only have .reg64offset offset"
+                )
+            }
+
+            let divisor: Int64 = 8  // 64-bit ops. 32-bit ops have divisor 4
+            let truncated = try truncateOffset(offsetCount, divisor: divisor, bits: 7)
+
+            let (Rt1, Rt2) = pair
+            
+            let mask: Int64
+            switch ixMode {
+            case nil: 
+                //       o      ixm imm7    Rt2   Rn    Rt1
+                mask = 0b0010100101_0000000_00000_00000_00000
+            case .pre: 
+                //       o      ixm imm7    Rt2   Rn    Rt1
+                mask = 0b0010100111_0000000_00000_00000_00000
+            case .post: 
+                //       o      ixm imm7    Rt2   Rn    Rt1
+                mask = 0b0010100011_0000000_00000_00000_00000
+            }
+
+            let opc: Int64 = 0b10   // 64-bit hardcoded (otherwise 0b00)
+            let opcOffset: Int64 = 30
+            let encodedRt1: Int64 = encodeReg(Rt1, shift: 0)
+            let encodedRt2: Int64 = encodeReg(Rt2, shift: 10)
+            let encodedRn: Int64 = encodeReg(Rn, shift: 5)
+            let imm: Int64 = truncated << 15
+            let encoded =
+                encodedRt1 | encodedRt2 | encodedRn | (opc << opcOffset) | mask | imm
             return returnAsArray(encoded)
         case .stp(let pair, let offset):
             guard case .reg64offset(let Rn, let offsetCount, let ixMode) = offset else {

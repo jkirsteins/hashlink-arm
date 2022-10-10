@@ -1,4 +1,30 @@
 class M1Compiler {
+    /*
+    stp    x29, x30, [sp, #-16]!
+    mov    x29, sp
+    */
+    func prologue(in buffer: ByteBuffer) throws {
+        buffer.push(
+            try EmitterM1.emit(
+                for: .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre))
+            ),
+            try EmitterM1.emit(
+                for: .movr64(.x29_fp, .sp)
+            )
+        )
+    }
+
+    /*
+    ldp x29, x30, [sp], 16
+    */
+    func epilogue(in buffer: ByteBuffer) throws {
+        buffer.push(
+            try EmitterM1.emit(
+                for: .ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))
+            )
+        )
+    }
+
     func compile(native: HLFunction) throws -> ByteBuffer {
         let result = ByteBuffer(incrementSize: 32)
 

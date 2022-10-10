@@ -3,6 +3,25 @@ import XCTest
 @testable import swiftasm
 
 final class EmitterM1Tests: XCTestCase {
+    func testLdp() throws {
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))),
+            [0xfd, 0x7b, 0xc1, 0xa8]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldp((.x0, .x1), .reg64offset(.sp, 16, .post))),
+            [0xe0, 0x07, 0xc1, 0xa8]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldp((.x0, .x1), .reg64offset(.sp, 16, nil))),
+            [0xe0, 0x07, 0x41, 0xa9]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldp((.x0, .x1), .reg64offset(.sp, 16, .pre))),
+            [0xe0, 0x07, 0xc1, 0xa9]
+        )
+    }
+
     func testStp() throws {
         XCTAssertThrowsError(try EmitterM1.emit(for: .stp((.x0, .x1), .immediate(10))))
         { error in
