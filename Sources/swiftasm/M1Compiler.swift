@@ -5,14 +5,15 @@ class M1Compiler {
     */
     let emitter = EmitterM1()
 
+    func push(to buffer: ByteBuffer, _ ops: M1Op...) throws {
+        for op in ops { buffer.push(try emitter.emit(for: op)) }
+    }
+
     func prologue(in buffer: ByteBuffer) throws {
-        buffer.push(
-            try emitter.emit(
-                for: .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre))
-            ),
-            try emitter.emit(
-                for: .movr64(.x29_fp, .sp)
-            )
+        try self.push(
+            to: buffer,
+            .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre)),
+            .movr64(.x29_fp, .sp)
         )
     }
 
@@ -20,10 +21,9 @@ class M1Compiler {
     ldp x29, x30, [sp], 16
     */
     func epilogue(in buffer: ByteBuffer) throws {
-        buffer.push(
-            try emitter.emit(
-                for: .ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))
-            )
+        try self.push(
+            to: buffer,
+            .ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))
         )
     }
 
@@ -38,8 +38,7 @@ class M1Compiler {
         result.push(
             try emitter.emit(
                 for: .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre))
-            )
-            // try EmitterM1.emit(
+            )// try EmitterM1.emit(
             //     for: .movz64(.x29_fp, .sp)
             // )
         )
