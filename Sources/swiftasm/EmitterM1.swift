@@ -5,11 +5,19 @@ public protocol Register {
     var is32: Bool { get }
 }
 
+// TODO: wrong, fix w Shift64_Real
 public enum Shift64: Int {
     case _0 = 0
     case _16 = 16
     case _32 = 32
     case _48 = 48
+}
+
+public enum Shift64_Real {
+    case lsl(Int) 
+    case lsr(Int) 
+    case asr(Int) 
+    case ror(Int)
 }
 
 public enum Shift32: Int {
@@ -115,6 +123,17 @@ enum Op {
     case movz32(Register32, UInt16, Register32.Shift?)
     case movz64(Register64, UInt16, Register64.Shift?)
 
+    // when SP not included:
+    //  - https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOV--register---Move--register---an-alias-of-ORR--shifted-register--?lang=en
+    //  - MOV <Wd, Wm> is an alias of ORR <Wd>, WZR, <Wm> when SP not present
+    // when SP included:
+    //  - https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOV--to-from-SP---Move-between-register-and-stack-pointer--an-alias-of-ADD--immediate--
+    //  
+    case movr64(Register64, Register64) 
+
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ORR--shifted-register---Bitwise-OR--shifted-register--?lang=en
+    case orr64(Register64, Register64, Register64, Register64.Shift?)  
+
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOVK--Move-wide-with-keep-
     case movk64(Register64, UInt16, Register64.Shift?)
 
@@ -201,8 +220,29 @@ public class EmitterM1 {
         return (mask & divided)
     }
 
+    // 0b0b10101010000000100000001111100000
+
     static func emit(for op: Op) throws -> [UInt8] {
         switch op {
+            
+        case .orr64(let Rd, let WZr, let Rn, let shift) where WZr == .sp && shift == nil:
+            fallthrough
+        case .movr64(let Rd, let Rn) where Rd == .sp || Rn == .sp: 
+            let mask: Int64 = 0b10010001_00000000_00000000_00000000
+            let encodedRd = encodeReg(Rd, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let imm12: Int64 = 0
+            let encoded = mask | encodedRd | encodedRn | imm12
+            return returnAsArray(encoded)
+        case .movr64(let Rd, let Rm) where Rd != .sp && Rm != .sp:
+            let mask: Int64 = 0b10101010_00000000_00000000_00000000
+                              
+            let encodedRd = encodeReg(Rd, shift: 0)
+            let encodedRn = encodeReg(Register64.sp, shift: 5) // 0b11111
+            let encodedRm = encodeReg(Rm, shift: 16) 
+            let imm6: Int64 = 0
+            let encoded = mask | encodedRm | encodedRd | encodedRn | imm6
+            return returnAsArray(encoded)
         case .stp(let pair, let offset):
             guard case .reg64offset(let Rn, let offsetCount, let ixMode) = offset else {
                 throw EmitterM1Error.invalidOffset(
