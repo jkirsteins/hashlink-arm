@@ -15,16 +15,29 @@ final class EmitterM1Tests: XCTestCase {
     }
     func testAdr() throws {
         XCTAssertEqual(
-            try EmitterM1.emit(for: .adr64(.x1, 16)),
+            try EmitterM1.emit(for: .adr64(.x1, Int64(16))),
             [0x81, 0x00, 0x00, 0x10]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .adr64(.x1, 153)),
+            try EmitterM1.emit(for: .adr64(.x1, Int64(153))),
             [0xc1, 0x04, 0x00, 0x30]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .adr64(.x21, -5426)),
+            try EmitterM1.emit(for: .adr64(.x21, Int64(-5426))),
             [0x75, 0x56, 0xff, 0x50]
+        )
+
+        // quick doublecheck for deferred offsets
+        let offset = RelativeDeferredOffset(wrappedValue: 0)
+        offset.wrappedValue = -5426
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .adr64(.x21, offset)),
+            [0x75, 0x56, 0xff, 0x50]
+        )
+        offset.wrappedValue = 153
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .adr64(.x21, offset)),
+            [0xc1, 0x04, 0x00, 0x30]
         )
     }
     func testLdp() throws {

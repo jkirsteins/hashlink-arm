@@ -13,7 +13,7 @@ enum M1Op {
 
     https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ADR--Form-PC-relative-address-?lang=en 
     */
-    case adr64(Register64, Int)
+    case adr64(Register64, RelativeOffset)
 
     // case bl
     case blr(Register64)

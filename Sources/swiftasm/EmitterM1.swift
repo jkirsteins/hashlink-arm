@@ -214,8 +214,8 @@ public class EmitterM1 {
             guard Rd != .sp else {
                 throw EmitterM1Error.invalidRegister("Rd can not be SP for adr")
             }
-            let immlo: Int64 = (Int64(offset) & 0b11) << 29
-            let immhi: Int64 = (Int64(offset) & 0b111111111111111111100) << 3
+            let immlo: Int64 = (Int64(offset.value) & 0b11) << 29
+            let immhi: Int64 = (Int64(offset.value) & 0b111111111111111111100) << 3
             let encodedRd = encodeReg(Rd, shift: 0)
             let mask: Int64 = 1 << 28
             let encoded = mask | encodedRd | immlo | immhi 
