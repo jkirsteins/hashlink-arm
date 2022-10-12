@@ -8,7 +8,6 @@ enum M1Op {
     */
     case svc(UInt16)
 
-
     /*
     - 
     - STUR when not using pre/post indexing:
@@ -70,5 +69,8 @@ enum M1Op {
         - https://developer.arm.com/documentation/ddi0596/2021-06/Base-Instructions/LDR--immediate---Load-Register--immediate--?lang=en
     */
     case ldr(LdrMode)
+
+    // should supersede .ldr(LdrMode)
+    case ldr2(any Register, Offset)
 }
 

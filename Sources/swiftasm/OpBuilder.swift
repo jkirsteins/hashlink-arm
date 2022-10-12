@@ -7,8 +7,19 @@ class OpBuilder
 
     @discardableResult
     func appendDebugPrintAligned4(_ val: String) -> OpBuilder {
-        // self.append(
-        //     .stp((.x0, .x1), .reg64offset(.sp, -16, .pre)),
+        let adr = RelativeDeferredOffset(wrappedValue: 0)
+        let str = "Hello World from JIT \\o/"
+        self.append(
+            .str(Register64.x0, .reg64offset(.sp, -16, .pre)),
+            .movz64(.x0, 1, nil),
+            .adr64(.x1, adr),
+            .movz64(.x2, UInt16(str.count), nil),
+            .movz64(.x16, 4, ._0), // unix write system call
+            .svc(0x80)
+        )
+            // .ldr(LdrMode._64(.x0, .sp, .reg64offset(Register64, Int64, IndexingMode?)
+
+
         //     .movr64(.x29_fp, .sp)
 
         //     .movz64(.x0, 1, ._0),
