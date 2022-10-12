@@ -177,18 +177,41 @@ final class EmitterM1Tests: XCTestCase {
         XCTAssertEqual(try EmitterM1.emit(for: .nop), [0x1f, 0x20, 0x03, 0xd5])
     }
 
-    func testLdr_base_noOffset() throws {
+    func testLdrReal() throws {
         XCTAssertEqual(
-            try EmitterM1.emit(for: .ldr(._32(.w2, .x1, nil))),
+            try EmitterM1.emit(for: .ldr(Register32.w2, .reg64offset(.x1, 0, nil))),
             [0x22, 0x00, 0x40, 0xb9]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .ldr(._64(.x2, .x1, nil))),
+            try EmitterM1.emit(for: .ldr(Register64.x2, .reg64offset(.x1, 0, nil))),
+            [0x22, 0x00, 0x40, 0xf9]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldr(Register64.x0, .reg64offset(.sp, 16, .post))),
+            [0xe0, 0x07, 0x41, 0xf8]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldr(Register64.x0, .reg64offset(.sp, 16, .pre))),
+            [0xe0, 0x0f, 0x41, 0xf8]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldr(Register64.x0, .reg64offset(.sp, 16, nil))),
+            [0xe0, 0x0b, 0x40, 0xf9]
+        )
+    }
+
+    func testLdrOld_base_noOffset() throws {
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldr_old(._32(.w2, .x1, nil))),
+            [0x22, 0x00, 0x40, 0xb9]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldr_old(._64(.x2, .x1, nil))),
             [0x22, 0x00, 0x40, 0xf9]
         )
     }
 
-    func testLdr_invalidOffset() throws {
+    func testLdrOld_invalidOffset() throws {
         /*
         Invalid offsets are:
         - When using pre/post indexing mode, the offset we can use must be in the range -256 to 255.
@@ -197,7 +220,7 @@ final class EmitterM1Tests: XCTestCase {
           for 64-bit it must be a multiple of 8 in the range of 0 to 32760.
         */
         XCTAssertThrowsError(
-            try EmitterM1.emit(for: .ldr(._64(.x2, .x1, .immediate(257))))
+            try EmitterM1.emit(for: .ldr_old(._64(.x2, .x1, .immediate(257))))
         ) { error in
             XCTAssertEqual(
                 error as! EmitterM1Error,
@@ -207,7 +230,7 @@ final class EmitterM1Tests: XCTestCase {
             )
         }
         XCTAssertThrowsError(
-            try EmitterM1.emit(for: .ldr(._32(.w2, .x1, .immediate(257))))
+            try EmitterM1.emit(for: .ldr_old(._32(.w2, .x1, .immediate(257))))
         ) { error in
             XCTAssertEqual(
                 error as! EmitterM1Error,
@@ -217,7 +240,7 @@ final class EmitterM1Tests: XCTestCase {
             )
         }
         XCTAssertThrowsError(
-            try EmitterM1.emit(for: .ldr(._64(.x2, .x1, .immediate(-257))))
+            try EmitterM1.emit(for: .ldr_old(._64(.x2, .x1, .immediate(-257))))
         ) { error in
             XCTAssertEqual(
                 error as! EmitterM1Error,
@@ -225,7 +248,7 @@ final class EmitterM1Tests: XCTestCase {
             )
         }
         XCTAssertThrowsError(
-            try EmitterM1.emit(for: .ldr(._64(.x2, .x1, .immediate(404))))
+            try EmitterM1.emit(for: .ldr_old(._64(.x2, .x1, .immediate(404))))
         ) { error in
             XCTAssertEqual(
                 error as! EmitterM1Error,

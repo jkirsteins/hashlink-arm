@@ -68,9 +68,9 @@ enum M1Op {
         - https://developer.arm.com/documentation/ddi0596/2021-06/Index-by-Encoding/Loads-and-Stores?lang=en#ldst_pos
         - https://developer.arm.com/documentation/ddi0596/2021-06/Base-Instructions/LDR--immediate---Load-Register--immediate--?lang=en
     */
-    case ldr(LdrMode)
+    case ldr_old(LdrMode)
 
     // should supersede .ldr(LdrMode)
-    case ldr2(any Register, Offset)
+    case ldr(any Register, Offset)
 }
 

@@ -348,8 +348,46 @@ public class EmitterM1 {
             return returnAsArray(mask | encodedRn)
         case .nop: return [0x1f, 0x20, 0x03, 0xd5]
         case .ret: return [0xc0, 0x03, 0x5f, 0xd6]
-        case .ldr(._32(let Rt as any Register, let Rn as any Register, let offset)),
-            .ldr(._64(let Rt as any Register, let Rn as any Register, let offset)):
+        case .ldr(let Rt, let offset):
+        
+            guard case .reg64offset(let Rn, let offsetCount, let ixMode) = offset else {
+                throw EmitterM1Error.invalidOffset(
+                    "LDR can only have .reg64offset offset"
+                )
+            }
+
+            let mask: Int64
+            let immBits: Int64
+            let immShift: Int64
+            let divider: Int64
+            switch(ixMode) {
+                case nil: 
+                    //         S          imm12        Rn    Rt
+                    mask = 0b1_0_11100101_000000000000_00000_00000
+                    immBits = 12
+                    immShift = 10
+                    divider = Rt.is32 ? 4 : 8 // pimm
+                case .pre: 
+                    //         S           imm9
+                    mask = 0b1_0_111000010_000000000_11_00000_00000
+                    immBits = 9
+                    immShift = 12
+                    divider = 1 // simm
+                case .post: 
+                    //         S           imm9         Rn    Rt
+                    mask = 0b1_0_111000010_000000000_01_00000_00000
+                    immBits = 9
+                    immShift = 12
+                    divider = 1 // simm
+            }
+            let encodedRt = encodeReg(Rt, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let imm = (try truncateOffset(Int64(offsetCount), divisor: divider, bits: immBits)) << immShift
+            let size: Int64 = (Rt.is32 ? 0 : 1) << 30
+            let encoded = mask | encodedRt | encodedRn | imm | size
+            return returnAsArray(encoded)
+        case .ldr_old(._32(let Rt as any Register, let Rn as any Register, let offset)),
+            .ldr_old(._64(let Rt as any Register, let Rn as any Register, let offset)):
             let size: Int64 = Rt.is32 ? 0b10 : 0b11
             switch offset {
             case .immediate(let imm):
