@@ -1,4 +1,4 @@
-public protocol Register {
+public protocol Register: CustomDebugStringConvertible {
     associatedtype Shift
 
     var rawValue: UInt8 { get }
@@ -8,20 +8,10 @@ public protocol Register {
 extension OpBuilder
 {
     @discardableResult
-    func append(_ op: M1Op) -> OpBuilder
-    {
-        let data = try! EmitterM1.emit(for: op)
-        return self.append(data)
-    }
-
-    @discardableResult
     func append(_ ops: M1Op...) -> OpBuilder
     {
-        for op in ops {
-            let data = try! EmitterM1.emit(for: op)
-            self.append(data)
-        }
-        return self
+        let x = ops.map { $0 as any CpuOp }
+        return self.append(x)
     }
 }
 
@@ -82,6 +72,19 @@ enum Register64: UInt8, Register {
     case x29_fp = 29  // frame pointer
     case x30_lr = 30  // /link register
     case sp = 31
+
+    var debugDescription: String {
+        switch(self) {
+            case .sp:
+                return "sp"
+            case .x29_fp:
+                return "x29"
+            case .x30_lr:
+                return "x30"
+            default:
+                return "x\(self.rawValue)"
+        }
+    }
 }
 
 enum ExtendOp32 {
@@ -99,6 +102,10 @@ enum Register32: UInt8, Register {
     typealias Shift = Shift32
     typealias ExtendOp = ExtendOp32
     var is32: Bool { true }
+
+    var debugDescription: String {
+        return "w\(self.rawValue)"
+    }
 
     case w0 = 0
     case w1 = 1
@@ -155,9 +162,9 @@ public class EmitterM1 {
     private static func returnAsArray(_ val: Int64) -> [UInt8] {
         let length: Int = 4 * MemoryLayout<UInt8>.size
         let result = withUnsafeBytes(of: val) { bytes in Array(bytes.prefix(length)) }
-        print(
-            "Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })"
-        )
+        // print(
+        //     "Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })"
+        // )
         return result
     }
 
@@ -170,7 +177,7 @@ public class EmitterM1 {
     {
         if val % divisor != 0 {
             throw EmitterM1Error.invalidOffset(
-                "Offset immediate must be a multiple of \(divisor)"
+                "Offset immediate must be a multiple of \(divisor) but was \(val)"
             )
         }
 
@@ -329,6 +336,12 @@ public class EmitterM1 {
             let encoded =
                 encodedRt1 | encodedRt2 | encodedRn | (opc << opcOffset) | mask | imm
             return returnAsArray(encoded)
+        case .b(let imm26):
+            let imm = try truncateOffset(Int64(imm26.value), divisor: 4, bits: 26)
+            //                         imm26
+            let mask: Int64 = 0b000101_00000000000000000000000000
+            let encoded = mask | imm
+            return returnAsArray(encoded)
         case .bl(let imm26):
             guard (imm26 & 0x3FFFFFF) == imm26 else {
                 throw EmitterM1Error.invalidValue(
@@ -482,5 +495,13 @@ extension String {
 
         let padding = String(repeating: withPad, count: toLength - self.count)
         return padding + self
+    }
+
+    func rightPadding(toLength: Int, withPad: String = " ") -> String {
+
+        guard toLength > self.count else { return self }
+
+        let padding = String(repeating: withPad, count: toLength - self.count)
+        return self + padding
     }
 }

@@ -14,6 +14,23 @@ final class EmitterM1Tests: XCTestCase {
         )
     }
 
+    func testB() throws {
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .b(RelativeLiteralOffset(8))),
+            [0x02, 0x00, 0x00, 0x14]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .b(RelativeLiteralOffset(-16))),
+            [0xfc, 0xff, 0xff, 0x17]
+        )
+        let x = RelativeDeferredOffset()
+        x.storage.wrappedValue = 24
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .b(x)),
+            [0x06, 0x00, 0x00, 0x14]
+        )
+    }
+
     func testStr() throws {
         // should match stur
         XCTAssertEqual(
@@ -60,13 +77,13 @@ final class EmitterM1Tests: XCTestCase {
         )
 
         // quick doublecheck for deferred offsets
-        let offset = RelativeDeferredOffset(wrappedValue: 0)
-        offset.wrappedValue = -5426
+        let offset = RelativeDeferredOffset()
+        offset.storage.wrappedValue = -5426
         XCTAssertEqual(
             try EmitterM1.emit(for: .adr64(.x21, offset)),
             [0x75, 0x56, 0xff, 0x50]
         )
-        offset.wrappedValue = 153
+        offset.storage.wrappedValue = 153
         XCTAssertEqual(
             try EmitterM1.emit(for: .adr64(.x1, offset)),
             [0xc1, 0x04, 0x00, 0x30]

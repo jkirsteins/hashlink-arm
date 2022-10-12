@@ -31,7 +31,7 @@ struct SwiftAsm: ParsableCommand {
             .ret,
             .nop   // to ensure aligning to 4
         )
-        builder.append(utf8: str)
+        builder.append(ascii: str)
         // mov    X0, #1              // 1 = StdOut
         // adr    X1, helloworld2     // string to print
         // mov    X2, helloworld2_len // length of our string

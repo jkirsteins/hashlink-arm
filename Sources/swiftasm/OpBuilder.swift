@@ -1,70 +1,160 @@
 import Darwin
 import Foundation
 
+enum PseudoOp: CpuOp, CustomDebugStringConvertible {
+    case zero
+    case ascii(String)
+
+    var size: ByteCount {
+        switch(self) {
+            case .zero: return 1
+            case .ascii(let v): return ByteCount(v.utf8.count)
+        }
+    }
+
+    var debugDescription: String {
+        switch(self) {
+            case .zero: return ".zero"
+            case .ascii(let val):
+                return ".ascii(\(val))"
+        }
+    }
+
+    func emit() throws -> [UInt8] {
+        switch(self) {
+            case .zero: return [0]
+            case .ascii(let val):
+                return Array(val.utf8)
+        }
+    }
+}
+
 class OpBuilder
 {
-    var data = Data()
+    var ops: [any CpuOp] = []
+    
+    var position: Int { ops.count }
 
     @discardableResult
     func appendDebugPrintAligned4(_ val: String) -> OpBuilder {
-        let adr = RelativeDeferredOffset(wrappedValue: 0)
-        let str = "Hello World from JIT \\o/"
+        var adr = RelativeDeferredOffset()
+        var jmpTarget = RelativeDeferredOffset()
+        let str = val
+        
         self.append(
-            .str(Register64.x0, .reg64offset(.sp, -16, .pre)),
-            .movz64(.x0, 1, nil),
+            // Stash registers we'll use (so we can reset)
+            .str(Register64.x0, .reg64offset(.sp, -32, .pre)),
+            .str(Register64.x1, .reg64offset(.sp, 8, nil)),
+            .str(Register64.x2, .reg64offset(.sp, 16, nil)),
+            .str(Register64.x16, .reg64offset(.sp, 24, nil)),
+
+            // unix write system call
+            .movz64(.x0, 1, nil)
+        )
+        adr.start(at: self.byteSize)
+        self.append(
             .adr64(.x1, adr),
             .movz64(.x2, UInt16(str.count), nil),
-            .movz64(.x16, 4, ._0), // unix write system call
+            .movz64(.x16, 4, nil), 
+            .svc(0x80),
+            
+            // restore
+            .ldr(Register64.x16, .reg64offset(.sp, 24, nil)),
+            .ldr(Register64.x2, .reg64offset(.sp, 16, nil)),
+            .ldr(Register64.x1, .reg64offset(.sp, 8, nil)),
+            .ldr(Register64.x0, .reg64offset(.sp, 32, .post))
+        )
+        
+        jmpTarget.start(at: self.byteSize)
+        self.append(.b(jmpTarget))
+        
+        adr.stop(at: self.byteSize)
+        self.append(ascii: str).align(4)
+
+        jmpTarget.stop(at: self.byteSize)
+        self.append(
+            .movz64(.x16, 1, nil),
             .svc(0x80)
         )
-            // .ldr(LdrMode._64(.x0, .sp, .reg64offset(Register64, Int64, IndexingMode?)
 
+        return self
+    }
+    
+    @discardableResult
+    func align(_ to: Int64) -> OpBuilder {
+        let origSize = self.byteSize
+        var targetSize = origSize
+        
+        while targetSize % to != 0 { targetSize += 1 }
 
-        //     .movr64(.x29_fp, .sp)
+        while self.byteSize < targetSize {
+            if origSize + 4 > targetSize {
+                self.append(PseudoOp.zero)
+            } else {
+                self.append(.nop)
+            }
+        }
 
-        //     .movz64(.x0, 1, ._0),
-        //     .adr64(.x1, 7 /*instructions including self*/ * 4),
-        //     .movz64(.x2, UInt16(str.count), ._0),
-        //     .movz64(.x16, 4, ._0),
-        //     .svc(0x80),
-            
-        //     // return 3
-        //     .movz64(.x0, 3, ._0),
-        //     .ret,
-        //     .nop   // to ensure aligning to 4
-        // )
-        fatalError("wip")
+        return self
+    }
+
+    var byteSize: Int64 {
+        self.ops.reduce(0) { $0 + $1.size }
     }
 
     @discardableResult
-    func append(_ instructions: [UInt8]) -> OpBuilder
+    func append(_ instructions: any CpuOp...) -> OpBuilder
     {
-        data.append(contentsOf: instructions)
+        ops.append(contentsOf: instructions)
         return self
     }
 
     @discardableResult
-    func append(utf8 str: String) -> OpBuilder
+    func append(_ instructions: [any CpuOp]) -> OpBuilder
     {
-        let bytes: [UInt8] = Array(str.utf8)
-
-        data.append(contentsOf: bytes)
+        ops.append(contentsOf: instructions)
         return self
+    }
+
+    @discardableResult
+    func append(ascii str: String) -> OpBuilder
+    {
+        append(PseudoOp.ascii(str))
+    }
+
+    func safeBuild() throws -> [UInt8] {
+        return try self.ops.flatMap { try $0.emit() }
     }
 
     func build() -> [UInt8] {
-        var arr2 = Array<UInt8>(repeating: 0, count: data.count/MemoryLayout<UInt8>.stride)
-        _ = arr2.withUnsafeMutableBytes { data.copyBytes(to: $0) }
-        return arr2
+        return try! safeBuild()
     }
 
     func debugPrint() {
-        
-        let arr2 = build()
-        for row in arr2.chunked(into: 4) {
-            let strs = row.map { "0x" + String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") }
-            print(strs.joined(separator: " "))
+        print("---- START ----")
+        for op in self.ops {
+            let bytes = try! op.emit()
+            for (ix, row) in bytes.chunked(into: 4).enumerated() {
+                let strs = row.map { "0x" + String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") }
+
+                let debugString: String? 
+                if case PseudoOp.ascii = op {
+                    debugString = String(bytes: row, encoding: .ascii)?.replacingOccurrences(of: " ", with: ".")
+                } else if ix == 0 {
+                    debugString = op.debugDescription
+                } else {
+                    debugString = nil
+                }
+
+                print(strs.joined(separator: " ").rightPadding(toLength: 19), terminator: (debugString != nil) ? "; " : "\n")
+                if let debugString = debugString { print(debugString) }
+            }
         }
+        // let arr2 = build()
+        // for row in arr2.chunked(into: 4) {
+        //     let strs = row.map { "0x" + String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") }
+        //     print(strs.joined(separator: " ") + "; ")
+        // }
         
         print("---- END ----")
     }

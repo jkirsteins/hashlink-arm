@@ -1,4 +1,106 @@
-enum M1Op {
+typealias ByteCount = Int64
+protocol CpuOp : CustomDebugStringConvertible {
+  func emit() throws -> [UInt8]
+  var size: ByteCount { get }
+}
+
+enum M1Op : CpuOp {
+    var size: ByteCount { 4 }
+
+    var debugDescription: String {
+      switch(self) {
+        case .nop: return "nop" 
+        case .ret: return "ret"
+        case .svc(let x): return "svc 0x\(String(x, radix: 16).leftPadding(toLength: 4, withPad: "0"))"
+        case .str(let rt, .reg64offset(let rn, let offsetC, nil)):
+          return "str \(rt), [\(rn), #\(offsetC)]"
+        case .str(let rt, .reg64offset(let rn, let offsetC, .pre)):
+          return "str \(rt), [\(rn), #\(offsetC)]!"
+        case .str(let rt, .reg64offset(let rn, let offsetC, .post)):
+          return "str \(rt), [\(rn)], #\(offsetC)"
+        case .stur(let rt, let rn, let offset):
+          return "stur \(rt), \(rn), #\(offset)"
+        case .adr64(let rt, let offset):
+          return "adr \(rt), #\(offset)"
+        case .blr(let r):
+          return "blr \(r)"
+        case .bl(let r):
+          return "bl #\(r)"
+        case .b(let r):
+          return "b #\(r)"
+        case .movz32(let rt, let v, nil):
+          return "movz \(rt), #\(v)"
+        case .movz32(let rt, let v, let shift) where shift != nil:
+          return "movz \(rt), #\(v), \(shift)"
+        case .movz64(let rt, let v, nil):
+          return "movz \(rt), #\(v)"
+        case .movz64(let rt, let v, let shift) where shift != nil:
+          return "movz \(rt), #\(v), \(shift)"
+        case .movr64(let rt, let rn):
+          return "movr \(rt), \(rn)"
+        case .orr64: 
+          fatalError("orr debugdesc not implemente4d")
+        case .movk64(let rt, let val, nil):
+          return "movk \(rt), #\(val)"
+        case .movk64(let rt, let val, let shift) where shift != nil:
+          fatalError("movk debugdesc not implemente4d with shift")
+        case .stp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, .pre)):
+          return "stp \(rt1), \(rt2), [\(rn), #\(offset)]!"
+        case .stp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, .post)):
+          return "stp \(rt1), \(rt2), [\(rn)], #\(offset)"
+        case .stp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, nil)):
+          return "stp \(rt1), \(rt2), [\(rn), #\(offset)]"
+        case .ldp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, .pre)):
+          return "ldp \(rt1), \(rt2), [\(rn), #\(offset)]!"
+        case .ldp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, .post)):
+          return "ldp \(rt1), \(rt2), [\(rn)], #\(offset)"
+        case .ldp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, nil)):
+          return "ldp \(rt1), \(rt2), [\(rn), #\(offset)]"
+        case .ldr(let rt, Offset.reg64offset(let rn, let offset, nil)):
+          return "ldr \(rt), [\(rn), #\(offset)]"
+        case .ldr(let rt, Offset.reg64offset(let rn, let offset, .pre)):
+          return "ldr \(rt), [\(rn), #\(offset)]!"
+        case .ldr(let rt, Offset.reg64offset(let rn, let offset, .post)):
+          return "ldr \(rt), [\(rn)], #\(offset)"
+        case .str(_, .immediate(_)):
+          return "str immediate not implemented"
+        case .str(_, .reg64shift(_, _)):
+          return "str reg64shift not implemented"
+        case .str(_, .reg32(_, _, _)):
+          return "str reg32 not implemented"
+        case .movz32(_, _, .some(_)):
+          return "movz32 .some not implemented"
+        case .movz64(_, _, .some(_)):
+          return "movz64 .some not implemented"
+        case .movk64(_, _, .some(_)):
+          return "movk64 .some not implemented"
+        case .stp(_, .immediate(_)):
+          return "stp .immediate not implemented"
+        case .stp(_, .reg64shift(_, _)):
+          return "stp .reg64shift not implemented"
+        case .stp(_, .reg32(_, _, _)):
+          return "stp .reg32 not implemented"
+        case .ldp(_, .immediate(_)):
+          return "ldp .immediate not implemented"
+        case .ldp(_, .reg64shift(_, _)):
+          return "ldp .reg64shift not implemented"
+        case .ldp(_, .reg32(_, _, _)):
+          return "ldp .reg32 not implemented"
+        case .ldr_old(_):
+          return "ldp_old not implemented"
+        case .ldr(_, .immediate(_)):
+          return "ldr .immediate"
+        case .ldr(_, .reg64shift(_, _)):
+          return "ldr .reg64shift not implemented"
+        case .ldr(_, .reg32(_, _, _)):
+          return "ldr .reg32 not implemented"
+        }
+    }
+
+    func emit() throws -> [UInt8] {
+      try EmitterM1.emit(for: self)
+    }
+
     case nop
     case ret
 
@@ -27,7 +129,7 @@ enum M1Op {
     */
     case adr64(Register64, RelativeOffset)
 
-    // case bl
+    case b(RelativeOffset) // 26 bits max
     case blr(Register64)
     case bl(Int32)  // 26 bits max
 
