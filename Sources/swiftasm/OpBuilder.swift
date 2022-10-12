@@ -6,6 +6,26 @@ class OpBuilder
     var data = Data()
 
     @discardableResult
+    func appendDebugPrintAligned4(_ val: String) -> OpBuilder {
+        // self.append(
+        //     .stp((.x0, .x1), .reg64offset(.sp, -16, .pre)),
+        //     .movr64(.x29_fp, .sp)
+
+        //     .movz64(.x0, 1, ._0),
+        //     .adr64(.x1, 7 /*instructions including self*/ * 4),
+        //     .movz64(.x2, UInt16(str.count), ._0),
+        //     .movz64(.x16, 4, ._0),
+        //     .svc(0x80),
+            
+        //     // return 3
+        //     .movz64(.x0, 3, ._0),
+        //     .ret,
+        //     .nop   // to ensure aligning to 4
+        // )
+        fatalError("wip")
+    }
+
+    @discardableResult
     func append(_ instructions: [UInt8]) -> OpBuilder
     {
         data.append(contentsOf: instructions)

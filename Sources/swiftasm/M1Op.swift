@@ -8,6 +8,19 @@ enum M1Op {
     */
     case svc(UInt16)
 
+
+    /*
+    - 
+    - STUR when not using pre/post indexing:
+      https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STUR--Store-Register--unscaled--?lang=en
+    - When using pre/post indexing:
+      https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STR--immediate---Store-Register--immediate--?lang=en
+    */
+    case str(any Register, Offset)
+    
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STUR--Store-Register--unscaled--?lang=en
+    case stur(any Register, Register64, Int16)
+
     /* 
     Form PC-relative address adds an immediate value to the PC value to form a PC-relative address, and writes the result to the destination register.
 

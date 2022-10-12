@@ -3,6 +3,38 @@ import XCTest
 @testable import swiftasm
 
 final class EmitterM1Tests: XCTestCase {
+    func testStur() throws {
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .stur(Register64.x0, .sp, -16)),
+            [0xe0, 0x03, 0x1f, 0xf8]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .stur(Register32.w0, .sp, -16)),
+            [0xe0, 0x03, 0x1f, 0xb8]
+        )
+    }
+
+    func testStr() throws {
+        // should match stur
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .str(Register64.x0, .reg64offset(.sp, -16, nil))),
+            [0xe0, 0x03, 0x1f, 0xf8]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .str(Register32.w0, .reg64offset(.sp, -16, nil))),
+            [0xe0, 0x03, 0x1f, 0xb8]
+        )
+
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .str(Register64.x0, .reg64offset(.sp, -16, .pre))),
+            [0xe0, 0x0f, 0x1f, 0xf8]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .str(Register64.x0, .reg64offset(.sp, -16, .post))),
+            [0xe0, 0x07, 0x1f, 0xf8]
+        )
+    }
+
     func testSvc() throws {
         XCTAssertEqual(
             try EmitterM1.emit(for: .svc(51)),
@@ -36,7 +68,7 @@ final class EmitterM1Tests: XCTestCase {
         )
         offset.wrappedValue = 153
         XCTAssertEqual(
-            try EmitterM1.emit(for: .adr64(.x21, offset)),
+            try EmitterM1.emit(for: .adr64(.x1, offset)),
             [0xc1, 0x04, 0x00, 0x30]
         )
     }

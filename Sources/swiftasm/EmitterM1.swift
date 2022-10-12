@@ -204,7 +204,38 @@ public class EmitterM1 {
 
     static func emit(for op: M1Op) throws -> [UInt8] {
         switch op {
-
+        case .stur(let Rt, let Rn, let offset ):
+            //                    S           imm9         Rn    Rt
+            let mask: Int64 = 0b1_0_111000000_000000000_00_00000_00000
+            let encodedRt = encodeReg(Rt, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let offs = (try truncateOffset(Int64(offset), divisor: 1, bits: 9)) << 12
+            let size: Int64 = (Rt.is32 ? 0 : 1) << 30
+            let encoded = mask | encodedRt | encodedRn | offs | size
+            return returnAsArray(encoded)
+        case .str(let Rt, let offset ):
+            guard case .reg64offset(let Rn, let offsetCount, let ixMode) = offset else {
+                throw EmitterM1Error.invalidOffset(
+                    "STR can only have .reg64offset offset"
+                )
+            }
+            let mask: Int64
+            switch(ixMode) {
+                case nil: 
+                    return try Self.emit(for: .stur(Rt, Rn, Int16(offsetCount)))
+                case .pre: 
+                    //         S           imm9         Rn    Rt
+                    mask = 0b1_0_111000000_000000000_11_00000_00000
+                case .post: 
+                    //         S           imm9         Rn    Rt
+                    mask = 0b1_0_111000000_000000000_01_00000_00000
+            }
+            let encodedRt = encodeReg(Rt, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let offs = (try truncateOffset(Int64(offsetCount), divisor: 1, bits: 9)) << 12
+            let size: Int64 = (Rt.is32 ? 0 : 1) << 30
+            let encoded = mask | encodedRt | encodedRn | offs | size
+            return returnAsArray(encoded)
         case .svc(let imm16):
             //                              imm16
             let mask: Int64 = 0b11010100000_0000000000000000_00001
