@@ -18,26 +18,10 @@ struct SwiftAsm: ParsableCommand {
 
         let builder = OpBuilder()
         
-        let str = "Debug Testing from JIT\n"
-        builder.append(
-            .movz64(.x0, 1, ._0),
-            .adr64(.x1, 7 /*instructions including self*/ * 4),
-            .movz64(.x2, UInt16(str.count), ._0),
-            .movz64(.x16, 4, ._0),
-            .svc(0x80),
-            
-            // return 3
-            .movz64(.x0, 3, ._0),
-            .ret,
-            .nop   // to ensure aligning to 4
-        )
-        builder.append(ascii: str)
-        // mov    X0, #1              // 1 = StdOut
-        // adr    X1, helloworld2     // string to print
-        // mov    X2, helloworld2_len // length of our string
-        // mov    X16, #4             // Unix write system call
-        // svc    #0x80               // Call kernel to output the string
-
+        builder.appendDebugPrintAligned4("Hello 1\n")
+        builder.appendDebugPrintAligned4("Hello 2\n")
+        builder.appendSystemExit(255)
+        // builder.appendDebugPrintAligned4("Hello 2")
         
 
         builder.debugPrint()

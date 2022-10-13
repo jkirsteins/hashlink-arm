@@ -72,12 +72,18 @@ class OpBuilder
         self.append(ascii: str).align(4)
 
         jmpTarget.stop(at: self.byteSize)
+        
+        // appendSystemExit(132)
+        return self
+    }
+
+    @discardableResult
+    func appendSystemExit(_ code: UInt8) -> OpBuilder {
         self.append(
+            .movz64(.x0, UInt16(code), nil),
             .movz64(.x16, 1, nil),
             .svc(0x80)
         )
-
-        return self
     }
     
     @discardableResult
