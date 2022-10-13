@@ -3,6 +3,27 @@ import XCTest
 @testable import swiftasm
 
 final class OpBuilderTests: XCTestCase {
+    func testAppendPrologue() throws {
+        let sut = OpBuilder()
+        try sut.appendPrologue()
+
+        XCTAssertEqual(
+            sut.build(),
+            [0xfd, 0x7b, 0xbf, 0xa9,
+             0xfd, 0x03, 0x00, 0x91]
+        )
+    }
+
+    func testAppendEpilogue() throws {
+        let sut = OpBuilder()
+        try sut.appendEpilogue()
+
+        XCTAssertEqual(
+            sut.build(),
+            [0xfd, 0x7b, 0xc1, 0xa8]
+        )
+    }
+
     func testAppendDebugPrintAligned4() throws {
         let sut = OpBuilder()
         sut.appendDebugPrintAligned4("Hello World")
@@ -28,8 +49,6 @@ final class OpBuilderTests: XCTestCase {
                 0x6f, 0x20, 0x57, 0x6f, //; o.Wo
                 0x72, 0x6c, 0x64      , //; rld
                 0x00                  , //; .zero
-                0x30, 0x00, 0x80, 0xd2, //; movz x16, #1
-                0x01, 0x10, 0x00, 0xd4, //; svc 0x0080
             ])
     }
 }

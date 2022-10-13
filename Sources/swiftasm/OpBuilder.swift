@@ -32,8 +32,15 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
 class OpBuilder
 {
     var ops: [any CpuOp] = []
-    
     var position: Int { ops.count }
+    var byteSize: ByteCount = 0
+    let jitBase: SharedStorage<UnsafeMutableRawPointer?> = SharedStorage(wrappedValue: nil)
+
+    func getDeferredPosition() -> DeferredAddress {
+        DeferredAddress(
+            jitBase: jitBase, 
+            offsetFromBase: byteSize)
+    }
 
     @discardableResult
     func appendDebugPrintAligned4(_ val: String) -> OpBuilder {
@@ -69,7 +76,8 @@ class OpBuilder
         self.append(.b(jmpTarget))
         
         adr.stop(at: self.byteSize)
-        self.append(ascii: str).align(4)
+        self.append(ascii: str)
+            .align(4)
 
         jmpTarget.stop(at: self.byteSize)
         
@@ -84,6 +92,23 @@ class OpBuilder
             .movz64(.x16, 1, nil),
             .svc(0x80)
         )
+    }
+
+    @discardableResult
+    func appendPrologue() throws -> OpBuilder {
+        self.append(
+            .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre)),
+            .movr64(.x29_fp, .sp)
+        )
+        return self
+    }
+    
+    @discardableResult
+    func appendEpilogue() throws -> OpBuilder {
+        self.append(
+            .ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))
+        )
+        return self
     }
     
     @discardableResult
@@ -104,20 +129,24 @@ class OpBuilder
         return self
     }
 
-    var byteSize: Int64 {
-        self.ops.reduce(0) { $0 + $1.size }
-    }
-
     @discardableResult
     func append(_ instructions: any CpuOp...) -> OpBuilder
     {
-        ops.append(contentsOf: instructions)
-        return self
+        _internalAppend(instructions)
     }
 
     @discardableResult
     func append(_ instructions: [any CpuOp]) -> OpBuilder
     {
+        _internalAppend(instructions)
+    }
+
+    // This should be the only place that modifies size/ops
+    @discardableResult
+    func _internalAppend(_ instructions: [any CpuOp]) -> OpBuilder
+    {
+        let increase = instructions.reduce(0) { $0 + $1.size }
+        byteSize += increase
         ops.append(contentsOf: instructions)
         return self
     }
@@ -138,6 +167,7 @@ class OpBuilder
 
     func debugPrint() {
         print("---- START ----")
+        var printedAlready: ByteCount = 0
         for op in self.ops {
             let bytes = try! op.emit()
             for (ix, row) in bytes.chunked(into: 4).enumerated() {
@@ -152,9 +182,11 @@ class OpBuilder
                     debugString = nil
                 }
 
-                print(strs.joined(separator: " ").rightPadding(toLength: 19), terminator: (debugString != nil) ? "; " : "\n")
+                print("\(printedAlready):\t" + strs.joined(separator: " ").rightPadding(toLength: 19), terminator: (debugString != nil) ? "; " : "\n")
                 if let debugString = debugString { print(debugString) }
             }
+            
+            printedAlready += op.size
         }
         // let arr2 = build()
         // for row in arr2.chunked(into: 4) {
@@ -167,15 +199,20 @@ class OpBuilder
 
     typealias JitMainType = (@convention(c) () -> Int64)
 
-    func buildEntrypoint() -> JitMainType {
-        let code = build()
-
+    func buildEntrypoint(_ entrypoint: any WholeFunction) -> JitMainType {
+        
         let map = mmap(
             nil, 
-            code.count, 
+            Int(byteSize), 
             PROT_WRITE | PROT_EXEC, 
             MAP_ANONYMOUS | MAP_PRIVATE | MAP_JIT, 
             -1, 0)
+
+        // This is needed so that DeferredAddresses
+        // are available
+        self.jitBase.wrappedValue = map
+        
+        let code = build()
         
         if map == MAP_FAILED {
             fatalError("MAP FAILED \(errno)")
@@ -186,15 +223,24 @@ class OpBuilder
         pthread_jit_write_protect_np(0);
         memcpy(map, code, code.count)
         pthread_jit_write_protect_np(1);
-            
-        var codeCopy = code
-        withUnsafeMutablePointer(to: &codeCopy) {
-            codePtr in 
 
-            jitMain = unsafeBitCast(
-                map, 
-                to: JitMainType.self)
-        }
+        var entrypointAddress: UnsafeMutableRawPointer = entrypoint.memory.value
+
+        print("Casting from \(entrypointAddress)")
+        
+        jitMain = unsafeBitCast(
+            // map /*entrypointAddress*/, 
+            /*map*/ entrypointAddress, 
+            to: JitMainType.self)
+
+        // var codeCopy = code
+        // withUnsafeMutablePointer(to: &codeCopy) {
+        //     codePtr in 
+
+        //     jitMain = unsafeBitCast(
+        //         map, 
+        //         to: JitMainType.self)
+        // }
 
         guard let jitMain = jitMain else { fatalError("Failed to init jitMain") }
 

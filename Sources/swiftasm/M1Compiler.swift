@@ -9,39 +9,28 @@ class M1Compiler {
         for op in ops { buffer.push(try emitter.emit(for: op)) }
     }
 
-    func prologue(in buffer: ByteBuffer) throws {
-        try self.push(
-            to: buffer,
-            .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre)),
-            .movr64(.x29_fp, .sp)
-        )
-    }
+    func compile(native: HLFunction, into mem: OpBuilder) throws -> HLCompiledFunction {
+        
+        // grab it before it changes from prologue
+        let memory = mem.getDeferredPosition()
 
-    /*
-    ldp x29, x30, [sp], 16
-    */
-    func epilogue(in buffer: ByteBuffer) throws {
-        try self.push(
-            to: buffer,
-            .ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))
-        )
-    }
+        print("Compiling function \(native.findex) at \(memory.offsetFromBase)")
+        
+        try mem.appendPrologue()
+        mem.appendDebugPrintAligned4("==-(from jit)-==> Executing function \(native.findex)@\(memory.offsetFromBase)\n")
+        try mem.appendEpilogue()
 
-    func compile(native: HLFunction) throws -> ByteBuffer {
-        let result = ByteBuffer(incrementSize: 32)
-
-        /*
-        Prologue
-        stp    x29, x30, [sp, #-16]!
-        mov    x29, sp
-        */
-        result.push(
-            try emitter.emit(
-                for: .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre))
-            )// try EmitterM1.emit(
-            //     for: .movz64(.x29_fp, .sp)
-            // )
+        // tmp return 
+        mem.append(
+            .movz64(.x0, UInt16(native.findex), ._0),
+            .ret
         )
+
+        // mem.appendSystemExit(44)
+
+        return HLCompiledFunction(
+            function: native, 
+            memory: memory)
 
         /*
         Epilogue (excluding return)
@@ -68,7 +57,6 @@ class M1Compiler {
             }
         }
 
-        guard result.buffer.count > 0 else { fatalError("Empty compilation result") }
-        return result
+        // return result
     }
 }

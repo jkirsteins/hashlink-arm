@@ -3,7 +3,7 @@ struct HLNative: WholeFunction, CustomDebugStringConvertible {
     let name: Resolvable<String>
     let type: Resolvable<HLType>
     let findex: Int32
-    let memory: UnsafeMutableRawPointer
+    let memory: any MemoryAddress
 
     var wholeFunctionDebugDescription: String {
         "native/\(lib.value)/\(name.value)/\(findex)"

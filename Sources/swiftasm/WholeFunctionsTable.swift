@@ -1,6 +1,26 @@
+protocol MemoryAddress {
+    var value: UnsafeMutableRawPointer { get }
+}
+
+extension UnsafeMutableRawPointer: MemoryAddress {
+    var value: UnsafeMutableRawPointer { self }
+}
+
+struct DeferredAddress: MemoryAddress {
+    let jitBase: SharedStorage<UnsafeMutableRawPointer?>
+    let offsetFromBase: ByteCount
+
+    var value: UnsafeMutableRawPointer {
+        guard let base = self.jitBase.wrappedValue else {
+            fatalError("Deferred address not available")
+        }
+        return base.advanced(by: Int(offsetFromBase))
+    }
+}
+
 struct HLCompiledFunction : WholeFunction, CustomDebugStringConvertible {
     let function: HLFunction
-    let memory: UnsafeMutableRawPointer
+    let memory: any MemoryAddress
 
     var type: Resolvable<HLType> { function.type }
     var findex: Int32 { function.findex }
@@ -16,7 +36,7 @@ struct HLCompiledFunction : WholeFunction, CustomDebugStringConvertible {
 
 protocol WholeFunction {
     var findex: Int32 { get }
-    var memory: UnsafeMutableRawPointer { get }
+    var memory: any MemoryAddress { get }
     var type: Resolvable<HLType> { get }
 
     // simply convenience for testing/doublechecking what's here
@@ -64,6 +84,7 @@ class WholeFunctionsTable {
     var _cachedTable: [WholeFunction]?
     var table: [WholeFunction]! {
         guard _cachedTable == nil else { 
+            print("Got cached")
             return _cachedTable 
         }
 
@@ -72,6 +93,7 @@ class WholeFunctionsTable {
         let result = (castNatives + castFuncs).sorted(by: { $0.findex < $1.findex })
 
         guard result.count == natives.count + functions.count else {
+            print("\(result.count) != \(natives.count) + \(functions.count)")
             return nil
         }
 
