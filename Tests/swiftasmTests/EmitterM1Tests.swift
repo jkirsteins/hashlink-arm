@@ -3,6 +3,32 @@ import XCTest
 @testable import swiftasm
 
 final class EmitterM1Tests: XCTestCase {
+    func testSub() throws {
+        XCTAssertEqual("sub sp, sp, #16", M1Op.sub(.sp, .sp, 16).debugDescription)
+        XCTAssertEqual("add sp, sp, #16", M1Op.sub(.sp, .sp, -16).debugDescription)
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .sub(.sp, .sp, 16)),
+            [0xff, 0x43, 0x00, 0xd1]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .sub(.sp, .sp, -16)),
+            [0xff, 0x43, 0x00, 0x91]
+        )
+    }
+
+    func testAdd() throws {
+        XCTAssertEqual("add sp, sp, #16", M1Op.add(.sp, .sp, 16).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16", M1Op.add(.sp, .sp, -16).debugDescription)
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .add(.sp, .sp, -16)),
+            [0xff, 0x43, 0x00, 0xd1]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .add(.sp, .sp, 16)),
+            [0xff, 0x43, 0x00, 0x91]
+        )
+    }
+
     func testStur() throws {
         XCTAssertEqual(
             try EmitterM1.emit(for: .stur(Register64.x0, .sp, -16)),

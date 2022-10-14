@@ -13,11 +13,25 @@ class M1Compiler {
         
         // grab it before it changes from prologue
         let memory = mem.getDeferredPosition()
+        let resolvedRegs = native.regs.map { $0.value }
 
         print("Compiling function \(native.findex) at \(memory.offsetFromBase)")
         
         try mem.appendPrologue()
-        mem.appendDebugPrintAligned4("==-(from jit)-==> Executing function \(native.findex)@\(memory.offsetFromBase)\n")
+
+        try mem.appendStackReservation(resolvedRegs)
+        
+        mem.appendDebugPrintAligned4("Entering function \(native.findex)@\(memory.offsetFromBase)\n")
+        
+        for op in native.ops {
+            mem.appendDebugPrintAligned4("Executing \(op.debugDescription)\n")
+
+            switch op {
+                // case .OGetThis
+            default: fatalError("Can't compile \(op.debugDescription)")
+            }
+        }
+
         try mem.appendEpilogue()
 
         // tmp return 
@@ -51,11 +65,7 @@ class M1Compiler {
         // let offset = 0
         // EmitterM1.emit(for: .ldr(._64(.x0, 1)))
 
-        for op in native.ops {
-            switch op {
-            default: fatalError("Can't compile \(op.debugDescription)")
-            }
-        }
+        
 
         // return result
     }

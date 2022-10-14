@@ -43,10 +43,19 @@ class OpBuilder
     }
 
     @discardableResult
+    func appendStackReservation(_ regs: [HLType]) -> OpBuilder {
+        let size = regs.reduce(0) { $0 + $1.neededBytes }
+        self.append(
+            //.sub sp, sp, size
+        )
+        fatalError("Not implemented")
+    }
+
+    @discardableResult
     func appendDebugPrintAligned4(_ val: String) -> OpBuilder {
         var adr = RelativeDeferredOffset()
         var jmpTarget = RelativeDeferredOffset()
-        let str = val
+        let str = "[jitdebug] \(val)"
         
         self.append(
             // Stash registers we'll use (so we can reset)

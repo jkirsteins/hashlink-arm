@@ -127,6 +127,45 @@ bindings: \(bindings.count > 0 ? "\n" : "")\(bindings.map { "  \($0.debugDescrip
 }
 
 
+protocol HLRegisterSize {
+    var neededBytes: ByteCount { get }
+}
+
+extension HLType : HLRegisterSize {
+    var neededBytes: ByteCount {
+        switch(self) {
+            case .void: return 0 // void not really a value, used for typing purpose
+            
+            case .bool: fallthrough
+            case .u8: return 1 // an unsigned 8 bits integer (0-255)
+            
+            case .u16: return 2
+            
+            case .i32: fallthrough
+            case .f32: return 4
+            
+            case .f64: return 8
+
+            // All the following values are memory addresse pointers and takes either 4 bytes in x86 mode or 8 bytes in x86-64 mode:
+
+            case .bytes: fallthrough
+            case .dyn: fallthrough
+            case .fun: fallthrough
+            case .array: fallthrough
+            case .obj: fallthrough
+            case .dynobj: fallthrough
+            case .virtual: fallthrough
+            case .enum: fallthrough
+            case .ref: fallthrough
+            case .null: fallthrough
+            case .type: fallthrough
+            case .abstract: return 8
+
+            default:
+            fatalError("Register size not available for \(self.debugName)")
+        }
+    }
+}
 
 enum HLType : CustomDebugStringConvertible {
 
@@ -166,13 +205,13 @@ enum HLType : CustomDebugStringConvertible {
             case .bytes: return "bytes" 
             case .dyn: return "dynamic"
             case .fun: return "fun"
-            case .obj(let data): return data.name.value
+            case .obj(let data): return "obj(\(data.name.value))"
             case .array: return "array"
             case .type: return "type"
             case .ref: return "ref"
             case .virtual: return "virtual"
             case .dynobj: return "dynobj"
-            case .abstract(let data): return data.name.value
+            case .abstract(let data): return "abs(\(data.name.value))"
             case .`enum`(let data): return "enum(\(data.name.value))"
             case .null(let data): return "null(\(data.type.value.debugName))"
             case .method: return "method"

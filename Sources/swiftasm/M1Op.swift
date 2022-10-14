@@ -11,6 +11,14 @@ enum M1Op : CpuOp {
       switch(self) {
         case .nop: return "nop" 
         case .ret: return "ret"
+        case .add(let rt, let rn, let off) where off < 0: 
+          fallthrough
+        case .sub(let rt, let rn, let off) where off >= 0: 
+          return "sub \(rt), \(rn), #\(abs(off))"
+        case .sub(let rt, let rn, let off): 
+          fallthrough
+        case .add(let rt, let rn, let off): 
+          return "add \(rt), \(rn), #\(abs(off))"
         case .svc(let x): return "svc 0x\(String(x, radix: 16).leftPadding(toLength: 4, withPad: "0"))"
         case .str(let rt, .reg64offset(let rn, let offsetC, nil)):
           return "str \(rt), [\(rn), #\(offsetC)]"
@@ -128,6 +136,9 @@ enum M1Op : CpuOp {
     https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ADR--Form-PC-relative-address-?lang=en 
     */
     case adr64(Register64, RelativeOffset)
+
+    case sub(Register64, Register64, Int16) // negative -> alias for add
+    case add(Register64, Register64, Int16) // negative -> alias for sub
 
     case b(RelativeOffset) // 26 bits max
     case blr(Register64)
