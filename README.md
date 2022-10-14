@@ -9,10 +9,13 @@ Bytecode references:
 
 ## Checking stuff
 
-    def p(num, bits, offset)
-        mask = bits.times.collect { |x| x }.reduce(0) { |x,y| x | (0b1 << y) }
-        return (num >> offset) & mask
-    end
+def p(num, bits, offset)
+    mask = bits.times.collect { |x| x }.reduce(0) { |x,y| x | (0b1 << y) }
+    res = (num >> offset) & mask
+    res = res.to_s(2)
+    res.rjust(3, "0")
+end
+
 
 
 ## hl type C structs

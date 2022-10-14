@@ -4,28 +4,42 @@ import XCTest
 
 final class EmitterM1Tests: XCTestCase {
     func testSub() throws {
-        XCTAssertEqual("sub sp, sp, #16", M1Op.sub(.sp, .sp, 16).debugDescription)
-        XCTAssertEqual("add sp, sp, #16", M1Op.sub(.sp, .sp, -16).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, 16).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16, lsl 12", M1Op.sub(Register64.sp, Register64.sp, Imm12Lsl12(16, lsl: ._12)).debugDescription)
+        XCTAssertEqual("add sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, -16).debugDescription)
         XCTAssertEqual(
-            try EmitterM1.emit(for: .sub(.sp, .sp, 16)),
+            try EmitterM1.emit(for: .sub(X.sp, X.sp, 16)),
             [0xff, 0x43, 0x00, 0xd1]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .sub(.sp, .sp, -16)),
+            try EmitterM1.emit(for: .sub(W.w0, W.w0, 16)),
+            [0x00, 0x40, 0x00, 0x51]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .sub(X.sp, X.sp, -16)),
             [0xff, 0x43, 0x00, 0x91]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .sub(X.sp, X.sp, Imm12Lsl12(16, lsl: ._12))),
+            [0xff, 0x43, 0x40, 0xd1]
         )
     }
 
     func testAdd() throws {
-        XCTAssertEqual("add sp, sp, #16", M1Op.add(.sp, .sp, 16).debugDescription)
-        XCTAssertEqual("sub sp, sp, #16", M1Op.add(.sp, .sp, -16).debugDescription)
+        XCTAssertEqual("add sp, sp, #16", M1Op.add(X.sp, X.sp, 16).debugDescription)
+        XCTAssertEqual("add sp, sp, #16, lsl 12", M1Op.add(X.sp, X.sp, Imm12Lsl12(16, lsl: ._12)).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16", M1Op.add(X.sp, X.sp, -16).debugDescription)
         XCTAssertEqual(
-            try EmitterM1.emit(for: .add(.sp, .sp, -16)),
+            try EmitterM1.emit(for: .add(X.sp, X.sp, -16)),
             [0xff, 0x43, 0x00, 0xd1]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .add(.sp, .sp, 16)),
+            try EmitterM1.emit(for: .add(X.sp, X.sp, 16)),
             [0xff, 0x43, 0x00, 0x91]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .add(X.sp, X.sp, Imm12Lsl12(16, lsl: ._12))),
+            [0xff, 0x43, 0x40, 0x91]
         )
     }
 
@@ -241,65 +255,6 @@ final class EmitterM1Tests: XCTestCase {
             try EmitterM1.emit(for: .ldr(Register64.x0, .reg64offset(.sp, 16, nil))),
             [0xe0, 0x0b, 0x40, 0xf9]
         )
-    }
-
-    func testLdrOld_base_noOffset() throws {
-        XCTAssertEqual(
-            try EmitterM1.emit(for: .ldr_old(._32(.w2, .x1, nil))),
-            [0x22, 0x00, 0x40, 0xb9]
-        )
-        XCTAssertEqual(
-            try EmitterM1.emit(for: .ldr_old(._64(.x2, .x1, nil))),
-            [0x22, 0x00, 0x40, 0xf9]
-        )
-    }
-
-    func testLdrOld_invalidOffset() throws {
-        /*
-        Invalid offsets are:
-        - When using pre/post indexing mode, the offset we can use must be in the range -256 to 255.
-        - The offset may range from -256 to 255 for 32-bit and 64-bit accesses.
-        - Larger offsets are a bit more limited: for 32-bit it must be multiple of 4 in the range 0 to 16380,
-          for 64-bit it must be a multiple of 8 in the range of 0 to 32760.
-        */
-        XCTAssertThrowsError(
-            try EmitterM1.emit(for: .ldr_old(._64(.x2, .x1, .immediate(257))))
-        ) { error in
-            XCTAssertEqual(
-                error as! EmitterM1Error,
-                EmitterM1Error.invalidOffset(
-                    "Offset in 64-bit mode must be a multiple of 8 in range 0...32760"
-                )
-            )
-        }
-        XCTAssertThrowsError(
-            try EmitterM1.emit(for: .ldr_old(._32(.w2, .x1, .immediate(257))))
-        ) { error in
-            XCTAssertEqual(
-                error as! EmitterM1Error,
-                EmitterM1Error.invalidOffset(
-                    "Offset in 32-bit mode must be a multiple of 4 in range 0...16380"
-                )
-            )
-        }
-        XCTAssertThrowsError(
-            try EmitterM1.emit(for: .ldr_old(._64(.x2, .x1, .immediate(-257))))
-        ) { error in
-            XCTAssertEqual(
-                error as! EmitterM1Error,
-                EmitterM1Error.invalidOffset("Offset can\'t be less than -256")
-            )
-        }
-        XCTAssertThrowsError(
-            try EmitterM1.emit(for: .ldr_old(._64(.x2, .x1, .immediate(404))))
-        ) { error in
-            XCTAssertEqual(
-                error as! EmitterM1Error,
-                EmitterM1Error.invalidOffset(
-                    "Offset in 64-bit mode must be a multiple of 8 in range 0...32760"
-                )
-            )
-        }
     }
 
     func testMovk64() throws {

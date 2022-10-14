@@ -5,6 +5,9 @@ public protocol Register: CustomDebugStringConvertible {
     var is32: Bool { get }
 }
 
+typealias X = Register64 
+typealias W = Register32
+
 extension OpBuilder
 {
     @discardableResult
@@ -28,6 +31,39 @@ public enum Shift64_Real {
     case lsr(Int) 
     case asr(Int) 
     case ror(Int)
+}
+
+struct Imm12Lsl12 : CustomDebugStringConvertible, ExpressibleByIntegerLiteral {
+    enum Lsl12 {
+        case _0 
+        case _12
+    }
+
+    let imm: Int16
+    let lsl: Lsl12
+
+    var debugDescription: String {
+        if lsl == ._0 {
+            return "#\(imm)"
+        } else {
+            return "#\(imm), lsl 12"
+        }
+    }
+
+    init(integerLiteral: Int16)
+    {
+        // we don't need the encoded result, just
+        // check if we fit
+        try! EmitterM1.truncateOffset(Int64(integerLiteral), divisor: 1, bits: 12)
+
+        self.imm = integerLiteral
+        self.lsl = ._0
+    }
+
+    init(_ imm: Int16, lsl: Imm12Lsl12.Lsl12 = ._0) {
+        self.imm = Int16(try! EmitterM1.truncateOffset(Int64(imm), divisor: 1, bits: 12)) 
+        self.lsl = lsl
+    }
 }
 
 public enum Shift32: Int {
@@ -162,9 +198,9 @@ public class EmitterM1 {
     private static func returnAsArray(_ val: Int64) -> [UInt8] {
         let length: Int = 4 * MemoryLayout<UInt8>.size
         let result = withUnsafeBytes(of: val) { bytes in Array(bytes.prefix(length)) }
-        // print(
-        //     "Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })"
-        // )
+        print(
+            "Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })"
+        )
         return result
     }
 
@@ -211,6 +247,39 @@ public class EmitterM1 {
 
     static func emit(for op: M1Op) throws -> [UInt8] {
         switch op {
+        case .sub(let Rd, let Rn, let offset):
+            guard Rd.is32 == Rn.is32 else {
+                throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
+            }
+            guard offset.imm >= 0 else {
+                return try emit(for: .add(Rd, Rn, Imm12Lsl12(-offset.imm, lsl: offset.lsl)))
+            }
+
+            //                  S          sh imm12        Rn    Rd
+            let mask: Int64 = 0b0_10100010_0__000000000000_00000_00000
+            let encodedRd: Int64 = encodeReg(Rd, shift: 0)
+            let encodedRn: Int64 = encodeReg(Rn, shift: 5)
+            let size: Int64 = (Rd.is32 ? 0 : 1) << 31
+            let sh: Int64 = (offset.lsl == ._0 ? 0 : 1) << 22
+            let imm: Int64 = Int64(offset.imm) << 10
+            let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | imm
+            return returnAsArray(encoded)
+        case .add(let Rd, let Rn, let offset):
+            guard Rd.is32 == Rn.is32 else {
+                throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
+            }
+            guard offset.imm >= 0 else {
+                return try emit(for: .sub(Rd, Rn, Imm12Lsl12(-offset.imm, lsl: offset.lsl)))
+            }
+            //                  S          sh imm12        Rn    Rd
+            let mask: Int64 = 0b0_00100010_0__000000000000_00000_00000
+            let encodedRd: Int64 = encodeReg(Rd, shift: 0)
+            let encodedRn: Int64 = encodeReg(Rn, shift: 5)
+            let size: Int64 = (Rd.is32 ? 0 : 1) << 31
+            let sh: Int64 = (offset.lsl == ._0 ? 0 : 1) << 22
+            let imm: Int64 = Int64(offset.imm) << 10
+            let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | imm
+            return returnAsArray(encoded)
         case .stur(let Rt, let Rn, let offset ):
             //                    S           imm9         Rn    Rt
             let mask: Int64 = 0b1_0_111000000_000000000_00_00000_00000
@@ -398,46 +467,6 @@ public class EmitterM1 {
             let imm = (try truncateOffset(Int64(offsetCount), divisor: divider, bits: immBits)) << immShift
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
             let encoded = mask | encodedRt | encodedRn | imm | size
-            return returnAsArray(encoded)
-        case .ldr_old(._32(let Rt as any Register, let Rn as any Register, let offset)),
-            .ldr_old(._64(let Rt as any Register, let Rn as any Register, let offset)):
-            let size: Int64 = Rt.is32 ? 0b10 : 0b11
-            switch offset {
-            case .immediate(let imm):
-                guard imm >= -256 else {
-                    throw EmitterM1Error.invalidOffset("Offset can't be less than -256")
-                }
-                guard
-                    (!Rt.is32) || (imm <= 255 && imm >= -256)
-                        || (imm >= 0 && imm <= 16380 && imm % 4 == 0)
-                else {
-                    throw EmitterM1Error.invalidOffset(
-                        "Offset in 32-bit mode must be a multiple of 4 in range 0...16380"
-                    )
-                }
-                guard
-                    (Rt.is32) || (imm <= 255 && imm >= -256)
-                        || (imm >= 0 && imm <= 32760 && imm % 8 == 0)
-                else {
-                    throw EmitterM1Error.invalidOffset(
-                        "Offset in 64-bit mode must be a multiple of 8 in range 0...32760"
-                    )
-                }
-            default: break
-            }
-            let sizeOffset: Int64 = 30
-            let v: Int64 = 0
-            let vOffset: Int64 = 26
-            let opc: Int64 = 0b01
-            let opcOffset: Int64 = 22
-            let mask: Int64 = 0b0011_1001_0000_0000_0000_0000_0000_0000
-
-            let encodedRt = encodeReg(Rt, shift: 0)
-            let encodedRn = encodeReg(Rn, shift: 5)
-
-            let encoded: Int64 =
-                (size << sizeOffset) | (v << vOffset) | (opc << opcOffset) | mask
-                | encodedRt | encodedRn
             return returnAsArray(encoded)
         case .movk64(let register, let val, let shift):
             // xx1x 0010 1xxi iiii iiii iiii iiid dddd

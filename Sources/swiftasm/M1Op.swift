@@ -11,14 +11,14 @@ enum M1Op : CpuOp {
       switch(self) {
         case .nop: return "nop" 
         case .ret: return "ret"
-        case .add(let rt, let rn, let off) where off < 0: 
-          fallthrough
-        case .sub(let rt, let rn, let off) where off >= 0: 
-          return "sub \(rt), \(rn), #\(abs(off))"
+        case .add(let rt, let rn, let off) where off.imm < 0: 
+          return M1Op.sub(rt, rn, Imm12Lsl12(-off.imm, lsl: off.lsl)).debugDescription
+        case .sub(let rt, let rn, let off) where off.imm >= 0: 
+          return "sub \(rt), \(rn), \(off.debugDescription)"
         case .sub(let rt, let rn, let off): 
-          fallthrough
+          return M1Op.add(rt, rn, Imm12Lsl12(-off.imm, lsl: off.lsl)).debugDescription
         case .add(let rt, let rn, let off): 
-          return "add \(rt), \(rn), #\(abs(off))"
+          return "add \(rt), \(rn), \(off.debugDescription)"
         case .svc(let x): return "svc 0x\(String(x, radix: 16).leftPadding(toLength: 4, withPad: "0"))"
         case .str(let rt, .reg64offset(let rn, let offsetC, nil)):
           return "str \(rt), [\(rn), #\(offsetC)]"
@@ -94,8 +94,6 @@ enum M1Op : CpuOp {
           return "ldp .reg64shift not implemented"
         case .ldp(_, .reg32(_, _, _)):
           return "ldp .reg32 not implemented"
-        case .ldr_old(_):
-          return "ldp_old not implemented"
         case .ldr(_, .immediate(_)):
           return "ldr .immediate"
         case .ldr(_, .reg64shift(_, _)):
@@ -137,8 +135,8 @@ enum M1Op : CpuOp {
     */
     case adr64(Register64, RelativeOffset)
 
-    case sub(Register64, Register64, Int16) // negative -> alias for add
-    case add(Register64, Register64, Int16) // negative -> alias for sub
+    case sub(any Register, any Register, Imm12Lsl12) // negative -> alias for add
+    case add(any Register, any Register, Imm12Lsl12) // negative -> alias for sub
 
     case b(RelativeOffset) // 26 bits max
     case blr(Register64)
@@ -181,9 +179,6 @@ enum M1Op : CpuOp {
         - https://developer.arm.com/documentation/ddi0596/2021-06/Index-by-Encoding/Loads-and-Stores?lang=en#ldst_pos
         - https://developer.arm.com/documentation/ddi0596/2021-06/Base-Instructions/LDR--immediate---Load-Register--immediate--?lang=en
     */
-    case ldr_old(LdrMode)
-
-    // should supersede .ldr(LdrMode)
     case ldr(any Register, Offset)
 }
 
