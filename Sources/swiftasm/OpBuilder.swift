@@ -1,6 +1,10 @@
 import Darwin
 import Foundation
 
+/* NOTE: this file shouldn't contain
+anything specific to M1. Keep it a generic
+output builder based on CpuOp protocol. */
+
 class OpBuilder
 {
     var ops: [any CpuOp] = []
@@ -19,84 +23,6 @@ class OpBuilder
             offsetFromBase: byteSize)
     }
 
-    @discardableResult
-    func appendStackReservation(_ regs: [HLType]) throws -> OpBuilder {
-        let size: Int16 = regs.reduce(0) { $0 + Int16($1.neededBytes) }
-        self.append(
-            .sub(X.sp, X.sp, try Imm12Lsl12(Immediate12(size), lsl: ._0))
-        )
-        return self
-    }
-
-    @discardableResult
-    func appendDebugPrintAligned4(_ val: String) -> OpBuilder {
-        var adr = RelativeDeferredOffset()
-        var jmpTarget = RelativeDeferredOffset()
-        let str = "[jitdebug] \(val)"
-        
-        self.append(
-            // Stash registers we'll use (so we can reset)
-            .str(Register64.x0, .reg64offset(.sp, -32, .pre)),
-            .str(Register64.x1, .reg64offset(.sp, 8, nil)),
-            .str(Register64.x2, .reg64offset(.sp, 16, nil)),
-            .str(Register64.x16, .reg64offset(.sp, 24, nil)),
-
-            // unix write system call
-            .movz64(.x0, 1, nil)
-        )
-        adr.start(at: self.byteSize)
-        self.append(
-            .adr64(.x1, adr),
-            .movz64(.x2, UInt16(str.count), nil),
-            .movz64(.x16, 4, nil), 
-            .svc(0x80),
-            
-            // restore
-            .ldr(Register64.x16, .reg64offset(.sp, 24, nil)),
-            .ldr(Register64.x2, .reg64offset(.sp, 16, nil)),
-            .ldr(Register64.x1, .reg64offset(.sp, 8, nil)),
-            .ldr(Register64.x0, .reg64offset(.sp, 32, .post))
-        )
-        
-        jmpTarget.start(at: self.byteSize)
-        self.append(.b(jmpTarget))
-        
-        adr.stop(at: self.byteSize)
-        self.append(ascii: str)
-            .align(4)
-
-        jmpTarget.stop(at: self.byteSize)
-        
-        // appendSystemExit(132)
-        return self
-    }
-
-    @discardableResult
-    func appendSystemExit(_ code: UInt8) -> OpBuilder {
-        self.append(
-            .movz64(.x0, UInt16(code), nil),
-            .movz64(.x16, 1, nil),
-            .svc(0x80)
-        )
-    }
-
-    @discardableResult
-    func appendPrologue() throws -> OpBuilder {
-        self.append(
-            .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre)),
-            .movr64(.x29_fp, .sp)
-        )
-        return self
-    }
-    
-    @discardableResult
-    func appendEpilogue() throws -> OpBuilder {
-        self.append(
-            .ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))
-        )
-        return self
-    }
-    
     @discardableResult
     func align(_ to: Int64) -> OpBuilder {
         let origSize = self.byteSize
@@ -149,6 +75,33 @@ class OpBuilder
 
     func build() -> [UInt8] {
         return try! safeBuild()
+    }
+
+    // print copy-pastable into a test
+    func hexPrint() {
+        print("---- START ----")
+        var printedAlready: ByteCount = 0
+        for op in self.ops {
+            let bytes = try! op.emit()
+            for (ix, row) in bytes.chunked(into: 4).enumerated() {
+                let strs = row.map { "0x" + String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") }
+                
+                let debugString: String
+                if case PseudoOp.ascii = op {
+                    debugString = String(bytes: row, encoding: .ascii)!.replacingOccurrences(of: " ", with: ".")
+                } else if ix == 0 {
+                    debugString = op.debugDescription
+                } else {
+                    debugString = ""
+                }
+                
+                print(strs.joined(separator: ", ") + ", // \(debugString)")
+            }
+
+            printedAlready += op.size
+        }
+        
+        print("---- END ----")
     }
 
     func debugPrint() {

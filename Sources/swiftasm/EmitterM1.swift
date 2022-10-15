@@ -166,9 +166,9 @@ public class EmitterM1 {
     private static func returnAsArray(_ val: Int64) -> [UInt8] {
         let length: Int = 4 * MemoryLayout<UInt8>.size
         let result = withUnsafeBytes(of: val) { bytes in Array(bytes.prefix(length)) }
-        print(
-            "Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })"
-        )
+        // print(
+        //     "Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })"
+        // )
         return result
     }
 

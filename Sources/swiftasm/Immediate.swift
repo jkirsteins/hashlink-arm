@@ -300,6 +300,14 @@ struct Imm12Lsl12 : Immediate, CustomDebugStringConvertible, ExpressibleByIntege
         self.lsl = lsl
     }
 
+    init(_ val: any BinaryInteger) throws {
+        try self.init(try Immediate12(val))
+    }
+
+    static func i(_ val: any BinaryInteger) throws -> Self {
+        try Self(val)
+    }
+
     init(_ val: Int64, bits: Int64) throws {
         guard bits == 12 else { fatalError("bits must be 12 for \(type(of: self))") }
         do {

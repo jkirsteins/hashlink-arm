@@ -144,6 +144,7 @@ extension HLType : HLRegisterSize {
             case .i32: fallthrough
             case .f32: return 4
             
+            case .i64: fallthrough
             case .f64: return 8
 
             // All the following values are memory addresse pointers and takes either 4 bytes in x86 mode or 8 bytes in x86-64 mode:

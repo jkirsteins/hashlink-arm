@@ -5,4 +5,6 @@ enum GlobalError : Error {
 
     // generic invalid value passed
     case invalidValue(_ reason: String)
+
+    case expectationViolation(_ reason: String)
 }
