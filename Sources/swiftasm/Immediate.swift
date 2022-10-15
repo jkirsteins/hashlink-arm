@@ -56,30 +56,30 @@ struct VariableImmediate: Immediate {
     }
 }
 
-struct AbsoluteAddressImmediate: Immediate, ExpressibleByIntegerLiteral {
-    let bits: Int64
-    let value: Int64 
+// struct AbsoluteAddressImmediate: Immediate, ExpressibleByIntegerLiteral {
+//     let bits: Int64
+//     let value: Int64 
 
-    var immediate: Int64 { value }
+//     var immediate: Int64 { value }
 
-    init(_ val: UnsafeMutableRawPointer) {
-        self.value = Int64(Int(bitPattern: val))
-        self.bits = 64
-    }
+//     init(_ val: UnsafeMutableRawPointer) {
+//         self.value = Int64(Int(bitPattern: val))
+//         self.bits = 64
+//     }
 
-    init(_ val: Int64, bits: Int64) throws {
-        guard bits == 64 else { throw GlobalError.invalidValue("\(type(of: self)) expects 64 bits") }
-        self.value = val
-        self.bits = bits
-    }
+//     init(_ val: Int64, bits: Int64) throws {
+//         guard bits == 64 else { throw GlobalError.invalidValue("\(type(of: self)) expects 64 bits") }
+//         self.value = val
+//         self.bits = bits
+//     }
 
-    init(integerLiteral: Int64) {
-        self.value = integerLiteral
-        self.bits = 64
-    }
-}
+//     init(integerLiteral: Int64) {
+//         self.value = integerLiteral
+//         self.bits = 64
+//     }
+// }
 
-typealias DeferredAddressImmediate = DeferredImmediate<AbsoluteAddressImmediate>
+// typealias DeferredAddressImmediate = DeferredImmediate<AbsoluteAddressImmediate>
 
 struct DeferredImmediate<T: Immediate> : Immediate {
     let ptr: SharedStorage<T?> = SharedStorage(wrappedValue: nil)

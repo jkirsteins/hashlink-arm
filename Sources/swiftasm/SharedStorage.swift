@@ -9,6 +9,10 @@
         nonmutating get { storage.value }
         nonmutating set { storage.value = newValue }
     }
+
+    public func isSameStorage(_ other: Self) -> Bool {
+        self.storage == other.storage
+    }
     
     private class Storage : Equatable {
         init(value: T) {

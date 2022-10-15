@@ -34,25 +34,25 @@ final class ImmediateTests: XCTestCase {
         XCTAssertFalse(x.isPositive) 
     }
 
-    func testAbsoluteAddressImmediate() throws {
-        var test = 1
-        var ptr = UnsafeMutableRawPointer(mutating: &test)
-        let x = AbsoluteAddressImmediate(ptr)
+    // func testAbsoluteAddressImmediate() throws {
+    //     var test = 1
+    //     var ptr = UnsafeMutableRawPointer(mutating: &test)
+    //     let x = AbsoluteAddressImmediate(ptr)
 
-        XCTAssertEqual(x.immediate, Int64(Int(bitPattern: ptr)))
-    }
+    //     XCTAssertEqual(x.immediate, Int64(Int(bitPattern: ptr)))
+    // }
 
-    func testDeferredAbsoluteAddressImmediate() throws {
-        var test = 1
-        var ptr = UnsafeMutableRawPointer(mutating: &test)
-        let sut: DeferredImmediate<AbsoluteAddressImmediate> = DeferredImmediate()
+    // func testDeferredAbsoluteAddressImmediate() throws {
+    //     var test = 1
+    //     var ptr = UnsafeMutableRawPointer(mutating: &test)
+    //     let sut: DeferredImmediate<AbsoluteAddressImmediate> = DeferredImmediate()
 
-        XCTAssertThrowsError(try sut.get())
+    //     XCTAssertThrowsError(try sut.get())
 
-        let x = AbsoluteAddressImmediate(ptr)
-        sut.finalize(x)
+    //     let x = AbsoluteAddressImmediate(ptr)
+    //     sut.finalize(x)
 
-        XCTAssertEqual(try sut.get(), x)
-        XCTAssertEqual(sut.immediate, x.immediate)
-    }
+    //     XCTAssertEqual(try sut.get(), x)
+    //     XCTAssertEqual(sut.immediate, x.immediate)
+    // }
 }

@@ -40,20 +40,42 @@ class WholeFunctionsTable {
     let functions: TableResolver<HLCompiledFunction> 
     
     // For compiler to be able to refer to addresses ahead of them being known
-    let addresses: [DeferredAbsoluteAddress] 
+    // These can be relative (for HLCompiledFunction) or absolute (for HLNative)
+    //
+    // These need to be separate from functions, and have to be merged once all data is available,
+    // for example in this scenario:
+    //   - start compiling function #0
+    //   - function #0 needs to call function #1
+    //   - we need a deferred address, but function #1 has not been compiled yet
+    let addresses: [any DeferredMemoryAddress] 
+
+    // convenience for tests
+    convenience init(nnatives: Int32, nfunctions: Int32, jitBase: SharedStorage<UnsafeMutableRawPointer?>) {
+        let natives: TableResolver<HLNative> = TableResolver(table: SharedStorage(wrappedValue: []), count: nnatives)
+        let funcs: TableResolver<HLCompiledFunction> = TableResolver(table: SharedStorage(wrappedValue: []), count: nfunctions)
+        self.init(natives: natives, functions: funcs, jitBase: jitBase)
+    }
 
     init(
         natives: TableResolver<HLNative>,
-        functions: TableResolver<HLCompiledFunction>) 
+        functions: TableResolver<HLCompiledFunction>,
+        jitBase: SharedStorage<UnsafeMutableRawPointer?>) 
     {
         self.natives = natives 
+        guard natives.count == natives.table.count else {
+            // This is the normal case. Placing a fatalError in case something changes, because
+            // the address store/lookup is not considered for this scenario.
+            fatalError("Natives must already be fully populated")
+        }
+
         self.functions = functions
-        self.addresses = (0..<(natives.count + functions.count)).map { ix in
+        self.addresses = (0..<(natives.count + functions.count)).map { (ix: Int32)->any DeferredMemoryAddress in
+            // assuming natives are always available with a set absolute address
             if let nat = natives.table.first { $0.findex == ix } {
-                return DeferredAbsoluteAddress(wrappedValue: nat.memory.value)
+                return nat.memory.value
             } 
             
-            return DeferredAbsoluteAddress(wrappedValue: nil)
+            return FullyDeferredRelativeAddress(jitBase: jitBase)
         }
     } 
 
@@ -71,7 +93,7 @@ class WholeFunctionsTable {
         }
     }
 
-    func getAddr(_ ix: Int) -> DeferredAbsoluteAddress {
+    func getAddr(_ ix: Int) -> any DeferredMemoryAddress {
         self.addresses[ix]
     }
 

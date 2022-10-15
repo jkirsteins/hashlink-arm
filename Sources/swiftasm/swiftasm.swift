@@ -53,7 +53,8 @@ struct SwiftAsm: ParsableCommand {
         let wft = WholeFunctionsTable(
             // natives: /*head.nativeResolver*/fakeNativeResolver, 
             natives: head.nativeResolver, 
-            functions: compiledFunctions)
+            functions: compiledFunctions,
+            jitBase: SharedStorage(wrappedValue: nil))
 
         // TODO: unify functions and natives in one function table
 
@@ -96,7 +97,7 @@ struct SwiftAsm: ParsableCommand {
         
         jit.debugPrint()
 
-        print("Got \(xxx)@\((xxx.memory as! DeferredAddress).offsetFromBase)")
+        print("Got \(xxx)@\((xxx.memory as! any DeferredMemoryAddress))")
 
 
         let finalEntrypoint = jit.buildEntrypoint(compiledEntrypoint)

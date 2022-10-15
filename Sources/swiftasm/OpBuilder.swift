@@ -13,8 +13,8 @@ class OpBuilder
     Before compiling the whole block, the address is simply offset from 0.
     
     Aftercompiling the whole block, the address is <jitmemstart + offset> */
-    func getDeferredPosition() -> DeferredAddress {
-        DeferredAddress(
+    func getDeferredPosition() -> DeferredBaseRelativeAddress {
+        DeferredBaseRelativeAddress(
             jitBase: jitBase, 
             offsetFromBase: byteSize)
     }

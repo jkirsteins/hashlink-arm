@@ -29,22 +29,31 @@ class M1Compiler {
         for op in ops { buffer.push(try emitter.emit(for: op)) }
     }
 
+    /*
+    Will compile and update the JIT context with new known deferred addresses.
+    */
     func compile(
         native: HLFunction, 
         into mem: OpBuilder, 
         ctx: JitContext) throws -> HLCompiledFunction {
         
         // grab it before it changes from prologue
-        let memory = mem.getDeferredPosition()
+        // let memory = mem.getDeferredPosition()
         let resolvedRegs = native.regs.map { $0.value }
 
-        print("Compiling function \(native.findex) at \(memory.offsetFromBase)")
+        let relativeBaseAddr = mem.getDeferredPosition()
+        let currentFuncAddr = ctx.wft.getAddr(Int(native.findex))
+        currentFuncAddr.update(from: relativeBaseAddr)
+
+        print("Compiling function \(native.findex) at deferred address \(currentFuncAddr)")
+
+        // currentFuncAddr.wrappedValue = 
         
         try mem.appendPrologue()
 
         try mem.appendStackReservation(resolvedRegs)
         
-        mem.appendDebugPrintAligned4("Entering function \(native.findex)@\(memory.offsetFromBase)\n")
+        mem.appendDebugPrintAligned4("Entering function \(native.findex)@\(relativeBaseAddr.offsetFromBase)\n")
         
         for op in native.ops {
             mem.appendDebugPrintAligned4("Executing \(op.debugDescription)\n")
@@ -52,12 +61,12 @@ class M1Compiler {
             switch op {
                 case .OCall0(let dst, let fun):
                     let fnAddr = try ctx.wft.getAddr(fun)
-                    // mem.append(
-                    //     PseudoOp.mov(.x10, fnAddr.wrappedValue),
-                    //     .blr(.x10)
-                    // )
+                    mem.append(
+                        PseudoOp.mov(.x10, fnAddr),
+                        M1Op.blr(.x10)
+                    )
                     // fatalError("Jumping to \(fn) for funIx \(fun)")
-                    fatalError("OCall0")
+                    // fatalError("OCall0")
                 case .ONew: fatalError("No ONew yet. What's up with types?")
                 case .OGetThis(let reg1, let fieldRef):
                     let regStackOffset = getRegStackOffset(resolvedRegs, reg1)
@@ -86,9 +95,14 @@ class M1Compiler {
 
         // mem.appendSystemExit(44)
 
-        return HLCompiledFunction(
+        let result = HLCompiledFunction(
             function: native, 
-            memory: memory)
+            memory: currentFuncAddr)
+
+        // Register as we go. 
+        ctx.wft.functions.table.append(result)
+
+        return result
 
         /*
         Epilogue (excluding return)
