@@ -33,39 +33,6 @@ public enum Shift64_Real {
     case ror(Int)
 }
 
-struct Imm12Lsl12 : CustomDebugStringConvertible, ExpressibleByIntegerLiteral {
-    enum Lsl12 {
-        case _0 
-        case _12
-    }
-
-    let imm: Immediate12
-    let lsl: Lsl12
-
-    var debugDescription: String {
-        if lsl == ._0 {
-            return "#\(imm.immediate)"
-        } else {
-            return "#\(imm.immediate), lsl 12"
-        }
-    }
-
-    init(integerLiteral: Int16)
-    {
-        self.imm = try! Immediate12(integerLiteral)
-        self.lsl = ._0
-    }
-
-    init(_ imm: Immediate12, lsl: Imm12Lsl12.Lsl12 = ._0) throws {
-        self.imm = imm
-        self.lsl = lsl
-    }
-
-    // init(_ imm: Int16, lsl: Imm12Lsl12.Lsl12 = ._0) throws {
-    //     self.imm = try Immediate12(imm)
-    //     self.lsl = lsl
-    // }
-}
 
 public enum Shift32: Int {
     case _0 = 0

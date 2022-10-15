@@ -3,7 +3,25 @@ import XCTest
 @testable import swiftasm
 
 final class ImmediateTests: XCTestCase {
-    func testInit() throws {
+    func testImm12Lsl12() throws {
+        // fits, so default to lsl 0
+        let x1: Imm12Lsl12 = 51
+        let x2 = try Imm12Lsl12(51, bits: 12)
+        XCTAssertEqual(x1.immediate, 51)
+        XCTAssertEqual(x1.lsl, ._0)
+        XCTAssertEqual(x2.immediate, 51)
+        XCTAssertEqual(x2.lsl, ._0)
+
+        // infer 4096 doesn't fit, so apply lsl 12
+        let y1: Imm12Lsl12 = 4096
+        let y2 = try Imm12Lsl12(4096, bits: 12)
+        XCTAssertEqual(y1.immediate, 1)
+        XCTAssertEqual(y1.lsl, ._12)
+        XCTAssertEqual(y2.immediate, 1)
+        XCTAssertEqual(y2.lsl, ._12)
+    }
+
+    func testImmediate12() throws {
         let x: Immediate12 = -14
         // value will not match -14 cause truncated
         XCTAssertEqual(x.immediate, 4082)   

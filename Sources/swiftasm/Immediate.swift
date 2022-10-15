@@ -244,3 +244,59 @@ extension Int16: Immediate {
     }
 }
 
+
+struct Imm12Lsl12 : Immediate, CustomDebugStringConvertible, ExpressibleByIntegerLiteral {
+    enum Lsl12 {
+        case _0 
+        case _12
+    }
+
+    var bits: Int64 { imm.bits }
+    var immediate: Int64 { imm.immediate }
+    
+    let imm: Immediate12
+    let lsl: Lsl12
+
+    var debugDescription: String {
+        if lsl == ._0 {
+            return "#\(imm.immediate)"
+        } else {
+            return "#\(imm.immediate), lsl 12"
+        }
+    }
+
+    init(integerLiteral val: Int16)
+    {
+        do {
+            self.imm = try Immediate12(val)
+            self.lsl = ._0
+        } catch {
+            guard val == ((val >> 12) << 12) else {
+                fatalError("Value must fit in either high or low 12 bits of a 24 bit value")
+            }
+
+            self.imm = try! Immediate12(Int64(val) >> 12)
+            self.lsl = ._12
+        }
+    }
+
+    init(_ imm: Immediate12, lsl: Imm12Lsl12.Lsl12 = ._0) throws {
+        self.imm = imm
+        self.lsl = lsl
+    }
+
+    init(_ val: Int64, bits: Int64) throws {
+        guard bits == 12 else { fatalError("bits must be 12 for \(type(of: self))") }
+        do {
+            self.imm = try Immediate12(val, bits: 12)
+            self.lsl = ._0
+        } catch {
+            guard val == ((val >> 12) << 12) else {
+                fatalError("Value must fit in either high or low 12 bits of a 24 bit value")
+            }
+
+            self.imm = try Immediate12(val >> 12, bits: 12)
+            self.lsl = ._12
+        }
+    }
+}
