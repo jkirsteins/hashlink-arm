@@ -1,4 +1,4 @@
-struct HLGlobal : CustomDebugStringConvertible {
+struct HLGlobal : Equatable, CustomDebugStringConvertible {
     let type: Resolvable<HLType>
 
     var debugDescription: String {

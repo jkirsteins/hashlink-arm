@@ -14,6 +14,24 @@ final class OpBuilderTests: XCTestCase {
         )
     }
 
+    func testMov() throws {
+        let sut = OpBuilder()
+        let op = PseudoOp.mov(.x0, 1229801703818430600)
+        try sut.append(op)
+
+        let b = sut.build()
+
+        XCTAssertEqual(b.count, Int(op.size))
+
+        XCTAssertEqual(
+            b,
+            [0x00, 0x11, 0x91, 0xd2,
+            0x80, 0x88, 0xa8, 0xf2,
+            0x40, 0x44, 0xc4, 0xf2,
+            0x20, 0x22, 0xe2, 0xf2]
+        )
+    }
+
     func testAppendEpilogue() throws {
         let sut = OpBuilder()
         try sut.appendEpilogue()

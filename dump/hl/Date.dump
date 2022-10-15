@@ -35,7 +35,7 @@ class Date {
 	public function toString[Function:() -> String]
 		[Block:Dynamic]
 			[Var outLen(4975):Int] [Const:Int] 0
-			[Var bytes(9455):Int]
+			[Var bytes(9457):Int]
 				[Field:Int]
 					[Const:Date] this
 					[FInstance:Int]
@@ -52,7 +52,7 @@ class Date {
 						[FStatic:(t : Int, outLen : hl.Ref<Int>) -> hl.Bytes]
 							Date
 							date_to_string:(t : Int, outLen : hl.Ref<Int>) -> hl.Bytes
-					[Local bytes(9455):Int:Int]
+					[Local bytes(9457):Int:Int]
 					[Meta:hl.Ref<Int>]
 						:implicitCast
 						[Local this1(4981):hl.Ref<Int>:hl.Ref<Int>]

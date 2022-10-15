@@ -59,8 +59,10 @@ struct SwiftAsm: ParsableCommand {
 
         // entrypoint initializes types, memory, and all that good stuff
         let funcs = [
-            head.functionResolver.table.first { $0.findex == 0 }!,
-            head.functionResolver.table.first { $0.findex == 1 }!,
+            head.functionResolver.table.first { $0.findex == 295 }!,
+            head.functionResolver.table.first { $0.findex == 404 }!,
+            
+            // head.functionResolver.table.first { $0.findex == 1 }!,
 
             // // Type_init
             // head.functionResolver.table.first { $0.findex == 295 }!,
@@ -72,11 +74,12 @@ struct SwiftAsm: ParsableCommand {
             // head.functionResolver.table.first { $0.findex == 30 }!
         ]
 
+        let ctx = JitContext(wft: wft)
         let jit = OpBuilder()
         
-        // compiledTable.wrappedValue = try /*head.functionResolver.table*/funcs.map {
-        compiledTable.wrappedValue = try head.functionResolver.table.map {
-            try compiler.compile(native: $0, into: jit)
+        compiledTable.wrappedValue = try /*head.functionResolver.table*/funcs.map {
+        // compiledTable.wrappedValue = try head.functionResolver.table.map {
+            try compiler.compile(native: $0, into: jit, ctx: ctx)
             // break
         }
 

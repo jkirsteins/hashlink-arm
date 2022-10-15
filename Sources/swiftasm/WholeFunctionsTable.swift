@@ -1,24 +1,4 @@
-protocol MemoryAddress {
-    var value: UnsafeMutableRawPointer { get }
-}
-
-extension UnsafeMutableRawPointer: MemoryAddress {
-    var value: UnsafeMutableRawPointer { self }
-}
-
-struct DeferredAddress: MemoryAddress {
-    let jitBase: SharedStorage<UnsafeMutableRawPointer?>
-    let offsetFromBase: ByteCount
-
-    var value: UnsafeMutableRawPointer {
-        guard let base = self.jitBase.wrappedValue else {
-            fatalError("Deferred address not available")
-        }
-        return base.advanced(by: Int(offsetFromBase))
-    }
-}
-
-struct HLCompiledFunction : WholeFunction, CustomDebugStringConvertible {
+struct HLCompiledFunction : Equatable, WholeFunction, CustomDebugStringConvertible {
     let function: HLFunction
     let memory: any MemoryAddress
 
@@ -32,9 +12,16 @@ struct HLCompiledFunction : WholeFunction, CustomDebugStringConvertible {
     var wholeFunctionDebugDescription: String {
         "compiled/ops:\(function.ops.count)/regs:\(function.regs.count)/\(findex)"
     }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        return lhs.function == rhs.function  &&
+            lhs.memory.isEqual(rhs.memory) && 
+            lhs.type == rhs.type && 
+            lhs.findex == rhs.findex 
+    }
 }
 
-protocol WholeFunction {
+protocol WholeFunction : Equatable {
     var findex: Int32 { get }
     var memory: any MemoryAddress { get }
     var type: Resolvable<HLType> { get }
@@ -52,12 +39,22 @@ class WholeFunctionsTable {
     let natives: TableResolver<HLNative>
     let functions: TableResolver<HLCompiledFunction> 
     
+    // For compiler to be able to refer to addresses ahead of them being known
+    let addresses: [DeferredAbsoluteAddress] 
+
     init(
         natives: TableResolver<HLNative>,
         functions: TableResolver<HLCompiledFunction>) 
     {
         self.natives = natives 
         self.functions = functions
+        self.addresses = (0..<(natives.count + functions.count)).map { ix in
+            if let nat = natives.table.first { $0.findex == ix } {
+                return DeferredAbsoluteAddress(wrappedValue: nat.memory.value)
+            } 
+            
+            return DeferredAbsoluteAddress(wrappedValue: nil)
+        }
     } 
 
     func requireReady() throws {
@@ -74,17 +71,20 @@ class WholeFunctionsTable {
         }
     }
 
-    func get(_ ix: Int) throws -> WholeFunction {
+    func getAddr(_ ix: Int) -> DeferredAbsoluteAddress {
+        self.addresses[ix]
+    }
+
+    func get(_ ix: Int) throws -> any WholeFunction {
         try requireReady()
         return self.table![ix] 
     }
 
     var ready: Bool { table != nil && _cachedTable != nil }
 
-    var _cachedTable: [WholeFunction]?
-    var table: [WholeFunction]! {
+    var _cachedTable: [any WholeFunction]?
+    var table: [any WholeFunction]! {
         guard _cachedTable == nil else { 
-            print("Got cached")
             return _cachedTable 
         }
 

@@ -1,6 +1,6 @@
 
 
-class TableResolver<T: CustomDebugStringConvertible> {
+class TableResolver<T: CustomDebugStringConvertible> where T: Equatable {
     @SharedStorage var table: [T]
     let count: Int32
 
@@ -22,11 +22,16 @@ class TableResolver<T: CustomDebugStringConvertible> {
     func getResolvable(_ index: TableIndex) -> Resolvable<T> {
         Resolvable(ix: index, table: self)
     }
+
+    static func == (lhs: TableResolver, rhs: TableResolver) -> Bool {
+        return lhs.count == rhs.count  &&
+            lhs.table == rhs.table
+    }
 }
 
 typealias TableIndex = Int
 
-struct Resolvable<T: CustomDebugStringConvertible> : CustomDebugStringConvertible {
+struct Resolvable<T: CustomDebugStringConvertible> : Equatable, CustomDebugStringConvertible where T: Equatable {
     let ix: TableIndex
     let table: TableResolver<T>
 
@@ -36,6 +41,10 @@ struct Resolvable<T: CustomDebugStringConvertible> : CustomDebugStringConvertibl
 
     var debugDescription: String {
         return "\(ix) : \(value.debugDescription)"
+    }
+
+    static func == (lhs: Resolvable, rhs: Resolvable) -> Bool {
+        return lhs.ix == rhs.ix && lhs.table == rhs.table
     }
 }
 

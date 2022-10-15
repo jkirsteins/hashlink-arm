@@ -104,8 +104,13 @@ class Main {
      Main.hx:107  16: CallClosure reg1 = reg2(reg4, reg8)
      Main.hx:107  17: Ret         reg1
      */
-    static public function pathTest2(p: Path2):Void {
+     static public function pathTest2(p: Path2):Void {
         trace('received path $p');
+    }
+
+    static public function pathTest3(p: Path2):Int {
+        var result = p.test2;
+        return result;
     }
 
 	static public function main():Void {

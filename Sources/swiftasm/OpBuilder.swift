@@ -1,34 +1,6 @@
 import Darwin
 import Foundation
 
-enum PseudoOp: CpuOp, CustomDebugStringConvertible {
-    case zero
-    case ascii(String)
-
-    var size: ByteCount {
-        switch(self) {
-            case .zero: return 1
-            case .ascii(let v): return ByteCount(v.utf8.count)
-        }
-    }
-
-    var debugDescription: String {
-        switch(self) {
-            case .zero: return ".zero"
-            case .ascii(let val):
-                return ".ascii(\(val))"
-        }
-    }
-
-    func emit() throws -> [UInt8] {
-        switch(self) {
-            case .zero: return [0]
-            case .ascii(let val):
-                return Array(val.utf8)
-        }
-    }
-}
-
 class OpBuilder
 {
     var ops: [any CpuOp] = []
@@ -36,6 +8,11 @@ class OpBuilder
     var byteSize: ByteCount = 0
     let jitBase: SharedStorage<UnsafeMutableRawPointer?> = SharedStorage(wrappedValue: nil)
 
+    /* Deferred refers to the base memory address (for JIT) not being available.
+    
+    Before compiling the whole block, the address is simply offset from 0.
+    
+    Aftercompiling the whole block, the address is <jitmemstart + offset> */
     func getDeferredPosition() -> DeferredAddress {
         DeferredAddress(
             jitBase: jitBase, 
@@ -43,12 +20,12 @@ class OpBuilder
     }
 
     @discardableResult
-    func appendStackReservation(_ regs: [HLType]) -> OpBuilder {
-        let size = regs.reduce(0) { $0 + $1.neededBytes }
+    func appendStackReservation(_ regs: [HLType]) throws -> OpBuilder {
+        let size: Int16 = regs.reduce(0) { $0 + Int16($1.neededBytes) }
         self.append(
-            //.sub sp, sp, size
+            .sub(X.sp, X.sp, try Imm12Lsl12(Immediate12(size), lsl: ._0))
         )
-        fatalError("Not implemented")
+        return self
     }
 
     @discardableResult

@@ -39,31 +39,32 @@ struct Imm12Lsl12 : CustomDebugStringConvertible, ExpressibleByIntegerLiteral {
         case _12
     }
 
-    let imm: Int16
+    let imm: Immediate12
     let lsl: Lsl12
 
     var debugDescription: String {
         if lsl == ._0 {
-            return "#\(imm)"
+            return "#\(imm.immediate)"
         } else {
-            return "#\(imm), lsl 12"
+            return "#\(imm.immediate), lsl 12"
         }
     }
 
     init(integerLiteral: Int16)
     {
-        // we don't need the encoded result, just
-        // check if we fit
-        try! EmitterM1.truncateOffset(Int64(integerLiteral), divisor: 1, bits: 12)
-
-        self.imm = integerLiteral
+        self.imm = try! Immediate12(integerLiteral)
         self.lsl = ._0
     }
 
-    init(_ imm: Int16, lsl: Imm12Lsl12.Lsl12 = ._0) {
-        self.imm = Int16(try! EmitterM1.truncateOffset(Int64(imm), divisor: 1, bits: 12)) 
+    init(_ imm: Immediate12, lsl: Imm12Lsl12.Lsl12 = ._0) throws {
+        self.imm = imm
         self.lsl = lsl
     }
+
+    // init(_ imm: Int16, lsl: Imm12Lsl12.Lsl12 = ._0) throws {
+    //     self.imm = try Immediate12(imm)
+    //     self.lsl = lsl
+    // }
 }
 
 public enum Shift32: Int {
@@ -251,8 +252,8 @@ public class EmitterM1 {
             guard Rd.is32 == Rn.is32 else {
                 throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
             }
-            guard offset.imm >= 0 else {
-                return try emit(for: .add(Rd, Rn, Imm12Lsl12(-offset.imm, lsl: offset.lsl)))
+            guard offset.imm.isPositive else {
+                return try emit(for: .add(Rd, Rn, Imm12Lsl12(offset.imm.flippedSign, lsl: offset.lsl)))
             }
 
             //                  S          sh imm12        Rn    Rd
@@ -261,23 +262,24 @@ public class EmitterM1 {
             let encodedRn: Int64 = encodeReg(Rn, shift: 5)
             let size: Int64 = (Rd.is32 ? 0 : 1) << 31
             let sh: Int64 = (offset.lsl == ._0 ? 0 : 1) << 22
-            let imm: Int64 = Int64(offset.imm) << 10
+            let imm: Int64 = offset.imm.shiftedLeft(10)
             let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | imm
             return returnAsArray(encoded)
         case .add(let Rd, let Rn, let offset):
             guard Rd.is32 == Rn.is32 else {
                 throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
             }
-            guard offset.imm >= 0 else {
-                return try emit(for: .sub(Rd, Rn, Imm12Lsl12(-offset.imm, lsl: offset.lsl)))
+            guard offset.imm.isPositive else {
+                return try emit(for: .sub(Rd, Rn, Imm12Lsl12(offset.imm.flippedSign, lsl: offset.lsl)))
             }
+            
             //                  S          sh imm12        Rn    Rd
             let mask: Int64 = 0b0_00100010_0__000000000000_00000_00000
             let encodedRd: Int64 = encodeReg(Rd, shift: 0)
             let encodedRn: Int64 = encodeReg(Rn, shift: 5)
             let size: Int64 = (Rd.is32 ? 0 : 1) << 31
             let sh: Int64 = (offset.lsl == ._0 ? 0 : 1) << 22
-            let imm: Int64 = Int64(offset.imm) << 10
+            let imm: Int64 = offset.imm.shiftedLeft(10)
             let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | imm
             return returnAsArray(encoded)
         case .stur(let Rt, let Rn, let offset ):
@@ -412,18 +414,18 @@ public class EmitterM1 {
             let encoded = mask | imm
             return returnAsArray(encoded)
         case .bl(let imm26):
-            guard (imm26 & 0x3FFFFFF) == imm26 else {
+            guard (imm26.immediate & 0x3FFFFFF) == imm26.immediate else {
                 throw EmitterM1Error.invalidValue(
                     "BL requires the immediate to fit in 26 bits"
                 )
             }
-            guard imm26 % 4 == 0 else {
+            guard imm26.immediate % 4 == 0 else {
                 throw EmitterM1Error.invalidValue(
                     "BL requires the immediate to be a multiple of 4"
                 )
             }
             let mask: Int64 = 0b1001_0100_0000_0000_0000_0000_0000_0000
-            return returnAsArray(mask | Int64(imm26 / 4))
+            return returnAsArray(mask | Int64(imm26.immediate / 4))
         case .blr(let Rn):
             let mask: Int64 = 0b1101_0110_0011_1111_0000_0000_0000_0000
             let encodedRn = encodeReg(Rn, shift: 5)

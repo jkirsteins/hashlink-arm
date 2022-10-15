@@ -18,7 +18,7 @@ typealias RefEnumConstruct = TableIndex
 // position in function (for calculating jumps)
 typealias OpCodePosition = UInt32
 
-enum HLOpCodeId: UInt32 {
+enum HLOpCodeId: UInt32, Equatable {
     case OMov
     case OInt
     case OFloat
@@ -527,7 +527,7 @@ extension HLOpCode {
     }
 }
 
-enum HLOpCode {
+enum HLOpCode : Equatable {
     /// Copy value from *src* into *dst*
     case OMov(dst: Reg, src: Reg)
     case OInt(dst: Reg, ptr: RefInt)

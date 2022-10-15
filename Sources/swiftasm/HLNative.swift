@@ -1,4 +1,4 @@
-struct HLNative: WholeFunction, CustomDebugStringConvertible {
+struct HLNative: Equatable, WholeFunction, CustomDebugStringConvertible {
     let lib: Resolvable<String>
     let name: Resolvable<String>
     let type: Resolvable<HLType>
@@ -11,5 +11,9 @@ struct HLNative: WholeFunction, CustomDebugStringConvertible {
 
     var debugDescription: String {
         "HLNative<\(lib.debugDescription), \(name.debugDescription), \(type.debugDescription), \(findex), mem \(memory)>"
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        return lhs.memory.isEqual(rhs.memory)
     }
 }

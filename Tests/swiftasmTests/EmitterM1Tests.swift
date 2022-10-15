@@ -5,7 +5,8 @@ import XCTest
 final class EmitterM1Tests: XCTestCase {
     func testSub() throws {
         XCTAssertEqual("sub sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, 16).debugDescription)
-        XCTAssertEqual("sub sp, sp, #16, lsl 12", M1Op.sub(Register64.sp, Register64.sp, Imm12Lsl12(16, lsl: ._12)).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, try Imm12Lsl12(16)).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16, lsl 12", M1Op.sub(Register64.sp, Register64.sp, try Imm12Lsl12(16, lsl: ._12)).debugDescription)
         XCTAssertEqual("add sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, -16).debugDescription)
         XCTAssertEqual(
             try EmitterM1.emit(for: .sub(X.sp, X.sp, 16)),
@@ -27,7 +28,7 @@ final class EmitterM1Tests: XCTestCase {
 
     func testAdd() throws {
         XCTAssertEqual("add sp, sp, #16", M1Op.add(X.sp, X.sp, 16).debugDescription)
-        XCTAssertEqual("add sp, sp, #16, lsl 12", M1Op.add(X.sp, X.sp, Imm12Lsl12(16, lsl: ._12)).debugDescription)
+        XCTAssertEqual("add sp, sp, #16, lsl 12", M1Op.add(X.sp, X.sp, try Imm12Lsl12(16, lsl: ._12)).debugDescription)
         XCTAssertEqual("sub sp, sp, #16", M1Op.add(X.sp, X.sp, -16).debugDescription)
         XCTAssertEqual(
             try EmitterM1.emit(for: .add(X.sp, X.sp, -16)),
@@ -200,11 +201,11 @@ final class EmitterM1Tests: XCTestCase {
     //    4: fd 03 00 91  	mov	x29, sp
 
     func testBl() throws {
-        XCTAssertThrowsError(try EmitterM1.emit(for: .bl(0x3FFFFFF + 1))) { error in
+        XCTAssertThrowsError(try EmitterM1.emit(for: .bl(try Immediate26(0x3FFFFFF + 1)))) { error in
             XCTAssertEqual(
                 error as! EmitterM1Error,
                 EmitterM1Error.invalidValue(
-                    "BL requires the immediate to fit in 26 bits"
+                    "Immediate 67108864 must fit in 26 bits"
                 )
             )
         }

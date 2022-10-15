@@ -1,4 +1,4 @@
-struct HLConstant : CustomDebugStringConvertible {
+struct HLConstant : Equatable, CustomDebugStringConvertible {
     let global: Resolvable<HLGlobal>
     let	fields: [TableIndex]
 
