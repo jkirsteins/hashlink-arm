@@ -27,6 +27,10 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
     func emit() throws -> [UInt8] {
         switch(self) {
             case .mov(let Rd, let val):
+
+                guard val.hasUsableValue else {
+                    throw GlobalError.immediateMissingValue
+                }
                 
                 let v1 = UInt16(Int(val.immediate) & 0xFFFF)
                 let v2 = UInt16((Int(val.immediate) >> 16) & 0xFFFF)

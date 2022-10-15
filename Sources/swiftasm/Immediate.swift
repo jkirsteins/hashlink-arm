@@ -2,7 +2,14 @@ protocol Immediate : Equatable {
     var bits: Int64 { get }
     var immediate: Int64 { get }
 
+    // deferred immediates might not have a value set
+    var hasUsableValue: Bool { get }
+
     init(_ val: Int64, bits: Int64) throws
+}
+
+extension Immediate {
+    var hasUsableValue: Bool { true }
 }
 
 fileprivate func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throws
@@ -49,7 +56,7 @@ struct VariableImmediate: Immediate {
     }
 }
 
-struct AbsoluteAddressImmediate: Immediate {
+struct AbsoluteAddressImmediate: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64
     let value: Int64 
 
@@ -61,14 +68,18 @@ struct AbsoluteAddressImmediate: Immediate {
     }
 
     init(_ val: Int64, bits: Int64) throws {
+        guard bits == 64 else { throw GlobalError.invalidValue("\(type(of: self)) expects 64 bits") }
         self.value = val
         self.bits = bits
     }
+
+    init(integerLiteral: Int64) {
+        self.value = integerLiteral
+        self.bits = 64
+    }
 }
 
-enum DeferredImmediateError : Error {
-    case accessBeforeReady
-}
+typealias DeferredAddressImmediate = DeferredImmediate<AbsoluteAddressImmediate>
 
 struct DeferredImmediate<T: Immediate> : Immediate {
     let ptr: SharedStorage<T?> = SharedStorage(wrappedValue: nil)
@@ -87,7 +98,7 @@ struct DeferredImmediate<T: Immediate> : Immediate {
 
     func `try`<R>(_ c: (T)->R) throws -> R {
         guard let val = self.ptr.wrappedValue else {
-            throw DeferredImmediateError.accessBeforeReady
+            throw GlobalError.immediateMissingValue
         }
         return c(val)
     }
@@ -96,6 +107,10 @@ struct DeferredImmediate<T: Immediate> : Immediate {
         try `try` {
             return $0
         }
+    }
+
+    var hasUsableValue: Bool { 
+        ptr.wrappedValue != nil
     }
 
     var bits: Int64 {
