@@ -9,6 +9,7 @@ extension Double: CustomDebugStringConvertible {
 struct ModuleStorage {
     let stringTable: SharedStorage<[String]>
     let int32Table: SharedStorage<[Int32]>
+    let float64Table: SharedStorage<[Double]>
     let typeTable: SharedStorage<[HLType]>
     let globalTable: SharedStorage<[HLGlobal]>
     let nativeTable: SharedStorage<[HLNative]>
@@ -17,6 +18,7 @@ struct ModuleStorage {
 
     let stringResolver: TableResolver<String>
     let int32Resolver: TableResolver<Int32>
+    let float64Resolver: TableResolver<Double>
     let typeResolver: TableResolver<HLType>
     let globalResolver: TableResolver<HLGlobal>
     let nativeResolver: TableResolver<HLNative>
@@ -27,6 +29,7 @@ struct ModuleStorage {
         self.init(
             nstrings: 0,
             nints: 0,
+            nfloats: 0,
             ntypes: 0,
             nglobals: 0,
             nnatives: 0,
@@ -39,6 +42,7 @@ struct ModuleStorage {
         self.init(
             nstrings: 0,
             nints: 0,
+            nfloats: 0,
             ntypes: Int32(types.count),
             nglobals: 0,
             nnatives: 0,
@@ -53,6 +57,7 @@ struct ModuleStorage {
         self.init(
             nstrings: 0,
             nints: 0,
+            nfloats: 0,
             ntypes: 0,
             nglobals: 0,
             nnatives: 0,
@@ -66,6 +71,7 @@ struct ModuleStorage {
         self.init(
             nstrings: 0,
             nints: Int32(ints.count),
+            nfloats: 0,
             ntypes: 0,
             nglobals: 0,
             nnatives: 0,
@@ -80,6 +86,7 @@ struct ModuleStorage {
         self.init(
             nstrings: 0,
             nints: 0,
+            nfloats: 0,
             ntypes: 0,
             nglobals: 0,
             nnatives: Int32(natives.count),
@@ -93,6 +100,7 @@ struct ModuleStorage {
         self.init(
             nstrings: 0,
             nints: 0,
+            nfloats: 0,
             ntypes: 0,
             nglobals: 0,
             nnatives: Int32(natives.count),
@@ -106,6 +114,7 @@ struct ModuleStorage {
     init(
         nstrings: Int32 = 0,
         nints: Int32 = 0,
+        nfloats: Int32 = 0,
         ntypes: Int32 = 0,
         nglobals: Int32 = 0,
         nnatives: Int32 = 0,
@@ -114,6 +123,7 @@ struct ModuleStorage {
     ) {
         let stringTable = SharedStorage(wrappedValue: [String]())
         let int32Table = SharedStorage(wrappedValue: [Int32]())
+        let float64Table = SharedStorage(wrappedValue: [Double]())
         let typeTable = SharedStorage(wrappedValue: [HLType]())
         let globalTable = SharedStorage(wrappedValue: [HLGlobal]())
         let nativeTable = SharedStorage(wrappedValue: [HLNative]())
@@ -123,6 +133,7 @@ struct ModuleStorage {
         // Storage
         self.stringTable = stringTable
         self.int32Table = int32Table
+        self.float64Table = float64Table
         self.typeTable = typeTable
         self.globalTable = globalTable
         self.nativeTable = nativeTable
@@ -132,6 +143,7 @@ struct ModuleStorage {
         // Resolvers
         self.stringResolver = TableResolver(table: stringTable, count: nstrings)
         self.int32Resolver = TableResolver(table: int32Table, count: nints)
+        self.float64Resolver = TableResolver(table: float64Table, count: nfloats)
         self.typeResolver = TableResolver(table: typeTable, count: ntypes)
         self.globalResolver = TableResolver(table: globalTable, count: nglobals)
         self.nativeResolver = TableResolver(table: nativeTable, count: nnatives)

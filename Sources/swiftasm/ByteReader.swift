@@ -140,12 +140,15 @@ class ByteReader {
         let storage = ModuleStorage(
             nstrings: nstrings, 
             nints: nints,
+            nfloats: nfloats,
             ntypes: ntypes, 
             nglobals: nglobals, 
             nnatives: nnatives, 
             nfunctions: nfunctions, 
             nconstants: nconstants)
         storage.stringTable.wrappedValue = try self.readStrings(nstrings)
+        storage.int32Table.wrappedValue = constInts
+        storage.float64Table.wrappedValue = constFloats
 
         if sig.v >= 5 { fatalError("byte reading not implemented") }
 
@@ -344,8 +347,6 @@ class ByteReader {
             nfunctions: nfunctions,
             nconstants: nconstants,
             entrypoint: entrypoint,
-            constInts: constInts,
-            constFloats: constFloats,
             storage: storage
         )
 

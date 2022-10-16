@@ -19,11 +19,6 @@ struct Module: CustomDebugStringConvertible {
     let nconstants: Int32
     let entrypoint: Int32
 
-    // [i32]
-    let constInts: [Int32]
-    // [f64]
-    let constFloats: [Double]
-
     let storage: ModuleStorage
 
     var debugDescription: String {
@@ -33,9 +28,9 @@ struct Module: CustomDebugStringConvertible {
             \(nstrings) strings
             \(0) bytes
             \(nints) ints
-            \(constInts.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
+            \(storage.int32Resolver.table.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
             \(nfloats) floats
-            \(constFloats.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
+            \(storage.float64Resolver.table.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
             \(nglobals) globals
             \(nnatives) natives
             \(nfunctions) functions
