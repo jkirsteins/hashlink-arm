@@ -9,37 +9,39 @@ extension Sequence where Iterator.Element: Hashable {
     }
 }
 
-func sut() -> M1Compiler {
-    M1Compiler(stripDebugMessages: true)
+func sut() -> M1Compiler { M1Compiler(stripDebugMessages: true) }
+
+func builder() -> OpBuilder {
+    let storage = ModuleStorage()
+    let ctx = JitContext(storage: storage)
+    return OpBuilder(ctx: ctx)
 }
 
-/* Helper method for compiling a HLFunction and inspecting results */
-func compileHLFunction(
-    ctx: JitContext,
+func prepareFunction(
+    retType: HLType,
     findex: Int32,
     regs: [HLType],
-    ret: HLType,
     args: [HLType],
-    into mem: OpBuilder,
-    ops: [HLOpCode]) throws -> HLCompiledFunction
-{
-    let sut = sut()
-
-    let funcType = HLType.fun(HLTypeFunData(args: Resolvable.array(args), ret: Resolvable(ret)))
-
-    let f = HLFunction(type: Resolvable(funcType),
+    ops: [HLOpCode]
+) -> HLFunction {
+    let funcType = HLType.fun(
+        HLTypeFunData(args: Resolvable.array(args), ret: Resolvable(retType))
+    )
+    return HLFunction(
+        type: Resolvable(funcType),
         findex: findex,
         regs: Resolvable.array(regs),
         ops: ops,
         assigns: []
     )
+}
 
-    let compiled = try sut.compile(native: f, into: mem, ctx: ctx)
-
-    ctx.storage.functionTable.wrappedValue.insert(f, at: Int(findex))
-    ctx.storage.compiledFunctionTable.wrappedValue.insert(compiled, at: Int(findex))
-
-    return compiled
+/* Helper method for compiling a HLFunction and inspecting results */func
+    compileHLFunction(ctx: JitContext, findex: Int32, into mem: OpBuilder) throws
+    -> HLCompiledFunction
+{
+    let sut = sut()
+    return try sut.compile(findex: findex, into: mem, ctx: ctx)
 }
 
 final class CompilerM1Tests: XCTestCase {
@@ -50,113 +52,209 @@ final class CompilerM1Tests: XCTestCase {
     outputs). */
     func testCompile_addressesAreAvailable() throws {
 
-        let storage = ModuleStorage(
-            nstrings: 0, 
-            ntypes: 2, 
-            nglobals: 0, 
-            nnatives: 0, 
-            nfunctions: 2, 
-            nconstants: 0)
-        
-        storage.typeTable.wrappedValue = [
-            .void,
-            HLType.fun(HLTypeFunData(args: [], ret: Resolvable(.void)))
-        ]
-
         let sut = sut()
 
-        let f1 = HLFunction(
-            type: storage.typeResolver.getResolvable(1),  // ()->void,
+        let f1 = prepareFunction(
+            retType: .void,
             findex: 0,
-            regs: [Resolvable(.void)],
-            ops: [.OCall0(dst: 0 /*reg*/, fun: 1 /*findex*/), .ORet(ret: 0)],
-            assigns: []
+            regs: [.void],
+            args: [],
+            ops: [.OCall0(dst: 0 /*reg*/, fun: 1 /*findex*/), .ORet(ret: 0)]
         )
-        let f2 = HLFunction(
-            type: storage.typeResolver.getResolvable(1),  // ()->void,
+        let f2 = prepareFunction(
+            retType: .void,
             findex: 1,
-            regs: [Resolvable(.void)],
+            regs: [.void],
+            args: [],
             ops: [
                 .OCall0(dst: 0 /*reg*/, fun: 1 /*findex*/)  // .ORet(ret: 0)
-            ],
-            assigns: []
+            ]
         )
 
-        let opb = OpBuilder()
+        let storage = ModuleStorage(functions: [f1, f2])
         let ctx = JitContext(storage: storage)
+        let opb = OpBuilder(ctx: ctx)
 
-        let compiled1 = try sut.compile(native: f1, into: opb, ctx: ctx)
-        let compiled2 = try sut.compile(native: f2, into: opb, ctx: ctx)
+        let compiled1 = try sut.compile(findex: 0, into: opb, ctx: ctx)
+        let compiled2 = try sut.compile(findex: 1, into: opb, ctx: ctx)
 
-        // finalize
-        // compiledTable.wrappedValue += [compiled2, compiled1]
         ctx.jitBase.wrappedValue = UnsafeMutableRawPointer(bitPattern: 1337)
-
         try ctx.wft.requireReady()
-        let rawData = opb.build()
 
-        let f1addr = ctx.wft.getAddr(0)  // should map w jitBase
-        let f2addr = ctx.wft.getAddr(1)  // should be jitBase + len(f1)
+        let rawData = try opb.lockAddressesAndBuild()
 
-        XCTAssertEqual(1337, (try ctx.wft.get(0)).memory.immediate)
-        XCTAssertGreaterThan((try ctx.wft.get(1)).memory.immediate, 1337)
-        XCTAssertEqual(f1addr.immediate, (try ctx.wft.get(0)).memory.immediate)
-        XCTAssertEqual(f2addr.immediate, (try ctx.wft.get(1)).memory.immediate)
+        let f1addr = try ctx.wft.get(0).memory  // should map w jitBase
+        let f2addr = try ctx.wft.get(1).memory  // should be jitBase + len(f1)
+
+        XCTAssertEqual(f1addr.immediate, 1337)
+        XCTAssertGreaterThan(f2addr.immediate, 1337)
     }
 
     func testCompile_emptyFunction() throws {
-        let storage = ModuleStorage(nfunctions: 1) 
+        let storage = ModuleStorage(functions: [
+            prepareFunction(
+                retType: .void,
+                findex: 0,
+                regs: [.void],
+                args: [],
+                ops: [.ORet(ret: 0)]
+            )
+        ])
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
-        let f = try compileHLFunction(ctx: ctx, findex: 0, regs: [.void], ret: .void, args: [], into: mem, ops: [
-            .ORet(ret: 0)
-        ])
+        let cf = try compileHLFunction(ctx: ctx, findex: 0, into: mem)
 
         // mem.hexPrint()
 
-        XCTAssertEqual(mem.build(), [
-            0xfd, 0x7b, 0xbf, 0xa9, // stp x29, x30, [sp, #-16]!
-            0xfd, 0x03, 0x00, 0x91, // movr x29, sp
-            0xe0, 0x03, 0x40, 0xf9, // ldr x0, [sp, #0]
-            0x01, 0x00, 0x00, 0x14, // b #4
-            0xfd, 0x7b, 0xc1, 0xa8, // ldp x29, x30, [sp], #16
-            0xc0, 0x03, 0x5f, 0xd6, // ret
-        ])
+        XCTAssertEqual(
+            try mem.lockAddressesAndBuild(),
+            [
+                0xfd, 0x7b, 0xbf, 0xa9,  // stp x29, x30, [sp, #-16]!
+                0xfd, 0x03, 0x00, 0x91,  // movr x29, sp
+                0xe0, 0x03, 0x40, 0xf9,  // ldr x0, [sp, #0]
+                0x01, 0x00, 0x00, 0x14,  // b #4
+                0xfd, 0x7b, 0xc1, 0xa8,  // ldp x29, x30, [sp], #16
+                0xc0, 0x03, 0x5f, 0xd6,  // ret
+            ]
+        )
 
         // run the entrypoint and ensure it works
-        let entrypoint: JitVoid = mem.buildEntrypoint(f)
+        let entrypoint: JitVoid = try mem.buildEntrypoint(cf)
         entrypoint()
     }
 
-    func testCompile_simpleReturn() throws {
-        let storage = ModuleStorage(nfunctions: 1, ints: [165]) 
+    func testCompile_callAndReturn_callNative() throws {
+        // Prepare function we'll call from JIT
+        let swiftFunc: JitInt64 = { return 145 }
+        let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
+        //       ^ pointer to the `swiftFunc` closure
+
+        // Function that consists of Hashlink ops:
+        //   - call function with index 1, and store result in HL register 0
+        //   - return value in register 0
+        let f = prepareFunction(
+            retType: .i32,
+            findex: 0,
+            regs: [.i32],
+            args: [],
+            ops: [
+                //                                         ^ this fuction will be registered in the whole
+                //                                           functions table with function-index 0
+                .OCall0(dst: 0, fun: 1), .ORet(ret: 0),
+            ]
+        )
+
+        // Misc. JIT stuff
+        let storage = ModuleStorage(
+            functions: [f],
+            natives: [
+                HLNative(
+                    lib: Resolvable("builtin"),
+                    name: Resolvable("swiftFunc"),
+                    type: Resolvable(
+                        .fun(
+                            HLTypeFunData(
+                                args: Resolvable.array([]),
+                                ret: Resolvable(.i32)
+                            )
+                        )
+                    ),
+                    findex: 1,
+                    memory: swiftFuncPtr
+                )
+            ]
+        )
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
-        let f = try compileHLFunction(ctx: ctx, findex: 0, regs: [.void, .i32], ret: .i32, args: [], into: mem, ops: [
-            .OInt(dst: 1, ptr: 0),
-            .ORet(ret: 1)
-        ])
-        
-        // mem.hexPrint()
-        
-        XCTAssertEqual(mem.build(), [
-            0xfd, 0x7b, 0xbf, 0xa9, // stp x29, x30, [sp, #-16]!
-            0xfd, 0x03, 0x00, 0x91, // movr x29, sp
-            0xff, 0x43, 0x00, 0xd1, // sub sp, sp, #16
-            0xe0, 0x03, 0x00, 0xf8, // str x0, [sp, #0]
-            0xa0, 0x14, 0x80, 0xd2, // .mov x0, #165
-            0x00, 0x00, 0xa0, 0xf2, // 
-            0x00, 0x00, 0xc0, 0xf2, // 
-            0x00, 0x00, 0xe0, 0xf2, // 
-            0xe0, 0x03, 0x00, 0xf8, // str x0, [sp, #0]
-            0xe0, 0x03, 0x40, 0xf9, // ldr x0, [sp, #0]
-            0x01, 0x00, 0x00, 0x14, // b #4
-            0xff, 0x43, 0x00, 0x91, // add sp, sp, #16
-            0xfd, 0x7b, 0xc1, 0xa8, // ldp x29, x30, [sp], #16
-            0xc0, 0x03, 0x5f, 0xd6, // ret
-        ])
+        // Compile HL function with function index 0 (from the whole functions table)
+        let cf = try compileHLFunction(ctx: ctx, findex: 0, into: mem)
+        // Print debug output of the generated Aarch64 bytecode
+        mem.hexPrint()
+        // Now place the compiled bytecode in executable memory and get a pointer to it in
+        // form of function (JitInt64 means (void)->Int64)
+        let entrypoint: JitInt64 = try mem.buildEntrypoint(cf)
+        var res: Int64 = entrypoint()
 
-        let entrypoint: JitInt64 = mem.buildEntrypoint(f)
+        // HL called Swift func. Swift func returned 145. HL returned the result it received.
+        XCTAssertEqual(145, res)
+    }
+
+    func testCompile_callAndReturn_callCompiled() throws {
+        // Misc. JIT stuff
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .i32,
+                    findex: 0,
+                    regs: [.i32],
+                    args: [],
+                    ops: [.OCall0(dst: 0, fun: 1), .ORet(ret: 0)]
+                ),
+                prepareFunction(
+                    retType: .i32,
+                    findex: 1,
+                    regs: [.void, .i32],
+                    args: [],
+                    ops: [.OInt(dst: 1, ptr: 0), .ORet(ret: 1)]
+                ),
+            ],
+            ints: [152]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let cf = try compileHLFunction(ctx: ctx, findex: 0, into: mem)
+        let cf2 = try compileHLFunction(ctx: ctx, findex: 1, into: mem)
+
+        // Print debug output of the generated Aarch64 bytecode
+        mem.hexPrint()
+        let entrypoint: JitInt64 = try mem.buildEntrypoint(cf)
+        let entrypoint2: JitInt64 = try mem.buildEntrypoint(cf2)
+        var res1: Int64 = entrypoint()
+        var res2: Int64 = entrypoint2()
+
+        XCTAssertEqual(152, res1)
+        XCTAssertEqual(res1, res2)
+    }
+
+    func testCompile_simpleReturn() throws {
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .i32,
+                    findex: 0,
+                    regs: [.void, .i32],
+                    args: [],
+                    ops: [.OInt(dst: 1, ptr: 0), .ORet(ret: 1)]
+                )
+            ],
+            ints: [165]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let cf = try compileHLFunction(ctx: ctx, findex: 0, into: mem)
+        // mem.hexPrint()
+
+        XCTAssertEqual(
+            try mem.lockAddressesAndBuild(),
+            [
+                0xfd, 0x7b, 0xbf, 0xa9,  // stp x29, x30, [sp, #-16]!
+                0xfd, 0x03, 0x00, 0x91,  // movr x29, sp
+                0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
+                0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
+                0xa0, 0x14, 0x80, 0xd2,  // .mov x0, #165
+                0x00, 0x00, 0xa0, 0xf2,  //
+                0x00, 0x00, 0xc0, 0xf2,  //
+                0x00, 0x00, 0xe0, 0xf2,  //
+                0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
+                0xe0, 0x03, 0x40, 0xf9,  // ldr x0, [sp, #0]
+                0x01, 0x00, 0x00, 0x14,  // b #4
+                0xff, 0x43, 0x00, 0x91,  // add sp, sp, #16
+                0xfd, 0x7b, 0xc1, 0xa8,  // ldp x29, x30, [sp], #16
+                0xc0, 0x03, 0x5f, 0xd6,  // ret
+            ]
+        )
+
+        let entrypoint: JitInt64 = try mem.buildEntrypoint(cf)
         var res: Int64 = entrypoint()
         XCTAssertEqual(165, res)
     }
@@ -171,19 +269,24 @@ final class CompilerM1Tests: XCTestCase {
         (size, _) = sut.calcStackArgReq(regs: [.array, .array, .i32], args: [])
         XCTAssertEqual(32, size)
 
-        (size, _) = sut.calcStackArgReq(regs: [.array, .array, .i32, .dyn, .dynobj], args: [])
+        (size, _) = sut.calcStackArgReq(
+            regs: [.array, .array, .i32, .dyn, .dynobj],
+            args: []
+        )
         XCTAssertEqual(48, size)
 
         (size, _) = sut.calcStackArgReq(
-            regs: [.array, .array, .i32, .dyn, .dynobj], 
-            args: [.array, .array, .i32, .dyn, .dynobj])
+            regs: [.array, .array, .i32, .dyn, .dynobj],
+            args: [.array, .array, .i32, .dyn, .dynobj]
+        )
         XCTAssertEqual(48, size)
 
         // args exceeding first 8 should not allocate extra space (as it
         // should already be allocated due to calling convention)
         (size, _) = sut.calcStackArgReq(
-            regs: Array(repeating: .dyn, count: 16), 
-            args: Array(repeating: .dyn, count: 16))
+            regs: Array(repeating: .dyn, count: 16),
+            args: Array(repeating: .dyn, count: 16)
+        )
         XCTAssertEqual(64, size)
 
         // non args should take space
@@ -192,35 +295,41 @@ final class CompilerM1Tests: XCTestCase {
 
         // 4 regs (all except 1st) and 1 arg should contribute to size here
         (size, _) = sut.calcStackArgReq(
-            regs: [.array] + Array(repeating: .i32, count: 4), 
-            args: [.array])
+            regs: [.array] + Array(repeating: .i32, count: 4),
+            args: [.array]
+        )
         XCTAssertEqual(32, size)
 
         // first 8 args should take space
         (size, _) = sut.calcStackArgReq(
-            regs: Array(repeating: .i32, count: 8), 
-            args: Array(repeating: .i32, count: 8))
+            regs: Array(repeating: .i32, count: 8),
+            args: Array(repeating: .i32, count: 8)
+        )
         XCTAssertEqual(32, size)
 
         // void should be ignored
         (size, _) = sut.calcStackArgReq(
-            regs: Array(repeating: .void, count: 8) + Array(repeating: .i32, count: 8), 
-            args: Array(repeating: .void, count: 8) + Array(repeating: .i32, count: 8))
+            regs: Array(repeating: .void, count: 8) + Array(repeating: .i32, count: 8),
+            args: Array(repeating: .void, count: 8) + Array(repeating: .i32, count: 8)
+        )
         XCTAssertEqual(32, size)
     }
 
     func testAppendPrologue() throws {
-        let mem = OpBuilder()
+        let mem = builder()
         sut().appendPrologue(builder: mem)
 
-        XCTAssertEqual(mem.build(), [0xfd, 0x7b, 0xbf, 0xa9, 0xfd, 0x03, 0x00, 0x91])
+        XCTAssertEqual(
+            try mem.lockAddressesAndBuild(),
+            [0xfd, 0x7b, 0xbf, 0xa9, 0xfd, 0x03, 0x00, 0x91]
+        )
     }
 
     func testAppendEpilogue() throws {
-        let mem = OpBuilder()
+        let mem = builder()
         sut().appendEpilogue(builder: mem)
 
-        XCTAssertEqual(mem.build(), [0xfd, 0x7b, 0xc1, 0xa8])
+        XCTAssertEqual(try mem.lockAddressesAndBuild(), [0xfd, 0x7b, 0xc1, 0xa8])
     }
 
     func testGetRegStackOffset_min16() throws {
@@ -255,9 +364,9 @@ final class CompilerM1Tests: XCTestCase {
     }
 
     func testAppendStackInit_skipVoid() throws {
-        let mem = OpBuilder()
+        let mem = builder()
         try sut().appendStackInit([.void], args: [.void], builder: mem)
-        XCTAssertEqual([], mem.build())
+        XCTAssertEqual([], try mem.lockAddressesAndBuild())
     }
 
     func testAppendStackInit_min16() throws {
@@ -266,18 +375,18 @@ final class CompilerM1Tests: XCTestCase {
         let _5_need32 = Array(repeating: HLType.i32, count: 5)
         let sut = sut()
         // 4 byte requirement should still be aligned to 16 byte boundary
-        let mem1 = OpBuilder()
+        let mem1 = builder()
         try sut.appendStackInit(_1_need16, args: _1_need16, builder: mem1)
         XCTAssertEqual(
             [
                 0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
                 0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
             ],
-            mem1.build()
+            try mem1.lockAddressesAndBuild()
         )
 
         // 16 byte requirement should not round to 32
-        let mem2 = OpBuilder()
+        let mem2 = builder()
         try sut.appendStackInit(_4_need16, args: _4_need16, builder: mem2)
         XCTAssertEqual(
             [
@@ -287,10 +396,10 @@ final class CompilerM1Tests: XCTestCase {
                 0xe2, 0x83, 0x00, 0xf8,  // str x2, [sp, #8]
                 0xe3, 0xc3, 0x00, 0xf8,  // str x3, [sp, #12]
             ],
-            mem2.build()
+            try mem2.lockAddressesAndBuild()
         )
         // 20 byte requirement should round to 32
-        let mem3 = OpBuilder()
+        let mem3 = builder()
         try sut.appendStackInit(_5_need32, args: _5_need32, builder: mem3)
         XCTAssertEqual(
             [
@@ -301,12 +410,12 @@ final class CompilerM1Tests: XCTestCase {
                 0xe3, 0xc3, 0x00, 0xf8,  // str x3, [sp, #12]
                 0xe4, 0x03, 0x01, 0xf8,  // str x4, [sp, #16]
             ],
-            mem3.build()
+            try mem3.lockAddressesAndBuild()
         )
     }
 
     func testAppendStackInit_multiple() throws {
-        let mem = OpBuilder()
+        let mem = builder()
         let sut = sut()
         try sut.appendStackInit(
             [.void, .i32, .i64],
@@ -319,18 +428,17 @@ final class CompilerM1Tests: XCTestCase {
                 0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
                 0xe1, 0x43, 0x00, 0xf8,  // str x1, [sp, #4]
             ],
-            mem.build()
+            try mem.lockAddressesAndBuild()
         )
     }
 
     func testAppendStackInit_moreThan8Args() throws {
-        let mem = OpBuilder()
+        let mem = builder()
         try sut().appendStackInit(
             Array(repeating: HLType.i32, count: 12),
             args: Array(repeating: HLType.i32, count: 12),
             builder: mem
         )
-        
         XCTAssertEqual(
             [
                 0xff, 0x83, 0x00, 0xd1,  // sub sp, sp, #32
@@ -343,12 +451,12 @@ final class CompilerM1Tests: XCTestCase {
                 0xe6, 0x83, 0x01, 0xf8,  // str x6, [sp, #24]
                 0xe7, 0xc3, 0x01, 0xf8,  // str x7, [sp, #28]
             ],
-            mem.build()
+            try mem.lockAddressesAndBuild()
         )
     }
 
     func testAppendStackInit_mismatchedRegs() throws {
-        let mem = OpBuilder()
+        let mem = builder()
 
         XCTAssertThrowsError(
             try sut().appendStackInit([.i32], args: [.void], builder: mem)
@@ -356,41 +464,44 @@ final class CompilerM1Tests: XCTestCase {
     }
 
     func testAppendDebugPrintAligned4() throws {
-        let memWith = OpBuilder()
-        let memWithout = OpBuilder()
-        M1Compiler(stripDebugMessages: false).appendDebugPrintAligned4("Hello World", builder: memWith)
-        M1Compiler(stripDebugMessages: true).appendDebugPrintAligned4("Hello World", builder: memWithout)
-
-        XCTAssertEqual(
-            memWithout.build(),
-            []
+        let memWith = builder()
+        let memWithout = builder()
+        M1Compiler(stripDebugMessages: false).appendDebugPrintAligned4(
+            "Hello World",
+            builder: memWith
+        )
+        M1Compiler(stripDebugMessages: true).appendDebugPrintAligned4(
+            "Hello World",
+            builder: memWithout
         )
 
+        XCTAssertEqual(try memWithout.lockAddressesAndBuild(), [])
+
         XCTAssertEqual(
-            memWith.build(),
+            try memWith.lockAddressesAndBuild(),
             [
                 // Printing debug message: Hello World
-                0xe0, 0x0f, 0x1e, 0xf8, // str x0, [sp, #-32]!
-                0xe1, 0x83, 0x00, 0xf8, // str x1, [sp, #8]
-                0xe2, 0x03, 0x01, 0xf8, // str x2, [sp, #16]
-                0xf0, 0x83, 0x01, 0xf8, // str x16, [sp, #24]
-                0x20, 0x00, 0x80, 0xd2, // movz x0, #1
-                0x21, 0x01, 0x00, 0x10, // adr x1, #36
-                0xe2, 0x02, 0x80, 0xd2, // movz x2, #23
-                0x90, 0x00, 0x80, 0xd2, // movz x16, #4
-                0x01, 0x10, 0x00, 0xd4, // svc 0x0080
-                0xf0, 0x0f, 0x40, 0xf9, // ldr x16, [sp, #24]
-                0xe2, 0x0b, 0x40, 0xf9, // ldr x2, [sp, #16]
-                0xe1, 0x07, 0x40, 0xf9, // ldr x1, [sp, #8]
-                0xe0, 0x07, 0x42, 0xf8, // ldr x0, [sp], #32
-                0x07, 0x00, 0x00, 0x14, // b #28
-                0x5b, 0x6a, 0x69, 0x74, // [jit
-                0x64, 0x65, 0x62, 0x75, // debu
-                0x67, 0x5d, 0x20, 0x48, // g].H
-                0x65, 0x6c, 0x6c, 0x6f, // ello
-                0x20, 0x57, 0x6f, 0x72, // .Wor
-                0x6c, 0x64, 0x0a, // ld\n
-                0x00, // .zero
+                0xe0, 0x0f, 0x1e, 0xf8,  // str x0, [sp, #-32]!
+                0xe1, 0x83, 0x00, 0xf8,  // str x1, [sp, #8]
+                0xe2, 0x03, 0x01, 0xf8,  // str x2, [sp, #16]
+                0xf0, 0x83, 0x01, 0xf8,  // str x16, [sp, #24]
+                0x20, 0x00, 0x80, 0xd2,  // movz x0, #1
+                0x21, 0x01, 0x00, 0x10,  // adr x1, #36
+                0xe2, 0x02, 0x80, 0xd2,  // movz x2, #23
+                0x90, 0x00, 0x80, 0xd2,  // movz x16, #4
+                0x01, 0x10, 0x00, 0xd4,  // svc 0x0080
+                0xf0, 0x0f, 0x40, 0xf9,  // ldr x16, [sp, #24]
+                0xe2, 0x0b, 0x40, 0xf9,  // ldr x2, [sp, #16]
+                0xe1, 0x07, 0x40, 0xf9,  // ldr x1, [sp, #8]
+                0xe0, 0x07, 0x42, 0xf8,  // ldr x0, [sp], #32
+                0x07, 0x00, 0x00, 0x14,  // b #28
+                0x5b, 0x6a, 0x69, 0x74,  // [jit
+                0x64, 0x65, 0x62, 0x75,  // debu
+                0x67, 0x5d, 0x20, 0x48,  // g].H
+                0x65, 0x6c, 0x6c, 0x6f,  // ello
+                0x20, 0x57, 0x6f, 0x72,  // .Wor
+                0x6c, 0x64, 0x0a,  // ld\n
+                0x00,  // .zero
             ]
         )
     }

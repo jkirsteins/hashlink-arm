@@ -1,7 +1,10 @@
+import Foundation 
+
 protocol MemoryAddress : Equatable, Immediate, Hashable {
     var value: UnsafeMutableRawPointer { get }
     
     func isEqual(_ to: any MemoryAddress) -> Bool 
+    func update(from: DeferredBaseRelativeAddress)
 }
 
 extension UnsafeMutableRawPointer: MemoryAddress, DeferredMemoryAddress {
@@ -83,7 +86,7 @@ extension MemoryAddress {
 }
 
 // neither base nor offset known
-struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, MemoryAddress, Hashable {
+struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, MemoryAddress, Hashable, CustomDebugStringConvertible {
     let jitBase: SharedStorage<UnsafeMutableRawPointer?>
     let offsetFromBase: SharedStorage<ByteCount?> = SharedStorage(wrappedValue: nil)
 
@@ -92,9 +95,17 @@ struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, MemoryAdd
 
     var value: UnsafeMutableRawPointer {
         guard let base = self.jitBase.wrappedValue, let offsetFromBase = self.offsetFromBase.wrappedValue else {
-            fatalError("Fully deferred address not available (base: \(hasBase); offset: \(hasOffset))")
+            fatalError("Fully deferred address not available (base: \(hasBase); offset: \(hasOffset)). At: \(Thread.callStackSymbols.joined(separator: "\n"))")
         }
         return base.advanced(by: Int(offsetFromBase))
+    }
+
+    var debugDescription: String {
+        "FullyDeferredRelativeAddress<hasBase: \(hasBase); hasOffset: \(hasOffset)>"
+    }
+
+    var hasUsableValue: Bool {
+        self.hasBase && self.hasOffset
     }
 
     static func == (lhs: Self, rhs: Self) -> Bool {

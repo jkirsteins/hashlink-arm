@@ -1,3 +1,5 @@
+import Foundation 
+
 protocol Immediate : Equatable, Hashable {
     var bits: Int64 { get }
     var immediate: Int64 { get }
@@ -98,7 +100,8 @@ struct DeferredImmediate<T: Immediate> : Immediate {
 
     func `try`<R>(_ c: (T)->R) throws -> R {
         guard let val = self.ptr.wrappedValue else {
-            throw GlobalError.immediateMissingValue
+            print("Failing in \(self) At: \(Thread.callStackSymbols.joined(separator: "\n"))")
+            throw GlobalError.immediateMissingValue("Trying to access DeferredImmediate value \(ptr)")
         }
         return c(val)
     }

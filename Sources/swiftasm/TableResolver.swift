@@ -14,7 +14,7 @@ class TableResolver<T: CustomDebugStringConvertible>: Hashable, Equatable where 
             fatalError("Fetching index \(index) but count is \(count) for \(T.self)")
         }
         guard self.table.count > index else {
-            fatalError("<value not available yet>")
+            fatalError("<value not available yet - fetching \(index) from \(T.self)>")
         }
         return self.table[index]
     }

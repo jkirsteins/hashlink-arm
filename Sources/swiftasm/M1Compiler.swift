@@ -36,16 +36,22 @@ extension M1Compiler {
     /// Stack space should be allocated for first 8 function args (will be filled from registers) and
     /// any register, which is not part of args.
     /// - Parameters:
-    ///   - regs: 
-    ///   - args: 
-    /// - Returns: 
-    func calcStackArgReq(regs unfilteredRegs: [HLType], args unfilteredArgs: [HLType]) -> (Int16, [HLType]) {
+    ///   - regs:
+    ///   - args:
+    /// - Returns:
+    func calcStackArgReq(regs unfilteredRegs: [HLType], args unfilteredArgs: [HLType])
+        -> (Int16, [HLType])
+    {
         let regs = unfilteredRegs.filter { $0 != .void }
         let args = unfilteredArgs.filter { $0 != .void }
         guard regs.prefix(args.count) == args.prefix(args.count) else {
-            fatalError("Args must match the first registers (got \(args) and \(regs) respectively)")
+            fatalError(
+                "Args must match the first registers (got \(args) and \(regs) respectively)"
+            )
         }
-        let stackArgs = Array(/* regs should be aligned with args */regs.dropFirst(args.count) + args.prefix(ARG_REGISTER_COUNT))
+        let stackArgs = Array( /* regs should be aligned with args */
+            regs.dropFirst(args.count) + args.prefix(ARG_REGISTER_COUNT)
+        )
         print("args needing space", stackArgs)
         let result = stackArgs.reduce(0) { $0 + Int16($1.neededBytes) }
         return (roundUpStackReservation(result), stackArgs)
@@ -56,8 +62,7 @@ extension M1Compiler {
     Stack should be extended to account for data which is in registers.
     Subsequently data should be moved from regs to stack, to enable use of all registers.
 */
-    @discardableResult
-    func appendStackInit(
+    @discardableResult func appendStackInit(
         _ unfilteredRegs: [HLType],
         args unfilteredArgs: [HLType],
         builder: OpBuilder
@@ -68,7 +73,7 @@ extension M1Compiler {
             unfilteredRegs.prefix(unfilteredArgRegCount)
                 == unfilteredArgs.prefix(unfilteredArgRegCount)
         else {
-            throw GlobalError.expectationViolation(
+            throw GlobalError.invalidOperation(
                 "Up to first \(ARG_REGISTER_COUNT) registers must be the same for a function and its type.args"
             )
         }
@@ -80,21 +85,22 @@ extension M1Compiler {
         // into stack
         let (neededExtraStackSize, stackArgs) = calcStackArgReq(regs: regs, args: args)
 
-        guard neededExtraStackSize > 0 else { 
-            builder.append(
-                PseudoOp.debugMarker("No extra stack space needed")
-            )    
+        guard neededExtraStackSize > 0 else {
+            builder.append(PseudoOp.debugMarker("No extra stack space needed"))
             return neededExtraStackSize
         }
 
         builder.append(
             PseudoOp.debugMarker("Reserving \(neededExtraStackSize) bytes for stack"),
-            M1Op.sub(X.sp, X.sp, try .i(neededExtraStackSize)))
+            M1Op.sub(X.sp, X.sp, try .i(neededExtraStackSize))
+        )
 
         var offset: ByteCount = 0
         for (ix, reg) in stackArgs.enumerated() {
             builder.append(
-                PseudoOp.debugMarker("Moving \(Register64(rawValue: UInt8(ix))!) to \(offset)"),
+                PseudoOp.debugMarker(
+                    "Moving \(Register64(rawValue: UInt8(ix))!) to \(offset)"
+                ),
                 M1Op.str(
                     Register64(rawValue: UInt8(ix))!,
                     .reg64offset(Register64.sp, offset, nil)
@@ -164,7 +170,8 @@ extension M1Compiler {
     func appendEpilogue(builder: OpBuilder) {
         builder.append(
             PseudoOp.debugMarker("Starting epilogue"),
-            M1Op.ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post)))
+            M1Op.ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))
+        )
     }
 }
 
@@ -176,12 +183,32 @@ class M1Compiler {
 
     let stripDebugMessages: Bool
 
+    func assert(reg: Reg, from: [HLType], matchesReturn funType: Resolvable<HLType>) {
+        guard from.count > reg else {
+            fatalError(
+                "Register with index \(reg) does not exist. Available registers: \(from)."
+            )
+        }
+        guard case .fun(let funData) = funType.value else {
+            fatalError("Expected HLNative to have .fun type (got \(funType.value)")
+        }
+        guard from[Int(reg)] == funData.ret.value else {
+            fatalError(
+                "Register \(reg) expected to be \(funType.value) but is \(from[Int(reg)])"
+            )
+        }
+    }
+
     func assert(reg: Reg, from: [HLType], is target: HLType) {
         guard from.count > reg else {
-            fatalError("Register with index \(reg) does not exist. Available registers: \(from).")
+            fatalError(
+                "Register with index \(reg) does not exist. Available registers: \(from)."
+            )
         }
         guard target == from[Int(reg)] else {
-            fatalError("Register \(reg) expected to be \(target) but is \(from[Int(reg)])")
+            fatalError(
+                "Register \(reg) expected to be \(target) but is \(from[Int(reg)])"
+            )
         }
     }
 
@@ -211,71 +238,67 @@ class M1Compiler {
         for op in ops { buffer.push(try emitter.emit(for: op)) }
     }
 
-    func compileFake(native: HLFunction, into mem: OpBuilder, ctx: JitContext) throws
-        -> HLCompiledFunction
-    {
-        let relativeBaseAddr = mem.getDeferredPosition()
-        let currentFuncAddr = ctx.wft.getAddr(Int(native.findex))
-        currentFuncAddr.update(from: relativeBaseAddr)
-
-        mem.append(
-            PseudoOp.mov(X.x0, 123),
-            M1Op.ret
-        )
-
-        let result = HLCompiledFunction(function: native, memory: currentFuncAddr)
-
-        // Register as we go.
-        ctx.wft.functions.table.append(result)
-
-        return result
-    }
-
     /*
-    Will compile and update the JIT context with new known deferred addresses.
+    Will compile and update the JIT context with the functions addresses.
     */
-    func compile(native: HLFunction, into mem: OpBuilder, ctx: JitContext) throws
+    func compile(findex: Int32, into mem: OpBuilder, ctx: JitContext) throws
         -> HLCompiledFunction
     {
+        guard let fun = ctx.compiledFunctions.first(where: { $0.findex == findex })
+        else {
+            throw GlobalError.invalidValue(
+                "Function \(findex) not found in the whole functions table."
+            )
+        }
+
+        guard !fun.memory.hasUsableValue else {
+            print("Memory tested \(fun.memory)")
+            throw GlobalError.invalidOperation(
+                "Function \(findex) has already been compiled and assigned an address."
+            )
+        }
+
         // grab it before it changes from prologue
         // let memory = mem.getDeferredPosition()
-        let resolvedRegs = native.regs.map { $0.value }
+        let resolvedRegs = fun.regs.map { $0.value }
 
         let relativeBaseAddr = mem.getDeferredPosition()
-        let currentFuncAddr = ctx.wft.getAddr(Int(native.findex))
-        currentFuncAddr.update(from: relativeBaseAddr)
+        fun.memory.update(from: relativeBaseAddr)
 
         // if we need to return early, we jump to these
         var retTargets: [RelativeDeferredOffset] = []
 
-        print(
-            "Compiling function \(native.findex) at deferred address \(currentFuncAddr)"
-        )
+        print("Compiling function \(fun.findex) at deferred address \(fun.memory)")
 
-        guard case .fun(let funData) = native.type.value else {
-            fatalError("HLFunction type should be function")
+        guard case .fun(let funData) = fun.type.value else {
+            fatalError("HLCompiledFunction type should be function")
         }
 
         let resolvedArgs = funData.args.map { $0.value }
 
+        mem.append(PseudoOp.debugMarker("==> STARTING FUNCTION \(fun.findex)"))
         appendPrologue(builder: mem)
-        let reservedStackBytes = try appendStackInit(resolvedRegs, args: resolvedArgs, builder: mem)
-
-        appendDebugPrintAligned4(
-            "Entering function \(native.findex)@\(relativeBaseAddr.offsetFromBase)",
+        let reservedStackBytes = try appendStackInit(
+            resolvedRegs,
+            args: resolvedArgs,
             builder: mem
         )
-        for op in native.ops {
+
+        appendDebugPrintAligned4(
+            "Entering function \(fun.findex)@\(relativeBaseAddr.offsetFromBase)",
+            builder: mem
+        )
+        for op in fun.function.ops {
             appendDebugPrintAligned4("Executing \(op.debugDescription)", builder: mem)
 
             switch op {
             case .ORet(let dst):
-                
                 // store
                 let regStackOffset = getRegStackOffset(resolvedRegs, dst)
                 mem.append(
                     PseudoOp.debugMarker("Returning stack offset \(regStackOffset)"),
-                    M1Op.ldr(X.x0, .reg64offset(.sp, regStackOffset, nil)))
+                    M1Op.ldr(X.x0, .reg64offset(.sp, regStackOffset, nil))
+                )
 
                 // jmp to end
                 var retTarget = RelativeDeferredOffset()
@@ -283,11 +306,38 @@ class M1Compiler {
                 retTargets.append(retTarget)
                 mem.append(
                     PseudoOp.debugMarker("Jumping to epilogue"),
-                    M1Op.b(retTarget))
+                    M1Op.b(retTarget)
+                )
 
             case .OCall0(let dst, let fun):
+                let callTarget = try ctx.wft.get(fun)
+                if let callTargetNative = callTarget as? HLNative {
+                    assert(
+                        reg: dst,
+                        from: resolvedRegs,
+                        matchesReturn: callTargetNative.type
+                    )
+                }
+                else if let callTargetFun = callTarget as? HLCompiledFunction {
+                    assert(
+                        reg: dst,
+                        from: resolvedRegs,
+                        matchesReturn: callTargetFun.type
+                    )
+                }
+                else {
+                    fatalError("Unknown call target \(callTarget)")
+                }
+
                 let fnAddr = try ctx.wft.getAddr(fun)
-                mem.append(PseudoOp.mov(.x10, fnAddr), M1Op.blr(.x10))
+                let regStackOffset = getRegStackOffset(resolvedRegs, dst)
+
+                mem.append(
+                    PseudoOp.debugMarker("Call0 fn@\(fun) -> \(dst)"),
+                    PseudoOp.mov(.x10, fnAddr),
+                    M1Op.blr(.x10),
+                    M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
+                )
             // fatalError("Jumping to \(fn) for funIx \(fun)")
             // fatalError("OCall0")
             case .ONew: fatalError("No ONew yet. What's up with types?")
@@ -307,9 +357,10 @@ class M1Compiler {
                 assert(reg: dst, from: resolvedRegs, is: .i32)
                 let c = ctx.storage.int32Resolver.get(iRef)
                 let regStackOffset = getRegStackOffset(resolvedRegs, dst)
-                
                 mem.append(
-                    PseudoOp.debugMarker("Mov \(c) into \(X.x0) and store in stack for HL reg \(iRef) at offset \(regStackOffset)"),
+                    PseudoOp.debugMarker(
+                        "Mov \(c) into \(X.x0) and store in stack for HL reg \(iRef) at offset \(regStackOffset)"
+                    ),
                     PseudoOp.mov(X.x0, c),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
@@ -318,30 +369,25 @@ class M1Compiler {
         }
 
         // initialize targets for 'ret' jumps
-        for var retTarget in retTargets { 
-            retTarget.stop(at: mem.byteSize) 
-        }
+        for var retTarget in retTargets { retTarget.stop(at: mem.byteSize) }
 
         if reservedStackBytes > 0 {
             mem.append(
                 PseudoOp.debugMarker("Free \(reservedStackBytes) bytes"),
                 (try M1Op._add(X.sp, X.sp, ByteCount(reservedStackBytes)))
             )
-        } else {
+        }
+        else {
             mem.append(
-                PseudoOp.debugMarker("Skipping freeing stack because \(reservedStackBytes) bytes were needed")
+                PseudoOp.debugMarker(
+                    "Skipping freeing stack because \(reservedStackBytes) bytes were needed"
+                )
             )
         }
 
         appendEpilogue(builder: mem)
         mem.append(.ret)
-        
 
-        let result = HLCompiledFunction(function: native, memory: currentFuncAddr)
-
-        // Register as we go.
-        ctx.wft.functions.table.append(result)
-
-        return result
+        return fun
     }
 }

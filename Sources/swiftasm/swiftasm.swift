@@ -42,78 +42,80 @@ struct SwiftAsm: ParsableCommand {
         print(String(reflecting: head))
         print("==> Compiling functions")
 
+        fatalError("WIP")
+    //     let fakeNatives = SharedStorage(wrappedValue: [HLNative]())
+    //     let fakeNativeResolver = TableResolver(table: fakeNatives, count: 0)
 
-        let fakeNatives = SharedStorage(wrappedValue: [HLNative]())
-        let fakeNativeResolver = TableResolver(table: fakeNatives, count: 0)
+    //     let compiledTable = SharedStorage(wrappedValue: [HLCompiledFunction]())
+    //     let compiledFunctions = TableResolver(table: compiledTable, count: 
+    //         head.storage.functionResolver.count)
 
-        let compiledTable = SharedStorage(wrappedValue: [HLCompiledFunction]())
-        let compiledFunctions = TableResolver(table: compiledTable, count: 
-            head.storage.functionResolver.count)
+    //     let wft = WholeFunctionsTable(
+    //         // natives: /*head.nativeResolver*/fakeNativeResolver, 
+    //         natives: head.storage.nativeResolver, 
+    //         compiledFunctions: compiledFunctions,
+    //         jitBase: SharedStorage(wrappedValue: nil))
 
-        let wft = WholeFunctionsTable(
-            // natives: /*head.nativeResolver*/fakeNativeResolver, 
-            natives: head.storage.nativeResolver, 
-            functions: compiledFunctions,
-            jitBase: SharedStorage(wrappedValue: nil))
+    //     // TODO: unify functions and natives in one function table
 
-        // TODO: unify functions and natives in one function table
-
-        // entrypoint initializes types, memory, and all that good stuff
-        let funcs = [
-            head.storage.functionResolver.table.first { $0.findex == 295 }!,
-            head.storage.functionResolver.table.first { $0.findex == 404 }!,
+    //     // entrypoint initializes types, memory, and all that good stuff
+    //     let funcs = [
+    //         head.storage.functionResolver.table.first { $0.findex == 295 }!,
+    //         head.storage.functionResolver.table.first { $0.findex == 404 }!,
             
-            // head.functionResolver.table.first { $0.findex == 1 }!,
+    //         // head.functionResolver.table.first { $0.findex == 1 }!,
 
-            // // Type_init
-            // head.functionResolver.table.first { $0.findex == 295 }!,
-            // // entrypoint
-            // head.functionResolver.table.first { $0.findex == 404 }!,
-            // // pathTest
-            // head.functionResolver.table.first { $0.findex == 29 }!,
-            // // pathTest2
-            // head.functionResolver.table.first { $0.findex == 30 }!
-        ]
+    //         // // Type_init
+    //         // head.functionResolver.table.first { $0.findex == 295 }!,
+    //         // // entrypoint
+    //         // head.functionResolver.table.first { $0.findex == 404 }!,
+    //         // // pathTest
+    //         // head.functionResolver.table.first { $0.findex == 29 }!,
+    //         // // pathTest2
+    //         // head.functionResolver.table.first { $0.findex == 30 }!
+    //     ]
 
-        let ctx = JitContext(storage: head.storage)
-        let jit = OpBuilder()
+    //     let ctx = JitContext(storage: head.storage)
+    //     let jit = OpBuilder()
+
+    //    fatalError("wip")
+
+    //     // compiledTable.wrappedValue = try /*head.functionResolver.table*/funcs.map {
+    //     // // compiledTable.wrappedValue = try head.functionResolver.table.map {
+    //     //     try compiler.compile(native: $0, into: jit, ctx: ctx)
+    //     //     // break
+    //     // }
+
+
+    //     // let entrypointCompiled = compiler.compile(native: entrypoint)
+    //     // let entrypointCompiled = compiler.compile(native: entrypoint)
+    //     // let pathTestCompiled = compiler.compile(native: pathTest)
+    //     // let pathTest2Compiled = compiler.compile(native: pathTest2)
+
+    //     try wft.requireReady()
+
+    //     let compiledEntrypoint = try wft.get(Int(head.entrypoint))
+    //     let xxx = compiledEntrypoint as! HLCompiledFunction
         
-        compiledTable.wrappedValue = try /*head.functionResolver.table*/funcs.map {
-        // compiledTable.wrappedValue = try head.functionResolver.table.map {
-            try compiler.compile(native: $0, into: jit, ctx: ctx)
-            // break
-        }
+    //     jit.debugPrint()
+
+    //     print("Got \(xxx)@\((xxx.memory as! any DeferredMemoryAddress))")
 
 
-        // let entrypointCompiled = compiler.compile(native: entrypoint)
-        // let entrypointCompiled = compiler.compile(native: entrypoint)
-        // let pathTestCompiled = compiler.compile(native: pathTest)
-        // let pathTest2Compiled = compiler.compile(native: pathTest2)
+    //     let finalEntrypoint = jit.buildMain(compiledEntrypoint)
+    //     let result = finalEntrypoint()
+    //     print("Entrypoint returned \(result)")
+    //     // fatalError("Ready")
+    //     // for funIx in 0..<head.nfunctions {
+    //     //     let fun: HLFunction = head.functionResolver.table.first { $0.findex == funIx }!
+    //     //     print("Compiling \(fun.debugDescription)")
+    //     //     print("    regs: \([fun.regs.map { $0.value.debugName }])")
+    //     //     let bytes = try compiler.compile(native: fun)
+    //     //     print("    done \(fun.debugDescription)")
+    //     //     print(bytes)
+    //     //     fatalError()
+    //     // }
 
-        try wft.requireReady()
-
-        let compiledEntrypoint = try wft.get(Int(head.entrypoint))
-        let xxx = compiledEntrypoint as! HLCompiledFunction
-        
-        jit.debugPrint()
-
-        print("Got \(xxx)@\((xxx.memory as! any DeferredMemoryAddress))")
-
-
-        let finalEntrypoint = jit.buildMain(compiledEntrypoint)
-        let result = finalEntrypoint()
-        print("Entrypoint returned \(result)")
-        // fatalError("Ready")
-        // for funIx in 0..<head.nfunctions {
-        //     let fun: HLFunction = head.functionResolver.table.first { $0.findex == funIx }!
-        //     print("Compiling \(fun.debugDescription)")
-        //     print("    regs: \([fun.regs.map { $0.value.debugName }])")
-        //     let bytes = try compiler.compile(native: fun)
-        //     print("    done \(fun.debugDescription)")
-        //     print(bytes)
-        //     fatalError()
-        // }
-
-        return
+    //     return
     }
 }

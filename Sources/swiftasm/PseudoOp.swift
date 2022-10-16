@@ -1,3 +1,5 @@
+import Foundation 
+
 enum PseudoOp: CpuOp, CustomDebugStringConvertible {
     case zero
     case ascii(String)
@@ -37,7 +39,8 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
             case .mov(let Rd, let val):
 
                 guard val.hasUsableValue else {
-                    throw GlobalError.immediateMissingValue
+                    print("Failing in \(self) At: \(Thread.callStackSymbols.joined(separator: "\n"))")
+                    throw GlobalError.immediateMissingValue("Trying to emit PseudoOp.mov and val \(val) does not have a usable value.")
                 }
                 
                 let v1 = UInt16(Int(val.immediate) & 0xFFFF)

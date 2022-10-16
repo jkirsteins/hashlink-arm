@@ -42,7 +42,7 @@ final class WholeFunctionsTableTests: XCTestCase {
             findex: 2,
             memory: ptr))
 
-        let sut = WholeFunctionsTable(natives: natives, functions: functions, jitBase: SharedStorage(wrappedValue: nil))
+        let sut = WholeFunctionsTable(natives: natives, compiledFunctions: functions, jitBase: SharedStorage(wrappedValue: nil))
 
         // populate fun
         functionTable.wrappedValue.append(HLCompiledFunction(function: HLFunction(
@@ -105,7 +105,7 @@ final class WholeFunctionsTableTests: XCTestCase {
             findex: 1,
             memory: ptr))
 
-        let sut = WholeFunctionsTable(natives: natives, functions: functions, jitBase: SharedStorage(wrappedValue: nil))
+        let sut = WholeFunctionsTable(natives: natives, compiledFunctions: functions, jitBase: SharedStorage(wrappedValue: nil))
 
         XCTAssertThrowsError(try sut.requireReady())
         { error in
@@ -155,7 +155,7 @@ final class WholeFunctionsTableTests: XCTestCase {
             findex: 2,
             memory: ptr))
 
-        let sut = WholeFunctionsTable(natives: natives, functions: functions, jitBase: SharedStorage(wrappedValue: nil))
+        let sut = WholeFunctionsTable(natives: natives, compiledFunctions: functions, jitBase: SharedStorage(wrappedValue: nil))
 
         XCTAssertThrowsError(try sut.requireReady())
         { error in
@@ -173,7 +173,7 @@ final class WholeFunctionsTableTests: XCTestCase {
         let natives = TableResolver(table: nativeTable, count: 0)
         let functions = TableResolver(table: functionTable, count: 2)
 
-        let sut = WholeFunctionsTable(natives: natives, functions: functions, jitBase: SharedStorage(wrappedValue: nil))
+        let sut = WholeFunctionsTable(natives: natives, compiledFunctions: functions, jitBase: SharedStorage(wrappedValue: nil))
         
         XCTAssertThrowsError(try sut.requireReady())
         { error in
