@@ -1,3 +1,5 @@
+
+
 struct Module: CustomDebugStringConvertible {
     let signature: ModuleSignature
     var version: UInt8 { signature.v }
@@ -22,12 +24,7 @@ struct Module: CustomDebugStringConvertible {
     // [f64]
     let constFloats: [Double]
 
-    let stringResolver: TableResolver<String>
-    let typeResolver: TableResolver<HLType>
-    let globalResolver: TableResolver<HLGlobal>
-    let nativeResolver: TableResolver<HLNative>
-    let functionResolver: TableResolver<HLFunction>
-    let constantResolver: TableResolver<HLConstant>
+    let storage: ModuleStorage
 
     var debugDescription: String {
         return """
@@ -45,7 +42,7 @@ struct Module: CustomDebugStringConvertible {
             ??? objects protos (not types)
             \(nconstants) constant values
             strings
-            \(stringResolver.table.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
+            \(storage.stringResolver.table.enumerated().map { (ix, el) in "    @\(ix) : \(el)" }.joined(separator: "\n"))
             """
     }
 }

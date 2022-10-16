@@ -1,6 +1,6 @@
 import Foundation
 
-struct HLTypeField : Equatable, CustomDebugStringConvertible {
+struct HLTypeField : Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
     let type: Resolvable<HLType>
 
@@ -9,7 +9,7 @@ struct HLTypeField : Equatable, CustomDebugStringConvertible {
     }
 }
 
-struct HLTypeBinding : Equatable, CustomDebugStringConvertible {
+struct HLTypeBinding : Equatable, CustomDebugStringConvertible, Hashable {
     let fieldRefIx: Int32
     let functionIx: Int32
 
@@ -18,9 +18,9 @@ struct HLTypeBinding : Equatable, CustomDebugStringConvertible {
     }
 }
 
-struct HLTypeProto : Equatable, CustomDebugStringConvertible{
+struct HLTypeProto : Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
-    let functionIx: Int32
+    let functionIx: Int32 
     let pIx: Int32
 
     var debugDescription: String {
@@ -28,7 +28,7 @@ struct HLTypeProto : Equatable, CustomDebugStringConvertible{
     }
 }
 
-struct HLTypeEnumConstruct : Equatable, CustomDebugStringConvertible 
+struct HLTypeEnumConstruct : Equatable, CustomDebugStringConvertible, Hashable 
 {
     let name: Resolvable<String>
     let params: [Resolvable<HLType>] 
@@ -38,7 +38,7 @@ struct HLTypeEnumConstruct : Equatable, CustomDebugStringConvertible
     }
 }
 
-struct HLTypeEnumData : Equatable, CustomDebugStringConvertible {
+struct HLTypeEnumData : Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
     let	global: Int32
     let constructs: [HLTypeEnumConstruct]
@@ -48,7 +48,7 @@ struct HLTypeEnumData : Equatable, CustomDebugStringConvertible {
     }
 }
 
-struct HLTypeRefData : Equatable, CustomDebugStringConvertible {
+struct HLTypeRefData : Equatable, CustomDebugStringConvertible, Hashable {
     let type: Resolvable<HLType>
 
     var debugDescription: String {
@@ -56,7 +56,7 @@ struct HLTypeRefData : Equatable, CustomDebugStringConvertible {
     }
 }
 
-struct HLTypeNullData : Equatable, CustomDebugStringConvertible {
+struct HLTypeNullData : Equatable, CustomDebugStringConvertible, Hashable {
     let type: Resolvable<HLType>
 
     var debugDescription: String {
@@ -64,7 +64,7 @@ struct HLTypeNullData : Equatable, CustomDebugStringConvertible {
     }
 }
 
-struct HLTypeAbstractData : Equatable, CustomDebugStringConvertible {
+struct HLTypeAbstractData : Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
     
     var debugDescription: String {
@@ -72,7 +72,7 @@ struct HLTypeAbstractData : Equatable, CustomDebugStringConvertible {
     }
 }
 
-struct HLTypeVirtualData : Equatable, CustomDebugStringConvertible {
+struct HLTypeVirtualData : Equatable, CustomDebugStringConvertible, Hashable {
     let fields: [HLTypeField]
     
     var debugDescription: String {
@@ -80,7 +80,7 @@ struct HLTypeVirtualData : Equatable, CustomDebugStringConvertible {
     }
 }
 
-struct HLTypeFunData : Equatable, CustomDebugStringConvertible {
+struct HLTypeFunData : Equatable, CustomDebugStringConvertible, Hashable {
     let args: [Resolvable<HLType>]
     let ret: Resolvable<HLType>
 
@@ -106,7 +106,7 @@ extension Resolvable<HLType> {
     }
 }
 
-struct HLTypeObjData : Equatable, CustomDebugStringConvertible{
+struct HLTypeObjData : Equatable, CustomDebugStringConvertible, Hashable {
     let	name: Resolvable<String>
     let	superType: Resolvable<HLType>?
     let	global: Int32
@@ -127,7 +127,7 @@ bindings: \(bindings.count > 0 ? "\n" : "")\(bindings.map { "  \($0.debugDescrip
 }
 
 
-protocol HLRegisterSize : Equatable {
+protocol HLRegisterSize : Equatable, Hashable {
     var neededBytes: ByteCount { get }
 }
 
@@ -168,7 +168,7 @@ extension HLType : HLRegisterSize {
     }
 }
 
-enum HLType : Equatable, CustomDebugStringConvertible {
+enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
 
     case void                           // 0
     case u8                             // 1

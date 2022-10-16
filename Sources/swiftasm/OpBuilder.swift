@@ -5,12 +5,23 @@ import Foundation
 anything specific to M1. Keep it a generic
 output builder based on CpuOp protocol. */
 
+typealias JitInt64 = (@convention(c) () -> Int64)
+typealias JitVoid = (@convention(c) () -> ())
+
 class OpBuilder
 {
     var ops: [any CpuOp] = []
     var position: Int { ops.count }
     var byteSize: ByteCount = 0
-    let jitBase: SharedStorage<UnsafeMutableRawPointer?> = SharedStorage(wrappedValue: nil)
+    let jitBase: SharedStorage<UnsafeMutableRawPointer?> 
+
+    init() {
+        self.jitBase = SharedStorage(wrappedValue: nil)
+    }
+
+    init(ctx: JitContext) {
+        self.jitBase = ctx.jitBase
+    }
 
     /* Deferred refers to the base memory address (for JIT) not being available.
     
@@ -83,6 +94,12 @@ class OpBuilder
         var printedAlready: ByteCount = 0
         for op in self.ops {
             let bytes = try! op.emit()
+            guard bytes.count > 0 else {
+                if case PseudoOp.debugMarker(let message) = op {
+                    print("// \(message)")
+                }
+                continue
+            }
             for (ix, row) in bytes.chunked(into: 4).enumerated() {
                 let strs = row.map { "0x" + String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") }
                 
@@ -95,7 +112,40 @@ class OpBuilder
                     debugString = ""
                 }
                 
-                print(strs.joined(separator: ", ") + ", // \(debugString)")
+                print(strs.joined(separator: ", ") + ", // \(debugString.replacingOccurrences(of: "\n", with: "\\n"))")
+            }
+
+            printedAlready += op.size
+        }
+        
+        print("---- END ----")
+    }
+
+    // print copy-pastable into a test
+    func asmPrint() {
+        print("---- START ----")
+        var printedAlready: ByteCount = 0
+        for op in self.ops {
+            let bytes = try! op.emit()
+            guard bytes.count > 0 else {
+                if case PseudoOp.debugMarker(let message) = op {
+                    print("// \(message)")
+                }
+                continue
+            }
+            for (ix, row) in bytes.chunked(into: 4).enumerated() {
+                let strs = row.map { "0x" + String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") }
+                
+                let debugString: String
+                if case PseudoOp.ascii = op {
+                    debugString = String(bytes: row, encoding: .ascii)!.replacingOccurrences(of: " ", with: ".")
+                } else if ix == 0 {
+                    debugString = op.debugDescription
+                } else {
+                    debugString = ""
+                }
+                
+                print(debugString)
             }
 
             printedAlready += op.size
@@ -136,9 +186,7 @@ class OpBuilder
         print("---- END ----")
     }
 
-    typealias JitMainType = (@convention(c) () -> Int64)
-
-    func buildEntrypoint(_ entrypoint: any WholeFunction) -> JitMainType {
+    func _buildAddress(_ entrypoint: any WholeFunction) -> UnsafeMutableRawPointer {
         
         let map = mmap(
             nil, 
@@ -150,27 +198,32 @@ class OpBuilder
         // This is needed so that DeferredAddresses
         // are available
         self.jitBase.wrappedValue = map
-        
         let code = build()
         
         if map == MAP_FAILED {
             fatalError("MAP FAILED \(errno)")
         }
 
-        var jitMain: JitMainType? = nil
-
         pthread_jit_write_protect_np(0);
         memcpy(map, code, code.count)
         pthread_jit_write_protect_np(1);
 
-        var entrypointAddress: UnsafeMutableRawPointer = entrypoint.memory.value
+        print("Map root is \(map)")
 
+        return entrypoint.memory.value
+    }
+
+    func buildMain(_ entrypoint: any WholeFunction) -> JitInt64 {
+        self.buildEntrypoint(entrypoint)
+    }
+
+    func buildEntrypoint<T>(_ entrypoint: any WholeFunction) -> T {
+        let entrypointAddress = _buildAddress(entrypoint)
         print("Casting from \(entrypointAddress)")
-        
-        jitMain = unsafeBitCast(
+        var jitMain: T? = unsafeBitCast(
             // map /*entrypointAddress*/, 
             /*map*/ entrypointAddress, 
-            to: JitMainType.self)
+            to: T.self)
 
         // var codeCopy = code
         // withUnsafeMutablePointer(to: &codeCopy) {

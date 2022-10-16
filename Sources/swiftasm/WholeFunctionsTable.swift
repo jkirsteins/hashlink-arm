@@ -1,4 +1,4 @@
-struct HLCompiledFunction : Equatable, WholeFunction, CustomDebugStringConvertible {
+struct HLCompiledFunction : Equatable, WholeFunction, CustomDebugStringConvertible, Hashable {
     let function: HLFunction
     let memory: any MemoryAddress
 
@@ -13,6 +13,11 @@ struct HLCompiledFunction : Equatable, WholeFunction, CustomDebugStringConvertib
         "compiled/ops:\(function.ops.count)/regs:\(function.regs.count)/\(findex)"
     }
 
+    func hash(into hasher: inout Hasher) {
+        function.hash(into: &hasher)
+        memory.hash(into: &hasher)
+    }
+
     static func == (lhs: Self, rhs: Self) -> Bool {
         return lhs.function == rhs.function  &&
             lhs.memory.isEqual(rhs.memory) && 
@@ -21,7 +26,7 @@ struct HLCompiledFunction : Equatable, WholeFunction, CustomDebugStringConvertib
     }
 }
 
-protocol WholeFunction : Equatable {
+protocol WholeFunction : Equatable, Hashable {
     var findex: Int32 { get }
     var memory: any MemoryAddress { get }
     var type: Resolvable<HLType> { get }
@@ -38,6 +43,7 @@ enum WholeFunctionsTableError: Error, Equatable {
 class WholeFunctionsTable {
     let natives: TableResolver<HLNative>
     let functions: TableResolver<HLCompiledFunction> 
+    let jitBase: SharedStorage<UnsafeMutableRawPointer?>
     
     // For compiler to be able to refer to addresses ahead of them being known
     // These can be relative (for HLCompiledFunction) or absolute (for HLNative)
@@ -61,6 +67,7 @@ class WholeFunctionsTable {
         functions: TableResolver<HLCompiledFunction>,
         jitBase: SharedStorage<UnsafeMutableRawPointer?>) 
     {
+        self.jitBase = jitBase
         self.natives = natives 
         guard natives.count == natives.table.count else {
             // This is the normal case. Placing a fatalError in case something changes, because

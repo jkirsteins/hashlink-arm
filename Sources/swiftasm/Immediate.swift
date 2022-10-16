@@ -1,4 +1,4 @@
-protocol Immediate : Equatable {
+protocol Immediate : Equatable, Hashable {
     var bits: Int64 { get }
     var immediate: Int64 { get }
 

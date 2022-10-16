@@ -48,11 +48,11 @@ struct SwiftAsm: ParsableCommand {
 
         let compiledTable = SharedStorage(wrappedValue: [HLCompiledFunction]())
         let compiledFunctions = TableResolver(table: compiledTable, count: 
-            head.functionResolver.count)
+            head.storage.functionResolver.count)
 
         let wft = WholeFunctionsTable(
             // natives: /*head.nativeResolver*/fakeNativeResolver, 
-            natives: head.nativeResolver, 
+            natives: head.storage.nativeResolver, 
             functions: compiledFunctions,
             jitBase: SharedStorage(wrappedValue: nil))
 
@@ -60,8 +60,8 @@ struct SwiftAsm: ParsableCommand {
 
         // entrypoint initializes types, memory, and all that good stuff
         let funcs = [
-            head.functionResolver.table.first { $0.findex == 295 }!,
-            head.functionResolver.table.first { $0.findex == 404 }!,
+            head.storage.functionResolver.table.first { $0.findex == 295 }!,
+            head.storage.functionResolver.table.first { $0.findex == 404 }!,
             
             // head.functionResolver.table.first { $0.findex == 1 }!,
 
@@ -75,7 +75,7 @@ struct SwiftAsm: ParsableCommand {
             // head.functionResolver.table.first { $0.findex == 30 }!
         ]
 
-        let ctx = JitContext(wft: wft)
+        let ctx = JitContext(storage: head.storage)
         let jit = OpBuilder()
         
         compiledTable.wrappedValue = try /*head.functionResolver.table*/funcs.map {
@@ -100,7 +100,7 @@ struct SwiftAsm: ParsableCommand {
         print("Got \(xxx)@\((xxx.memory as! any DeferredMemoryAddress))")
 
 
-        let finalEntrypoint = jit.buildEntrypoint(compiledEntrypoint)
+        let finalEntrypoint = jit.buildMain(compiledEntrypoint)
         let result = finalEntrypoint()
         print("Entrypoint returned \(result)")
         // fatalError("Ready")

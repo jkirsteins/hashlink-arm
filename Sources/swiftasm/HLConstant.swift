@@ -1,6 +1,6 @@
-struct HLConstant : Equatable, CustomDebugStringConvertible {
+struct HLConstant : Equatable, CustomDebugStringConvertible, Hashable {
     let global: Resolvable<HLGlobal>
-    let	fields: [TableIndex]
+    let	fields: [TableIndex] 
 
     var debugDescription: String {
         return "Constant(global \(global) fields: \(fields))"

@@ -1,4 +1,4 @@
-struct HLFunction: Equatable, CustomDebugStringConvertible {
+struct HLFunction: Equatable, CustomDebugStringConvertible, Hashable { 
 
     let type: Resolvable<HLType>
     let findex: Int32 

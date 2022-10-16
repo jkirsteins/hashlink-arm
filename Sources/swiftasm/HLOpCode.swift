@@ -527,7 +527,7 @@ extension HLOpCode {
     }
 }
 
-enum HLOpCode : Equatable {
+enum HLOpCode : Equatable, Hashable {
     /// Copy value from *src* into *dst*
     case OMov(dst: Reg, src: Reg)
     case OInt(dst: Reg, ptr: RefInt)

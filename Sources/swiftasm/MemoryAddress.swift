@@ -1,4 +1,4 @@
-protocol MemoryAddress : Equatable, Immediate {
+protocol MemoryAddress : Equatable, Immediate, Hashable {
     var value: UnsafeMutableRawPointer { get }
     
     func isEqual(_ to: any MemoryAddress) -> Bool 
@@ -83,7 +83,7 @@ extension MemoryAddress {
 }
 
 // neither base nor offset known
-struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, MemoryAddress {
+struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, MemoryAddress, Hashable {
     let jitBase: SharedStorage<UnsafeMutableRawPointer?>
     let offsetFromBase: SharedStorage<ByteCount?> = SharedStorage(wrappedValue: nil)
 
@@ -106,7 +106,7 @@ struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, MemoryAdd
         guard let to = to as? FullyDeferredRelativeAddress else {
             return false 
         }
-        return self == to
+        return self == to 
     }
 
     func update(from: DeferredBaseRelativeAddress) {
@@ -118,7 +118,7 @@ struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, MemoryAdd
 }
 
 // base is deferred, but offset is known
-struct DeferredBaseRelativeAddress: Equatable, MemoryAddress {
+struct DeferredBaseRelativeAddress: Equatable, MemoryAddress, Hashable {
     let jitBase: SharedStorage<UnsafeMutableRawPointer?>
     let offsetFromBase: ByteCount
 
