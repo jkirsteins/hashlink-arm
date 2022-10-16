@@ -1,40 +1,4 @@
-protocol MemoryAddress {
-    var value: UnsafeMutableRawPointer { get }
-}
-
-extension UnsafeMutableRawPointer: MemoryAddress {
-    var value: UnsafeMutableRawPointer { self }
-}
-
-struct DeferredAddress: MemoryAddress {
-    let jitBase: SharedStorage<UnsafeMutableRawPointer?>
-    let offsetFromBase: ByteCount
-
-    var value: UnsafeMutableRawPointer {
-        guard let base = self.jitBase.wrappedValue else {
-            fatalError("Deferred address not available")
-        }
-        return base.advanced(by: Int(offsetFromBase))
-    }
-}
-
-struct HLCompiledFunction : WholeFunction, CustomDebugStringConvertible {
-    let function: HLFunction
-    let memory: any MemoryAddress
-
-    var type: Resolvable<HLType> { function.type }
-    var findex: Int32 { function.findex }
-
-    var debugDescription: String {
-        function.debugDescription
-    }
-
-    var wholeFunctionDebugDescription: String {
-        "compiled/ops:\(function.ops.count)/regs:\(function.regs.count)/\(findex)"
-    }
-}
-
-protocol WholeFunction {
+protocol WholeFunction : Equatable, Hashable {
     var findex: Int32 { get }
     var memory: any MemoryAddress { get }
     var type: Resolvable<HLType> { get }
@@ -44,20 +8,37 @@ protocol WholeFunction {
 }
 
 enum WholeFunctionsTableError: Error, Equatable {
+    case functionsNotCompiled(String)
     case tableNotReadyWhenRequired
     case invalidUnderlyingData(String)
 }
 
 class WholeFunctionsTable {
     let natives: TableResolver<HLNative>
-    let functions: TableResolver<HLCompiledFunction> 
+    let compiledFunctions: TableResolver<HLCompiledFunction> 
+    let jitBase: SharedStorage<UnsafeMutableRawPointer?>
     
+    // convenience for tests
+    convenience init(nnatives: Int32, nfunctions: Int32, jitBase: SharedStorage<UnsafeMutableRawPointer?>) {
+        let natives: TableResolver<HLNative> = TableResolver(table: SharedStorage(wrappedValue: []), count: nnatives)
+        let funcs: TableResolver<HLCompiledFunction> = TableResolver(table: SharedStorage(wrappedValue: []), count: nfunctions)
+        self.init(natives: natives, compiledFunctions: funcs, jitBase: jitBase)
+    }
+
     init(
         natives: TableResolver<HLNative>,
-        functions: TableResolver<HLCompiledFunction>) 
+        compiledFunctions: TableResolver<HLCompiledFunction>,
+        jitBase: SharedStorage<UnsafeMutableRawPointer?>) 
     {
+        self.jitBase = jitBase
         self.natives = natives 
-        self.functions = functions
+        guard natives.count == natives.table.count, compiledFunctions.count == compiledFunctions.table.count else {
+            // This is the normal case. Placing a fatalError in case something changes, because
+            // the address store/lookup is not considered for this scenario.
+            fatalError("Both function tables must already be fully populated (but addresses can be deferred)")
+        }
+
+        self.compiledFunctions = compiledFunctions
     } 
 
     func requireReady() throws {
@@ -74,26 +55,36 @@ class WholeFunctionsTable {
         }
     }
 
-    func get(_ ix: Int) throws -> WholeFunction {
+    func getAddr(_ ix: Int) -> any DeferredMemoryAddress {
+        do {
+            let mem = try get(ix).memory
+            guard let res = mem as? any DeferredMemoryAddress else {
+                fatalError("Could not cast \(mem) as DeferredMemoryAddress")
+            }
+            return res
+        } catch {
+            fatalError("getAddr failed: \(error)")
+        }
+    }
+
+    func get(_ ix: Int) throws -> any WholeFunction {
         try requireReady()
         return self.table![ix] 
     }
 
     var ready: Bool { table != nil && _cachedTable != nil }
 
-    var _cachedTable: [WholeFunction]?
-    var table: [WholeFunction]! {
+    var _cachedTable: [any WholeFunction]?
+    var table: [any WholeFunction]! {
         guard _cachedTable == nil else { 
-            print("Got cached")
             return _cachedTable 
         }
 
         let castNatives: [any WholeFunction] = self.natives.table
-        let castFuncs: [any WholeFunction] = self.functions.table
+        let castFuncs: [any WholeFunction] = self.compiledFunctions.table
         let result = (castNatives + castFuncs).sorted(by: { $0.findex < $1.findex })
 
-        guard result.count == natives.count + functions.count else {
-            print("\(result.count) != \(natives.count) + \(functions.count)")
+        guard result.count == natives.count + compiledFunctions.count else {
             return nil
         }
 

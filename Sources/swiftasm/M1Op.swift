@@ -11,12 +11,14 @@ enum M1Op : CpuOp {
       switch(self) {
         case .nop: return "nop" 
         case .ret: return "ret"
-        case .add(let rt, let rn, let off) where off.imm < 0: 
-          return M1Op.sub(rt, rn, Imm12Lsl12(-off.imm, lsl: off.lsl)).debugDescription
-        case .sub(let rt, let rn, let off) where off.imm >= 0: 
+        case .add(let rt, let rn, let off) where off.imm.isNegative: 
+          // We're sure this fits
+          return M1Op.sub(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
+        case .sub(let rt, let rn, let off) where off.imm.isPositive: 
           return "sub \(rt), \(rn), \(off.debugDescription)"
         case .sub(let rt, let rn, let off): 
-          return M1Op.add(rt, rn, Imm12Lsl12(-off.imm, lsl: off.lsl)).debugDescription
+          // We're sure this fits
+          return M1Op.add(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
         case .add(let rt, let rn, let off): 
           return "add \(rt), \(rn), \(off.debugDescription)"
         case .svc(let x): return "svc 0x\(String(x, radix: 16).leftPadding(toLength: 4, withPad: "0"))"
@@ -103,6 +105,10 @@ enum M1Op : CpuOp {
         }
     }
 
+    static func _add(_ r1: any Register, _ r2: any Register, _ offs: ByteCount) throws -> M1Op {
+      .add(r1, r2, try Imm12Lsl12(Immediate12(offs), lsl: ._0))
+    }
+
     func emit() throws -> [UInt8] {
       try EmitterM1.emit(for: self)
     }
@@ -140,7 +146,7 @@ enum M1Op : CpuOp {
 
     case b(RelativeOffset) // 26 bits max
     case blr(Register64)
-    case bl(Int32)  // 26 bits max
+    case bl(Immediate26)  // 26 bits max
 
     // https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/MOVZ
     case movz32(Register32, UInt16, Register32.Shift?)

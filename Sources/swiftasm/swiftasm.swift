@@ -37,79 +37,77 @@ struct SwiftAsm: ParsableCommand {
         let file = try! Data(contentsOf: URL(fileURLWithPath: hlFileIn))
         let reader = ByteReader(file)
 
-        let head = try! reader.readModule()
-        let compiler = M1Compiler()
-        print(String(reflecting: head))
+        let mod = try! reader.readModule()
+        
+        print(String(reflecting: mod))
         print("==> Compiling functions")
 
+        let ctx = JitContext(module: mod)
+        let jit = OpBuilder(ctx: ctx)
+        let compiler = M1Compiler()
 
-        let fakeNatives = SharedStorage(wrappedValue: [HLNative]())
-        let fakeNativeResolver = TableResolver(table: fakeNatives, count: 0)
-
-        let compiledTable = SharedStorage(wrappedValue: [HLCompiledFunction]())
-        let compiledFunctions = TableResolver(table: compiledTable, count: 
-            head.functionResolver.count)
-
-        let wft = WholeFunctionsTable(
-            // natives: /*head.nativeResolver*/fakeNativeResolver, 
-            natives: head.nativeResolver, 
-            functions: compiledFunctions)
-
-        // TODO: unify functions and natives in one function table
-
-        // entrypoint initializes types, memory, and all that good stuff
-        let funcs = [
-            head.functionResolver.table.first { $0.findex == 0 }!,
-            head.functionResolver.table.first { $0.findex == 1 }!,
-
-            // // Type_init
-            // head.functionResolver.table.first { $0.findex == 295 }!,
-            // // entrypoint
-            // head.functionResolver.table.first { $0.findex == 404 }!,
-            // // pathTest
-            // head.functionResolver.table.first { $0.findex == 29 }!,
-            // // pathTest2
-            // head.functionResolver.table.first { $0.findex == 30 }!
-        ]
-
-        let jit = OpBuilder()
-        
-        // compiledTable.wrappedValue = try /*head.functionResolver.table*/funcs.map {
-        compiledTable.wrappedValue = try head.functionResolver.table.map {
-            try compiler.compile(native: $0, into: jit)
-            // break
+        for fn in mod.storage.functionResolver.table {
+            try compiler.compile(findex: fn.findex, into: jit)
         }
+ 
+    //     // entrypoint initializes types, memory, and all that good stuff
+    //     let funcs = [
+    //         head.storage.functionResolver.table.first { $0.findex == 295 }!,
+    //         head.storage.functionResolver.table.first { $0.findex == 404 }!,
+            
+    //         // head.functionResolver.table.first { $0.findex == 1 }!,
+
+    //         // // Type_init
+    //         // head.functionResolver.table.first { $0.findex == 295 }!,
+    //         // // entrypoint
+    //         // head.functionResolver.table.first { $0.findex == 404 }!,
+    //         // // pathTest
+    //         // head.functionResolver.table.first { $0.findex == 29 }!,
+    //         // // pathTest2
+    //         // head.functionResolver.table.first { $0.findex == 30 }!
+    //     ]
+
+    //     let ctx = JitContext(storage: head.storage)
+    //     let jit = OpBuilder()
+
+    //    fatalError("wip")
+
+    //     // compiledTable.wrappedValue = try /*head.functionResolver.table*/funcs.map {
+    //     // // compiledTable.wrappedValue = try head.functionResolver.table.map {
+    //     //     try compiler.compile(native: $0, into: jit, ctx: ctx)
+    //     //     // break
+    //     // }
 
 
-        // let entrypointCompiled = compiler.compile(native: entrypoint)
-        // let entrypointCompiled = compiler.compile(native: entrypoint)
-        // let pathTestCompiled = compiler.compile(native: pathTest)
-        // let pathTest2Compiled = compiler.compile(native: pathTest2)
+    //     // let entrypointCompiled = compiler.compile(native: entrypoint)
+    //     // let entrypointCompiled = compiler.compile(native: entrypoint)
+    //     // let pathTestCompiled = compiler.compile(native: pathTest)
+    //     // let pathTest2Compiled = compiler.compile(native: pathTest2)
 
-        try wft.requireReady()
+    //     try wft.requireReady()
 
-        let compiledEntrypoint = try wft.get(Int(head.entrypoint))
-        let xxx = compiledEntrypoint as! HLCompiledFunction
+    //     let compiledEntrypoint = try wft.get(Int(head.entrypoint))
+    //     let xxx = compiledEntrypoint as! HLCompiledFunction
         
-        jit.debugPrint()
+    //     jit.debugPrint()
 
-        print("Got \(xxx)@\((xxx.memory as! DeferredAddress).offsetFromBase)")
+    //     print("Got \(xxx)@\((xxx.memory as! any DeferredMemoryAddress))")
 
 
-        let finalEntrypoint = jit.buildEntrypoint(compiledEntrypoint)
-        let result = finalEntrypoint()
-        print("Entrypoint returned \(result)")
-        // fatalError("Ready")
-        // for funIx in 0..<head.nfunctions {
-        //     let fun: HLFunction = head.functionResolver.table.first { $0.findex == funIx }!
-        //     print("Compiling \(fun.debugDescription)")
-        //     print("    regs: \([fun.regs.map { $0.value.debugName }])")
-        //     let bytes = try compiler.compile(native: fun)
-        //     print("    done \(fun.debugDescription)")
-        //     print(bytes)
-        //     fatalError()
-        // }
+    //     let finalEntrypoint = jit.buildMain(compiledEntrypoint)
+    //     let result = finalEntrypoint()
+    //     print("Entrypoint returned \(result)")
+    //     // fatalError("Ready")
+    //     // for funIx in 0..<head.nfunctions {
+    //     //     let fun: HLFunction = head.functionResolver.table.first { $0.findex == funIx }!
+    //     //     print("Compiling \(fun.debugDescription)")
+    //     //     print("    regs: \([fun.regs.map { $0.value.debugName }])")
+    //     //     let bytes = try compiler.compile(native: fun)
+    //     //     print("    done \(fun.debugDescription)")
+    //     //     print(bytes)
+    //     //     fatalError()
+    //     // }
 
-        return
+    //     return
     }
 }

@@ -113,6 +113,17 @@ class Main {
 					className: [Const:String] "Main"
 					methodName: [Const:String] "pathTest2"
 
+	public static function pathTest3[Function:(p : Path2) -> Int]
+		[Arg:Path2] [Local p(5174):Path2]
+		[Block:Dynamic]
+			[Var result(5175):Int]
+				[Field:Int]
+					[Local p(5174):Path2:Path2]
+					[FInstance:Int]
+						Path2
+						test2:Int
+			[Return:Dynamic] [Local result(5175):Int:Int]
+
 	@:keep
 	public static function main[Function:() -> Void]
 		[Block:Void]
@@ -125,7 +136,7 @@ class Main {
 				[Const:String] "Hello World"
 				[ObjectDecl:{ methodName : String, lineNumber : Int, fileName : String, className : String }]
 					fileName: [Const:String] "haxesrc/Main.hx"
-					lineNumber: [Const:Int] 112
+					lineNumber: [Const:Int] 117
 					className: [Const:String] "Main"
 					methodName: [Const:String] "main"
 			[Call:Void]

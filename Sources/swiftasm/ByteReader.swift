@@ -24,6 +24,31 @@ struct ModuleSignature {
     let l: UInt8
     let b: UInt8
     let v: UInt8
+
+    init(h: UInt8, l: UInt8, b: UInt8, v: UInt8) {
+        self.h = h 
+        self.l = l 
+        self.b = b 
+        self.v = v 
+    }
+
+    static func valid() -> ModuleSignature {
+        ModuleSignature(
+            h: UInt8(ascii: "H"),
+            l: UInt8(ascii: "L"),
+            b: UInt8(ascii: "B"),
+            v: 4 
+        )
+    }
+
+    func validate() {
+        let firstB = String(bytes: [h, l, b], encoding: .ascii)!
+        guard firstB == "HLB" else {
+            fatalError(
+                "Invalid header (first three bytes must be HLB but got \(firstB))"
+            )
+        }
+    }
 }
 
 class ByteReader {
@@ -112,23 +137,18 @@ class ByteReader {
             try self.readDouble()
         }
 
-        // Tables
-        let stringTable = SharedStorage(wrappedValue: [String]())
-        let typeTable = SharedStorage(wrappedValue: [HLType]())
-        let globalTable = SharedStorage(wrappedValue: [HLGlobal]())
-        let nativeTable = SharedStorage(wrappedValue: [HLNative]())
-        let functionTable = SharedStorage(wrappedValue: [HLFunction]())
-        let constantTable = SharedStorage(wrappedValue: [HLConstant]())
-
-        // Resolvers
-        let stringResolver = TableResolver(table: stringTable, count: nstrings)
-        let typeResolver = TableResolver(table: typeTable, count: ntypes)
-        let globalResolver = TableResolver(table: globalTable, count: nglobals)
-        let nativeResolver = TableResolver(table: nativeTable, count: nnatives)
-        let functionResolver = TableResolver(table: functionTable, count: nfunctions)
-        let constantResolver = TableResolver(table: constantTable, count: nconstants)
-
-        stringTable.wrappedValue = try self.readStrings(nstrings)
+        let storage = ModuleStorage(
+            nstrings: nstrings, 
+            nints: nints,
+            nfloats: nfloats,
+            ntypes: ntypes, 
+            nglobals: nglobals, 
+            nnatives: nnatives, 
+            nfunctions: nfunctions, 
+            nconstants: nconstants)
+        storage.stringTable.wrappedValue = try self.readStrings(nstrings)
+        storage.int32Table.wrappedValue = constInts
+        storage.float64Table.wrappedValue = constFloats
 
         if sig.v >= 5 { fatalError("byte reading not implemented") }
 
@@ -148,12 +168,12 @@ class ByteReader {
 
                 let type = try HLType.read(
                     from: self,
-                    strings: stringResolver,
-                    types: typeResolver
+                    strings: storage.stringResolver,
+                    types: storage.typeResolver
                 )
-                typeTable.wrappedValue += [type]
+                storage.typeTable.wrappedValue += [type]
 
-                return typeResolver.getResolvable(ix)
+                return storage.typeResolver.getResolvable(ix)
             }
 
         print("==> Types")
@@ -164,9 +184,9 @@ class ByteReader {
             .enumerated().map { ix, _ in
 
                 let globalTypeIx = try readIndex()
-                let type = typeResolver.getResolvable(globalTypeIx)
+                let type = storage.typeResolver.getResolvable(globalTypeIx)
                 let global = HLGlobal(type: type)
-                globalTable.wrappedValue += [global]
+                storage.globalTable.wrappedValue += [global]
 
                 return global
             }
@@ -179,9 +199,9 @@ class ByteReader {
             ix,
             _ in
 
-            let lib = stringResolver.getResolvable(try readIndex())
-            let name = stringResolver.getResolvable(try readIndex())
-            let type = typeResolver.getResolvable(try readIndex())
+            let lib = storage.stringResolver.getResolvable(try readIndex())
+            let name = storage.stringResolver.getResolvable(try readIndex())
+            let type = storage.typeResolver.getResolvable(try readIndex())
             let findex = try readVarInt()
 
             //
@@ -195,7 +215,7 @@ class ByteReader {
                 findex: findex,
                 memory: rfun
             )
-            nativeTable.wrappedValue += [native]
+            storage.nativeTable.wrappedValue += [native]
 
             return native
         }
@@ -209,7 +229,7 @@ class ByteReader {
         let loadedFunctions = try Array(repeating: 0, count: Int(nfunctions))
             .enumerated().map { ix, _ in
 
-                let type = typeResolver.getResolvable(try self.readIndex())
+                let type = storage.typeResolver.getResolvable(try self.readIndex())
                 let findex = try self.readVarInt()
                 let nregs = try self.readVarInt()
                 let nops = try self.readVarInt()
@@ -219,7 +239,7 @@ class ByteReader {
                 )
 
                 let regs = try Array(repeating: 0, count: Int(nregs)).map { _ in
-                    typeResolver.getResolvable(try self.readIndex())
+                    storage.typeResolver.getResolvable(try self.readIndex())
                 }
 
                 let ops = try Array(repeating: 0, count: Int(nops)).enumerated().map {
@@ -278,7 +298,7 @@ class ByteReader {
 
                 let assigns = try Array(repeating: 0, count: Int(nassigns)).map { _ in
                     HLFunctionAssign(
-                        variableName: stringResolver.getResolvable(
+                        variableName: storage.stringResolver.getResolvable(
                             try self.readIndex()
                         ),
                         opcodeId: try self.readVarInt()
@@ -294,22 +314,22 @@ class ByteReader {
                 )
             }.sorted(by: { $0.findex < $1.findex })
 
-        functionTable.wrappedValue = loadedFunctions
+        storage.functionTable.wrappedValue = loadedFunctions
 
         print("==> Functions")
-        for (ix, rt) in functionTable.wrappedValue.enumerated() {
+        for (ix, rt) in storage.functionTable.wrappedValue.enumerated() {
             print("\(ix) : \(rt.debugDescription)")
             for op in rt.ops { print("    \(op.debugDescription)") }
         }
         // constants
-        constantTable.wrappedValue = try Array(repeating: 0, count: Int(nconstants))
+        storage.constantTable.wrappedValue = try Array(repeating: 0, count: Int(nconstants))
             .enumerated().map { ix, _ in let global = try self.readIndex()
                 let nfields = try self.readVarInt()
                 let fields = try Array(repeating: 0, count: Int(nfields)).map { _ in
                     return try self.readIndex()
                 }
                 return HLConstant(
-                    global: globalResolver.getResolvable(global),
+                    global: storage.globalResolver.getResolvable(global),
                     fields: fields
                 )
             }
@@ -327,14 +347,7 @@ class ByteReader {
             nfunctions: nfunctions,
             nconstants: nconstants,
             entrypoint: entrypoint,
-            constInts: constInts,
-            constFloats: constFloats,
-            stringResolver: stringResolver,
-            typeResolver: typeResolver,
-            globalResolver: globalResolver,
-            nativeResolver: nativeResolver,
-            functionResolver: functionResolver,
-            constantResolver: constantResolver
+            storage: storage
         )
 
         return result
