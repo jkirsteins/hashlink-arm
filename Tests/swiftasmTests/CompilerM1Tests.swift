@@ -134,7 +134,7 @@ final class CompilerM1Tests: XCTestCase {
             let objAddress = Int64(Int(bitPattern: ptr))
 
             // run the entrypoint and ensure it works
-            typealias _JitFunc = (@convention(c) (Int64) -> Int64)
+            typealias _JitFunc = (@convention(c) (Int64) -> Int32)
             let entrypoint: _JitFunc = try mem.buildEntrypoint(cf)
             let result = entrypoint(objAddress)
             XCTAssertEqual(result, 0xBEEF)
