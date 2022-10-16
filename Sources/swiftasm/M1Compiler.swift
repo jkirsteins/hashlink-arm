@@ -50,9 +50,10 @@ extension M1Compiler {
             )
         }
         let stackArgs = Array( /* regs should be aligned with args */
-            regs.dropFirst(args.count) + args.prefix(ARG_REGISTER_COUNT)
+            // IMPORTANT: args must come first
+            args.prefix(ARG_REGISTER_COUNT) + regs.dropFirst(args.count)
         )
-        print("args needing space", stackArgs)
+        print("args needing space", stackArgs.map { $0.debugName })
         let result = stackArgs.reduce(0) { $0 + Int16($1.neededBytes) }
         return (roundUpStackReservation(result), stackArgs)
     }
@@ -106,6 +107,7 @@ extension M1Compiler {
                     .reg64offset(Register64.sp, offset, nil)
                 )
             )
+            print("Inc offset by \(reg.neededBytes) from \(reg)")
             offset += reg.neededBytes
         }
 
@@ -228,7 +230,7 @@ class M1Compiler {
         }
         var startOffset = ByteCount(8)  // hl_type* pointer
         for ix in 0..<field {
-            var fieldToSkip = objData.fields[ix].type.value.neededBytes
+            let fieldToSkip = objData.fields[ix].type.value.neededBytes
             startOffset += fieldToSkip
         }
         return startOffset
@@ -238,12 +240,30 @@ class M1Compiler {
         for op in ops { buffer.push(try emitter.emit(for: op)) }
     }
 
-    /*
-    Will compile and update the JIT context with the functions addresses.
-    */
+    /// Deprecated.
+    /// - Parameters:
+    ///   - findex: 
+    ///   - mem: 
+    ///   - ctx: 
+    /// - Returns: 
+    @discardableResult
     func compile(findex: Int32, into mem: OpBuilder, ctx: JitContext) throws
         -> HLCompiledFunction
     {
+        try compile(findex: findex, into: mem)
+    }
+
+    /// Will compile and update the JIT context with the functions addresses.
+    /// - Parameters:
+    ///   - findex: 
+    ///   - mem: 
+    /// - Returns: 
+    @discardableResult
+    func compile(findex: Int32, into mem: OpBuilder) throws
+        -> HLCompiledFunction
+    {
+        let ctx = mem.ctx
+
         guard let fun = ctx.compiledFunctions.first(where: { $0.findex == findex })
         else {
             throw GlobalError.invalidValue(
@@ -269,6 +289,7 @@ class M1Compiler {
         var retTargets: [RelativeDeferredOffset] = []
 
         print("Compiling function \(fun.findex) at deferred address \(fun.memory)")
+        print("OPS: \n--" + fun.ops.map { $0.debugDescription }.joined(separator: "\n--"))
 
         guard case .fun(let funData) = fun.type.value else {
             fatalError("HLCompiledFunction type should be function")
@@ -341,18 +362,39 @@ class M1Compiler {
             // fatalError("Jumping to \(fn) for funIx \(fun)")
             // fatalError("OCall0")
             case .ONew: fatalError("No ONew yet. What's up with types?")
-            case .OGetThis(let reg1, let fieldRef):
-                let regStackOffset = getRegStackOffset(resolvedRegs, reg1)
+            case .OGetThis(let regDst, let fieldRef):
+                guard resolvedRegs.count > 0 && regDst < resolvedRegs.count else {
+                    fatalError("Not enough registers. Expected register 0 and \(regDst) to be available. Got: \(resolvedRegs)")
+                }
                 let sourceObjectType = resolvedRegs[0]
+                guard case .obj(let sourceObjData) = sourceObjectType else {
+                    fatalError("OGetThis: source object data must be obj but got \(sourceObjectType)")
+                }
+                guard fieldRef < sourceObjData.fields.count else {
+                    fatalError("OGetThis: expected field \(fieldRef) to exist but got \(sourceObjData.fields)")
+                }
+                let sourceObjectFieldType = sourceObjData.fields[fieldRef]
+                
+                assert(reg: regDst, from: resolvedRegs, is: sourceObjectFieldType.type.value)
+
+                let objOffset = getRegStackOffset(resolvedRegs, 0)
+                let dstOffset = getRegStackOffset(resolvedRegs, regDst)
                 let fieldOffset = getFieldOffset(sourceObjectType, fieldRef)
-                // TODO: is x0 loaded from method args?
+
+                /* We should:
+                - load x0 from reg0
+                - access (x0 + 8) + fieldN (accounting for N-1 field sizes)
+                - move to regN
+                */
+
                 mem.append(
-                    try ._add(X.x1, X.x0, fieldOffset)  // point x1 to field
-
+                    PseudoOp.debugMarker("Loading x0 from SP + \(objOffset) (offset for reg0)"),
+                    M1Op.ldr(X.x0, .reg64offset(X.sp, objOffset, nil)),     // point x0 to reg0 (i.e. obj)
+                    PseudoOp.debugMarker("Moving x0 by \(fieldOffset) (offset for field \(fieldRef))"),
+                    M1Op.ldr(X.x0, .reg64offset(X.x0, fieldOffset, nil)),   // move field (via offset) into x0
+                    PseudoOp.debugMarker("Storing x0 at SP + \(dstOffset) (offset for reg\(regDst))"),
+                    M1Op.str(X.x0, .reg64offset(X.sp, dstOffset, nil))      // store x0 back in sp
                 )
-
-                print("Reg stack offset for reg\(reg1) is \(regStackOffset)")
-                fatalError("Fetching \(fieldRef) for \(sourceObjectType)")
             case .OInt(let dst, let iRef):
                 assert(reg: dst, from: resolvedRegs, is: .i32)
                 let c = ctx.storage.int32Resolver.get(iRef)

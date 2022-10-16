@@ -6,6 +6,10 @@ struct JitContext {
     @SharedStorage var compiledFunctions: [HLCompiledFunction]
     let compiledFunctionResolver: TableResolver<HLCompiledFunction>
 
+    init(module: Module) {
+        self.init(storage: module.storage)
+    }
+
     init(storage: ModuleStorage) {
         let jitBase: SharedStorage<UnsafeMutableRawPointer?> = SharedStorage(
             wrappedValue: nil

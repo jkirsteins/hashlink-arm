@@ -35,6 +35,20 @@ struct ModuleStorage {
         )
     }
 
+    init(types: [HLType], functions: [HLFunction]) {
+        self.init(
+            nstrings: 0,
+            nints: 0,
+            ntypes: Int32(types.count),
+            nglobals: 0,
+            nnatives: 0,
+            nfunctions: Int32(functions.count),
+            nconstants: 0
+        )
+        self.typeTable.wrappedValue = types
+        self.functionTable.wrappedValue = functions
+    }
+
     init(functions: [HLFunction]) {
         self.init(
             nstrings: 0,

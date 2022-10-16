@@ -90,6 +90,57 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertGreaterThan(f2addr.immediate, 1337)
     }
 
+    func testCompile_OGetThis() throws {
+        struct _TestMemory {
+            var hl_type_addr: Int64 = 0xDEAD
+            var field: Int32 = 0xBEEF
+        }
+
+        XCTAssertEqual(MemoryLayout<_TestMemory>.size, 12)
+
+        let structType = HLType.obj(
+            HLTypeObjData(
+                name: Resolvable("_TestMemory"), 
+                superType: nil, 
+                global: 0, 
+                fields: [
+                    HLTypeField(
+                        name: Resolvable("field"), 
+                        type: Resolvable(.i32))], 
+                protos: [], 
+                bindings: []))
+
+        let storage = ModuleStorage(
+            types: [structType], 
+            functions: [ 
+                prepareFunction(
+                    retType: .i32,
+                    findex: 0,
+                    regs: [structType, .i32],
+                    args: [structType],
+                    ops: [ .OGetThis(dst: 1, field: 0), .ORet(ret: 1) ]
+                )
+        ])
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let cf = try compileHLFunction(ctx: ctx, findex: 0, into: mem)
+
+        mem.hexPrint()
+        // return
+        var obj = _TestMemory()
+
+        try withUnsafeMutableBytes(of: &obj) {  
+            guard let ptr = $0.baseAddress else { fatalError("Couldn't get ptr") }
+            let objAddress = Int64(Int(bitPattern: ptr))
+
+            // run the entrypoint and ensure it works
+            typealias _JitFunc = (@convention(c) (Int64) -> Int64)
+            let entrypoint: _JitFunc = try mem.buildEntrypoint(cf)
+            let result = entrypoint(objAddress)
+            XCTAssertEqual(result, 0xBEEF)
+        }
+    }
+
     func testCompile_emptyFunction() throws {
         let storage = ModuleStorage(functions: [
             prepareFunction(

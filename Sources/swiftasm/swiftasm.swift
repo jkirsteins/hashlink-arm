@@ -37,27 +37,19 @@ struct SwiftAsm: ParsableCommand {
         let file = try! Data(contentsOf: URL(fileURLWithPath: hlFileIn))
         let reader = ByteReader(file)
 
-        let head = try! reader.readModule()
-        let compiler = M1Compiler()
-        print(String(reflecting: head))
+        let mod = try! reader.readModule()
+        
+        print(String(reflecting: mod))
         print("==> Compiling functions")
 
-        fatalError("WIP")
-    //     let fakeNatives = SharedStorage(wrappedValue: [HLNative]())
-    //     let fakeNativeResolver = TableResolver(table: fakeNatives, count: 0)
+        let ctx = JitContext(module: mod)
+        let jit = OpBuilder(ctx: ctx)
+        let compiler = M1Compiler()
 
-    //     let compiledTable = SharedStorage(wrappedValue: [HLCompiledFunction]())
-    //     let compiledFunctions = TableResolver(table: compiledTable, count: 
-    //         head.storage.functionResolver.count)
-
-    //     let wft = WholeFunctionsTable(
-    //         // natives: /*head.nativeResolver*/fakeNativeResolver, 
-    //         natives: head.storage.nativeResolver, 
-    //         compiledFunctions: compiledFunctions,
-    //         jitBase: SharedStorage(wrappedValue: nil))
-
-    //     // TODO: unify functions and natives in one function table
-
+        for fn in mod.storage.functionResolver.table {
+            try compiler.compile(findex: fn.findex, into: jit)
+        }
+ 
     //     // entrypoint initializes types, memory, and all that good stuff
     //     let funcs = [
     //         head.storage.functionResolver.table.first { $0.findex == 295 }!,
