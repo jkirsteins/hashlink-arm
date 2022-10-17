@@ -88,11 +88,12 @@ class OpBuilder {
 
     // print copy-pastable into a test
     func hexPrint() {
-        try! lockAddresses()
+        do {
+        try lockAddresses()
         print("---- START ----")
         var printedAlready: ByteCount = 0
         for op in self.ops {
-            let bytes = try! op.emit()
+            let bytes = try op.emit()
             guard bytes.count > 0 else {
                 if case PseudoOp.debugMarker(let message) = op {
                     print("// \(message)")
@@ -123,6 +124,9 @@ class OpBuilder {
             printedAlready += op.size
         }
         print("---- END ----")
+        } catch {
+            fatalError("\(error): \(Thread.callStackSymbols.joined(separator: "\n"))")
+        }
     }
 
     // print copy-pastable into a test

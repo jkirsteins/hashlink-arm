@@ -4,6 +4,23 @@ protocol CpuOp : CustomDebugStringConvertible {
   var size: ByteCount { get }
 }
 
+extension M1Op {
+  func resolveFinalForm() -> M1Op {
+    switch(self) {
+      case .ldr(let Rt, .reg64offset(let Rn, let offsetCount, nil)) where (offsetCount % 8) != 0:
+        let imm9: Immediate9
+        do {
+          imm9 = try Immediate9(offsetCount) 
+        } catch {
+          fatalError("offsetCount must fit in 9 bits for .ldur")
+        }
+        return .ldur(Rt, Rn, imm9)
+        default:
+        return self
+  }
+    }    
+  }
+
 enum M1Op : CpuOp {
     var size: ByteCount { 4 }
 
@@ -30,6 +47,8 @@ enum M1Op : CpuOp {
           return "str \(rt), [\(rn)], #\(offsetC)"
         case .stur(let rt, let rn, let offset):
           return "stur \(rt), \(rn), #\(offset)"
+        case .ldur(let rt, let rn, let offset):
+          return "ldur \(rt), \(rn), #\(offset)"
         case .adr64(let rt, let offset):
           return "adr \(rt), #\(offset)"
         case .blr(let r):
@@ -53,7 +72,7 @@ enum M1Op : CpuOp {
         case .movk64(let rt, let val, nil):
           return "movk \(rt), #\(val)"
         case .movk64(let rt, let val, let shift) where shift != nil:
-          fatalError("movk debugdesc not implemente4d with shift")
+          return "movk \(rt), #\(val), \(shift!)"
         case .stp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, .pre)):
           return "stp \(rt1), \(rt2), [\(rn), #\(offset)]!"
         case .stp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, .post)):
@@ -133,6 +152,9 @@ enum M1Op : CpuOp {
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STUR--Store-Register--unscaled--?lang=en
     case stur(any Register, Register64, Int16)
+
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LDUR--Load-Register--unscaled--?lang=en
+    case ldur(any Register, Register64, Immediate9)
 
     /* 
     Form PC-relative address adds an immediate value to the PC value to form a PC-relative address, and writes the result to the destination register.

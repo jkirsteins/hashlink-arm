@@ -185,18 +185,41 @@ class M1Compiler {
 
     let stripDebugMessages: Bool
 
-    func assert(reg: Reg, from: [HLType], matchesReturn funType: Resolvable<HLType>) {
+    func assert(reg: Reg, from: [HLType], matchesCallArg argReg: Reg, inFun funType: HLType) {
         guard from.count > reg else {
             fatalError(
                 "Register with index \(reg) does not exist. Available registers: \(from)."
             )
         }
-        guard case .fun(let funData) = funType.value else {
-            fatalError("Expected HLNative to have .fun type (got \(funType.value)")
+        guard case .fun(let funData) = funType else {
+            fatalError("Expected HLNative to have .fun type (got \(funType)")
+        }
+        guard argReg < funData.args.count else {
+            fatalError("Expected HLNative to have a valid call reg ix \(argReg) but args are is \(funData.args). Fun: \(funData)")
+        }
+        guard from[Int(reg)] == funData.args[Int(argReg)].value else {
+            fatalError(
+                "Register \(reg) expected to be \(funType) but is \(from[Int(reg)])"
+            )
+        }
+    }
+
+    func assert(reg: Reg, from: [HLType], matchesReturn funType: Resolvable<HLType>) {
+        assert(reg: reg, from: from, matchesReturn: funType.value)
+    }
+
+    func assert(reg: Reg, from: [HLType], matchesReturn funType: HLType) {
+        guard from.count > reg else {
+            fatalError(
+                "Register with index \(reg) does not exist. Available registers: \(from)."
+            )
+        }
+        guard case .fun(let funData) = funType else {
+            fatalError("Expected HLNative to have .fun type (got \(funType)")
         }
         guard from[Int(reg)] == funData.ret.value else {
             fatalError(
-                "Register \(reg) expected to be \(funType.value) but is \(from[Int(reg)])"
+                "Register \(reg) expected to be \(funType) but is \(from[Int(reg)])"
             )
         }
     }
@@ -355,6 +378,39 @@ class M1Compiler {
 
                 mem.append(
                     PseudoOp.debugMarker("Call0 fn@\(fun) -> \(dst)"),
+                    PseudoOp.mov(.x10, fnAddr),
+                    M1Op.blr(.x10),
+                    M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
+                )
+            case .OCall3(let dst, let fun, let arg0, let arg1, let arg2):
+                let callTarget = try ctx.wft.get(fun)
+                let callTargetType: HLType
+                if let callTargetNative = callTarget as? HLNative {
+                    callTargetType = callTargetNative.type.value
+                }
+                else if let callTargetFun = callTarget as? HLCompiledFunction {
+                    callTargetType = callTargetFun.type.value
+                }
+                else {
+                    fatalError("OCall3 unknown call target \(callTarget)")
+                }
+
+                assert(reg: dst, from: resolvedRegs, matchesReturn: callTargetType)
+                assert(reg: arg0, from: resolvedRegs, matchesCallArg: 0, inFun: callTargetType)
+                assert(reg: arg1, from: resolvedRegs, matchesCallArg: 1, inFun: callTargetType)
+                assert(reg: arg2, from: resolvedRegs, matchesCallArg: 2, inFun: callTargetType)
+
+                let fnAddr = try ctx.wft.getAddr(fun)
+                let regStackOffset = getRegStackOffset(resolvedRegs, dst)
+                let arg0StackOffset = getRegStackOffset(resolvedRegs, arg0)
+                let arg1StackOffset = getRegStackOffset(resolvedRegs, arg1)
+                let arg2StackOffset = getRegStackOffset(resolvedRegs, arg2)
+
+                mem.append(
+                    PseudoOp.debugMarker("Call3 fn@\(fun)(\(arg0), \(arg1), \(arg2)) -> \(dst)"),
+                    M1Op.ldr(X.x0, .reg64offset(X.sp, arg0StackOffset, nil)),
+                    M1Op.ldr(X.x1, .reg64offset(X.sp, arg1StackOffset, nil)),
+                    M1Op.ldr(X.x2, .reg64offset(X.sp, arg2StackOffset, nil)),
                     PseudoOp.mov(.x10, fnAddr),
                     M1Op.blr(.x10),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))

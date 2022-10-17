@@ -19,7 +19,7 @@ fileprivate func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throw
 {
     if val % divisor != 0 {
         throw EmitterM1Error.invalidOffset(
-            "Offset immediate must be a multiple of \(divisor) but was \(val)"
+            "truncateOffset: offset immediate must be a multiple of \(divisor) but was \(val)"
         )
     }
 
@@ -188,6 +188,27 @@ struct Immediate26: Immediate, ExpressibleByIntegerLiteral {
 
 struct Immediate12: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64 = 12
+
+    let wrapped: VariableImmediate
+
+    var immediate: Int64 { wrapped.immediate }
+
+    init(integerLiteral: Int32) {
+        self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
+    }
+
+    init(_ val: Int64, bits: Int64) throws {
+        self.wrapped = try VariableImmediate(val, bits: bits)
+    }
+
+    init(_ val: any BinaryInteger) throws {
+        let i = Int(val)
+        self.wrapped = try VariableImmediate(Int64(i), bits: bits)
+    }
+}
+
+struct Immediate9: Immediate, ExpressibleByIntegerLiteral {
+    let bits: Int64 = 9
 
     let wrapped: VariableImmediate
 

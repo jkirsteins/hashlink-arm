@@ -174,6 +174,60 @@ final class CompilerM1Tests: XCTestCase {
         entrypoint()
     }
 
+    func testCompile__OCall3() throws {
+        // Prepare function we'll call from JIT
+        typealias _JitFunc = (@convention(c) (UInt8, UInt16, Int32) -> Int32)
+        let swiftFunc: _JitFunc = { (_ a: UInt8, _ b: UInt16, _ c: Int32) in
+            return Int32(bitPattern: UInt32(UInt16(a) | b)) | c
+        }
+        let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
+        
+        let f = prepareFunction(
+            retType: .i32,
+            findex: 0,
+            regs: [.u8, .u16, .i32],
+            args: [.u8, .u16, .i32],
+            ops: [
+                .OCall3(dst: 2, fun: 1, arg0: 0, arg1: 1, arg2: 2), 
+                .ORet(ret: 2),
+            ]
+        )
+
+        // Misc. JIT stuff
+        let storage = ModuleStorage(
+            functions: [f],
+            natives: [
+                HLNative(
+                    lib: Resolvable("builtin"),
+                    name: Resolvable("swiftFunc"),
+                    type: Resolvable(
+                        .fun(
+                            HLTypeFunData(
+                                args: Resolvable.array([.u8, .u16, .i32]),
+                                ret: Resolvable(.i32)
+                            )
+                        )
+                    ),
+                    findex: 1,
+                    memory: swiftFuncPtr
+                )
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        // Compile HL function with function index 0 (from the whole functions table)
+        let cf = try compileHLFunction(ctx: ctx, findex: 0, into: mem)
+        // Print debug output of the generated Aarch64 bytecode
+        mem.hexPrint()
+        // Now place the compiled bytecode in executable memory and get a pointer to it in
+        // form of function (JitInt64 means (void)->Int64)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(cf)
+        let res: Int32 = entrypoint(1, 2, 4)
+
+        // HL called Swift func. Swift func returned 145. HL returned the result it received.
+        XCTAssertEqual(0b111, res)
+    }
+
     func testCompile_callAndReturn_callNative() throws {
         // Prepare function we'll call from JIT
         let swiftFunc: JitInt64 = { return 145 }

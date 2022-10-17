@@ -91,6 +91,18 @@ final class EmitterM1Tests: XCTestCase {
             try EmitterM1.emit(for: .str(Register64.x0, .reg64offset(.sp, -16, .post))),
             [0xe0, 0x07, 0x1f, 0xf8]
         )
+        
+        // stur should not be used for 0
+        // same for ldur
+        // TODO: 
+        // XCTAssertEqual(
+        //     try EmitterM1.emit(for: .str(Register64.x0, .reg64offset(.sp, 0, nil))),
+        //     [0xe1, 0x03, 0x00, 0xf9]
+        // )
+        // XCTAssertNotEqual(
+        //     try EmitterM1.emit(for: .str(Register64.x0, .reg64offset(.sp, 0, nil))),
+        //     try EmitterM1.emit(for: .stur(Register64.x0, .sp, 0))
+        // )
     }
 
     func testSvc() throws {
@@ -235,7 +247,7 @@ final class EmitterM1Tests: XCTestCase {
         XCTAssertEqual(try EmitterM1.emit(for: .nop), [0x1f, 0x20, 0x03, 0xd5])
     }
 
-    func testLdrReal() throws {
+    func testLdr() throws {
         XCTAssertEqual(
             try EmitterM1.emit(for: .ldr(Register32.w2, .reg64offset(.x1, 0, nil))),
             [0x22, 0x00, 0x40, 0xb9]
@@ -255,6 +267,38 @@ final class EmitterM1Tests: XCTestCase {
         XCTAssertEqual(
             try EmitterM1.emit(for: .ldr(Register64.x0, .reg64offset(.sp, 16, nil))),
             [0xe0, 0x0b, 0x40, 0xf9]
+        )
+
+        // divisible by 8 -> ldr, otherwise -> ldur
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldr(Register64.x1, .reg64offset(.sp, 1, nil))),
+            try EmitterM1.emit(for: .ldur(Register64.x1, .sp, 1))
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldr(Register64.x1, .reg64offset(.sp, 4, nil))),
+            try EmitterM1.emit(for: .ldur(Register64.x1, .sp, 4))
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldr(Register64.x1, .reg64offset(.sp, 8, nil))),
+            [0xe1, 0x07, 0x40, 0xf9]
+        )
+
+        // for 0 ldur should not be the fallback
+        // TODO
+        XCTAssertNotEqual(
+            try EmitterM1.emit(for: .ldr(Register64.x1, .reg64offset(.sp, 0, nil))),
+            try EmitterM1.emit(for: .ldur(Register64.x1, .sp, 0))
+        )
+    }
+
+    func testLdur() throws {
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldur(Register64.x1, .sp, 1)),
+            [0xe1, 0x13, 0x40, 0xf8]
+        )
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .ldur(Register64.x1, .sp, 4)),
+            [0xe1, 0x43, 0x40, 0xf8]
         )
     }
 

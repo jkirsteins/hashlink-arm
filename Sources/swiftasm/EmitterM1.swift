@@ -1,3 +1,5 @@
+import Darwin 
+
 public protocol Register: CustomDebugStringConvertible {
     associatedtype Shift
 
@@ -181,7 +183,7 @@ public class EmitterM1 {
     {
         if val % divisor != 0 {
             throw EmitterM1Error.invalidOffset(
-                "Offset immediate must be a multiple of \(divisor) but was \(val)"
+                "truncateOffset: offset immediate must be a multiple of \(divisor) but was \(val)"
             )
         }
 
@@ -214,7 +216,8 @@ public class EmitterM1 {
     }
 
     static func emit(for op: M1Op) throws -> [UInt8] {
-        switch op {
+        fputs("Emitting \(op)\n", stderr)
+        switch op.resolveFinalForm() {  // resolve potential aliases
         case .sub(let Rd, let Rn, let offset):
             guard Rd.is32 == Rn.is32 else {
                 throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
@@ -268,6 +271,7 @@ public class EmitterM1 {
             switch(ixMode) {
                 case nil: 
                     return try Self.emit(for: .stur(Rt, Rn, Int16(offsetCount)))
+                    // TODO: stur should only be used when not divisible by 9 ^^^
                 case .pre: 
                     //         S           imm9         Rn    Rt
                     mask = 0b1_0_111000000_000000000_11_00000_00000
@@ -399,6 +403,15 @@ public class EmitterM1 {
             return returnAsArray(mask | encodedRn)
         case .nop: return [0x1f, 0x20, 0x03, 0xd5]
         case .ret: return [0xc0, 0x03, 0x5f, 0xd6]
+        case .ldur(let Rt, let Rn, let offset ):
+            //                    S           imm9         Rn    Rt
+            let mask: Int64 = 0b1_0_111000010_000000000_00_00000_00000
+            let encodedRt = encodeReg(Rt, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let offs = offset.immediate.shiftedLeft(12)
+            let size: Int64 = (Rt.is32 ? 0 : 1) << 30
+            let encoded = mask | encodedRt | encodedRn | offs | size
+            return returnAsArray(encoded)
         case .ldr(let Rt, let offset):
         
             guard case .reg64offset(let Rn, let offsetCount, let ixMode) = offset else {
