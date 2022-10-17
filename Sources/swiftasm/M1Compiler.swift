@@ -185,6 +185,14 @@ class M1Compiler {
 
     let stripDebugMessages: Bool
 
+    func requireType(reg: Reg, from resolvedRegs: [HLType]) -> HLType {
+        guard reg < resolvedRegs.count else {
+            fatalError("requireType(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(resolvedRegs.map { $0.debugName })")
+        }
+
+        return resolvedRegs[Int(reg)]
+    }
+
     func assert(reg: Reg, from: [HLType], matchesCallArg argReg: Reg, inFun funType: HLType) {
         guard from.count > reg else {
             fatalError(
@@ -417,7 +425,10 @@ class M1Compiler {
                 )
             // fatalError("Jumping to \(fn) for funIx \(fun)")
             // fatalError("OCall0")
-            case .ONew: fatalError("No ONew yet. What's up with types?")
+            case .ONew(let dst): 
+                // LOOK AT: https://github.com/HaxeFoundation/hashlink/blob/284301f11ea23d635271a6ecc604fa5cd902553c/src/jit.c#L3263
+                let typeToAllocate = requireType(reg: dst, from: resolvedRegs)
+                fatalError("No ONew yet. Allocating: \(typeToAllocate)")
             case .OGetThis(let regDst, let fieldRef):
                 guard resolvedRegs.count > 0 && regDst < resolvedRegs.count else {
                     fatalError("Not enough registers. Expected register 0 and \(regDst) to be available. Got: \(resolvedRegs)")

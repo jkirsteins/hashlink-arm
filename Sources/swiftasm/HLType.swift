@@ -193,7 +193,12 @@ enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
     case method                         // 20
     case `struct`                       // 21
 
+    // todo: find usages and move to debugDescription
     var debugName: String {
+        debugDescription
+    }
+
+    var debugDescription: String {
         switch(self) {
             case .void: return "void"
             case .u8: return "u8"
@@ -220,7 +225,7 @@ enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
         }
     }
 
-    var debugDescription: String {
+    var debugDescriptionDetailed: String {
         switch(self) {
             case .obj(let data): return data.debugDescription
             case .virtual(let data): return data.debugDescription
