@@ -42,8 +42,6 @@ final class WholeFunctionsTableTests: XCTestCase {
             findex: 2,
             memory: ptr))
 
-        let sut = WholeFunctionsTable(natives: natives, compiledFunctions: functions, jitBase: SharedStorage(wrappedValue: nil))
-
         // populate fun
         functionTable.wrappedValue.append(HLCompiledFunction(function: HLFunction(
             type: types.getResolvable(1),
@@ -60,6 +58,7 @@ final class WholeFunctionsTableTests: XCTestCase {
             assigns: []
         ), memory: ptr))
 
+        let sut = WholeFunctionsTable(natives: natives, compiledFunctions: functions, jitBase: SharedStorage(wrappedValue: nil))
         try sut.requireReady()
         
         XCTAssertEqual("native/lib1/nat1/0", (try sut.get(0)).wholeFunctionDebugDescription)
@@ -162,24 +161,6 @@ final class WholeFunctionsTableTests: XCTestCase {
             XCTAssertEqual(
                 error as? swiftasm.WholeFunctionsTableError,
                 WholeFunctionsTableError.invalidUnderlyingData("Function indexes have a gap")
-            )
-        }
-    }
-
-    func testRequireReady() throws {
-        let nativeTable = SharedStorage(wrappedValue: [HLNative]())
-        let functionTable = SharedStorage(wrappedValue: [HLCompiledFunction]())
-        
-        let natives = TableResolver(table: nativeTable, count: 0)
-        let functions = TableResolver(table: functionTable, count: 2)
-
-        let sut = WholeFunctionsTable(natives: natives, compiledFunctions: functions, jitBase: SharedStorage(wrappedValue: nil))
-        
-        XCTAssertThrowsError(try sut.requireReady())
-        { error in
-            XCTAssertEqual(
-                error as? swiftasm.WholeFunctionsTableError,
-                WholeFunctionsTableError.tableNotReadyWhenRequired
             )
         }
     }
