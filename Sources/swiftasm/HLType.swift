@@ -1,6 +1,6 @@
 import Foundation
 
-struct HLTypeField : Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeField: Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
     let type: Resolvable<HLType>
 
@@ -9,297 +9,472 @@ struct HLTypeField : Equatable, CustomDebugStringConvertible, Hashable {
     }
 }
 
-struct HLTypeBinding : Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeBinding: Equatable, CustomDebugStringConvertible, Hashable {
     let fieldRefIx: Int32
     let functionIx: Int32
 
-    var debugDescription: String {
-        "HLTypeBinding<\(fieldRefIx), \(functionIx)>"
-    }
+    var debugDescription: String { "HLTypeBinding<\(fieldRefIx), \(functionIx)>" }
 }
 
-struct HLTypeProto : Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeProto: Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
-    let functionIx: Int32 
+    let functionIx: Int32
     let pIx: Int32
 
-    var debugDescription: String {
-        "\(name.value): <fun>@\(functionIx) (\(pIx))"
-    }
+    var debugDescription: String { "\(name.value): <fun>@\(functionIx) (\(pIx))" }
 }
 
-struct HLTypeEnumConstruct : Equatable, CustomDebugStringConvertible, Hashable 
-{
+struct HLTypeEnumConstruct: Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
-    let params: [Resolvable<HLType>] 
+    let params: [Resolvable<HLType>]
 
-    var debugDescription: String {
-        "enumConstruct(\(name.value))"
-    }
+    var debugDescription: String { "enumConstruct(\(name.value))" }
 }
 
-struct HLTypeEnumData : Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeEnumData: Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
-    let	global: Int32
+    let global: Int32
     let constructs: [HLTypeEnumConstruct]
-    
-    var debugDescription: String {
-        return "\(name.value)"
-    }
+    var debugDescription: String { return "\(name.value)" }
 }
 
-struct HLTypeRefData : Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeRefData: Equatable, CustomDebugStringConvertible, Hashable {
     let type: Resolvable<HLType>
 
-    var debugDescription: String {
-        type.value.debugName
-    }
+    var debugDescription: String { type.value.debugName }
 }
 
-struct HLTypeNullData : Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeNullData: Equatable, CustomDebugStringConvertible, Hashable {
     let type: Resolvable<HLType>
 
-    var debugDescription: String {
-        "null<\(type.value.debugName)>"
-    }
+    var debugDescription: String { "null<\(type.value.debugName)>" }
 }
 
-struct HLTypeAbstractData : Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeAbstractData: Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
-    
-    var debugDescription: String {
-        return "\(name.value)"
-    }
+    var debugDescription: String { return "\(name.value)" }
 }
 
-struct HLTypeVirtualData : Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeVirtualData: Equatable, CustomDebugStringConvertible, Hashable {
     let fields: [HLTypeField]
-    
     var debugDescription: String {
-        return "virtual<\(fields.map { "\($0.name.value): \($0.type.debugDescription)" }.joined(separator: ", "))>"
+        return
+            "virtual<\(fields.map { "\($0.name.value): \($0.type.debugDescription)" }.joined(separator: ", "))>"
     }
 }
 
-struct HLTypeFunData : Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeFunData: Equatable, CustomDebugStringConvertible, Hashable {
     let args: [Resolvable<HLType>]
     let ret: Resolvable<HLType>
 
     var debugDescription: String {
-        return "(\(args.map { $0.debugDescription }.joined(separator: ", "))) -> (\(ret.debugDescription))"
+        return
+            "(\(args.map { $0.debugDescription }.joined(separator: ", "))) -> (\(ret.debugDescription))"
     }
 }
 
 extension Resolvable<String> {
-    var debugDescription: String {
-        "\(self.value)@\(self.ix)"
-    }
+    var debugDescription: String { "\(self.value)@\(self.ix)" }
 }
 
 extension Resolvable<HLType> {
     var debugDescription: String {
         let t = self.value
-        switch(t) {
-            case .obj(let data): return "\(data.name.value)@\(self.ix)"
-            default:
-            return "\(t.debugDescription)@\(self.ix)"
+        switch t {
+        case .obj(let data): return "\(data.name.value)@\(self.ix)"
+        default: return "\(t.debugDescription)@\(self.ix)"
         }
     }
 }
 
 ///
 /// Reference to writing the data: https://github.com/HaxeFoundation/haxe/blob/c35bbd4472c3410943ae5199503c23a2b7d3c5d6/src/generators/genhl.ml#L3840
-struct HLTypeObjData : Equatable, CustomDebugStringConvertible, Hashable {
-    let	name: Resolvable<String>
-    let	superType: Resolvable<HLType>?  
-    let	global: Int32?  
+struct HLTypeObjData: Equatable, CustomDebugStringConvertible, Hashable {
+    let name: Resolvable<String>
+    let superType: Resolvable<HLType>?
+    let global: Int32?
 
     let fields: [HLTypeField]
     let protos: [HLTypeProto]
     let bindings: [HLTypeBinding]
 
     var debugDescription: String {
-"""
-\(name.debugDescription) \(superType == nil ? "" : "extends \(superType!.debugDescription)")
-global: \(global)
-fields: \(fields.count > 0 ? "\n" : "")\((fields.map { "  \($0.debugDescription)" }).joined(separator: "\n"))
-protos: \(protos.count > 0 ? "\n" : "")\(protos.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
-bindings: \(bindings.count > 0 ? "\n" : "")\(bindings.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
-"""
+        """
+        \(name.debugDescription) \(superType == nil ? "" : "extends \(superType!.debugDescription)")
+        global: \(global)
+        fields: \(fields.count > 0 ? "\n" : "")\((fields.map { "  \($0.debugDescription)" }).joined(separator: "\n"))
+        protos: \(protos.count > 0 ? "\n" : "")\(protos.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
+        bindings: \(bindings.count > 0 ? "\n" : "")\(bindings.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
+        """
     }
 }
 
+protocol HLRegisterSize: Equatable, Hashable { var neededBytes: ByteCount { get } }
 
-protocol HLRegisterSize : Equatable, Hashable {
-    var neededBytes: ByteCount { get }
-}
-
-extension HLType : HLRegisterSize {
+extension HLType: HLRegisterSize {
     var neededBytes: ByteCount {
-        switch(self) {
-            case .void: return 0 // void not really a value, used for typing purpose
-            
-            case .bool: fallthrough
-            case .u8: return 1 // an unsigned 8 bits integer (0-255)
-            
-            case .u16: return 2
-            
-            case .i32: fallthrough
-            case .f32: return 4
-            
-            case .i64: fallthrough
-            case .f64: return 8
+        switch self {
+        case .void: return 0  // void not really a value, used for typing purpose
 
-            // All the following values are memory addresse pointers and takes either 4 bytes in x86 mode or 8 bytes in x86-64 mode:
+        case .bool, .u8: return 1  // an unsigned 8 bits integer (0-255)
 
-            case .bytes: fallthrough
-            case .dyn: fallthrough
-            case .fun: fallthrough
-            case .array: fallthrough
-            case .obj: fallthrough
-            case .dynobj: fallthrough
-            case .virtual: fallthrough
-            case .enum: fallthrough
-            case .ref: fallthrough
-            case .null: fallthrough
-            case .type: fallthrough
-            case .abstract: return 8
+        case .u16: return 2
+        case .i32, .f32: return 4
+        case .i64, .f64: return 8
 
-            default:
-            fatalError("Register size not available for \(self.debugName)")
+        // All the following values are memory addresse pointers and takes either 4 bytes in x86 mode or 8 bytes in x86-64 mode:
+
+        case .bytes: fallthrough
+        case .dyn, .fun, .array, .obj, .dynobj, .virtual, .enum, .ref, .null, .type,
+            .abstract:
+            return 8
+
+        default: fatalError("Register size not available for \(self.debugName)")
         }
     }
 }
 
-enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
+protocol CCompatibleMemoryProducer {
+    // var memory: DeferredAbsoluteAddress { get }
+    func allocate() -> UnsafeMutableRawPointer// func deallocate()
+}
 
-    case void                           // 0
-    case u8                             // 1
-    case u16                            // 2
-    case i32                            // 3
-    case i64                            // 4
-    case f32                            // 5
-    case f64                            // 6
-    case bool                           // 7
-    case bytes                          // 8
-    case dyn                            // 9
-    case fun(HLTypeFunData)             // 10
-    case obj(HLTypeObjData)             // 11
-    case array                          // 12
-    case type                           // 13
-    case ref(HLTypeRefData)             // 14
-    case virtual(HLTypeVirtualData)     // 15
-    case dynobj                         // 16
-    case abstract(HLTypeAbstractData)   // 17
-    case `enum`(HLTypeEnumData)         // 18
-    case null(HLTypeNullData)           // 19
-    case method                         // 20
-    case `struct`(HLTypeObjData)        // 21
+class HLTypeStorage {
+
+    var storage = [Int: UnsafeMutableRawPointer]()
+
+    func get(_ ix: Int) -> UnsafeMutableRawPointer { fatalError("wip") }
+
+    func allocate(for type: HLType, withIndex ix: Int) {
+        self.storage[ix] = type.allocate()
+    }
+
+}
+
+extension HLType: CCompatibleMemoryProducer {
+    func allocate() -> UnsafeMutableRawPointer {
+        switch self {
+        case .obj(let objData), .struct(let objData): break
+        default: fatalError("Initializing HLType memory not implemented for \(self)")
+        }
+        fatalError("wip")
+    }
+}
+
+/*
+union {
+    const uchar *abs_name;
+    hl_type_fun *fun;
+    hl_type_obj *obj;
+    hl_type_enum *tenum;
+    hl_type_virtual *virt;
+    hl_type	*tparam;
+};
+*/
+struct HLType_CCompat_BodyUnion {
+    var address: UnsafeMutableRawPointer
+    // case absName(UnsafeMutableRawPointer)
+    // case fun(UnsafeMutableRawPointer)
+    var obj: UnsafeMutablePointer<HLType_CCompat_Obj> {
+        address.bindMemory(to: HLType_CCompat_Obj.self, capacity: 1)
+    }// case `enum`(UnsafeMutableRawPointer)
+    // case virtual(UnsafeMutableRawPointer)
+    // case type(UnsafeMutableRawPointer)
+}
+
+struct HLType_CCompat_Obj {
+    let nfields: Int32
+    let nproto: Int32
+    let nbindings: Int32
+
+    let name: UnsafeMutableRawPointer
+    let superType: UnsafeMutableRawPointer
+
+    // hl_obj_field *fields;
+    let objFields: UnsafeMutableRawPointer
+    // hl_obj_proto *proto;
+    let proto: UnsafeMutableRawPointer
+
+    // int *bindings;
+    let bindings: UnsafeMutableRawPointer
+
+    // void **global_value;
+    let globalValue: UnsafeMutableRawPointer
+
+    // hl_module_context *m;
+    let moduleContext: UnsafeMutableRawPointer
+
+    // hl_runtime_obj *rt;
+    let rt: UnsafeMutableRawPointer
+}
+
+/*
+Memory layout should match
+
+struct hl_type {
+	hl_type_kind kind;
+	union {
+		const uchar *abs_name;
+		hl_type_fun *fun;
+		hl_type_obj *obj;
+		hl_type_enum *tenum;
+		hl_type_virtual *virt;
+		hl_type	*tparam;
+	};
+	void **vobj_proto;
+	unsigned int *mark_bits;
+};
+*/
+
+func allocCCompat(hltype: HLType) -> UnsafeMutablePointer<HLType_CCompat> {
+    let result: UnsafeMutablePointer<HLType_CCompat> = UnsafeMutablePointer.allocate(
+        capacity: 1
+    )
+
+    let root = UnsafeMutableRawPointer(bitPattern: Int(bitPattern: result))!
+    root.advanced(by: 0).bindMemory(to: HLTypeKind.self, capacity: 1).pointee = hltype.kind
+
+    guard case .obj(let objDataIn) = hltype else {
+        fatalError("\(hltype) not supported in allocCCompat")
+    }
+
+    //
+    let name = Array(objDataIn.name.value.utf16)
+    // let objData = HLType_CCompat_Obj(
+    //     nfields: Int32(objDataIn.fields.count),
+    //     nproto: Int32(objDataIn.protos.count), 
+    //     nbindings: Int32(objDataIn.bindings.count) , 
+    //     name: UnsafeMutableRawPointer, 
+    //     superType: UnsafeMutableRawPointer, 
+    //     objFields: UnsafeMutableRawPointer, 
+    //     proto: UnsafeMutableRawPointer, 
+    //     bindings: UnsafeMutableRawPointer, 
+    //     globalValue: UnsafeMutableRawPointer, 
+    //     moduleContext: UnsafeMutableRawPointer, 
+    //     rt: UnsafeMutableRawPointer)
+    // let body = HLType_CCompat_BodyUnion(address: UnsafeMutableRawPointer(nil))
+    // root.advanced(by: MemoryLayout<HLTypeKind>.size).bindMemory(to: HLTypeKind.self, capacity: 1).pointee = hltype.kind
+    fatalError("wip")
+    // UnsafeMutablePointer(mutating: &result.pointee.kind).pointee = hltype.kind
+
+    
+    assert(result.pointee.kind == hltype.kind)
+
+    return result
+}
+
+struct HLType_CCompat {
+    // hl_type_kind kind
+    let kind: HLTypeKind
+
+    /*
+    union {
+		const uchar *abs_name;
+		hl_type_fun *fun;
+		hl_type_obj *obj;
+		hl_type_enum *tenum;
+		hl_type_virtual *virt;
+		hl_type	*tparam;
+	};
+    */
+    let union: HLType_CCompat_BodyUnion
+
+    // void **vobj_proto
+    let vobjProto: UnsafeMutableRawPointer
+
+    // unsigned int *mark_bits
+    let markBits: UnsafeMutableRawPointer
+}
+
+struct HLTypeKind: ExpressibleByIntegerLiteral, Equatable, Hashable {  // not an enum because we need to force the size it takes
+    let rawValue: UInt32
+
+    init(integerLiteral value: UInt32) { self.init(rawValue: value) }
+
+    init(rawValue value: UInt32) { self.rawValue = value }
+
+    static let void = HLTypeKind(rawValue: 0)
+    static let u8 = HLTypeKind(rawValue: 1)
+    static let u16 = HLTypeKind(rawValue: 2)
+    static let i32 = HLTypeKind(rawValue: 3)
+    static let i64 = HLTypeKind(rawValue: 4)
+    static let f32 = HLTypeKind(rawValue: 5)
+    static let f64 = HLTypeKind(rawValue: 6)
+    static let bool = HLTypeKind(rawValue: 7)
+    static let bytes = HLTypeKind(rawValue: 8)
+    static let dyn = HLTypeKind(rawValue: 9)
+    static let fun = HLTypeKind(rawValue: 10)
+    static let obj = HLTypeKind(rawValue: 11)
+    static let array = HLTypeKind(rawValue: 12)
+    static let type = HLTypeKind(rawValue: 13)
+    static let ref = HLTypeKind(rawValue: 14)
+    static let virtual = HLTypeKind(rawValue: 15)
+    static let dynobj = HLTypeKind(rawValue: 16)
+    static let abstract = HLTypeKind(rawValue: 17)
+    static let `enum` = HLTypeKind(rawValue: 18)
+    static let null = HLTypeKind(rawValue: 19)
+    static let method = HLTypeKind(rawValue: 20)
+    static let `struct` = HLTypeKind(rawValue: 21)
+    static let packed = HLTypeKind(rawValue: 22)
+    // -----------------
+    static let last = HLTypeKind(rawValue: 23)
+    static let _H_FORCE_INT = HLTypeKind(rawValue: 0x7FFF_FFFF)
+}
+
+enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
+
+    case void  // 0
+    case u8  // 1
+    case u16  // 2
+    case i32  // 3
+    case i64  // 4
+    case f32  // 5
+    case f64  // 6
+    case bool  // 7
+    case bytes  // 8
+    case dyn  // 9
+    case fun(HLTypeFunData)  // 10
+    case obj(HLTypeObjData)  // 11
+    case array  // 12
+    case type  // 13
+    case ref(HLTypeRefData)  // 14
+    case virtual(HLTypeVirtualData)  // 15
+    case dynobj  // 16
+    case abstract(HLTypeAbstractData)  // 17
+    case `enum`(HLTypeEnumData)  // 18
+    case null(HLTypeNullData)  // 19
+    case method  // 20
+    case `struct`(HLTypeObjData)  // 21
 
     // todo: find usages and move to debugDescription
-    var debugName: String {
-        debugDescription
+    var debugName: String { debugDescription }
+
+    var kind: HLTypeKind {
+        switch self {
+        case .void: return .void
+        case .u8: return .u8
+        case .u16: return .u16
+        case .i32: return .i32
+        case .i64: return .i64
+        case .f32: return .f32
+        case .f64: return .f64
+        case .bool: return .bool
+        case .bytes: return .bytes
+        case .dyn: return .dyn
+        case .fun: return .fun
+        case .obj: return .obj
+        case .array: return .array
+        case .type: return .type
+        case .ref: return .ref
+        case .virtual: return .virtual
+        case .dynobj: return .dynobj
+        case .abstract: return .abstract
+        case .enum: return .enum
+        case .null: return .null
+        case .method: return .method
+        case .struct: return .struct
+        }
     }
 
     var debugDescription: String {
-        switch(self) {
-            case .void: return "void"
-            case .u8: return "u8"
-            case .u16: return "u16"
-            case .i32: return "i32"
-            case .i64: return "i64"
-            case .f32: return "f32"
-            case .f64: return "f64"
-            case .bool: return "bool"
-            case .bytes: return "bytes" 
-            case .dyn: return "dynamic"
-            case .fun: return "fun"
-            case .obj(let data): return "obj(\(data.name.value))"
-            case .array: return "array"
-            case .type: return "type"
-            case .ref: return "ref"
-            case .virtual: return "virtual"
-            case .dynobj: return "dynobj"
-            case .abstract(let data): return "abs(\(data.name.value))"
-            case .`enum`(let data): return "enum(\(data.name.value))"
-            case .null(let data): return "null(\(data.type.value.debugName))"
-            case .method: return "method"
-            case .`struct`: return "struct"
+        switch self {
+        case .void: return "void"
+        case .u8: return "u8"
+        case .u16: return "u16"
+        case .i32: return "i32"
+        case .i64: return "i64"
+        case .f32: return "f32"
+        case .f64: return "f64"
+        case .bool: return "bool"
+        case .bytes: return "bytes"
+        case .dyn: return "dynamic"
+        case .fun: return "fun"
+        case .obj(let data): return "obj(\(data.name.value))"
+        case .array: return "array"
+        case .type: return "type"
+        case .ref: return "ref"
+        case .virtual: return "virtual"
+        case .dynobj: return "dynobj"
+        case .abstract(let data): return "abs(\(data.name.value))"
+        case .`enum`(let data): return "enum(\(data.name.value))"
+        case .null(let data): return "null(\(data.type.value.debugName))"
+        case .method: return "method"
+        case .`struct`: return "struct"
         }
     }
 
     var debugDescriptionDetailed: String {
-        switch(self) {
-            case .obj(let data): return data.debugDescription
-            case .virtual(let data): return data.debugDescription
-            case .fun(let data): return data.debugDescription
-            default:
-            return self.debugName
+        switch self {
+        case .obj(let data): return data.debugDescription
+        case .virtual(let data): return data.debugDescription
+        case .fun(let data): return data.debugDescription
+        default: return self.debugName
         }
     }
 
     static func read(
-        from reader: ByteReader, 
+        from reader: ByteReader,
         strings: TableResolver<String>,
-        types: TableResolver<HLType>) throws -> HLType {
+        types: TableResolver<HLType>
+    ) throws -> HLType {
         let typeKind = try reader.readUInt8()
-        switch typeKind {
-            case 0: return .void
-            case 1: return .u8
-            case 2: return .u16
-            case 3: return .i32
-            case 4: return .i64
-            case 5: return .f32
-            case 6: return .f64
-            case 7: return .bool
-            case 8: return .bytes
-            case 9: return .dyn
-            case 10: return .fun(try readFunData(from: reader, types: types))
-            case 11: return .obj(try readObjData(from: reader, strings: strings, types: types))
-            case 12: return .array
-            case 13: return .type 
-            case 14: return .ref(try readRefData(from: reader, types: types))
-            case 15: return .virtual(try readVirtualData(from: reader, strings: strings, types: types))
-            case 17: return .abstract(try readAbstractData(from: reader, strings: strings))
-            case 18: return .enum(try readEnumData(from: reader, strings: strings, types: types))
-            case 19: return .null(try readNullData(from: reader, types: types))
-            default:
-            fatalError("Type kind \(typeKind) not supported")
+        switch HLTypeKind(rawValue: UInt32(typeKind)) {
+        case .void: return .void
+        case .u8: return .u8
+        case .u16: return .u16
+        case .i32: return .i32
+        case .i64: return .i64
+        case .f32: return .f32
+        case .f64: return .f64
+        case .bool: return .bool
+        case .bytes: return .bytes
+        case .dyn: return .dyn
+        case .fun: return .fun(try readFunData(from: reader, types: types))
+        case .obj:
+            return .obj(try readObjData(from: reader, strings: strings, types: types))
+        case .array: return .array
+        case .type: return .type
+        case .ref: return .ref(try readRefData(from: reader, types: types))
+        case .virtual:
+            return .virtual(
+                try readVirtualData(from: reader, strings: strings, types: types)
+            )
+        case .abstract:
+            return .abstract(try readAbstractData(from: reader, strings: strings))
+        case .enum:
+            return .enum(try readEnumData(from: reader, strings: strings, types: types))
+        case .null: return .null(try readNullData(from: reader, types: types))
+        default: fatalError("Type kind \(typeKind) not supported")
         }
     }
 
-    static func readRefData(
-        from reader: ByteReader, 
-        types: TableResolver<HLType>) throws -> HLTypeRefData
+    static func readRefData(from reader: ByteReader, types: TableResolver<HLType>)
+        throws -> HLTypeRefData
     {
         let ix = try reader.readIndex()
         return HLTypeRefData(type: types.getResolvable(ix))
     }
 
-    static func readNullData(
-        from reader: ByteReader, 
-        types: TableResolver<HLType>) throws -> HLTypeNullData
+    static func readNullData(from reader: ByteReader, types: TableResolver<HLType>)
+        throws -> HLTypeNullData
     {
         let ix = try reader.readIndex()
         return HLTypeNullData(type: types.getResolvable(ix))
     }
-    
     static func readEnumData(
-        from reader: ByteReader, 
+        from reader: ByteReader,
         strings: TableResolver<String>,
-        types: TableResolver<HLType>) throws -> HLTypeEnumData
-    {
+        types: TableResolver<HLType>
+    ) throws -> HLTypeEnumData {
         let ix = try reader.readIndex()
         let name = strings.getResolvable(ix)
         let global = try reader.readVarInt()
         let nconstructs = try reader.readVarInt()
-        
-        let constructs = try Array(repeating: 0, count: Int(nconstructs)).map {
-            _ in 
-            
+        let constructs = try Array(repeating: 0, count: Int(nconstructs)).map { _ in
             let name = strings.getResolvable(try reader.readIndex())
             let nparams = try reader.readVarInt()
-            let params = try Array(repeating: 0, count: Int(nparams)).map {
-                _ in types.getResolvable(try reader.readIndex())
+            let params = try Array(repeating: 0, count: Int(nparams)).map { _ in
+                types.getResolvable(try reader.readIndex())
             }
 
             return HLTypeEnumConstruct(name: name, params: params)
@@ -308,22 +483,21 @@ enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
         return HLTypeEnumData(name: name, global: global, constructs: constructs)
     }
 
-    static func readFunData(
-        from reader: ByteReader, 
-        types: TableResolver<HLType>) throws -> HLTypeFunData
+    static func readFunData(from reader: ByteReader, types: TableResolver<HLType>)
+        throws -> HLTypeFunData
     {
         let nargs = try reader.readVarInt()
-        let args = try Array(repeating: 0, count: Int(nargs)).map {
-            _ in types.getResolvable(try reader.readIndex())
+        let args = try Array(repeating: 0, count: Int(nargs)).map { _ in
+            types.getResolvable(try reader.readIndex())
         }
         let ret = types.getResolvable(try reader.readIndex())
         return HLTypeFunData(args: args, ret: ret)
     }
 
     static func readAbstractData(
-        from reader: ByteReader, 
-        strings: TableResolver<String>) throws -> HLTypeAbstractData
-    {
+        from reader: ByteReader,
+        strings: TableResolver<String>
+    ) throws -> HLTypeAbstractData {
         let ix = try reader.readIndex()
         let name = strings.getResolvable(ix)
         print("Loaded abstract \(name.value)")
@@ -331,34 +505,31 @@ enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
     }
 
     static func readVirtualData(
-        from reader: ByteReader, 
+        from reader: ByteReader,
         strings: TableResolver<String>,
-        types: TableResolver<HLType>) throws -> HLTypeVirtualData {
+        types: TableResolver<HLType>
+    ) throws -> HLTypeVirtualData {
 
         let nfields = try reader.readVarInt()
 
-        let fields = try Array(repeating: 0, count: Int(nfields)).map {
-            _ in 
+        let fields = try Array(repeating: 0, count: Int(nfields)).map { _ in
 
             let name = strings.getResolvable(try reader.readIndex())
             let type = types.getResolvable(try reader.readIndex())
-            return HLTypeField(
-                name: name,
-                type: type)
+            return HLTypeField(name: name, type: type)
         }
 
         return HLTypeVirtualData(fields: fields)
     }
 
     static func readObjData(
-        from reader: ByteReader, 
+        from reader: ByteReader,
         strings: TableResolver<String>,
-        types: TableResolver<HLType>) throws -> HLTypeObjData {
-        
+        types: TableResolver<HLType>
+    ) throws -> HLTypeObjData {
         let name = strings.getResolvable(try reader.readIndex())
         let superTypeIx = try reader.readIndex()
         let superType = superTypeIx >= 0 ? types.getResolvable(superTypeIx) : nil
-        
         // 0 means no global
         // It is valid for base or Class types etc.
         // https://github.com/HaxeFoundation/haxe/blob/c35bbd4472c3410943ae5199503c23a2b7d3c5d6/src/generators/genhl.ml#L3848
@@ -378,18 +549,14 @@ enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
         // let protos: [HLTypeProto]
         // let bindings: [HLTypeBinding]
 
-        let fields = try Array(repeating: 0, count: Int(nfields)).map {
-            _ in 
+        let fields = try Array(repeating: 0, count: Int(nfields)).map { _ in
 
             let name = strings.getResolvable(try reader.readIndex())
             let type = types.getResolvable(try reader.readIndex())
-            return HLTypeField(
-                name: name,
-                type: type)
+            return HLTypeField(name: name, type: type)
         }
 
-        let protos = try Array(repeating: 0, count: Int(nprotos)).map {
-            _ in 
+        let protos = try Array(repeating: 0, count: Int(nprotos)).map { _ in
 
             let name = strings.getResolvable(try reader.readIndex())
             // print("Proto \(name.value)")
@@ -400,8 +567,7 @@ enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
             )
         }
 
-        let bindings = try Array(repeating: 0, count: Int(nbindings)).map {
-            _ in 
+        let bindings = try Array(repeating: 0, count: Int(nbindings)).map { _ in
 
             return HLTypeBinding(
                 fieldRefIx: try reader.readVarInt(),
@@ -411,11 +577,11 @@ enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
 
         return HLTypeObjData(
             name: name,
-            superType: superType, 
+            superType: superType,
             global: global,
             fields: fields,
             protos: protos,
-            bindings: bindings)
+            bindings: bindings
+        )
     }
 }
-
