@@ -320,6 +320,7 @@ class M1Compiler {
         var retTargets: [RelativeDeferredOffset] = []
 
         print("Compiling function \(fun.findex) at deferred address \(fun.memory)")
+        print("REGS: \n--" + fun.regs.map { $0.debugDescription }.joined(separator: "\n--"))
         print("OPS: \n--" + fun.ops.map { $0.debugDescription }.joined(separator: "\n--"))
 
         guard case .fun(let funData) = fun.type.value else {
@@ -428,7 +429,26 @@ class M1Compiler {
             case .ONew(let dst): 
                 // LOOK AT: https://github.com/HaxeFoundation/hashlink/blob/284301f11ea23d635271a6ecc604fa5cd902553c/src/jit.c#L3263
                 let typeToAllocate = requireType(reg: dst, from: resolvedRegs)
-                fatalError("No ONew yet. Allocating: \(typeToAllocate)")
+                let allocFunc: HLNative
+                let global: Int32?
+                switch(typeToAllocate) {
+                    case .struct(let objData): 
+                        fallthrough 
+                    case .obj(let objData): 
+                        allocFunc = ctx.wft.hl_alloc_obj
+                        global = objData.global
+                    case .dynobj:
+                        allocFunc = ctx.wft.hl_alloc_dynobj
+                        fatalError("wip2")
+                    case .virtual: 
+                        allocFunc = ctx.wft.hl_alloc_virtual
+                        fatalError("wip3")
+                    default:
+                        fatalError("ONew not implemented for \(typeToAllocate)")
+                }
+
+                let g = ctx.storage.globalResolver.get(Int(global!))
+                fatalError("No ONew yet. Allocating: \(typeToAllocate) -> global \(global) \(g)")
             case .OGetThis(let regDst, let fieldRef):
                 guard resolvedRegs.count > 0 && regDst < resolvedRegs.count else {
                     fatalError("Not enough registers. Expected register 0 and \(regDst) to be available. Got: \(resolvedRegs)")

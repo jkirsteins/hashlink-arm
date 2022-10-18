@@ -106,10 +106,12 @@ extension Resolvable<HLType> {
     }
 }
 
+///
+/// Reference to writing the data: https://github.com/HaxeFoundation/haxe/blob/c35bbd4472c3410943ae5199503c23a2b7d3c5d6/src/generators/genhl.ml#L3840
 struct HLTypeObjData : Equatable, CustomDebugStringConvertible, Hashable {
     let	name: Resolvable<String>
-    let	superType: Resolvable<HLType>?
-    let	global: Int32
+    let	superType: Resolvable<HLType>?  
+    let	global: Int32?  
 
     let fields: [HLTypeField]
     let protos: [HLTypeProto]
@@ -191,7 +193,7 @@ enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
     case `enum`(HLTypeEnumData)         // 18
     case null(HLTypeNullData)           // 19
     case method                         // 20
-    case `struct`                       // 21
+    case `struct`(HLTypeObjData)        // 21
 
     // todo: find usages and move to debugDescription
     var debugName: String {
@@ -356,7 +358,13 @@ enum HLType : Equatable, Hashable, CustomDebugStringConvertible {
         let name = strings.getResolvable(try reader.readIndex())
         let superTypeIx = try reader.readIndex()
         let superType = superTypeIx >= 0 ? types.getResolvable(superTypeIx) : nil
-        let global = try reader.readVarInt()
+        
+        // 0 means no global
+        // It is valid for base or Class types etc.
+        // https://github.com/HaxeFoundation/haxe/blob/c35bbd4472c3410943ae5199503c23a2b7d3c5d6/src/generators/genhl.ml#L3848
+        let globalTry = try reader.readVarInt()
+        let global = globalTry != 0 ? (globalTry - 1) : nil
+
         let nfields = try reader.readVarInt()
         let nprotos = try reader.readVarInt()
         let nbindings = try reader.readVarInt()

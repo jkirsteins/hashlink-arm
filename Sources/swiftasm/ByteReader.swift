@@ -192,7 +192,13 @@ class ByteReader {
             }
 
         print("==> Globals")
-        for rt in _resolvableGlobals { print(rt.debugDescription) }
+        for (ix, rt) in _resolvableGlobals.enumerated() { print("\(ix): \(rt.debugDescription)") }
+        
+        print("==> Allocate global memory")
+        for g in _resolvableGlobals {
+            g.allocate(for: g.type.value)
+        }
+        print("    done")
 
         // natives
         let _natives = try Array(repeating: 0, count: Int(nnatives)).enumerated().map {
@@ -349,6 +355,13 @@ class ByteReader {
             entrypoint: entrypoint,
             storage: storage
         )
+
+        print("==> Asserts")
+        for g in storage.globalResolver.table {
+            guard g.hasAddress else {
+                fatalError("Global doesn't have an address.")
+            }
+        }
 
         return result
     }
