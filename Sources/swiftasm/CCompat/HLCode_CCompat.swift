@@ -83,7 +83,7 @@ struct HLCode_CCompat {
     let globals: UnsafePointer<UnsafePointer<HLType_CCompat>>
 
 	// hl_native*	natives;
-    let natives: UnsafeMutableRawPointer
+    let natives: UnsafePointer<HLNative_CCompat>
 
 	// hl_function* functions;
     let functions: UnsafeMutableRawPointer
@@ -103,6 +103,18 @@ struct HLCode_CCompat {
 
     func getFloat(_ ix: Int) -> Double {
         return floats.advanced(by: ix).pointee
+    }
+
+    func getFunction(_ ix: Int) -> HLFunction_CCompat {
+        fatalError()
+    }
+
+    func getNative(_ ix: Int) -> HLNative_CCompat {
+        natives.advanced(by: ix).pointee
+    }
+
+    func getType(_ ix: Int) -> HLType_CCompat {
+        types.advanced(by: ix).pointee
     }
 
     func getUstring(_ ix: Int) -> String {

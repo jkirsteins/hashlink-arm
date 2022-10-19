@@ -52,6 +52,28 @@ nconstants: 53
         
         XCTAssertEqual(res.pointee.getFloat(0), 0)
 
+        let pathType = res.pointee.getType(82)
+        XCTAssertEqual(pathType.kind, HLTypeKind.obj)
+        XCTAssertEqual(pathType.obj.nfields, 4)
+        XCTAssertEqual(pathType.obj.name, "Path")
+        XCTAssertEqual(pathType.obj.superType, nil)
+
+        let pathType2 = res.pointee.getType(84)
+        XCTAssertEqual(pathType2.obj.name, "Path2")
+        XCTAssertEqual(pathType2.obj.superType, pathType)
+
+        // test the objects point to the same memory
+        let pathTypeAddr = Int(bitPattern: res.pointee.types.advanced(by: 82))
+        let path2SuperTypeAddr = Int(bitPattern: pathType2.obj.superTypePtr)
+        XCTAssertEqual(pathTypeAddr, path2SuperTypeAddr)
+
+        // native
+        let hlnative = res.pointee.getNative(5)
+        XCTAssertEqual("std", hlnative.lib)
+        XCTAssertEqual("bytes_compare16", hlnative.name)
+        XCTAssertEqual(
+            res.pointee.getType(118), 
+            hlnative.type)
     }
 
     func test__hl_to_utf16__appendZero() throws {

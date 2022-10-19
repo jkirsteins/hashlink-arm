@@ -37,14 +37,16 @@ struct SwiftAsm: ParsableCommand {
         let file = try! Data(contentsOf: URL(fileURLWithPath: hlFileIn))
         let reader = ByteReader(file)
 
-        let mod = try! reader.readModule()
+        let hlcode = LibHl.load_code(hlFileIn)
         
+        // TODO: remove when not needed. Useful for printing for now
+        let mod = try! reader.readModule()        
         print(String(reflecting: mod))
         print("==> Compiling functions")
 
-        let ctx = JitContext(module: mod)
+        let ctx = JitContext(module: mod, hlcode: hlcode)
         let jit = OpBuilder(ctx: ctx)
-        let compiler = M1Compiler()
+        let compiler = M1Compiler() 
 
         for fn in mod.storage.functionResolver.table {
             try compiler.compile(findex: fn.findex, into: jit)

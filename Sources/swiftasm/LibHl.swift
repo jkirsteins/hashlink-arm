@@ -62,4 +62,19 @@ struct LibHl {
             return hl_to_utf16(charPtr)
         }
     }
+
+    // HL_API vdynobj *hl_alloc_dynobj( void );
+    static let hl_alloc_dynobj: (@convention(c) () -> UnsafeRawPointer) = { load("hl_alloc_dynobj") }()
+    
+    // HL_API vvirtual *hl_alloc_obj( hl_type *t );
+    static let _hl_alloc_obj: (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer) = { load("hl_alloc_obj") }()
+    static func hl_alloc_obj(_ hltype: UnsafePointer<HLType_CCompat>) -> UnsafeRawPointer {
+        _hl_alloc_obj(hltype)
+    }
+
+    // HL_API vvirtual *hl_alloc_virtual( hl_type *t );
+    static let _hl_alloc_virtual: (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer) = { load("hl_alloc_virtual") }()
+    static func hl_alloc_virtual(_ hltype: UnsafePointer<HLType_CCompat>) -> UnsafeRawPointer {
+        _hl_alloc_virtual(hltype)
+    }
 }

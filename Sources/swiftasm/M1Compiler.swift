@@ -428,27 +428,28 @@ class M1Compiler {
             // fatalError("OCall0")
             case .ONew(let dst): 
                 // LOOK AT: https://github.com/HaxeFoundation/hashlink/blob/284301f11ea23d635271a6ecc604fa5cd902553c/src/jit.c#L3263
-                let typeToAllocate = requireType(reg: dst, from: resolvedRegs)
-                let allocFunc: HLNative
-                let global: Int32?
-                switch(typeToAllocate) {
-                    case .struct(let objData): 
-                        fallthrough 
-                    case .obj(let objData): 
-                        allocFunc = ctx.wft.hl_alloc_obj
-                        global = objData.global
-                    case .dynobj:
-                        allocFunc = ctx.wft.hl_alloc_dynobj
-                        fatalError("wip2")
-                    case .virtual: 
-                        allocFunc = ctx.wft.hl_alloc_virtual
-                        fatalError("wip3")
-                    default:
-                        fatalError("ONew not implemented for \(typeToAllocate)")
-                }
+                // let typeToAllocate = requireType(reg: dst, from: resolvedRegs)
+                // let allocFunc: HLNative
+                // let global: Int32?
+                // switch(typeToAllocate) {
+                //     case .struct(let objData): 
+                //         fallthrough 
+                //     case .obj(let objData): 
+                //         allocFunc = ctx.wft.hl_alloc_obj
+                //         global = objData.global
+                //     case .dynobj:
+                //         allocFunc = ctx.wft.hl_alloc_dynobj
+                //         fatalError("wip2")
+                //     case .virtual: 
+                //         allocFunc = ctx.wft.hl_alloc_virtual
+                //         fatalError("wip3")
+                //     default:
+                //         fatalError("ONew not implemented for \(typeToAllocate)")
+                // }
+                fatalError()
 
-                let g = ctx.storage.globalResolver.get(Int(global!))
-                fatalError("No ONew yet. Allocating: \(typeToAllocate) -> global \(global) \(g)")
+                // let g = ctx.storage.globalResolver.get(Int(global!))
+                // fatalError("No ONew yet. Allocating: \(typeToAllocate) -> global \(global) \(g)")
             case .OGetThis(let regDst, let fieldRef):
                 guard resolvedRegs.count > 0 && regDst < resolvedRegs.count else {
                     fatalError("Not enough registers. Expected register 0 and \(regDst) to be available. Got: \(resolvedRegs)")

@@ -2,6 +2,6 @@ import XCTest
 
 @testable import swiftasm
 
-final class HLCode_CCompatTests: XCTestCase {
+final class HLType_CCompatTests: XCTestCase {
     
 }

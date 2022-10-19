@@ -171,42 +171,12 @@ union {
     hl_type	*tparam;
 };
 */
-struct HLType_CCompat_BodyUnion {
-    var address: UnsafeMutableRawPointer
-    // case absName(UnsafeMutableRawPointer)
-    // case fun(UnsafeMutableRawPointer)
-    var obj: UnsafeMutablePointer<HLType_CCompat_Obj> {
-        address.bindMemory(to: HLType_CCompat_Obj.self, capacity: 1)
-    }// case `enum`(UnsafeMutableRawPointer)
-    // case virtual(UnsafeMutableRawPointer)
-    // case type(UnsafeMutableRawPointer)
+
+struct HLString {
+    let ix: Int
 }
 
-struct HLType_CCompat_Obj {
-    let nfields: Int32
-    let nproto: Int32
-    let nbindings: Int32
 
-    let name: UnsafeMutableRawPointer
-    let superType: UnsafeMutableRawPointer
-
-    // hl_obj_field *fields;
-    let objFields: UnsafeMutableRawPointer
-    // hl_obj_proto *proto;
-    let proto: UnsafeMutableRawPointer
-
-    // int *bindings;
-    let bindings: UnsafeMutableRawPointer
-
-    // void **global_value;
-    let globalValue: UnsafeMutableRawPointer
-
-    // hl_module_context *m;
-    let moduleContext: UnsafeMutableRawPointer
-
-    // hl_runtime_obj *rt;
-    let rt: UnsafeMutableRawPointer
-}
 
 /*
 Memory layout should match
@@ -263,28 +233,6 @@ func allocCCompat(hltype: HLType) -> UnsafeMutablePointer<HLType_CCompat> {
     return result
 }
 
-struct HLType_CCompat {
-    // hl_type_kind kind
-    let kind: HLTypeKind
-
-    /*
-    union {
-		const uchar *abs_name;
-		hl_type_fun *fun;
-		hl_type_obj *obj;
-		hl_type_enum *tenum;
-		hl_type_virtual *virt;
-		hl_type	*tparam;
-	};
-    */
-    let union: HLType_CCompat_BodyUnion
-
-    // void **vobj_proto
-    let vobjProto: UnsafeMutableRawPointer
-
-    // unsigned int *mark_bits
-    let markBits: UnsafeMutableRawPointer
-}
 
 struct HLTypeKind: ExpressibleByIntegerLiteral, Equatable, Hashable {  // not an enum because we need to force the size it takes
     let rawValue: UInt32

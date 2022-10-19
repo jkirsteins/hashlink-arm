@@ -41,27 +41,6 @@ class WholeFunctionsTable {
         self.compiledFunctions = compiledFunctions
     } 
 
-    lazy var hl_alloc_dynobj: HLNative = {
-        guard let hl_alloc_dynobj = natives.table.first(where: { $0.name.value == "alloc_dynobj" && $0.lib.value == "std" }) else {
-            fatalError("hl_alloc_dynobj must be present in natives table") 
-        }
-        return hl_alloc_dynobj
-    }()
-
-    lazy var hl_alloc_obj: HLNative = {
-        guard let hl_alloc_obj = natives.table.first(where: { $0.name.value == "alloc_obj" && $0.lib.value == "std" }) else {
-            fatalError("hl_alloc_obj must be present in natives table") 
-        }
-        return hl_alloc_obj
-    }()
-
-    lazy var hl_alloc_virtual: HLNative = {
-        guard let hl_alloc_virtual = natives.table.first(where: { $0.name.value == "alloc_virtual" && $0.lib.value == "std" }) else {
-            fatalError("hl_alloc_virtual must be present in natives table") 
-        }
-        return hl_alloc_virtual
-    }()
-
     func requireReady() throws {
         guard ready else {
             throw WholeFunctionsTableError.tableNotReadyWhenRequired
