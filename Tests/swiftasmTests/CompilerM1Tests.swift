@@ -12,8 +12,11 @@ extension Sequence where Iterator.Element: Hashable {
 func sut() -> M1Compiler { M1Compiler(stripDebugMessages: true) }
 
 func builder() -> OpBuilder {
+    printerr("Builder1")
     let storage = ModuleStorage()
+    printerr("Builder2")
     let ctx = JitContext(storage: storage)
+    printerr("Builder3")
     return OpBuilder(ctx: ctx)
 }
 

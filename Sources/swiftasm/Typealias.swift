@@ -1,0 +1,1 @@
+typealias JitBase = SharedStorage<UnsafeMutableRawPointer?>
