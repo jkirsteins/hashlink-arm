@@ -66,6 +66,9 @@ struct LibHl {
     // HL_API vdynobj *hl_alloc_dynobj( void );
     static let hl_alloc_dynobj: (@convention(c) () -> UnsafeRawPointer) = { load("hl_alloc_dynobj") }()
     
+    // HL_API void hl_register_thread( void *stack_top ) 
+    static let hl_register_thread: (@convention(c) (UnsafeMutableRawPointer) -> ()) = { load("hl_register_thread") }()
+
     // HL_API vvirtual *hl_alloc_obj( hl_type *t );
     static let _hl_alloc_obj: (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer) = { load("hl_alloc_obj") }()
     static func hl_alloc_obj(_ hltype: UnsafePointer<HLType_CCompat>) -> UnsafeRawPointer {

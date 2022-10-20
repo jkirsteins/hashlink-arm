@@ -20,7 +20,7 @@ final class LibHlTests: XCTestCase {
     func test__load_code__mod1() throws {
         let p = String.testResourcePath("mod1.hl")
         let res = LibHl.load_code(p)
-        print("Loading \(p) and got \(res)")
+        printerr("Loading \(p) and got \(res)")
         
         /*
         version: 4

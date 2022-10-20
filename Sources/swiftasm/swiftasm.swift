@@ -31,8 +31,29 @@ struct SwiftAsm: ParsableCommand {
     //     let result = entrypoint2()
     //     print("Got", result)
     // }
+
+    // Not sure why this needed
+    //     typedef struct {  
+    //         hl_code *code;
+    //         hl_module *m;
+    //         vdynamic *ret;
+    //         pchar *file;
+    //         int file_time;
+    // } main_context;
+    struct MainContext {
+        var code: UnsafePointer<HLCode_CCompat>? = nil
+        var m: UnsafeMutableRawPointer? = nil
+        var ret: UnsafeMutableRawPointer? = nil
+        var file: UnsafePointer<CChar>? = nil
+        var file_time: Int32 = 0
+    }
     
     mutating func run() throws {
+
+        var _mctx = MainContext()
+
+        LibHl.hl_global_init()
+        LibHl.hl_register_thread(&_mctx)
 
         let file = try! Data(contentsOf: URL(fileURLWithPath: hlFileIn))
         let reader = ByteReader(file)
@@ -41,8 +62,8 @@ struct SwiftAsm: ParsableCommand {
         
         // TODO: remove when not needed. Useful for printing for now
         let mod = try! reader.readModule()        
-        print(String(reflecting: mod))
-        print("==> Compiling functions")
+        printerr(String(reflecting: mod))
+        printerr("==> Compiling functions")
 
         let ctx = JitContext(module: mod, hlcode: hlcode)
         let jit = OpBuilder(ctx: ctx)
