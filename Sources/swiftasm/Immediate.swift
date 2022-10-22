@@ -117,7 +117,7 @@ struct DeferredImmediate<T: Immediate> : Immediate {
     }
 
     var bits: Int64 {
-        try require {
+        require {
             return $0.bits
         } 
     }

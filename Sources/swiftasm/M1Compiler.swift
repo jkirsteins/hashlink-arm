@@ -1,16 +1,18 @@
+typealias HLTypeKinds = [HLTypeKind]
+
 // x0 through x7
 private let ARG_REGISTER_COUNT = 8
 extension M1Compiler {
     // Get offset into stack for a given register. This should skip void registers
-    func getRegStackOffset(_ regs: [HLType], args: [HLType], reg: Int) -> ByteCount {
+    func getRegStackOffset(_ regs: HLTypeKinds, args: HLTypeKinds, reg: Int) -> ByteCount {
         let base: ByteCount
-        let ptr: ArraySlice<HLType>
+        let ptr: ArraySlice<HLTypeKind>
         let skip: Int
 
         /* If we want a non-function-arg register, then start
-    counting from stack reservation offset and look at regs.
+        counting from stack reservation offset and look at regs.
 
-    Otherwise start counting args immediately. */
+        Otherwise start counting args immediately. */
         if reg >= min(ARG_REGISTER_COUNT, args.count) {
             let (stackRes, _) = calcStackArgReq(regs: regs, args: args)
             base = ByteCount(stackRes)
@@ -22,10 +24,10 @@ extension M1Compiler {
             skip = 0
             ptr = args.dropFirst(0)
         }
-
+        
         var result: ByteCount = base
         // note: careful, arrayslice inherits indexes from base array
-        for ix in (skip..<reg) { result += ptr[ix].neededBytes }
+        for ix in (skip..<reg) { result += ptr[ix].hlRegSize }
         return result
     }
 
@@ -39,8 +41,8 @@ extension M1Compiler {
     ///   - regs:
     ///   - args:
     /// - Returns:
-    func calcStackArgReq(regs unfilteredRegs: [HLType], args unfilteredArgs: [HLType])
-        -> (Int16, [HLType])
+    func calcStackArgReq(regs unfilteredRegs: HLTypeKinds, args unfilteredArgs: HLTypeKinds)
+        -> (Int16, HLTypeKinds)
     {
         let regs = unfilteredRegs.filter { $0 != .void }
         let args = unfilteredArgs.filter { $0 != .void }
@@ -53,8 +55,8 @@ extension M1Compiler {
             // IMPORTANT: args must come first
             args.prefix(ARG_REGISTER_COUNT) + regs.dropFirst(args.count)
         )
-        print("args needing space", stackArgs.map { $0.debugName })
-        let result = stackArgs.reduce(0) { $0 + Int16($1.neededBytes) }
+        printerr("args needing space: \(stackArgs.map { $0.debugDescription })")
+        let result = stackArgs.reduce(0) { $0 + Int16($1.hlRegSize) }
         return (roundUpStackReservation(result), stackArgs)
     }
 
@@ -64,8 +66,8 @@ extension M1Compiler {
     Subsequently data should be moved from regs to stack, to enable use of all registers.
 */
     @discardableResult func appendStackInit(
-        _ unfilteredRegs: [HLType],
-        args unfilteredArgs: [HLType],
+        _ unfilteredRegs: HLTypeKinds,
+        args unfilteredArgs: HLTypeKinds,
         builder: OpBuilder
     ) throws -> Int16 {
         // test mismatched before filtering
@@ -107,8 +109,8 @@ extension M1Compiler {
                     .reg64offset(Register64.sp, offset, nil)
                 )
             )
-            print("Inc offset by \(reg.neededBytes) from \(reg)")
-            offset += reg.neededBytes
+            print("Inc offset by \(reg.hlRegSize) from \(reg)")
+            offset += reg.hlRegSize
         }
 
         return neededExtraStackSize
@@ -193,46 +195,41 @@ class M1Compiler {
         return resolvedRegs[Int(reg)]
     }
 
-    func assert(reg: Reg, from: [HLType], matchesCallArg argReg: Reg, inFun funType: HLType) {
+    func assertKind(_ op: HLOpCode, _ actual: HLTypeKind, _ expected: HLTypeKind) {
+        guard expected == actual else {
+            fatalError("\(op): type kind must be \(expected) but got \(actual)")
+        }
+    }
+
+    func assert(reg: Reg, from: HLTypeKinds, matchesCallArg argReg: Reg, inFun callable: any Callable) {
         guard from.count > reg else {
             fatalError(
                 "Register with index \(reg) does not exist. Available registers: \(from)."
             )
         }
-        guard case .fun(let funData) = funType else {
-            fatalError("Expected HLNative to have .fun type (got \(funType)")
-        }
-        guard argReg < funData.args.count else {
-            fatalError("Expected HLNative to have a valid call reg ix \(argReg) but args are is \(funData.args). Fun: \(funData)")
-        }
-        guard from[Int(reg)] == funData.args[Int(argReg)].value else {
+        let regKind = from[Int(reg)]
+        let argKind = callable.args[Int(argReg)].kind
+        guard regKind == argKind else {
             fatalError(
-                "Register \(reg) expected to be \(funType) but is \(from[Int(reg)])"
+                "Register \(reg) kind \(regKind) expected to match arg \(argReg) but arg was \(argKind) "
             )
         }
     }
 
-    func assert(reg: Reg, from: [HLType], matchesReturn funType: Resolvable<HLType>) {
-        assert(reg: reg, from: from, matchesReturn: funType.value)
-    }
-
-    func assert(reg: Reg, from: [HLType], matchesReturn funType: HLType) {
+    func assert(reg: Reg, from: HLTypeKinds, matches type: HLType) {
         guard from.count > reg else {
             fatalError(
                 "Register with index \(reg) does not exist. Available registers: \(from)."
             )
         }
-        guard case .fun(let funData) = funType else {
-            fatalError("Expected HLNative to have .fun type (got \(funType)")
-        }
-        guard from[Int(reg)] == funData.ret.value else {
+        guard from[Int(reg)] == type.kind else {
             fatalError(
-                "Register \(reg) expected to be \(funType) but is \(from[Int(reg)])"
+                "Register \(reg) expected to be \(type.kind) but is \(from[Int(reg)])"
             )
         }
     }
-
-    func assert(reg: Reg, from: [HLType], is target: HLType) {
+    
+    func assert(reg: Reg, from: HLTypeKinds, is target: HLTypeKind) {
         guard from.count > reg else {
             fatalError(
                 "Register with index \(reg) does not exist. Available registers: \(from)."
@@ -249,19 +246,19 @@ class M1Compiler {
         self.stripDebugMessages = stripDebugMessages
     }
 
-    func getRegStackOffset(_ regs: [HLType], _ ix: Reg) -> ByteCount {
+    func getRegStackOffset(_ regs: HLTypeKinds, _ ix: Reg) -> ByteCount {
         var result = ByteCount(0)
-        for i in 0..<ix { result += regs[Int(i)].neededBytes }
+        for i in 0..<ix { result += regs[Int(i)].hlRegSize }
         return result
     }
 
     func getFieldOffset(_ obj: HLType, _ field: Int) -> ByteCount {
-        guard case .obj(let objData) = obj else {
-            fatalError("Field offset only supports .obj (got \(obj.debugName))")
+        guard let objData = obj.objData else {
+            fatalError("Field offset only supports .obj and .struct (got \(obj))")
         }
-        var startOffset = ByteCount(8)  // hl_type* pointer
+        var startOffset = ByteCount(8)  // hl_type* pointer at start of obj/struct
         for ix in 0..<field {
-            let fieldToSkip = objData.fields[ix].type.value.neededBytes
+            let fieldToSkip = objData.fields[ix].type.value.kind.hlRegSize
             startOffset += fieldToSkip
         }
         return startOffset
@@ -271,83 +268,72 @@ class M1Compiler {
         for op in ops { buffer.push(try emitter.emit(for: op)) }
     }
 
-    /// Deprecated.
-    /// - Parameters:
-    ///   - findex: 
-    ///   - mem: 
-    ///   - ctx: 
-    /// - Returns: 
-    @discardableResult
-    func compile(findex: Int32, into mem: OpBuilder, ctx: JitContext) throws
-        -> HLCompiledFunction
-    {
-        try compile(findex: findex, into: mem)
-    }
-
     /// Will compile and update the JIT context with the functions addresses.
     /// - Parameters:
     ///   - findex: 
     ///   - mem: 
     /// - Returns: 
-    @discardableResult
     func compile(findex: Int32, into mem: OpBuilder) throws
-        -> HLCompiledFunction
     {
         let ctx = mem.ctx
-
-        guard let fun = ctx.compiledFunctions.first(where: { $0.findex == findex })
-        else {
-            throw GlobalError.invalidValue(
-                "Function \(findex) not found in the whole functions table."
-            )
+        
+        let entry = ctx.callTargets.get(Int(findex))
+        
+        guard case .compilable(let compilable) = entry else {
+            fatalError("Call target fix==\(findex) is not compilable (got \(entry))")
         }
-
-        guard !fun.memory.hasUsableValue else {
-            print("Memory tested \(fun.memory)")
+        
+        guard !compilable.entrypoint.hasUsableValue else {
             throw GlobalError.invalidOperation(
                 "Function \(findex) has already been compiled and assigned an address."
             )
         }
+        
+        try compile(compilable: compilable, into: mem)
+    }
+    
+    func compile(compilable: Compilable, into mem: OpBuilder) throws
+    {
+        let ctx = mem.ctx
 
         // grab it before it changes from prologue
         // let memory = mem.getDeferredPosition()
-        let resolvedRegs = fun.regs.map { $0.value }
-
+        let regKinds = compilable.getRegs().map { $0.kind }
+        let regs = compilable.getRegs()
+        let findex = compilable.getFindex()
+        
         let relativeBaseAddr = mem.getDeferredPosition()
-        fun.memory.update(from: relativeBaseAddr)
+        compilable.entrypoint.update(from: relativeBaseAddr)
 
         // if we need to return early, we jump to these
         var retTargets: [RelativeDeferredOffset] = []
+        
+        print("Compiling function \(findex) at deferred address \(compilable.entrypoint)")
+        print("REGS: \n--" + regs.map { String(reflecting: $0) }.joined(separator: "\n--"))
+//        print("OPS: \n--" + funPtr.pointee.ops.map { String(reflecting: $0) }.joined(separator: "\n--"))
 
-        print("Compiling function \(fun.findex) at deferred address \(fun.memory)")
-        print("REGS: \n--" + fun.regs.map { $0.debugDescription }.joined(separator: "\n--"))
-        print("OPS: \n--" + fun.ops.map { $0.debugDescription }.joined(separator: "\n--"))
+        let argKinds = compilable.args.map { $0.kind }
 
-        guard case .fun(let funData) = fun.type.value else {
-            fatalError("HLCompiledFunction type should be function")
-        }
-
-        let resolvedArgs = funData.args.map { $0.value }
-
-        mem.append(PseudoOp.debugMarker("==> STARTING FUNCTION \(fun.findex)"))
+        mem.append(PseudoOp.debugMarker("==> STARTING FUNCTION \(findex)"))
         appendPrologue(builder: mem)
         let reservedStackBytes = try appendStackInit(
-            resolvedRegs,
-            args: resolvedArgs,
+            regKinds,
+            args: argKinds,
             builder: mem
         )
 
         appendDebugPrintAligned4(
-            "Entering function \(fun.findex)@\(relativeBaseAddr.offsetFromBase)",
+            "Entering function \(findex)@\(relativeBaseAddr.offsetFromBase)",
             builder: mem
         )
-        for op in fun.function.ops {
+        
+        for op in compilable.getOps() {
             appendDebugPrintAligned4("Executing \(op.debugDescription)", builder: mem)
 
             switch op {
             case .ORet(let dst):
                 // store
-                let regStackOffset = getRegStackOffset(resolvedRegs, dst)
+                let regStackOffset = getRegStackOffset(regKinds, dst)
                 mem.append(
                     PseudoOp.debugMarker("Returning stack offset \(regStackOffset)"),
                     M1Op.ldr(X.x0, .reg64offset(.sp, regStackOffset, nil))
@@ -362,58 +348,36 @@ class M1Compiler {
                     M1Op.b(retTarget)
                 )
 
-            case .OCall0(let dst, let fun):
-                let callTarget = try ctx.wft.get(fun)
-                if let callTargetNative = callTarget as? HLNative {
-                    assert(
-                        reg: dst,
-                        from: resolvedRegs,
-                        matchesReturn: callTargetNative.type
-                    )
-                }
-                else if let callTargetFun = callTarget as? HLCompiledFunction {
-                    assert(
-                        reg: dst,
-                        from: resolvedRegs,
-                        matchesReturn: callTargetFun.type
-                    )
-                }
-                else {
-                    fatalError("Unknown call target \(callTarget)")
-                }
-
-                let fnAddr = try ctx.wft.getAddr(fun)
-                let regStackOffset = getRegStackOffset(resolvedRegs, dst)
+            case .OCall0(let dst, let funRef):
+                let fn = ctx.callTargets.get(funRef)
+                
+                assert(
+                    reg: dst,
+                    from: regKinds,
+                    matches: fn.ret
+                )
+            
+                let regStackOffset = getRegStackOffset(regKinds, dst)
 
                 mem.append(
-                    PseudoOp.debugMarker("Call0 fn@\(fun) -> \(dst)"),
-                    PseudoOp.mov(.x10, fnAddr),
+                    PseudoOp.debugMarker("Call0 fn@\(funRef) -> \(dst)"),
+                    PseudoOp.mov(.x10, fn.entrypoint),
                     M1Op.blr(.x10),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
             case .OCall3(let dst, let fun, let arg0, let arg1, let arg2):
-                let callTarget = try ctx.wft.get(fun)
-                let callTargetType: HLType
-                if let callTargetNative = callTarget as? HLNative {
-                    callTargetType = callTargetNative.type.value
-                }
-                else if let callTargetFun = callTarget as? HLCompiledFunction {
-                    callTargetType = callTargetFun.type.value
-                }
-                else {
-                    fatalError("OCall3 unknown call target \(callTarget)")
-                }
+                let callTarget = ctx.callTargets.get(fun)
+                
+                assert(reg: dst, from: regKinds, matches: callTarget.ret)
+                assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
+                assert(reg: arg1, from: regKinds, matchesCallArg: 1, inFun: callTarget)
+                assert(reg: arg2, from: regKinds, matchesCallArg: 2, inFun: callTarget)
 
-                assert(reg: dst, from: resolvedRegs, matchesReturn: callTargetType)
-                assert(reg: arg0, from: resolvedRegs, matchesCallArg: 0, inFun: callTargetType)
-                assert(reg: arg1, from: resolvedRegs, matchesCallArg: 1, inFun: callTargetType)
-                assert(reg: arg2, from: resolvedRegs, matchesCallArg: 2, inFun: callTargetType)
-
-                let fnAddr = try ctx.wft.getAddr(fun)
-                let regStackOffset = getRegStackOffset(resolvedRegs, dst)
-                let arg0StackOffset = getRegStackOffset(resolvedRegs, arg0)
-                let arg1StackOffset = getRegStackOffset(resolvedRegs, arg1)
-                let arg2StackOffset = getRegStackOffset(resolvedRegs, arg2)
+                let fnAddr = callTarget.entrypoint
+                let regStackOffset = getRegStackOffset(regKinds, dst)
+                let arg0StackOffset = getRegStackOffset(regKinds, arg0)
+                let arg1StackOffset = getRegStackOffset(regKinds, arg1)
+                let arg2StackOffset = getRegStackOffset(regKinds, arg2)
 
                 mem.append(
                     PseudoOp.debugMarker("Call3 fn@\(fun)(\(arg0), \(arg1), \(arg2)) -> \(dst)"),
@@ -426,7 +390,8 @@ class M1Compiler {
                 )
             // fatalError("Jumping to \(fn) for funIx \(fun)")
             // fatalError("OCall0")
-            case .ONew(let dst): 
+            case .ONew(let dst):
+                _ = dst
                 // LOOK AT: https://github.com/HaxeFoundation/hashlink/blob/284301f11ea23d635271a6ecc604fa5cd902553c/src/jit.c#L3263
                 // let typeToAllocate = requireType(reg: dst, from: resolvedRegs)
                 // let allocFunc: HLNative
@@ -451,22 +416,25 @@ class M1Compiler {
                 // let g = ctx.storage.globalResolver.get(Int(global!))
                 // fatalError("No ONew yet. Allocating: \(typeToAllocate) -> global \(global) \(g)")
             case .OGetThis(let regDst, let fieldRef):
-                guard resolvedRegs.count > 0 && regDst < resolvedRegs.count else {
-                    fatalError("Not enough registers. Expected register 0 and \(regDst) to be available. Got: \(resolvedRegs)")
+                guard regKinds.count > 0 && regDst < regKinds.count else {
+                    fatalError("Not enough registers. Expected register 0 and \(regDst) to be available. Got: \(regKinds)")
                 }
-                let sourceObjectType = resolvedRegs[0]
-                guard case .obj(let sourceObjData) = sourceObjectType else {
-                    fatalError("OGetThis: source object data must be obj but got \(sourceObjectType)")
-                }
-                guard fieldRef < sourceObjData.fields.count else {
-                    fatalError("OGetThis: expected field \(fieldRef) to exist but got \(sourceObjData.fields)")
-                }
-                let sourceObjectFieldType = sourceObjData.fields[fieldRef]
+                let sourceObjectType = regs[0]
+                assertKind(op, sourceObjectType.kind, .obj)
                 
-                assert(reg: regDst, from: resolvedRegs, is: sourceObjectFieldType.type.value)
+                guard case .obj(let objData) = sourceObjectType else {
+                    fatalError("source object should be .obj but was \(sourceObjectType)")
+                }
+                
+                guard fieldRef < objData.fields.count else {
+                    fatalError("OGetThis: expected field \(fieldRef) to exist but got \(objData.fields)")
+                } 
+                let sourceObjectFieldType = objData.fields[fieldRef]
+                
+                assert(reg: regDst, from: regKinds, is: sourceObjectFieldType.type.value.kind)
 
-                let objOffset = getRegStackOffset(resolvedRegs, 0)
-                let dstOffset = getRegStackOffset(resolvedRegs, regDst)
+                let objOffset = getRegStackOffset(regKinds, 0)
+                let dstOffset = getRegStackOffset(regKinds, regDst)
                 let fieldOffset = getFieldOffset(sourceObjectType, fieldRef)
 
                 /* We should:
@@ -484,9 +452,9 @@ class M1Compiler {
                     M1Op.str(X.x0, .reg64offset(X.sp, dstOffset, nil))      // store x0 back in sp
                 )
             case .OInt(let dst, let iRef):
-                assert(reg: dst, from: resolvedRegs, is: .i32)
+                assert(reg: dst, from: regKinds, is: .i32)
                 let c = ctx.storage.int32Resolver.get(iRef)
-                let regStackOffset = getRegStackOffset(resolvedRegs, dst)
+                let regStackOffset = getRegStackOffset(regKinds, dst)
                 mem.append(
                     PseudoOp.debugMarker(
                         "Mov \(c) into \(X.x0) and store in stack for HL reg \(iRef) at offset \(regStackOffset)"
@@ -517,7 +485,5 @@ class M1Compiler {
 
         appendEpilogue(builder: mem)
         mem.append(.ret)
-
-        return fun
     }
 }

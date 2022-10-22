@@ -105,24 +105,20 @@ struct HLCode_CCompat {
         return floats.advanced(by: ix).pointee
     }
 
-    func getFunction(_ ix: Int) -> HLFunction_CCompat {
-        functions.advanced(by: ix).pointee
+    func getFunction(_ ix: Int) -> UnsafePointer<HLFunction_CCompat> {
+        functions.advanced(by: ix)
     }
 
-    func getNative(_ ix: Int) -> HLNative_CCompat {
-        natives.advanced(by: ix).pointee
+    func getNative(_ ix: Int) -> UnsafePointer<HLNative_CCompat> {
+        natives.advanced(by: ix)
     }
 
-    func getType(_ ix: Int) -> HLType_CCompat {
-        types.advanced(by: ix).pointee
+    func getType(_ ix: Int) -> UnsafePointer<HLType_CCompat> {
+        types.advanced(by: ix)
     }
 
     func getUstring(_ ix: Int) -> String {
         let len = string_lens.advanced(by: ix).pointee
-        guard ustrings.advanced(by: ix) != nil else {
-            fatalError("ustring \(ix) is nil")
-        }
-
         let strPtr = ustrings.advanced(by: ix).pointee
         
         let str = String(

@@ -2,7 +2,6 @@ import XCTest
 @testable import swiftasm
 
 final class CCompatTests: XCTestCase {
-    
 
     func testHLType_sizes() throws {
         XCTAssertEqual(MemoryLayout<HLTypeKind>.size, 4)
@@ -11,6 +10,7 @@ final class CCompatTests: XCTestCase {
         // union sizes
         // obj
         XCTAssertEqual(MemoryLayout<HLType_CCompat_Obj>.size, 80)
+        XCTAssertEqual(MemoryLayout<HLObjField_CCompat>.size, 24)
         // fun
         XCTAssertEqual(MemoryLayout<HLType_CCompat_Fun>.size, 80)
         XCTAssertEqual(MemoryLayout<HLType_CCompat_Fun_Closure>.size, 32)

@@ -5,7 +5,9 @@ import XCTest
 final class EmitterM1Tests: XCTestCase {
     func testSub() throws {
         XCTAssertEqual("sub sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, 16).debugDescription)
-        XCTAssertEqual("sub sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, try Imm12Lsl12(16)).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16",
+                       M1Op.sub(Register64.sp, Register64.sp,
+                                Imm12Lsl12(16)).debugDescription)
         XCTAssertEqual("sub sp, sp, #16, lsl 12", M1Op.sub(Register64.sp, Register64.sp, try Imm12Lsl12(16, lsl: ._12)).debugDescription)
         XCTAssertEqual("add sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, -16).debugDescription)
         XCTAssertEqual(

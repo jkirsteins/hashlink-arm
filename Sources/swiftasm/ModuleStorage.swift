@@ -2,7 +2,7 @@ extension Int32: CustomDebugStringConvertible {
     public var debugDescription: String { "i32(\(self))" }
 }
 
-extension Double: CustomDebugStringConvertible {
+extension Double {
     public var debugDescription: String { "f64(\(self))" }
 }
 

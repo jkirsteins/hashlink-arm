@@ -5,11 +5,11 @@ struct HLGlobal : Equatable, CustomDebugStringConvertible, Hashable {
     var hasAddress: Bool { memory.hasUsableValue }
 
     func allocate(for type: HLType) {
-        printerr("Allocating memory for \(type) (\(type.neededBytes)b)")
+        printerr("Allocating memory for \(type) (\(type.kind.hlRegSize)b)")
         self.memory.wrappedValue = UnsafeMutableRawPointer.allocate(
-            byteCount: Int(type.neededBytes), 
+            byteCount: Int(type.kind.hlRegSize), 
             alignment: MemoryLayout<UInt8>.alignment)
-        self.memory.wrappedValue!.initializeMemory(as: UInt8.self, repeating: 0, count: Int(type.neededBytes))
+        self.memory.wrappedValue!.initializeMemory(as: UInt8.self, repeating: 0, count: Int(type.kind.hlRegSize))
     }
 
     func deallocate() {

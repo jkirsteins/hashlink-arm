@@ -81,6 +81,7 @@ class OpBuilder {
         return try self.ops.flatMap { try $0.emit() }
     }
 
+    @discardableResult
     func lockAddressesAndBuild() -> [UInt8] {
         try! lockAddresses()
         return try! safeBuild()
@@ -144,9 +145,6 @@ class OpBuilder {
                 continue
             }
             for (ix, row) in bytes.chunked(into: 4).enumerated() {
-                let strs = row.map {
-                    "0x" + String($0, radix: 16).leftPadding(toLength: 2, withPad: "0")
-                }
                 let debugString: String
                 if case PseudoOp.ascii = op {
                     debugString = String(bytes: row, encoding: .ascii)!
@@ -231,42 +229,35 @@ class OpBuilder {
         )
     }
 
-    func _buildAddress(_ entrypoint: any WholeFunction) throws
+    func _buildAddress(_ callable: any Callable) throws
         -> UnsafeMutableRawPointer
     {
-        let code = try lockAddressesAndBuild()
+        let code = lockAddressesAndBuild()
         if map == MAP_FAILED { fatalError("MAP FAILED \(errno)") }
 
         pthread_jit_write_protect_np(0)
         memcpy(map, code, code.count)
         pthread_jit_write_protect_np(1)
 
-        print("Map root is \(map)")
-
-        return entrypoint.memory.value
+        return callable.entrypoint.value
     }
 
-    func buildMain(_ entrypoint: any WholeFunction) throws -> JitInt64 {
+    func buildMain(_ entrypoint: FunctionAddresses.Entry) throws -> JitInt64 {
         try self.buildEntrypoint(entrypoint)
     }
 
-    func buildEntrypoint<T>(_ entrypoint: any WholeFunction) throws -> T {
+    func buildEntrypoint<T>(_ ix: Int) throws -> T {
+        try self.buildEntrypoint(ctx.callTargets.get(ix))
+    }
+
+    func buildEntrypoint<T>(_ entrypoint: FunctionAddresses.Entry) throws -> T {
         let entrypointAddress = try _buildAddress(entrypoint)
         print("Casting from \(entrypointAddress)")
-        var jitMain: T? = unsafeBitCast(
+        let jitMain: T? = unsafeBitCast(
             // map /*entrypointAddress*/,
             /*map*/ entrypointAddress,
             to: T.self
         )
-
-        // var codeCopy = code
-        // withUnsafeMutablePointer(to: &codeCopy) {
-        //     codePtr in
-
-        //     jitMain = unsafeBitCast(
-        //         map,
-        //         to: JitMainType.self)
-        // }
 
         guard let jitMain = jitMain else { fatalError("Failed to init jitMain") }
 

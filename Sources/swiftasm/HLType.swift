@@ -101,7 +101,7 @@ struct HLTypeObjData: Equatable, CustomDebugStringConvertible, Hashable {
     var debugDescription: String {
         """
         \(name.debugDescription) \(superType == nil ? "" : "extends \(superType!.debugDescription)")
-        global: \(global)
+        global: \(global?.debugDescription ?? "nil")
         fields: \(fields.count > 0 ? "\n" : "")\((fields.map { "  \($0.debugDescription)" }).joined(separator: "\n"))
         protos: \(protos.count > 0 ? "\n" : "")\(protos.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
         bindings: \(bindings.count > 0 ? "\n" : "")\(bindings.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
@@ -109,10 +109,10 @@ struct HLTypeObjData: Equatable, CustomDebugStringConvertible, Hashable {
     }
 }
 
-protocol HLRegisterSize: Equatable, Hashable { var neededBytes: ByteCount { get } }
+protocol HLRegisterSizeProvider: Equatable, Hashable { var hlRegSize: ByteCount { get } }
 
-extension HLType: HLRegisterSize {
-    var neededBytes: ByteCount {
+extension HLType: HLRegisterSizeProvider {
+    var hlRegSize: ByteCount {
         switch self {
         case .void: return 0  // void not really a value, used for typing purpose
 
@@ -134,32 +134,6 @@ extension HLType: HLRegisterSize {
     }
 }
 
-protocol CCompatibleMemoryProducer {
-    // var memory: DeferredAbsoluteAddress { get }
-    func allocate() -> UnsafeMutableRawPointer// func deallocate()
-}
-
-class HLTypeStorage {
-
-    var storage = [Int: UnsafeMutableRawPointer]()
-
-    func get(_ ix: Int) -> UnsafeMutableRawPointer { fatalError("wip") }
-
-    func allocate(for type: HLType, withIndex ix: Int) {
-        self.storage[ix] = type.allocate()
-    }
-
-}
-
-extension HLType: CCompatibleMemoryProducer {
-    func allocate() -> UnsafeMutableRawPointer {
-        switch self {
-        case .obj(let objData), .struct(let objData): break
-        default: fatalError("Initializing HLType memory not implemented for \(self)")
-        }
-        fatalError("wip")
-    }
-}
 
 /*
 union {
@@ -196,45 +170,7 @@ struct hl_type {
 };
 */
 
-func allocCCompat(hltype: HLType) -> UnsafeMutablePointer<HLType_CCompat> {
-    let result: UnsafeMutablePointer<HLType_CCompat> = UnsafeMutablePointer.allocate(
-        capacity: 1
-    )
-
-    let root = UnsafeMutableRawPointer(bitPattern: Int(bitPattern: result))!
-    root.advanced(by: 0).bindMemory(to: HLTypeKind.self, capacity: 1).pointee = hltype.kind
-
-    guard case .obj(let objDataIn) = hltype else {
-        fatalError("\(hltype) not supported in allocCCompat")
-    }
-
-    //
-    let name = Array(objDataIn.name.value.utf16)
-    // let objData = HLType_CCompat_Obj(
-    //     nfields: Int32(objDataIn.fields.count),
-    //     nproto: Int32(objDataIn.protos.count), 
-    //     nbindings: Int32(objDataIn.bindings.count) , 
-    //     name: UnsafeMutableRawPointer, 
-    //     superType: UnsafeMutableRawPointer, 
-    //     objFields: UnsafeMutableRawPointer, 
-    //     proto: UnsafeMutableRawPointer, 
-    //     bindings: UnsafeMutableRawPointer, 
-    //     globalValue: UnsafeMutableRawPointer, 
-    //     moduleContext: UnsafeMutableRawPointer, 
-    //     rt: UnsafeMutableRawPointer)
-    // let body = HLType_CCompat_BodyUnion(address: UnsafeMutableRawPointer(nil))
-    // root.advanced(by: MemoryLayout<HLTypeKind>.size).bindMemory(to: HLTypeKind.self, capacity: 1).pointee = hltype.kind
-    fatalError("wip")
-    // UnsafeMutablePointer(mutating: &result.pointee.kind).pointee = hltype.kind
-
-    
-    assert(result.pointee.kind == hltype.kind)
-
-    return result
-}
-
-
-struct HLTypeKind: ExpressibleByIntegerLiteral, Equatable, Hashable {  // not an enum because we need to force the size it takes
+struct HLTypeKind: HLRegisterSizeProvider, CustomDebugStringConvertible, ExpressibleByIntegerLiteral, Equatable, Hashable {  // not an enum because we need to force the size it takes
     let rawValue: UInt32
 
     init(integerLiteral value: UInt32) { self.init(rawValue: value) }
@@ -267,6 +203,56 @@ struct HLTypeKind: ExpressibleByIntegerLiteral, Equatable, Hashable {  // not an
     // -----------------
     static let last = HLTypeKind(rawValue: 23)
     static let _H_FORCE_INT = HLTypeKind(rawValue: 0x7FFF_FFFF)
+
+    var hlRegSize: ByteCount {
+        switch self {
+        case .void: return 0  // void not really a value, used for typing purpose
+
+        case .bool, .u8: return 1  // an unsigned 8 bits integer (0-255)
+
+        case .u16: return 2
+        case .i32, .f32: return 4
+        case .i64, .f64: return 8
+
+        // All the following values are memory addresse pointers and takes either 4 bytes in x86 mode or 8 bytes in x86-64 mode:
+
+        case .bytes: fallthrough
+        case .dyn, .fun, .array, .obj, .dynobj, .virtual, .enum, .ref, .null, .type,
+            .abstract:
+            return 8
+
+        default: fatalError("Register size not available for \(self.debugDescription)")
+        }
+    }
+
+    var debugDescription: String {
+        switch self {
+        case .void: return "void"
+        case .u8: return "u8"
+        case .u16: return "u16"
+        case .i32: return "i32"
+        case .i64: return "i64"
+        case .f32: return "f32"
+        case .f64: return "f64"
+        case .bool: return "bool"
+        case .bytes: return "bytes"
+        case .dyn: return "dynamic"
+        case .fun: return "fun"
+        case .obj: return "obj"
+        case .array: return "array"
+        case .type: return "type"
+        case .ref: return "ref"
+        case .virtual: return "virtual"
+        case .dynobj: return "dynobj"
+        case .abstract: return "abs"
+        case .`enum`: return "enum"
+        case .null: return "null"
+        case .method: return "method"
+        case .`struct`: return "struct"
+        default:
+            fatalError("unknown HLTypeKind \(rawValue)")
+}
+    }
 }
 
 enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
@@ -296,6 +282,20 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
 
     // todo: find usages and move to debugDescription
     var debugName: String { debugDescription }
+    
+    var objData: HLTypeObjData? {
+        switch(self) {
+        case .obj(let objData), .struct(let objData): return objData
+        default: return nil
+        }
+    }
+    
+    var funData: HLTypeFunData? {
+        switch(self) {
+        case .fun(let data): return data
+        default: return nil
+        }
+    }
 
     var kind: HLTypeKind {
         switch self {

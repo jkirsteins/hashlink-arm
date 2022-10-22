@@ -60,11 +60,11 @@ enum M1Op : CpuOp {
         case .movz32(let rt, let v, nil):
           return "movz \(rt), #\(v)"
         case .movz32(let rt, let v, let shift) where shift != nil:
-          return "movz \(rt), #\(v), \(shift)"
+          return "movz \(rt), #\(v), \(String(describing: shift))"
         case .movz64(let rt, let v, nil):
           return "movz \(rt), #\(v)"
         case .movz64(let rt, let v, let shift) where shift != nil:
-          return "movz \(rt), #\(v), \(shift)"
+          return "movz \(rt), #\(v), \(String(describing: shift)))"
         case .movr64(let rt, let rn):
           return "movr \(rt), \(rn)"
         case .orr64: 

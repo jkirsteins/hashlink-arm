@@ -66,7 +66,6 @@ extension HLOpCode: CustomDebugStringConvertible {
             return "reg\(dst) = reg\(obj).<\(field)>"
         case .OSetField(let obj, let field, let src):
             return "reg\(obj).<\(field)> = reg\(src)"
-            fatalError("OSetField")
         case .OGetThis(let dst, let field): return "reg\(dst) = this.<\(field)>"
         case .OSetThis(let field, let src): return "this.<\(field)> = reg\(src)"
         case .ODynGet(let dst, let obj, let field): 

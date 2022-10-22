@@ -161,6 +161,7 @@ class ByteReader {
         else {
             debugEntries = []
         }
+        _ = debugEntries // suppress warning about usage
 
         // only need _resolvableTypes for debug printing
         let _resolvableTypes = try Array(repeating: 0, count: Int(ntypes)).enumerated()
@@ -409,7 +410,7 @@ class ByteReader {
         var bytes = [UInt8]()
         while try peekUInt8() != 0 { bytes += [try readUInt8()] }
 
-        try readUInt8()  // skip the 0 terminator
+        _ = try readUInt8() // skip the 0 terminator
 
         guard let result = String(bytes: bytes, encoding: .ascii) else {
             fatalError("Failed to decode string")

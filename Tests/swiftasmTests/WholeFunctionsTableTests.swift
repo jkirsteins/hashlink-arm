@@ -25,8 +25,7 @@ final class WholeFunctionsTableTests: XCTestCase {
 
         typeTable.wrappedValue.append(HLType.fun(HLTypeFunData(args: [], ret: types.getResolvable(0 /*void*/))))
         
-        var dummy = [5]
-        let ptr: UnsafeMutableRawPointer = UnsafeMutableRawPointer(mutating: dummy)
+        let ptr: UnsafeMutableRawPointer = UnsafeMutableRawPointer(bitPattern: 5)!
         
         // populate native
         nativeTable.wrappedValue.append(HLNative(
@@ -87,8 +86,7 @@ final class WholeFunctionsTableTests: XCTestCase {
 
         typeTable.wrappedValue.append(HLType.fun(HLTypeFunData(args: [], ret: types.getResolvable(0 /*void*/))))
         
-        var dummy = [5]
-        let ptr: UnsafeMutableRawPointer = UnsafeMutableRawPointer(mutating: dummy)
+        let ptr: UnsafeMutableRawPointer = UnsafeMutableRawPointer(bitPattern: 5)!
         
         // populate native
         nativeTable.wrappedValue.append(HLNative(
@@ -137,8 +135,7 @@ final class WholeFunctionsTableTests: XCTestCase {
 
         typeTable.wrappedValue.append(HLType.fun(HLTypeFunData(args: [], ret: types.getResolvable(0 /*void*/))))
         
-        var dummy = [5]
-        let ptr: UnsafeMutableRawPointer = UnsafeMutableRawPointer(mutating: dummy)
+        let ptr: UnsafeMutableRawPointer = UnsafeMutableRawPointer(bitPattern: 5)!
 
         // populate native
         nativeTable.wrappedValue.append(HLNative(

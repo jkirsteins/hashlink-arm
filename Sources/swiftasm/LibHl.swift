@@ -41,9 +41,10 @@ struct LibHl {
     static func load_code(_ val: String) -> UnsafeMutablePointer<HLCode_CCompat> {
         let res = val.withCString {
             charPtr in 
-            
+            print("charPtr: \(charPtr)")
             return load_code(charPtr, nil, true)
         }
+        print("res: \(res)")
         guard let res = res?.bindMemory(to: HLCode_CCompat.self, capacity: 1) else {
             fatalError("Failed to load code")
         }
