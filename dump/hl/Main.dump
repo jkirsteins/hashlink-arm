@@ -109,7 +109,7 @@ class Main {
 						[Local p(4099):Path2:Path2]
 				[ObjectDecl:{ methodName : String, lineNumber : Int, fileName : String, className : String }]
 					fileName: [Const:String] "haxesrc/Main.hx"
-					lineNumber: [Const:Int] 108
+					lineNumber: [Const:Int] 123
 					className: [Const:String] "Main"
 					methodName: [Const:String] "pathTest2"
 
@@ -136,7 +136,7 @@ class Main {
 				[Const:String] "Hello World"
 				[ObjectDecl:{ methodName : String, lineNumber : Int, fileName : String, className : String }]
 					fileName: [Const:String] "haxesrc/Main.hx"
-					lineNumber: [Const:Int] 117
+					lineNumber: [Const:Int] 132
 					className: [Const:String] "Main"
 					methodName: [Const:String] "main"
 			[Call:Void]

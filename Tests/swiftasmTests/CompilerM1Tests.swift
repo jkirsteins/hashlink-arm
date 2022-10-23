@@ -243,7 +243,7 @@ final class CompilerM1Tests: XCTestCase {
 
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
-        let sut = M1Compiler(stripDebugMessages: false)
+        let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
 
          mem.hexPrint()
@@ -303,6 +303,10 @@ final class CompilerM1Tests: XCTestCase {
             let result = entrypoint(cstr, 11)
             let retPtr = result.bindMemory(to: vdynamic.self, capacity: 1)
             let typePtr = retPtr.pointee.t
+            
+            XCTAssertEqual(result.advanced(by: 8).bindMemory(to: Int32.self, capacity: 1).pointee, 0)
+            XCTAssertEqual(result.advanced(by: 16).bindMemory(to: Int32.self, capacity: 1).pointee, 11)
+            
             XCTAssertNotNil(typePtr.pointee.obj.pointee.rt)
             XCTAssertTrue(false) // TODO: we need to check the memory contents
         }

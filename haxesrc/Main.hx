@@ -1,6 +1,10 @@
 /**
 	Multi-line comments for documentation.
 **/
+
+import hl.UI8;
+import hl.UI16;
+
 typedef Point = {x:Int, y:Int}
 
 class Path {
@@ -20,6 +24,17 @@ class Path2 extends Path {
         this.current = { x: 0, y: 0};
         this.childfield = { x: 0, y: 0};
     }
+}
+
+// Class for testing offsets for field indexes
+class OffsetTests {
+    public var test: Int = 0xDEAD; // marker
+    public var test_2nd: UI8 = 1;
+    public var test_3rd: UI8 = 1;
+    public var test_4th: UI16 = 1; // will be memaligned
+    public var test2: Float = 0.5;
+    public var test3: Bool = true;
+    public var test4: String = "Asd";
 }
 
 typedef Point3 = { > Point, z : Int }

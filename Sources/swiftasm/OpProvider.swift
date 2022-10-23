@@ -145,6 +145,7 @@ extension HLType {
         case .null: self = .null(HLTypeNullData(type: Resolvable(HLType(c.tparam.pointee), memory: c.tparam)))
         case .obj: self = .obj(HLTypeObj(c.obj.pointee))
         case .struct: self = .struct(HLTypeObj(c.obj.pointee))
+        case .bool: self = .bool
         
         case .method: self = .method(HLTypeFun(c.fun.pointee))
         case .fun: self = .fun(HLTypeFun(c.fun.pointee))

@@ -520,6 +520,35 @@ class M1Compiler {
                 appendDebugPrintAligned4("Entering OSetField", builder: mem)
                 let objRegKind = requireTypeKind(reg: objReg, from: regKinds)
 
+                /**
+                 field indexes are fetched from runtime_object,
+                 and match what you might expect. E.g. for String:
+                 
+                    Example offsets for 0) bytes, 1) i32
+                 
+                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.pointee
+                 (Int32?) $R0 = 8   // <----- first is 8 offset, on account of hl_type* at the top
+                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 1).pointee
+                 (Int32?) $R1 = 16 // <----- second is 8 more offset, cause bytes is a pointer
+                 (lldb)
+                 
+                    NOTE: keep alignment in mind. E.g. 0) int32 and 1) f64 will have 8 and 16 offsets respectively.
+                        But 0) int32, 1) u8, 2) u8, 3) u16, 4) f64 will have 8, 12, 13, 14, 16 offsets respectively.
+                 
+                    See below:
+                 
+                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 0).pointee
+                 (Int32?) $R0 = 8
+                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 1).pointee
+                 (Int32?) $R1 = 12
+                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 2).pointee
+                 (Int32?) $R2 = 13
+                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 3).pointee
+                 (Int32?) $R3 = 14
+                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 4).pointee
+                 (Int32?) $R4 = 16
+                 */
+                
                 switch(objRegKind) {
                 case .obj: fallthrough
                 case .struct:

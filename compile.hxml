@@ -2,5 +2,5 @@
 -main Main
 -debug 
 -D dump
-# -hl haxebin/app.hl
--hl haxebin/app.c
+-hl haxebin/app.hl
+# -hl haxebin/app.c

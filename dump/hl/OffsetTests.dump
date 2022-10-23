@@ -1,0 +1,84 @@
+@:used
+class OffsetTests {
+
+	@:compilerGenerated
+	public function new[Function:() -> Void]
+		[Block:Void]
+			[Binop:String]
+				[Field:String]
+					[Const:OffsetTests] this
+					[FInstance:String]
+						OffsetTests
+						test4:String
+				=
+				[Const:String] "Asd"
+			[Binop:Bool]
+				[Field:Bool]
+					[Const:OffsetTests] this
+					[FInstance:Bool]
+						OffsetTests
+						test3:Bool
+				=
+				[Const:Bool] true
+			[Binop:Float]
+				[Field:Float]
+					[Const:OffsetTests] this
+					[FInstance:Float]
+						OffsetTests
+						test2:Float
+				=
+				[Const:Float] 0.5
+			[Binop:hl.UI16]
+				[Field:hl.UI16]
+					[Const:OffsetTests] this
+					[FInstance:hl.UI16]
+						OffsetTests
+						test_4th:hl.UI16
+				=
+				[Cast:hl.UI16] [Const:Int] 1
+			[Binop:hl.UI8]
+				[Field:hl.UI8]
+					[Const:OffsetTests] this
+					[FInstance:hl.UI8]
+						OffsetTests
+						test_3rd:hl.UI8
+				=
+				[Cast:hl.UI8] [Const:Int] 1
+			[Binop:hl.UI8]
+				[Field:hl.UI8]
+					[Const:OffsetTests] this
+					[FInstance:hl.UI8]
+						OffsetTests
+						test_2nd:hl.UI8
+				=
+				[Cast:hl.UI8] [Const:Int] 1
+			[Binop:Int]
+				[Field:Int]
+					[Const:OffsetTests] this
+					[FInstance:Int]
+						OffsetTests
+						test:Int
+				=
+				[Const:Int] 57005
+
+	@:value(0xDEAD)
+	public var test:Int;
+
+	@:value(1)
+	public var test_2nd:hl.UI8;
+
+	@:value(1)
+	public var test_3rd:hl.UI8;
+
+	@:value(1)
+	public var test_4th:hl.UI16;
+
+	@:value(0.5)
+	public var test2:Float;
+
+	@:value(true)
+	public var test3:Bool;
+
+	@:value("Asd")
+	public var test4:String;
+}
