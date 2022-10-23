@@ -166,4 +166,25 @@ struct ModuleStorage {
         self.functionResolver = TableResolver(table: functionTable, count: nfunctions)
         self.constantResolver = TableResolver(table: constantTable, count: nconstants)
     }
+    
+    init(_ hlcode: HLCode_CCompat) {
+        self.init(
+            nstrings: 0,
+            nints: Int32(hlcode.nints),
+            nfloats: 0,
+            ntypes: 0,
+            nglobals: 0,
+            nnatives: 0,
+            nfunctions: 0,
+            nconstants: 0
+        )
+        self.int32Table.wrappedValue = hlcode.ints.getArray(hlcode.nints)
+    }
+}
+
+extension UnsafePointer {
+    func getArray(_ count: UInt32) -> Array<Pointee> {
+        let buf = UnsafeBufferPointer(start: self, count: Int(count))
+        return Array(buf)
+    }
 }

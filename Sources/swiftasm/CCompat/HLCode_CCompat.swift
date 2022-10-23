@@ -108,9 +108,19 @@ struct HLCode_CCompat {
     func getFunction(_ ix: Int) -> UnsafePointer<HLFunction_CCompat> {
         functions.advanced(by: ix)
     }
-
+    
     func getNative(_ ix: Int) -> UnsafePointer<HLNative_CCompat> {
         natives.advanced(by: ix)
+    }
+    
+    func findNative(_ fix: Int) -> UnsafePointer<HLNative_CCompat>? {
+        for ix in 0..<self.nnatives {
+            let candidate = natives.advanced(by: Int(ix))
+            if candidate.pointee.findex == fix {
+                return candidate
+            }
+        }
+        return nil
     }
 
     func getType(_ ix: Int) -> UnsafePointer<HLType_CCompat> {

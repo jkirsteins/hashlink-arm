@@ -7,6 +7,14 @@ protocol MemoryAddress : Equatable, Immediate, Hashable {
     func update(from: DeferredBaseRelativeAddress)
 }
 
+extension UnsafeRawPointer: MemoryAddress, DeferredMemoryAddress {
+    var value: UnsafeMutableRawPointer { UnsafeMutableRawPointer(mutating: self) }
+    
+    func isEqual(_ to: any MemoryAddress) -> Bool {
+        self.value == to.value
+    }
+}
+
 extension UnsafeMutableRawPointer: MemoryAddress, DeferredMemoryAddress {
     var value: UnsafeMutableRawPointer { self }
     

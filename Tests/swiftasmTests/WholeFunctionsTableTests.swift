@@ -23,7 +23,7 @@ final class WholeFunctionsTableTests: XCTestCase {
         let strings = TableResolver(table: stringTable, count: Int32(stringTable.wrappedValue.count))
         let types = TableResolver(table: typeTable, count: 2)
 
-        typeTable.wrappedValue.append(HLType.fun(HLTypeFunData(args: [], ret: types.getResolvable(0 /*void*/))))
+        typeTable.wrappedValue.append(HLType.fun(HLTypeFun(args: [], ret: types.getResolvable(0 /*void*/))))
         
         let ptr: UnsafeMutableRawPointer = UnsafeMutableRawPointer(bitPattern: 5)!
         
@@ -84,7 +84,7 @@ final class WholeFunctionsTableTests: XCTestCase {
         let strings = TableResolver(table: stringTable, count: Int32(stringTable.wrappedValue.count))
         let types = TableResolver(table: typeTable, count: 2)
 
-        typeTable.wrappedValue.append(HLType.fun(HLTypeFunData(args: [], ret: types.getResolvable(0 /*void*/))))
+        typeTable.wrappedValue.append(HLType.fun(HLTypeFun(args: [], ret: types.getResolvable(0 /*void*/))))
         
         let ptr: UnsafeMutableRawPointer = UnsafeMutableRawPointer(bitPattern: 5)!
         
@@ -133,7 +133,7 @@ final class WholeFunctionsTableTests: XCTestCase {
         let strings = TableResolver(table: stringTable, count: Int32(stringTable.wrappedValue.count))
         let types = TableResolver(table: typeTable, count: 2)
 
-        typeTable.wrappedValue.append(HLType.fun(HLTypeFunData(args: [], ret: types.getResolvable(0 /*void*/))))
+        typeTable.wrappedValue.append(HLType.fun(HLTypeFun(args: [], ret: types.getResolvable(0 /*void*/))))
         
         let ptr: UnsafeMutableRawPointer = UnsafeMutableRawPointer(bitPattern: 5)!
 

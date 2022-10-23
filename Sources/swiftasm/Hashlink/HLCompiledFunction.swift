@@ -3,7 +3,7 @@ struct HLCompiledFunction : Equatable, WholeFunction, CustomDebugStringConvertib
     let memory: any MemoryAddress
 
     var type: Resolvable<HLType> { function.type }
-    var regs: [Resolvable<HLType>] { function.regs }
+
     var ops: [HLOpCode] { function.ops }
     var findex: Int32 { function.findex }
     

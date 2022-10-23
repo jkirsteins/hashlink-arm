@@ -28,16 +28,10 @@ struct HLType_CCompat_Fun_Closure : Equatable, Hashable {
     let nargs: UInt32
     let parent: UnsafePointer<HLType_CCompat>?
 
-	var args: [HLType_CCompat] {
-	    guard let startPtr = self.argsPtr?.pointee else {
-			fatalError("argsPtr empty")
-		}
-        let buf = UnsafeBufferPointer(start: startPtr, count: Int(nargs))
-        return Array(buf)
-    }
+    var args: [HLType_CCompat] { self.argsPtr?.getArray(count: Int32(nargs)) ?? [] }
 }
 
-struct HLType_CCompat_Fun : Equatable, Hashable {
+struct HLTypeFun_CCompat : Equatable, Hashable {
     let argsPtr: UnsafePointer<UnsafePointer<HLType_CCompat>>
     let retPtr: UnsafePointer<HLType_CCompat>
     let nargs: UInt32
@@ -45,18 +39,16 @@ struct HLType_CCompat_Fun : Equatable, Hashable {
     let closure_type: HLType_CCompat_Fun_ClosureType
     let closure: HLType_CCompat_Fun_Closure
 
-	var ret: HLType_CCompat {
-//		guard let retPtr = self.retPtr else {
-//			fatalError("retPtr is nil")
-//		}
+	var ret: HLType_CCompat { return retPtr.pointee }
+	var args: [HLType_CCompat] { self.argsPtr.getArray(count: Int32(nargs)) }
+}
 
-		return retPtr.pointee
-	}
-	var args: [HLType_CCompat] {
-//	    guard let startPtr = self.argsPtr?.pointee else {
-//			fatalError("argsPtr empty")
-//		}
-        let buf = UnsafeBufferPointer(start: self.argsPtr.pointee, count: Int(nargs))
-        return Array(buf)
+extension HLTypeFun {
+    init(_ ccompat: HLTypeFun_CCompat) {
+        self.args = ccompat.args.enumerated().map { ix, item in
+            let ptr = ccompat.argsPtr.advanced(by: ix)
+            return Resolvable(HLType(item), memory: ptr.pointee)
+        }
+        self.ret = Resolvable(HLType(ccompat.ret), memory: ccompat.retPtr)
     }
 }

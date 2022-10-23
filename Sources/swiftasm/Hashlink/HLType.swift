@@ -1,27 +1,10 @@
 import Foundation
 
-struct HLTypeField: Equatable, CustomDebugStringConvertible, Hashable {
-    let name: Resolvable<String>
-    let type: Resolvable<HLType>
-
-    var debugDescription: String {
-        "\(name.value): <\(type.value.debugName)>@\(type.ix)"
-    }
-}
-
 struct HLTypeBinding: Equatable, CustomDebugStringConvertible, Hashable {
     let fieldRefIx: Int32
     let functionIx: Int32
 
     var debugDescription: String { "HLTypeBinding<\(fieldRefIx), \(functionIx)>" }
-}
-
-struct HLTypeProto: Equatable, CustomDebugStringConvertible, Hashable {
-    let name: Resolvable<String>
-    let functionIx: Int32
-    let pIx: Int32
-
-    var debugDescription: String { "\(name.value): <fun>@\(functionIx) (\(pIx))" }
 }
 
 struct HLTypeEnumConstruct: Equatable, CustomDebugStringConvertible, Hashable {
@@ -56,46 +39,22 @@ struct HLTypeAbstractData: Equatable, CustomDebugStringConvertible, Hashable {
 }
 
 struct HLTypeVirtualData: Equatable, CustomDebugStringConvertible, Hashable {
-    let fields: [HLTypeField]
+    let fields: [HLObjField]
     var debugDescription: String {
         return
             "virtual<\(fields.map { "\($0.name.value): \($0.type.debugDescription)" }.joined(separator: ", "))>"
     }
 }
 
-struct HLTypeFunData: Equatable, CustomDebugStringConvertible, Hashable {
-    let args: [Resolvable<HLType>]
-    let ret: Resolvable<HLType>
-
-    var debugDescription: String {
-        return
-            "(\(args.map { $0.debugDescription }.joined(separator: ", "))) -> (\(ret.debugDescription))"
-    }
-}
-
-extension Resolvable<String> {
-    var debugDescription: String { "\(self.value)@\(self.ix)" }
-}
-
-extension Resolvable<HLType> {
-    var debugDescription: String {
-        let t = self.value
-        switch t {
-        case .obj(let data): return "\(data.name.value)@\(self.ix)"
-        default: return "\(t.debugDescription)@\(self.ix)"
-        }
-    }
-}
-
 ///
 /// Reference to writing the data: https://github.com/HaxeFoundation/haxe/blob/c35bbd4472c3410943ae5199503c23a2b7d3c5d6/src/generators/genhl.ml#L3840
-struct HLTypeObjData: Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeObj: Equatable, CustomDebugStringConvertible, Hashable {
     let name: Resolvable<String>
     let superType: Resolvable<HLType>?
     let global: Int32?
 
-    let fields: [HLTypeField]
-    let protos: [HLTypeProto]
+    let fields: [Resolvable<HLObjField>]
+    let proto: [Resolvable<HLObjProto>]
     let bindings: [HLTypeBinding]
 
     var debugDescription: String {
@@ -103,7 +62,7 @@ struct HLTypeObjData: Equatable, CustomDebugStringConvertible, Hashable {
         \(name.debugDescription) \(superType == nil ? "" : "extends \(superType!.debugDescription)")
         global: \(global?.debugDescription ?? "nil")
         fields: \(fields.count > 0 ? "\n" : "")\((fields.map { "  \($0.debugDescription)" }).joined(separator: "\n"))
-        protos: \(protos.count > 0 ? "\n" : "")\(protos.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
+        protos: \(proto.count > 0 ? "\n" : "")\(proto.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
         bindings: \(bindings.count > 0 ? "\n" : "")\(bindings.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
         """
     }
@@ -267,8 +226,8 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     case bool  // 7
     case bytes  // 8
     case dyn  // 9
-    case fun(HLTypeFunData)  // 10
-    case obj(HLTypeObjData)  // 11
+    case fun(HLTypeFun)  // 10
+    case obj(HLTypeObj)  // 11
     case array  // 12
     case type  // 13
     case ref(HLTypeRefData)  // 14
@@ -277,20 +236,20 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     case abstract(HLTypeAbstractData)  // 17
     case `enum`(HLTypeEnumData)  // 18
     case null(HLTypeNullData)  // 19
-    case method  // 20
-    case `struct`(HLTypeObjData)  // 21
+    case method(HLTypeFun)  // 20
+    case `struct`(HLTypeObj)  // 21
 
     // todo: find usages and move to debugDescription
     var debugName: String { debugDescription }
     
-    var objData: HLTypeObjData? {
+    var objData: HLTypeObj? {
         switch(self) {
         case .obj(let objData), .struct(let objData): return objData
         default: return nil
         }
     }
     
-    var funData: HLTypeFunData? {
+    var funData: HLTypeFun? {
         switch(self) {
         case .fun(let data): return data
         default: return nil
@@ -432,14 +391,14 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     }
 
     static func readFunData(from reader: ByteReader, types: TableResolver<HLType>)
-        throws -> HLTypeFunData
+        throws -> HLTypeFun
     {
         let nargs = try reader.readVarInt()
         let args = try Array(repeating: 0, count: Int(nargs)).map { _ in
             types.getResolvable(try reader.readIndex())
         }
         let ret = types.getResolvable(try reader.readIndex())
-        return HLTypeFunData(args: args, ret: ret)
+        return HLTypeFun(args: args, ret: ret)
     }
 
     static func readAbstractData(
@@ -464,7 +423,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
 
             let name = strings.getResolvable(try reader.readIndex())
             let type = types.getResolvable(try reader.readIndex())
-            return HLTypeField(name: name, type: type)
+            return HLObjField(name: name, type: type)
         }
 
         return HLTypeVirtualData(fields: fields)
@@ -474,7 +433,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
         from reader: ByteReader,
         strings: TableResolver<String>,
         types: TableResolver<HLType>
-    ) throws -> HLTypeObjData {
+    ) throws -> HLTypeObj {
         let name = strings.getResolvable(try reader.readIndex())
         let superTypeIx = try reader.readIndex()
         let superType = superTypeIx >= 0 ? types.getResolvable(superTypeIx) : nil
@@ -488,27 +447,27 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
         let nprotos = try reader.readVarInt()
         let nbindings = try reader.readVarInt()
 
-        // HLTypeObjData
+        // HLTypeObj
         // let	name: TableResolver<String>.Index
         // let	superName: TableResolver<String>.Index?
         // let	global: Int32
 
-        // let fields: [HLTypeField]
-        // let protos: [HLTypeProto]
+        // let fields: [HLObjField]
+        // let protos: [HLObjProto]
         // let bindings: [HLTypeBinding]
 
         let fields = try Array(repeating: 0, count: Int(nfields)).map { _ in
 
             let name = strings.getResolvable(try reader.readIndex())
             let type = types.getResolvable(try reader.readIndex())
-            return HLTypeField(name: name, type: type)
+            return HLObjField(name: name, type: type)
         }
 
         let protos = try Array(repeating: 0, count: Int(nprotos)).map { _ in
 
             let name = strings.getResolvable(try reader.readIndex())
             // print("Proto \(name.value)")
-            return HLTypeProto(
+            return HLObjProto(
                 name: name,
                 functionIx: try reader.readVarInt(),
                 pIx: try reader.readVarInt()
@@ -523,12 +482,12 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
             )
         }
 
-        return HLTypeObjData(
+        return HLTypeObj(
             name: name,
             superType: superType,
             global: global,
-            fields: fields,
-            protos: protos,
+            fields: Resolvable.array(fields),
+            proto: Resolvable.array(protos),
             bindings: bindings
         )
     }

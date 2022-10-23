@@ -26,7 +26,9 @@ struct LibHl {
 
     static let hl_global_free: (@convention(c) () -> ()) = { load("hl_global_free") }()
     static let hl_global_init: (@convention(c) () -> ()) = { load("hl_global_init") }()
-
+    
+    static let _hl_sys_init: (@convention(c) (UnsafePointer<UnsafeRawPointer>?, Int32, UnsafeRawPointer) -> ()) = { load("hl_sys_init") }()
+    
     static let hl_utf8_length: (@convention(c) (UnsafePointer<Int8>?, Int) -> (Int)) = { load("hl_utf8_length") }()
     static func hl_utf8_length(_ val: String, pos: Int = 0) -> Int {
         return val.withCString {
@@ -65,10 +67,17 @@ struct LibHl {
     }
 
     // HL_API vdynobj *hl_alloc_dynobj( void );
-    static let hl_alloc_dynobj: (@convention(c) () -> UnsafeRawPointer) = { load("hl_alloc_dynobj") }()
+    static let _hl_alloc_dynobj: (@convention(c) () -> UnsafeRawPointer) = { load("hl_alloc_dynobj") }()
+    static func hl_alloc_dynobj() -> UnsafeRawPointer { _hl_alloc_dynobj() }
     
     // HL_API void hl_register_thread( void *stack_top ) 
     static let hl_register_thread: (@convention(c) (UnsafeMutableRawPointer) -> ()) = { load("hl_register_thread") }()
+    
+    // hl_module *hl_module_alloc( hl_code *code );
+    static let hl_module_alloc: (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer) = { load("hl_module_alloc", from: .bin) }()
+    
+    // int hl_module_init( hl_module *m, h_bool hot_reload );
+    static let hl_module_init: (@convention(c) (UnsafeRawPointer, Bool) -> Int32) = { load("hl_module_init", from: .bin) }()
 
     // HL_API vvirtual *hl_alloc_obj( hl_type *t );
     static let _hl_alloc_obj: (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer) = { load("hl_alloc_obj") }()

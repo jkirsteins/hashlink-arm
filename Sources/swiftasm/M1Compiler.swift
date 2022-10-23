@@ -1,5 +1,13 @@
 typealias HLTypeKinds = [HLTypeKind]
 
+protocol CompilerUtilities {
+    func appendDebugPrintAligned4(_ val: String, builder: OpBuilder);
+}
+
+extension M1Compiler : CompilerUtilities {
+    
+}
+
 // x0 through x7
 private let ARG_REGISTER_COUNT = 8
 extension M1Compiler {
@@ -186,10 +194,21 @@ class M1Compiler {
     */let emitter = EmitterM1()
 
     let stripDebugMessages: Bool
+    
+    func requireTypeAddress(reg: Reg, from regs: [Resolvable<HLType>]) -> UnsafeRawPointer {
+        guard reg < regs.count else {
+            fatalError("requireTypeAddress(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(regs)")
+        }
+        guard let mem = regs[Int(reg)].memory else {
+            fatalError("requireTypeAddress(reg:from:): Register \(reg) has no type address available.")
+        }
 
-    func requireType(reg: Reg, from resolvedRegs: [HLType]) -> HLType {
+        return mem
+    }
+    
+    func requireTypeKind(reg: Reg, from resolvedRegs: HLTypeKinds) -> HLTypeKind {
         guard reg < resolvedRegs.count else {
-            fatalError("requireType(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(resolvedRegs.map { $0.debugName })")
+            fatalError("requireType(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(resolvedRegs)")
         }
 
         return resolvedRegs[Int(reg)]
@@ -208,7 +227,7 @@ class M1Compiler {
             )
         }
         let regKind = from[Int(reg)]
-        let argKind = callable.args[Int(argReg)].kind
+        let argKind = callable.args[Int(argReg)].value.kind
         guard regKind == argKind else {
             fatalError(
                 "Register \(reg) kind \(regKind) expected to match arg \(argReg) but arg was \(argKind) "
@@ -258,7 +277,7 @@ class M1Compiler {
         }
         var startOffset = ByteCount(8)  // hl_type* pointer at start of obj/struct
         for ix in 0..<field {
-            let fieldToSkip = objData.fields[ix].type.value.kind.hlRegSize
+            let fieldToSkip = objData.fields[ix].value.type.value.kind.hlRegSize
             startOffset += fieldToSkip
         }
         return startOffset
@@ -298,8 +317,9 @@ class M1Compiler {
 
         // grab it before it changes from prologue
         // let memory = mem.getDeferredPosition()
-        let regKinds = compilable.getRegs().map { $0.kind }
-        let regs = compilable.getRegs()
+        let regs = compilable.regs
+        let regKinds = regs.map { $0.value.kind }
+        
         let findex = compilable.getFindex()
         
         let relativeBaseAddr = mem.getDeferredPosition()
@@ -312,7 +332,7 @@ class M1Compiler {
         print("REGS: \n--" + regs.map { String(reflecting: $0) }.joined(separator: "\n--"))
 //        print("OPS: \n--" + funPtr.pointee.ops.map { String(reflecting: $0) }.joined(separator: "\n--"))
 
-        let argKinds = compilable.args.map { $0.kind }
+        let argKinds = compilable.args.map { $0.value.kind }
 
         mem.append(PseudoOp.debugMarker("==> STARTING FUNCTION \(findex)"))
         appendPrologue(builder: mem)
@@ -327,7 +347,7 @@ class M1Compiler {
             builder: mem
         )
         
-        for op in compilable.getOps() {
+        for op in compilable.ops {
             appendDebugPrintAligned4("Executing \(op.debugDescription)", builder: mem)
 
             switch op {
@@ -354,7 +374,7 @@ class M1Compiler {
                 assert(
                     reg: dst,
                     from: regKinds,
-                    matches: fn.ret
+                    matches: fn.ret.value
                 )
             
                 let regStackOffset = getRegStackOffset(regKinds, dst)
@@ -368,7 +388,7 @@ class M1Compiler {
             case .OCall3(let dst, let fun, let arg0, let arg1, let arg2):
                 let callTarget = ctx.callTargets.get(fun)
                 
-                assert(reg: dst, from: regKinds, matches: callTarget.ret)
+                assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
                 assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
                 assert(reg: arg1, from: regKinds, matchesCallArg: 1, inFun: callTarget)
                 assert(reg: arg2, from: regKinds, matchesCallArg: 2, inFun: callTarget)
@@ -391,28 +411,62 @@ class M1Compiler {
             // fatalError("Jumping to \(fn) for funIx \(fun)")
             // fatalError("OCall0")
             case .ONew(let dst):
-                _ = dst
+                appendDebugPrintAligned4("Entering ONew", builder: mem)
                 // LOOK AT: https://github.com/HaxeFoundation/hashlink/blob/284301f11ea23d635271a6ecc604fa5cd902553c/src/jit.c#L3263
-                // let typeToAllocate = requireType(reg: dst, from: resolvedRegs)
-                // let allocFunc: HLNative
-                // let global: Int32?
-                // switch(typeToAllocate) {
-                //     case .struct(let objData): 
-                //         fallthrough 
-                //     case .obj(let objData): 
-                //         allocFunc = ctx.wft.hl_alloc_obj
-                //         global = objData.global
-                //     case .dynobj:
-                //         allocFunc = ctx.wft.hl_alloc_dynobj
-                //         fatalError("wip2")
-                //     case .virtual: 
-                //         allocFunc = ctx.wft.hl_alloc_virtual
-                //         fatalError("wip3")
-                //     default:
-                //         fatalError("ONew not implemented for \(typeToAllocate)")
-                // }
-                fatalError()
-
+                let typeToAllocate = requireTypeKind(reg: dst, from: regKinds)
+                
+                let allocFunc_jumpTarget: UnsafeRawPointer
+                
+                // Do we need to move the dst value in X0 for the alloc func (e.g. hl_alloc_dynobj
+                // takes no args, but hl_alloc_obj does)
+                var needX0 = true
+                
+                switch(typeToAllocate) {
+                case .struct:
+                fallthrough
+                case .obj:
+                    mem.append(
+                        PseudoOp.debugMarker("Using hl_alloc_obj to allocate reg \(dst))")
+                    )
+                    allocFunc_jumpTarget = unsafeBitCast(LibHl._hl_alloc_obj, to: UnsafeRawPointer.self)
+                case .dynobj:
+                    mem.append(
+                        PseudoOp.debugMarker("Using hl_alloc_dynobj to allocate reg \(dst))")
+                    )
+                    allocFunc_jumpTarget = unsafeBitCast(LibHl._hl_alloc_dynobj, to: UnsafeRawPointer.self)
+                    needX0 = false
+                case .virtual:
+                    mem.append(
+                        PseudoOp.debugMarker("Using hl_alloc_virtual to allocate reg \(dst))")
+                    )
+                    allocFunc_jumpTarget = unsafeBitCast(LibHl._hl_alloc_virtual, to: UnsafeRawPointer.self)
+                default:
+                fatalError("ONew not implemented for \(typeToAllocate)")
+                }
+                
+                if needX0 {
+                    let dstTypeAddr = requireTypeAddress(reg: dst, from: regs)
+                    mem.append(
+                        PseudoOp.debugMarker("Moving reg address \(dstTypeAddr) in .x0"),
+                        PseudoOp.mov(.x0, dstTypeAddr)
+                    )
+                } else {
+                    mem.append(
+                        PseudoOp.debugMarker("Not moving reg \(dst) in x0 b/c alloc func doesn't need it")
+                        )
+                }
+                
+                let dstOffset = getRegStackOffset(regKinds, dst)
+                
+                mem.append(
+                    PseudoOp.debugMarker("Moving alloc address in x1"),
+                    PseudoOp.mov(.x1, allocFunc_jumpTarget),
+                    PseudoOp.debugMarker("Jumping to the alloc func"),
+                    PseudoOp.debugPrint(self, "Jumping to alloc func and storing result"),
+                    M1Op.blr(.x1),
+                    M1Op.str(X.x0, .reg64offset(X.sp, dstOffset, nil))
+                )
+                
                 // let g = ctx.storage.globalResolver.get(Int(global!))
                 // fatalError("No ONew yet. Allocating: \(typeToAllocate) -> global \(global) \(g)")
             case .OGetThis(let regDst, let fieldRef):
@@ -420,9 +474,9 @@ class M1Compiler {
                     fatalError("Not enough registers. Expected register 0 and \(regDst) to be available. Got: \(regKinds)")
                 }
                 let sourceObjectType = regs[0]
-                assertKind(op, sourceObjectType.kind, .obj)
+                assertKind(op, sourceObjectType.value.kind, .obj)
                 
-                guard case .obj(let objData) = sourceObjectType else {
+                guard case .obj(let objData) = sourceObjectType.value else {
                     fatalError("source object should be .obj but was \(sourceObjectType)")
                 }
                 
@@ -431,11 +485,11 @@ class M1Compiler {
                 } 
                 let sourceObjectFieldType = objData.fields[fieldRef]
                 
-                assert(reg: regDst, from: regKinds, is: sourceObjectFieldType.type.value.kind)
+                assert(reg: regDst, from: regKinds, is: sourceObjectFieldType.value.type.value.kind)
 
                 let objOffset = getRegStackOffset(regKinds, 0)
                 let dstOffset = getRegStackOffset(regKinds, regDst)
-                let fieldOffset = getFieldOffset(sourceObjectType, fieldRef)
+                let fieldOffset = getFieldOffset(sourceObjectType.value, fieldRef)
 
                 /* We should:
                 - load x0 from reg0
@@ -462,6 +516,24 @@ class M1Compiler {
                     PseudoOp.mov(X.x0, c),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
+            case .OSetField(let objReg, let fieldReg, let srcReg):
+                appendDebugPrintAligned4("Entering OSetField", builder: mem)
+                let objRegKind = requireTypeKind(reg: objReg, from: regKinds)
+
+                switch(objRegKind) {
+                case .obj: fallthrough
+                case .struct:
+                    break
+                    // nop
+//                        {
+//                            hl_runtime_obj *rt = hl_get_obj_rt(dst->t);
+//                            preg *rr = alloc_cpu(ctx, dst, true);
+//                            copy_from(ctx, pmem(&p, (CpuReg)rr->id, rt->fields_indexes[o->p2]), rb);
+//                        }
+//                        break;
+                default:
+                    fatalError("OSetField not implemented for \(objRegKind)")
+                }
             default: fatalError("Can't compile \(op.debugDescription)")
             }
         }

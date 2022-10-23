@@ -15,13 +15,7 @@
 	} field;
 */
 
-struct HLOpCode__CCompat : Equatable, Hashable {
-    let op: Int32
-	let p1: Int32
-	let p2: Int32
-	let p3: Int32
-	let extra: UnsafePointer<Int32>?
-}
+
 
 struct HLFunction_CCompat : Equatable, Hashable {
     // stored 
@@ -32,25 +26,23 @@ struct HLFunction_CCompat : Equatable, Hashable {
     let ref: Int32 
     let typePtr: UnsafePointer<HLType_CCompat>?
     let regsPtr: UnsafePointer<UnsafePointer<HLType_CCompat>>?
-    let opsPtr: UnsafePointer<HLOpCode__CCompat>?
+    let opsPtr: UnsafePointer<HLOpCode_CCompat>?
     let debug: UnsafePointer<UInt8>?
     let objPtr: UnsafePointer<HLType_CCompat>?
     let unionPtr: UnsafeRawPointer?
 
     // following computed 
 
-    var ops: [HLOpCode__CCompat] {
+    var cOps: [HLOpCode_CCompat] {
         let buf = UnsafeBufferPointer(start: opsPtr, count: Int(nops))
         return Array(buf)
     } 
 
-    var type: HLType_CCompat { typePtr!.pointee }
-    var regs: [HLType_CCompat] { 
-        let startPtr = regsPtr!.pointee
-        let buf = UnsafeBufferPointer(start: startPtr, count: Int(nregs))
-        return Array(buf)
+    var cType: HLType_CCompat { typePtr!.pointee }
+    var cRegs: [HLType_CCompat] {
+        regsPtr?.getArray(count: nregs) ?? []
     }
-    var obj: HLType_CCompat { objPtr!.pointee }
+    var cObj: HLType_CCompat? { objPtr?.pointee }
 
     // union
     var field__name: String? {

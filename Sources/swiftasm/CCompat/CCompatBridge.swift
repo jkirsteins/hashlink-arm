@@ -28,11 +28,11 @@ extension CCompatProvider {
     }
 }
 
-extension HLTypeFunData : CCompatProvider {
-    func createCCompatInstance() -> HLType_CCompat_Fun {
+extension HLTypeFun : CCompatProvider {
+    func createCCompatInstance() -> HLTypeFun_CCompat {
         let argPtr = self.args.map { $0.value }.createCCompatPointer()
         let retPtr = self.ret.value.createCCompatPointer()
-        return HLType_CCompat_Fun(
+        return HLTypeFun_CCompat(
             argsPtr: argPtr.createCCompatPointer(),
             retPtr: retPtr,
             nargs: UInt32(args.count),
@@ -45,10 +45,10 @@ extension HLTypeFunData : CCompatProvider {
 }
 
 
-extension HLTypeObjData : CCompatProvider {
-    func createCCompatInstance() -> HLType_CCompat_Obj {
+extension HLTypeObj : CCompatProvider {
+    func createCCompatInstance() -> HLTypeObj_CCompat {
         fatalError("not implem")
-//        let res = HLType_CCompat_Obj(
+//        let res = HLTypeObj_CCompat(
 //            nfields: Int32(self.fields.count),
 //            nproto: Int32(self.protos.count),
 //            nbindings: Int32(self.bindings.count),
@@ -67,18 +67,19 @@ extension HLTypeObjData : CCompatProvider {
 
 extension HLType : CCompatProvider {
     func createCCompatInstance() -> HLType_CCompat {
-        let unionPtr: UnsafeMutableRawPointer?
-        switch(self) {
-        case .i32, .i64, .void, .f32, .f64, .u8, .u16, .bool: unionPtr = nil
-        case .obj(let objData): unionPtr = UnsafeMutableRawPointer(mutating: objData.createCCompatPointer())
-        case .fun(let funData): unionPtr = UnsafeMutableRawPointer(mutating: funData.createCCompatPointer())
-        default: fatalError("HLType#createCCompatInstance: not implemented for \(self)")
-        }
-        return HLType_CCompat(
-            kind: self.kind,
-            union: unionPtr,
-            vobjProto: .allocate(byteCount: 8, alignment: 1),
-            markBits: .allocate(byteCount: 4, alignment: 1))
+        fatalError("dont use these")
+//        let unionPtr: UnsafeMutableRawPointer?
+//        switch(self) {
+//        case .i32, .i64, .void, .f32, .f64, .u8, .u16, .bool, .bytes: unionPtr = nil
+//        case .obj(let objData): unionPtr = UnsafeMutableRawPointer(mutating: objData.createCCompatPointer())
+//        case .fun(let funData): unionPtr = UnsafeMutableRawPointer(mutating: funData.createCCompatPointer())
+//        default: fatalError("HLType#createCCompatInstance: not implemented for \(self)")
+//        }
+//        return HLType_CCompat(
+//            kind: self.kind,
+//            union: unionPtr,
+//            vobjProto: .allocate(byteCount: 8, alignment: 1),
+//            markBits: .allocate(byteCount: 4, alignment: 1))
     }
 }
 

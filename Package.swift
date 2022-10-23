@@ -19,6 +19,10 @@ let package = Package(
             ]),
         .testTarget(
             name: "swiftasmTests",
-            dependencies: ["swiftasm"]),
+            dependencies: ["swiftasm"],
+            resources: [
+              .copy("Resources/mod1.hl")
+            ]
+        ),
     ]
 )

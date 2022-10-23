@@ -21,25 +21,99 @@ func builder() -> OpBuilder {
 }
 
 func prepareFunction(
+    funcType: Resolvable<HLType>,
+    retType: Resolvable<HLType>,
+    findex: Int32,
+    regs: [Resolvable<HLType>],
+    args: [Resolvable<HLType>],
+    ops: [HLOpCode]
+) -> HLFunction {
+    return HLFunction(
+        type: funcType,
+        findex: findex,
+        regs: regs,
+        ops: ops,
+        assigns: []
+    )
+}
+
+/// NOTE: Deprecated. Stop using this (compiler needs Resolvables with memory initialized)
+func prepareFunction(
     retType: HLType,
     findex: Int32,
     regs: [HLType],
     args: [HLType],
     ops: [HLOpCode]
 ) -> HLFunction {
-    let funcType = HLType.fun(
-        HLTypeFunData(args: Resolvable.array(args), ret: Resolvable(retType))
-    )
-    return HLFunction(
-        type: Resolvable(funcType),
-        findex: findex,
-        regs: Resolvable.array(regs),
-        ops: ops,
-        assigns: []
-    )
+    let rRegs = Resolvable.array(regs)
+    let rArgs = Resolvable.array(args)
+    let rRetType = Resolvable(retType)
+    let rFuncType = Resolvable(HLType.fun(
+        HLTypeFun(args: rArgs, ret: rRetType)
+    ))
+    return prepareFunction(funcType: rFuncType, retType: rRetType, findex: findex, regs: rRegs, args: rArgs, ops: ops)
+}
+
+/*
+typedef struct {
+    hl_code *code;
+    hl_module *m;
+    vdynamic *ret;
+    pchar *file;
+    int file_time;
+} main_context;
+*/
+struct MainContext {
+    var code: UnsafePointer<HLCode_CCompat>
+    var module: UnsafeRawPointer?
+    var ret: UnsafeRawPointer?
+    var file: UnsafePointer<UInt8>?
+    var file_time: Int32
 }
 
 final class CompilerM1Tests: XCTestCase {
+    static var context: MainContext? = nil
+    
+    static var code: UnsafePointer<HLCode_CCompat>?
+    var code: UnsafePointer<HLCode_CCompat> { Self.code! }
+    
+    class override func setUp() {
+        LibHl.hl_global_init()
+        
+        //
+        let mod1 = Bundle.module.url(forResource: "mod1", withExtension: "hl")!.path
+        let code = UnsafePointer(LibHl.load_code(mod1))
+        self.context = MainContext(code: code, module: nil, ret: nil, file: nil, file_time: 0)
+        self.code = code
+        
+        self.context!.module = LibHl.hl_module_alloc(self.context!.code);
+        guard let m = self.context?.module else {
+            fatalError("nil module")
+        }
+            
+        let res = LibHl.hl_module_init(m, false)
+        guard res == 1 else {
+            fatalError("Failed to init module (got \(res))")
+        }
+
+                
+        //
+        
+//        XCTAssertEqual(MemoryLayout<MainContext>.size, 40)
+//        
+//        "file-jk-yo.dat".withCString {
+//            LibHl._hl_sys_init(nil, 0, $0)
+//        }
+//        withUnsafeMutablePointer(to: &self.context!) {
+//            LibHl.hl_register_thread($0)
+//        }
+//        _hl_register_thread()
+//        hl_sys_init((void**)argv,argc,file);
+//        hl_register_thread(&ctx);
+    }
+    class override func tearDown() {
+        LibHl.hl_global_free()
+    }
     func testCompile_OGetThis() throws {
         let sut = sut()
         struct _TestMemory {
@@ -50,15 +124,15 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(MemoryLayout<_TestMemory>.size, 12)
 
         let structType = HLType.obj(
-            HLTypeObjData(
+            HLTypeObj(
                 name: Resolvable("_TestMemory"), 
                 superType: nil, 
                 global: 0, 
-                fields: [
-                    HLTypeField(
+                fields: Resolvable.array([
+                    HLObjField(
                         name: Resolvable("field"), 
-                        type: Resolvable(.i32))], 
-                protos: [], 
+                        type: Resolvable(.i32))]), 
+                proto: [],
                 bindings: []))
 
         let storage = ModuleStorage(
@@ -127,6 +201,113 @@ final class CompilerM1Tests: XCTestCase {
         entrypoint()
     }
 
+    /**
+     > fn 16
+     16 : fn __alloc__@16 (bytes, i32) -> (String)@18 (3 regs, 4 ops)
+         reg0  bytes@14
+         reg1  i32@3
+         reg2  String@13
+     /usr/local/lib/haxe/std/hl/_std/String.hx:220   0: New         reg2 = new String@13
+     /usr/local/lib/haxe/std/hl/_std/String.hx:221   1: SetField    reg2.bytes = reg0
+     /usr/local/lib/haxe/std/hl/_std/String.hx:222   2: SetField    reg2.length = reg1
+     /usr/local/lib/haxe/std/hl/_std/String.hx:223   3: Ret         reg2
+    */
+    func testCompile_ONew() throws {
+        let funcType: UnsafePointer<HLType_CCompat> = code.pointee.getType(18)     // (bytes, i32) -> (String)
+        let stringType = code.pointee.getType(13)   // String
+        let byteType = code.pointee.getType(14)   // bytes
+        let i32Type = code.pointee.getType(3)   // i32
+        
+        let rFuncType: Resolvable<HLType> = .init(funcType)
+        let rStringType: Resolvable<HLType> = .init(stringType)
+        let rByteType: Resolvable<HLType> = .init(byteType)
+        let ri32Type: Resolvable<HLType> = .init(i32Type)
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: rStringType,
+                    findex: 0,
+                    regs: [
+                        rByteType, ri32Type, rStringType
+                    ],
+                    args: [rByteType, ri32Type],
+                    ops: [
+                        .ONew(dst: 2),
+                        .OSetField(obj: 2, field: 0, src: 0),
+                        .OSetField(obj: 2, field: 1, src: 1),
+                        .ORet(ret: 2)]
+                )
+        ])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: false)
+        try sut.compile(findex: 0, into: mem)
+
+         mem.hexPrint()
+
+        XCTAssertEqual(
+            mem.lockAddressesAndBuild(),
+            [
+                // ==> STARTING FUNCTION 0
+                // Starting prologue
+                0xfd, 0x7b, 0xbf, 0xa9, // stp x29, x30, [sp, #-16]!
+                0xfd, 0x03, 0x00, 0x91, // movr x29, sp
+                // Reserving 32 bytes for stack
+                0xff, 0x83, 0x00, 0xd1, // sub sp, sp, #32
+                // Moving x0 to 0
+                0xe0, 0x03, 0x00, 0xf8, // str x0, [sp, #0]
+                // Moving x1 to 8
+                0xe1, 0x83, 0x00, 0xf8, // str x1, [sp, #8]
+                // Moving x2 to 12
+                0xe2, 0xc3, 0x00, 0xf8, // str x2, [sp, #12]
+                // Printing debug message: Entering function 0@0
+                // (debug message printing stripped)
+                // Printing debug message: Executing ONew: reg2 = new
+                // (debug message printing stripped)
+                // Using hl_alloc_obj to allocate reg 2)
+                // Moving reg x2 in x0
+                0xe2, 0x03, 0x00, 0xaa, // movr x2, x0
+                // Moving alloc address in x1
+                0x81, 0x0a, 0x97, 0xd2, // .mov x1, #0x0000000107c4b854
+                0x81, 0xf8, 0xa0, 0xf2, //
+                0x21, 0x00, 0xc0, 0xf2, //
+                0x01, 0x00, 0xe0, 0xf2, //
+                // Jumping to the alloc func
+                0x20, 0x00, 0x3f, 0xd6, // blr x1
+                // Printing debug message: Executing OSetField: reg2.<0> = reg0
+                // (debug message printing stripped)
+                // Printing debug message: Executing OSetField: reg2.<1> = reg1
+                // (debug message printing stripped)
+                // Printing debug message: Executing ORet: ret reg2
+                // (debug message printing stripped)
+                // Returning stack offset 12
+                0xe0, 0xc3, 0x40, 0xf8, // ldr x0, [sp, #12]
+                // Jumping to epilogue
+                0x01, 0x00, 0x00, 0x14, // b #4
+                // Free 32 bytes
+                0xff, 0x83, 0x00, 0x91, // add sp, sp, #32
+                // Starting epilogue
+                0xfd, 0x7b, 0xc1, 0xa8, // ldp x29, x30, [sp], #16
+                0xc0, 0x03, 0x5f, 0xd6, // ret
+            ]
+        )
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (UnsafeRawPointer, Int32) -> UnsafeRawPointer)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        "Hello World".withCString { cstr in
+            let result = entrypoint(cstr, 11)
+            let retPtr = result.bindMemory(to: vdynamic.self, capacity: 1)
+            let typePtr = retPtr.pointee.t
+            XCTAssertNotNil(typePtr.pointee.obj.pointee.rt)
+            XCTAssertTrue(false) // TODO: we need to check the memory contents
+        }
+    }
+
     func testCompile__OCall3() throws {
         // Prepare function we'll call from JIT
         typealias _JitFunc = (@convention(c) (UInt8, UInt16, Int32) -> Int32)
@@ -155,7 +336,7 @@ final class CompilerM1Tests: XCTestCase {
                     name: Resolvable("swiftFunc"),
                     type: Resolvable(
                         .fun(
-                            HLTypeFunData(
+                            HLTypeFun(
                                 args: Resolvable.array([.u8, .u16, .i32]),
                                 ret: Resolvable(.i32)
                             )
@@ -212,7 +393,7 @@ final class CompilerM1Tests: XCTestCase {
                     name: Resolvable("swiftFunc"),
                     type: Resolvable(
                         .fun(
-                            HLTypeFunData(
+                            HLTypeFun(
                                 args: Resolvable.array([]),
                                 ret: Resolvable(.i32)
                             )

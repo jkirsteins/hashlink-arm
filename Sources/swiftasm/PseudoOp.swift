@@ -6,7 +6,8 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
 
     // This will only show up in bytecode debug output (e.g. hexPrint()) and
     // will be ignored when emitting 
-    case debugMarker(String)    
+    case debugMarker(String)
+    case debugPrint(CompilerUtilities, String)
 
     // Generate movz+movk instructions for moving a 64-bit value 
     // into a register over multiple steps
@@ -14,7 +15,8 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
 
     var size: ByteCount {
         switch(self) {
-            case .debugMarker: return 0
+        case .debugMarker, .debugPrint:
+            return 0
             case .mov: return 16
             case .zero: return 1
             case .ascii(let v): return ByteCount(v.utf8.count)
@@ -23,6 +25,8 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
 
     var debugDescription: String {
         switch(self) {
+        case .debugPrint(_, let message):
+            return message
             case .debugMarker(let message):
                 return message
             case .mov(let Rd, let val):
@@ -35,6 +39,12 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
 
     func emit() throws -> [UInt8] {
         switch(self) {
+        case .debugPrint(let comp, let message):
+            // hacky way to get the output
+                let b = OpBuilder(ctx: JitContext(storage: ModuleStorage()))
+                comp.appendDebugPrintAligned4(message, builder: b)
+                let res = try b.ops.flatMap { try $0.emit() }
+                return res
             case .debugMarker: return []
             case .mov(let Rd, let val):
 

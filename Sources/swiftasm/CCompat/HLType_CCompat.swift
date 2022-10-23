@@ -1,3 +1,5 @@
+fileprivate var _obj2: UnsafePointer<HLTypeObj_CCompat>? = nil
+
 struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
     // hl_type_kind kind
     let kind: HLTypeKind
@@ -12,15 +14,22 @@ struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
 		hl_type	*tparam;
 	};
     */
-    let union: UnsafeMutableRawPointer?
-    // case absName(UnsafeMutableRawPointer)
-    // case fun(UnsafeMutableRawPointer)
-    func getUnion<T>() -> T? {
-        union?.bindMemory(to: T.self, capacity: 1).pointee
+    /// NOTE: important to not be optional. See `getUnion()` comments.
+    let union: UnsafeMutableRawPointer
+    
+    /// NOTE: very important that the underlying `union` pointer is not optional,
+    /// otherwise the pointee down the chain can be set to nil at unexpected times, causing
+    /// weird bugs. See `HLType_CCompatTests`.
+    ///
+    /// I suspect it's because there's no strong reference to the unsafe pointer we initialize based on
+    /// the optional, but not completely clear to me what's happening there.
+    func getUnion<T>() -> UnsafePointer<T> {
+        return UnsafePointer(union.bindMemory(to: T.self, capacity: 1))
     }
-    var obj: HLType_CCompat_Obj { getUnion()! }
-    var fun: HLType_CCompat_Fun { getUnion()! }
-
+    var obj: UnsafePointer<HLTypeObj_CCompat> { getUnion() }
+    var fun: UnsafePointer<HLTypeFun_CCompat> { getUnion() }
+    var tparam: UnsafePointer<HLType_CCompat> { getUnion() }
+    
     // void **vobj_proto
     let vobjProto: UnsafeMutableRawPointer?
 
@@ -40,7 +49,7 @@ struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
         case .bytes: return "bytes"
         case .dyn: return "dynamic"
         case .fun: return "fun"
-        case .obj: return "obj(\(obj.name))"
+        case .obj: return "obj(\(obj.pointee.name))"
         case .array: return "array"
         case .type: return "type"
         case .ref: return "ref"
@@ -50,7 +59,7 @@ struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
         case .`enum`: return "enum(<wip>)"
         case .null: return "null(<wip>)"
         case .method: return "method"
-        case .`struct`: return "struct(\(obj.name))"
+        case .`struct`: return "struct(\(obj.pointee.name))"
         default: fatalError("Unknown kind \(self.kind.rawValue)")
         }
     }

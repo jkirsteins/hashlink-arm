@@ -12,14 +12,14 @@ struct FunctionAddresses {
             }
         }
         
-        var ret: HLType {
+        var ret: Resolvable<HLType> {
             switch(self) {
             case .compilable(let c): return c.ret
             case .native(let c): return c.ret
             }
         }
         
-        var args: [HLType] {
+        var args: [Resolvable<HLType>] {
             switch(self) {
             case .compilable(let c): return c.args
             case .native(let c): return c.args

@@ -216,7 +216,6 @@ public class EmitterM1 {
     }
 
     static func emit(for op: M1Op) throws -> [UInt8] {
-        fputs("Emitting \(op)\n", stderr)
         switch op.resolveFinalForm() {  // resolve potential aliases
         case .sub(let Rd, let Rn, let offset):
             guard Rd.is32 == Rn.is32 else {
