@@ -41,8 +41,7 @@ final class CompileMod1Tests: XCTestCase {
         let mem = OpBuilder(ctx: ctx)
         
         for fix in 0..<code.pointee.nfunctions {
-            print("Compiling \(fix)")
-//            try sut.compile(findex: Int32(fix), into: mem)
+            try sut.compile(findex: Int32(fix), into: mem)
         }
         
     }

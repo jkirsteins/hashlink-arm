@@ -212,7 +212,7 @@ final class CompilerM1Tests: XCTestCase {
      /usr/local/lib/haxe/std/hl/_std/String.hx:222   2: SetField    reg2.length = reg1
      /usr/local/lib/haxe/std/hl/_std/String.hx:223   3: Ret         reg2
     */
-    func testCompile_ONew() throws {
+    func testCompile_ONew_OSetField() throws {
         let funcType: UnsafePointer<HLType_CCompat> = code.pointee.getType(18)     // (bytes, i32) -> (String)
         let stringType = code.pointee.getType(13)   // String
         let byteType = code.pointee.getType(14)   // bytes
@@ -246,69 +246,32 @@ final class CompilerM1Tests: XCTestCase {
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
 
-         mem.hexPrint()
-
-        XCTAssertEqual(
-            mem.lockAddressesAndBuild(),
-            [
-                // ==> STARTING FUNCTION 0
-                // Starting prologue
-                0xfd, 0x7b, 0xbf, 0xa9, // stp x29, x30, [sp, #-16]!
-                0xfd, 0x03, 0x00, 0x91, // movr x29, sp
-                // Reserving 32 bytes for stack
-                0xff, 0x83, 0x00, 0xd1, // sub sp, sp, #32
-                // Moving x0 to 0
-                0xe0, 0x03, 0x00, 0xf8, // str x0, [sp, #0]
-                // Moving x1 to 8
-                0xe1, 0x83, 0x00, 0xf8, // str x1, [sp, #8]
-                // Moving x2 to 12
-                0xe2, 0xc3, 0x00, 0xf8, // str x2, [sp, #12]
-                // Printing debug message: Entering function 0@0
-                // (debug message printing stripped)
-                // Printing debug message: Executing ONew: reg2 = new
-                // (debug message printing stripped)
-                // Using hl_alloc_obj to allocate reg 2)
-                // Moving reg x2 in x0
-                0xe2, 0x03, 0x00, 0xaa, // movr x2, x0
-                // Moving alloc address in x1
-                0x81, 0x0a, 0x97, 0xd2, // .mov x1, #0x0000000107c4b854
-                0x81, 0xf8, 0xa0, 0xf2, //
-                0x21, 0x00, 0xc0, 0xf2, //
-                0x01, 0x00, 0xe0, 0xf2, //
-                // Jumping to the alloc func
-                0x20, 0x00, 0x3f, 0xd6, // blr x1
-                // Printing debug message: Executing OSetField: reg2.<0> = reg0
-                // (debug message printing stripped)
-                // Printing debug message: Executing OSetField: reg2.<1> = reg1
-                // (debug message printing stripped)
-                // Printing debug message: Executing ORet: ret reg2
-                // (debug message printing stripped)
-                // Returning stack offset 12
-                0xe0, 0xc3, 0x40, 0xf8, // ldr x0, [sp, #12]
-                // Jumping to epilogue
-                0x01, 0x00, 0x00, 0x14, // b #4
-                // Free 32 bytes
-                0xff, 0x83, 0x00, 0x91, // add sp, sp, #32
-                // Starting epilogue
-                0xfd, 0x7b, 0xc1, 0xa8, // ldp x29, x30, [sp], #16
-                0xc0, 0x03, 0x5f, 0xd6, // ret
-            ]
-        )
+        // mem.hexPrint()
 
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (UnsafeRawPointer, Int32) -> UnsafeRawPointer)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
         
-        "Hello World".withCString { cstr in
-            let result = entrypoint(cstr, 11)
-            let retPtr = result.bindMemory(to: vdynamic.self, capacity: 1)
-            let typePtr = retPtr.pointee.t
+        Array("Hello World".utf16).withUnsafeBytes { cstr in
+            let result = entrypoint(cstr.baseAddress!, 11)
             
-            XCTAssertEqual(result.advanced(by: 8).bindMemory(to: Int32.self, capacity: 1).pointee, 0)
-            XCTAssertEqual(result.advanced(by: 16).bindMemory(to: Int32.self, capacity: 1).pointee, 11)
+            let vPtr = result.bindMemory(to: vdynamic.self, capacity: 1)
+            let typePtr = vPtr.pointee.t
             
+            // check type
+            XCTAssertEqual(typePtr.pointee.kind, .obj)
             XCTAssertNotNil(typePtr.pointee.obj.pointee.rt)
-            XCTAssertTrue(false) // TODO: we need to check the memory contents
+                        
+            // bytes/str
+            let bytes = result.advanced(by: 8).bindMemory(to: UnsafePointer<CChar16>.self, capacity: 1)
+            XCTAssertEqual(bytes.pointee, cstr.baseAddress!)
+            
+            let str = String.wrapUtf16(from: bytes.pointee)
+            XCTAssertEqual(str, "Hello World")
+            
+            // len
+            let len = Int(result.advanced(by: 16).bindMemory(to: Int32.self, capacity: 1).pointee)
+            XCTAssertEqual(len, 11)
         }
     }
 

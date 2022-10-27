@@ -13,6 +13,7 @@ private let ARG_REGISTER_COUNT = 8
 extension M1Compiler {
     // Get offset into stack for a given register. This should skip void registers
     func getRegStackOffset(_ regs: HLTypeKinds, args: HLTypeKinds, reg: Int) -> ByteCount {
+        fatalError("is this used?")
         let base: ByteCount
         let ptr: ArraySlice<HLTypeKind>
         let skip: Int
@@ -187,6 +188,8 @@ extension M1Compiler {
     }
 }
 
+typealias Registers = [Resolvable<HLType>]
+
 class M1Compiler {
     /*
     stp    x29, x30, [sp, #-16]!
@@ -194,6 +197,38 @@ class M1Compiler {
     */let emitter = EmitterM1()
 
     let stripDebugMessages: Bool
+    
+    func assertEnoughRegisters(_ ix: Reg, regs: Registers) {
+        guard ix < regs.count else {
+            fatalError("Not enough registers. Expected \(ix) to be available. Got: \(regs)")
+        }
+    }
+    
+    func requireTypeMemory(reg: Reg, regs: Registers) -> UnsafePointer<HLType_CCompat> {
+        assertEnoughRegisters(reg, regs: regs)
+        
+        guard let mem = regs[Int(reg)].memory else {
+            fatalError("Register \(reg) has no type address available.")
+        }
+        
+        return UnsafePointer(OpaquePointer(mem))
+    }
+    
+    func requireFieldOffset(fieldRef: Int, objIx: Reg, regs: Registers) -> Int64 {
+        let mem = requireTypeMemory(reg: objIx, regs: regs)
+  
+        switch(mem.pointee.kind) {
+        case .obj:
+            fallthrough
+        case .struct:
+            guard let rt = mem.pointee.obj.pointee.rt else {
+                fatalError("Can not get field offset for obj without rt initialized")
+            }
+            return Int64(rt.pointee.fields_indexes.advanced(by: fieldRef).pointee)
+        default:
+            fatalError("Can not get field offset for obj type \(mem.pointee.kind)")
+        }
+    }
     
     func requireTypeAddress(reg: Reg, from regs: [Resolvable<HLType>]) -> UnsafeRawPointer {
         guard reg < regs.count else {
@@ -516,7 +551,7 @@ class M1Compiler {
                     PseudoOp.mov(X.x0, c),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
-            case .OSetField(let objReg, let fieldReg, let srcReg):
+            case .OSetField(let objReg, let fieldRef, let srcReg):
                 appendDebugPrintAligned4("Entering OSetField", builder: mem)
                 let objRegKind = requireTypeKind(reg: objReg, from: regKinds)
 
@@ -552,7 +587,18 @@ class M1Compiler {
                 switch(objRegKind) {
                 case .obj: fallthrough
                 case .struct:
-                    break
+                    // offset from obj address
+                    let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
+                    
+                    // offsets from .sp
+                    let srcOffset = getRegStackOffset(regKinds, srcReg)
+                    let objAddressOffset = getRegStackOffset(regKinds, objReg)
+                    
+                    mem.append(
+                        M1Op.ldr(X.x0, .reg64offset(.sp, srcOffset, nil)),
+                        M1Op.ldr(X.x1, .reg64offset(.sp, objAddressOffset, nil)),
+                        M1Op.str(X.x0, .reg64offset(.x1, fieldOffset, nil))
+                    )
                     // nop
 //                        {
 //                            hl_runtime_obj *rt = hl_get_obj_rt(dst->t);
