@@ -274,7 +274,7 @@ final class CompilerM1Tests: XCTestCase {
             XCTAssertEqual(len, 11)
         }
     }
-
+    
     func testCompile__OCall3() throws {
         // Prepare function we'll call from JIT
         typealias _JitFunc = (@convention(c) (UInt8, UInt16, Int32) -> Int32)

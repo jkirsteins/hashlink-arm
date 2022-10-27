@@ -39,11 +39,7 @@ struct HLFunction_CCompat : Equatable, Hashable {
     } 
 
     var cType: HLType_CCompat { typePtr!.pointee }
-    var cRegs: [HLType_CCompat] {
-        regsPtr?.getArray(count: nregs) ?? []
-    }
-    var cObj: HLType_CCompat? { objPtr?.pointee }
-
+    
     // union
     var field__name: String? {
         guard let unionPtr = unionPtr else { return nil }

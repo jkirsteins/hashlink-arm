@@ -17,9 +17,10 @@ protocol NativeCallable : Callable {
 
 extension HLNative_CCompat : IncompleteCallable {
     var args: [Resolvable<HLType>] {
-        self.type.fun.pointee.args.enumerated().map { ix, item in
-            let ptr = self.type.fun.pointee.argsPtr.advanced(by: ix).pointee
-            return Resolvable(HLType(item), memory: ptr)
+        (0..<self.typePtr.pointee.fun.pointee.nargs).map { ix in
+            let ptrPtr = self.typePtr.pointee.fun.pointee.argsPtr.advanced(by: Int(ix))
+            
+            return Resolvable(ptrPtr.pointee)
         }
     }
     
@@ -160,9 +161,13 @@ extension HLFunction_CCompat : Compilable {
     func getFindex() -> Int { Int(self.findex) }
     
     var regs: [Resolvable<HLType>] {
-        self.cRegs.enumerated().map { ix, item in
-            let ptr = self.regsPtr?.advanced(by: ix)
-            return Resolvable(HLType(item), memory: ptr?.pointee)
+        (0..<nregs).map { ix in
+            let ptrPtr = self.regsPtr?.advanced(by: Int(ix))
+            guard let ptr = ptrPtr?.pointee else {
+                fatalError("No pointer available")
+            }
+            
+            return Resolvable(ptr)
         }
     }
     

@@ -122,6 +122,16 @@ struct HLCode_CCompat {
         }
         return nil
     }
+    
+    func findFunction(_ fix: Int) -> UnsafePointer<HLFunction_CCompat>? {
+        for ix in 0..<self.nfunctions {
+            let candidate = functions.advanced(by: Int(ix))
+            if candidate.pointee.findex == fix {
+                return candidate
+            }
+        }
+        return nil
+    }
 
     func getType(_ ix: Int) -> UnsafePointer<HLType_CCompat> {
         types.advanced(by: ix)

@@ -261,6 +261,9 @@ class M1Compiler {
                 "Register with index \(reg) does not exist. Available registers: \(from)."
             )
         }
+        guard callable.args.count > argReg else {
+            fatalError("Expected args to have index \(argReg) but got \(callable.args)")
+        }
         let regKind = from[Int(reg)]
         let argKind = callable.args[Int(argReg)].value.kind
         guard regKind == argKind else {

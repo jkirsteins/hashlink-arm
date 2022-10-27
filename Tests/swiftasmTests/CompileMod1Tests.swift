@@ -34,6 +34,38 @@ final class CompileMod1Tests: XCTestCase {
             [.bytes, .i32, .i32])
         XCTAssertEqual(f.pointee.ret.value.kind, .bytes)
     }
+    
+    func testParseFn0() throws {
+        let f: UnsafePointer<HLFunction_CCompat>! = code.pointee.findFunction(0)
+        XCTAssertNotNil(f)
+        
+        XCTAssertEqual(f.pointee.typePtr!.pointee.kind, .fun)
+        XCTAssertEqual(
+            f.pointee.args.map { $0.value.kind },
+            [.obj])
+        XCTAssertEqual(
+            f.pointee.regs.map { $0.value.kind },
+            [.obj, .bytes, .i32, .i32, .obj])
+        XCTAssertEqual(f.pointee.ret.value.kind, .obj)
+    }
+    
+    func testParseFn237() throws {
+        let f: UnsafePointer<HLNative_CCompat>! = code.pointee.findNative(237)
+        XCTAssertNotNil(f)
+        
+        XCTAssertEqual(f.pointee.typePtr.pointee.kind, .fun)
+        XCTAssertEqual(
+            f.pointee.args.map { $0.value.kind },
+            [.bytes, .i32, .i32])
+        XCTAssertEqual(f.pointee.ret.value.kind, .bytes)
+    }
+    
+    func testCompileFn0() throws {
+        let sut = M1Compiler()
+        let mem = OpBuilder(ctx: ctx)
+        
+        try sut.compile(findex: 0, into: mem)
+    }
 
     func testCompileAll() throws {
         
@@ -41,6 +73,7 @@ final class CompileMod1Tests: XCTestCase {
         let mem = OpBuilder(ctx: ctx)
         
         for fix in 0..<code.pointee.nfunctions {
+            print("Compiling \(fix)")
             try sut.compile(findex: Int32(fix), into: mem)
         }
         
