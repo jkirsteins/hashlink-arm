@@ -5,13 +5,32 @@ import XCTest
 final class EmitterM1Tests: XCTestCase {
     func testB_lt() throws {
         XCTAssertEqual(
-            "bt.l #16",
+            "b.lt #16",
             M1Op.b_lt(16).debugDescription
+        )
+        XCTAssertEqual(
+            "b.lt #-4",
+            M1Op.b_lt(-4).debugDescription
+        )
+
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .b_lt(0x10)),
+            [0x8b, 0x00, 0x00, 0x54]
+        )
+
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .b_lt(-4)),
+            [0xeb, 0xff, 0xff, 0x54]
         )
         
         XCTAssertEqual(
-            try EmitterM1.emit(for: .b_lt(0x10)),
-            [0x6b, 0x00, 0x00, 0x54]
+            try EmitterM1.emit(for: .b_lt(-16)),
+            [0x8b, 0xff, 0xff, 0x54]
+        )
+
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .b_lt(0)),
+            [0x0b, 0x00, 0x00, 0x54]
         )
     }
     func testCmp() throws {

@@ -141,6 +141,14 @@ extension Immediate {
     func shiftedLeft(_ lsl: any BinaryInteger) -> Int64 {
         self.immediate << lsl
     }
+    
+    func shiftedRight(_ lsl: any BinaryInteger) -> Int64 {
+        var res = self.immediate
+        for _ in 0..<Int(lsl) {
+            res = (res >> 1) | (self.isNegative ? (1 << (self.bits-1)) : 0)
+        }
+        return res
+    }
 
     var signMask: Int64 {
         1 << (self.bits - 1)
@@ -234,11 +242,21 @@ struct Immediate19: Immediate, ExpressibleByIntegerLiteral {
     let wrapped: VariableImmediate
 
     var immediate: Int64 { wrapped.immediate }
+    
+    var signedImmediate: Int64 {
+        guard self.isNegative else { return immediate }
+        
+        var result = self.immediate
+        for ix in self.bits..<64 {
+            result = result | (1 << ix)
+        }
+        return result
+    }
 
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
     }
-
+    
     init(_ val: Int64, bits: Int64) throws {
         self.wrapped = try VariableImmediate(val, bits: bits)
     }

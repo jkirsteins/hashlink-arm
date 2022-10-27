@@ -3,6 +3,11 @@ import XCTest
 @testable import swiftasm
 
 final class ImmediateTests: XCTestCase {
+    func testImmediate19() throws {
+        let x1: Immediate19 = -4
+        XCTAssertEqual(x1.immediate, 0b1111111111111111100)
+    }
+    
     func testImm12Lsl12() throws {
         // fits, so default to lsl 0
         let x1: Imm12Lsl12 = 51

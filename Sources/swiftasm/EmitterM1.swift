@@ -170,9 +170,9 @@ public class EmitterM1 {
     private static func returnAsArray(_ val: Int64) -> [UInt8] {
         let length: Int = 4 * MemoryLayout<UInt8>.size
         let result = withUnsafeBytes(of: val) { bytes in Array(bytes.prefix(length)) }
-        // print(
-        //     "Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })"
-        // )
+         print(
+             "Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })"
+         )
         return result
     }
 
@@ -503,11 +503,14 @@ public class EmitterM1 {
             let encoded: Int64 = mask | size | shift | encodedRm | imm6 | encodedRn | encodedRd
             return returnAsArray(encoded)
         case .b_lt(let imm):
-            //                 imm19                 cond
-            let x = 0b01010100_0000000000000000000_0_0000
+            //                           imm19                 cond
+            let mask: Int64 = 0b01010100_0000000000000000000_0_1011
             
-            
-            fatalError()
+//            01010100001111111111111111101011 // bad
+//            01010100111111111111111111101011 // good
+            let imm16: Int64 = (imm.shiftedRight(2) /* div by 4 */) << 5
+            let encoded = mask | imm16
+            return returnAsArray(encoded)
         default: throw EmitterM1Error.unsupportedOp
         }
     }

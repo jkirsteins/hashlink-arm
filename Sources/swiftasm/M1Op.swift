@@ -132,7 +132,7 @@ enum M1Op : CpuOp {
       case .str(_, .reg32shift(_, _)):
           return "str reg32shift not implemented"
       case .b_lt(let imm):
-          return "b.lt \(imm)"
+          return "b.lt #\(imm.signedImmediate)"
       case .stp(_, .reg32shift(_, _)):
           return "stp reg32shift not implemented"
       case .ldp(_, .reg32shift(_, _)):
