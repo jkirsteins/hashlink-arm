@@ -6,18 +6,34 @@ final class CompileMod1Tests: XCTestCase {
     static var code: UnsafePointer<HLCode_CCompat>?
     static var ctx: JitContext? = nil
     
+    static var context: MainContext? = nil
+    
     var code: UnsafePointer<HLCode_CCompat> { Self.code! }
     var ctx: JitContext { Self.ctx! }
     
     override class func setUp() {
         LibHl.hl_global_init()
+        //
         let mod1 = Bundle.module.url(forResource: "mod1", withExtension: "hl")!.path
-        
         let code = UnsafePointer(LibHl.load_code(mod1))
+        self.context = MainContext(code: code, module: nil, ret: nil, file: nil, file_time: 0)
+        self.code = code
+        
+        self.context!.module = LibHl.hl_module_alloc(self.context!.code);
+        guard let m = self.context?.module else {
+            fatalError("nil module")
+        }
+            
+        let res = LibHl.hl_module_init(m, false)
+        guard res == 1 else {
+            fatalError("Failed to init module (got \(res))")
+        }
+
+                
+        //
         let fakeMod = ModuleStorage(code.pointee)
         
         self.ctx = JitContext(storage: fakeMod, hlcode: code)
-        self.code = code
     }
 
     override class func tearDown() {

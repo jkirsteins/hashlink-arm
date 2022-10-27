@@ -221,6 +221,8 @@ class M1Compiler {
         case .obj:
             fallthrough
         case .struct:
+            // if this is not set, the module has not
+            // been initialized
             guard let rt = mem.pointee.obj.pointee.rt else {
                 fatalError("Can not get field offset for obj without rt initialized")
             }
@@ -386,6 +388,7 @@ class M1Compiler {
         )
         
         for op in compilable.ops {
+            print("Compiling \(op)")
             appendDebugPrintAligned4("Executing \(op.debugDescription)", builder: mem)
 
             switch op {
