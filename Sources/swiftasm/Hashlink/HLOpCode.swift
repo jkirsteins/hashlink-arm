@@ -632,6 +632,8 @@ enum HLOpCode : Equatable, Hashable {
     case OJSGte(a: Reg, b: Reg, offset: JumpOffset)
     case OJSGt(a: Reg, b: Reg, offset: JumpOffset)
     case OJSLte(a: Reg, b: Reg, offset: JumpOffset)
+    
+    //    jult [a], [b], [offset] jump by offset opcodes if register values comparison a < b (integer types only) unsigned mode
     case OJULt(a: Reg, b: Reg, offset: JumpOffset)
     case OJUGte(a: Reg, b: Reg, offset: JumpOffset)
     case OJNotLt(a: Reg, b: Reg, offset: JumpOffset)

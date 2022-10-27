@@ -7,6 +7,10 @@ protocol CpuOp : CustomDebugStringConvertible {
 extension M1Op {
   func resolveFinalForm() -> M1Op {
     switch(self) {
+    case .cmp(let Rn, let Rm) where Rn.is32 && Rm.is32:
+        return .subs(W.wZR, Rn, .reg32shift(Rm as! Register32, nil))
+    case .cmp(let Rn, let Rm) where !Rn.is32 && !Rm.is32:
+        return .subs(X.sp, Rn, .reg64shift(Rm as! Register64, nil))
       case .ldr(let Rt, .reg64offset(let Rn, let offsetCount, nil)) where (offsetCount % 8) != 0:
         let imm9: Immediate9
         do {
@@ -121,7 +125,21 @@ enum M1Op : CpuOp {
           return "ldr .reg64shift not implemented"
         case .ldr(_, .reg32(_, _, _)):
           return "ldr .reg32 not implemented"
-        }
+      case .subs(let Rd, let Rn, let offset):
+          return "subs \(Rd), \(Rn), \(offset)"
+      case .cmp(let Rn, let Rm):
+          return "cmp \(Rn), \(Rm)"
+      case .str(_, .reg32shift(_, _)):
+          return "str reg32shift not implemented"
+      case .b_lt(let imm):
+          return "b.lt \(imm)"
+      case .stp(_, .reg32shift(_, _)):
+          return "stp reg32shift not implemented"
+      case .ldp(_, .reg32shift(_, _)):
+          return "ldp reg32shift not implemented"
+      case .ldr(_, .reg32shift(_, _)):
+          return "ldr reg32shift not implemented"
+      }
     }
 
     static func _add(_ r1: any Register, _ r2: any Register, _ offs: ByteCount) throws -> M1Op {
@@ -169,6 +187,11 @@ enum M1Op : CpuOp {
     case b(RelativeOffset) // 26 bits max
     case blr(Register64)
     case bl(Immediate26)  // 26 bits max
+    
+    case cmp(any Register, any Register)
+    case subs(any Register, any Register, Offset)
+    
+    case b_lt(Immediate19)
 
     // https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/MOVZ
     case movz32(Register32, UInt16, Register32.Shift?)

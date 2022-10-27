@@ -615,6 +615,9 @@ class M1Compiler {
                 default:
                     fatalError("OSetField not implemented for \(objRegKind)")
                 }
+            case .OJULt(let a, let b, let offset):
+                let wordsToSkip = offset + 1
+                fatalError()
             default: fatalError("Can't compile \(op.debugDescription)")
             }
         }

@@ -228,6 +228,27 @@ struct Immediate9: Immediate, ExpressibleByIntegerLiteral {
     }
 }
 
+struct Immediate19: Immediate, ExpressibleByIntegerLiteral {
+    let bits: Int64 = 19
+
+    let wrapped: VariableImmediate
+
+    var immediate: Int64 { wrapped.immediate }
+
+    init(integerLiteral: Int32) {
+        self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
+    }
+
+    init(_ val: Int64, bits: Int64) throws {
+        self.wrapped = try VariableImmediate(val, bits: bits)
+    }
+
+    init(_ val: any BinaryInteger) throws {
+        let i = Int(val)
+        self.wrapped = try VariableImmediate(Int64(i), bits: bits)
+    }
+}
+
 extension Int: Immediate {
     var bits: Int64 { 
         guard Int(0).bitWidth == 64 else {

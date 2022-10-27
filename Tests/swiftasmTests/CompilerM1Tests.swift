@@ -25,7 +25,6 @@ func prepareFunction(
     retType: Resolvable<HLType>,
     findex: Int32,
     regs: [Resolvable<HLType>],
-    args: [Resolvable<HLType>],
     ops: [HLOpCode]
 ) -> HLFunction {
     return HLFunction(
@@ -51,7 +50,7 @@ func prepareFunction(
     let rFuncType = Resolvable(HLType.fun(
         HLTypeFun(args: rArgs, ret: rRetType)
     ))
-    return prepareFunction(funcType: rFuncType, retType: rRetType, findex: findex, regs: rRegs, args: rArgs, ops: ops)
+    return prepareFunction(funcType: rFuncType, retType: rRetType, findex: findex, regs: rRegs, ops: ops)
 }
 
 /*
@@ -166,6 +165,55 @@ final class CompilerM1Tests: XCTestCase {
             XCTAssertEqual(result, 0xBEEF) 
         }
     }
+    
+    func testCompile_OJULt() throws {
+        let i32Type = code.pointee.getType(3)   // i32
+        let ri32Type: Resolvable<HLType> = .init(i32Type)
+        
+        let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
+        let rFuncType: Resolvable<HLType> = .init(funcType)
+        
+        // constants
+        let constI_3 = 1 // constant value 1
+        let constI_57005 = 2 // constant value 57005
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: ri32Type,
+                    findex: 0,
+                    regs: [ri32Type, ri32Type],
+                    ops: [
+                        // if first arg < second arg, skip 2 following ops
+                        .OJULt(a: 0, b: 1, offset: 2),
+                        
+                        // return 3
+                        .OInt(dst: 0, ptr: constI_3),
+                        .ORet(ret: 0),
+                        
+                        // return 57005
+                        .OInt(dst: 0, ptr: constI_57005),
+                        .ORet(ret: 0)
+                    ]
+                )
+        ])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: true)
+        try sut.compile(findex: 0, into: mem)
+
+        // mem.hexPrint()
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(3, entrypoint(2, 2))
+        XCTAssertEqual(3, entrypoint(3, 2))
+        XCTAssertEqual(57005, entrypoint(1, 2))
+    }
 
     func testCompile_emptyFunction() throws {
         let storage = ModuleStorage(functions: [
@@ -232,7 +280,6 @@ final class CompilerM1Tests: XCTestCase {
                     regs: [
                         rByteType, ri32Type, rStringType
                     ],
-                    args: [rByteType, ri32Type],
                     ops: [
                         .ONew(dst: 2),
                         .OSetField(obj: 2, field: 0, src: 0),

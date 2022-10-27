@@ -123,7 +123,7 @@ extension HLOpCode {
         case .ORet:
             return .ORet(ret: cop.p1)
         case .OJULt:
-            fatalError("WIP")
+            return .OJULt(a: cop.p1, b: cop.p2, offset: cop.p3)
         default:
             fatalError("Unknown op to parse \(String(describing: opId))")
         }

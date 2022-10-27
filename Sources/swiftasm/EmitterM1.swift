@@ -142,6 +142,7 @@ enum Register32: UInt8, Register {
     case w26 = 26
     case w27 = 27
     case w28 = 28
+    case wZR = 31 // 0b11111
 }
 
 enum LdrMode {
@@ -152,6 +153,7 @@ enum LdrMode {
 enum Offset {
     case immediate(Int16)
     case reg64offset(Register64, Int64, IndexingMode?)
+    case reg32shift(Register32, Register32.Shift?)
     case reg64shift(Register64, Register64.Shift?)
     case reg32(Register32, Register32.ExtendOp, IndexingMode?)
 }
@@ -487,6 +489,25 @@ public class EmitterM1 {
 
             let encoded: Int64 = encodedR | encodedVal | shiftVal | mask
             return returnAsArray(encoded)
+        case .subs(let Rd, let Rn, .reg64shift(let Rm, nil)):
+            guard Rd.is32 == Rn.is32 && Rd.is32 == Rm.is32 else {
+                fatalError("All registers must be the same size")
+            }
+            let mask: Int64 = 0b01101011000000000000000000000000
+            let encodedRd: Int64 = encodeReg(Rd, shift: 0)
+            let encodedRn: Int64 = encodeReg(Rn, shift: 5)
+            let encodedRm: Int64 = encodeReg(Rm, shift: 16)
+            let imm6: Int64 = 0
+            let shift: Int64 = 0
+            let size: Int64 = (Rd.is32 ? 0 : 1) << 31
+            let encoded: Int64 = mask | size | shift | encodedRm | imm6 | encodedRn | encodedRd
+            return returnAsArray(encoded)
+        case .b_lt(let imm):
+            //                 imm19                 cond
+            let x = 0b01010100_0000000000000000000_0_0000
+            
+            
+            fatalError()
         default: throw EmitterM1Error.unsupportedOp
         }
     }

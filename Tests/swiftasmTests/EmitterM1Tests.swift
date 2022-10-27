@@ -3,6 +3,28 @@ import XCTest
 @testable import swiftasm
 
 final class EmitterM1Tests: XCTestCase {
+    func testB_lt() throws {
+        XCTAssertEqual(
+            "bt.l #16",
+            M1Op.b_lt(16).debugDescription
+        )
+        
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .b_lt(0x10)),
+            [0x6b, 0x00, 0x00, 0x54]
+        )
+    }
+    func testCmp() throws {
+        XCTAssertEqual(
+            "cmp x0, x1",
+            M1Op.cmp(X.x0, X.x1).debugDescription
+        )
+        
+        XCTAssertEqual(
+            try EmitterM1.emit(for: .cmp(X.x0, X.x1)),
+            [0x1f, 0x00, 0x01, 0xeb]
+        )
+    }
     func testSub() throws {
         XCTAssertEqual("sub sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, 16).debugDescription)
         XCTAssertEqual("sub sp, sp, #16",
