@@ -122,6 +122,8 @@ extension HLOpCode {
             return .OSetField(obj: cop.p1, field: RefField(cop.p2), src: cop.p3)
         case .ORet:
             return .ORet(ret: cop.p1)
+        case .OJULt:
+            fatalError("WIP")
         default:
             fatalError("Unknown op to parse \(String(describing: opId))")
         }

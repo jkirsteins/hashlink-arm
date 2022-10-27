@@ -82,6 +82,13 @@ final class CompileMod1Tests: XCTestCase {
         
         try sut.compile(findex: 0, into: mem)
     }
+    
+    func testCompileFn2() throws {
+        let sut = M1Compiler()
+        let mem = OpBuilder(ctx: ctx)
+        
+        try sut.compile(findex: 2, into: mem)
+    }
 
     func testCompileAll() throws {
         
