@@ -472,6 +472,23 @@ class M1Compiler {
                     M1Op.blr(.x10),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
+            case .OCall1(let dst, let fun, let arg0):
+                let callTarget = ctx.callTargets.get(fun)
+                
+                assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
+                assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
+                
+                let fnAddr = callTarget.entrypoint
+                let regStackOffset = getRegStackOffset(regKinds, dst)
+                let arg0StackOffset = getRegStackOffset(regKinds, arg0)
+                
+                mem.append(
+                    PseudoOp.debugMarker("Call1 fn@\(fun)(\(arg0)) -> \(dst)"),
+                    M1Op.ldr(X.x0, .reg64offset(X.sp, arg0StackOffset, nil)),
+                    PseudoOp.mov(.x10, fnAddr),
+                    M1Op.blr(.x10),
+                    M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
+                )
             case .OCall3(let dst, let fun, let arg0, let arg1, let arg2):
                 let callTarget = ctx.callTargets.get(fun)
                 
@@ -710,6 +727,15 @@ class M1Compiler {
                     PseudoOp.debugPrint(self, "NOT JUMPING")
                 )
                 
+            case .OGetGlobal(let dst, let globalRef):
+                guard let globalTypePtr = ctx.hlcode?.pointee.globals.advanced(by: globalRef).pointee else {
+                    fatalError("Can't resolve global \(globalRef)")
+                }
+                let dstOffset = getRegStackOffset(regKinds, dst)
+                mem.append(
+                    PseudoOp.mov(.x0, UnsafeRawPointer(globalTypePtr)),
+                    M1Op.str(X.x0, .reg64offset(.sp, dstOffset, nil))
+                )
             default: fatalError("Can't compile \(op.debugDescription)")
             }
         }

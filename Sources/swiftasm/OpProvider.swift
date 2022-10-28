@@ -124,6 +124,16 @@ extension HLOpCode {
             return .ORet(ret: cop.p1)
         case .OJULt:
             return .OJULt(a: cop.p1, b: cop.p2, offset: cop.p3)
+        case .OGetGlobal:
+            return .OGetGlobal(dst: cop.p1, global: RefGlobal(cop.p2))
+        case .OCall1:
+            return .OCall1(dst: cop.p1, fun: RefFun(cop.p2), arg0: cop.p3)
+        case .OShl:
+            return .OShl(dst: cop.p1, a: cop.p2, b: cop.p3)
+        case .OGetI16:
+            return .OGetI16(dst: cop.p1, bytes: cop.p2, index: cop.p3)
+        case .OSetI16:
+            return .OSetI16(bytes: cop.p1, index: cop.p2, src: cop.p3)
         default:
             fatalError("Unknown op to parse \(String(describing: opId))")
         }
