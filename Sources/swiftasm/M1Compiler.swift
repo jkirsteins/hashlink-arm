@@ -736,6 +736,11 @@ class M1Compiler {
                     PseudoOp.mov(.x0, UnsafeRawPointer(globalTypePtr)),
                     M1Op.str(X.x0, .reg64offset(.sp, dstOffset, nil))
                 )
+            case .OShl(let dst, let a, let b):
+                let dstOffset = getRegStackOffset(regKinds, dst)
+                let aOffset = getRegStackOffset(regKinds, a)
+                let bOffset = getRegStackOffset(regKinds, b)
+                fatalError("Shl not implemented")
             default: fatalError("Can't compile \(op.debugDescription)")
             }
         }
