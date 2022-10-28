@@ -48,6 +48,20 @@ final class EmitterM1Tests: XCTestCase {
         XCTAssertM1Op(.b_ne(-4), 0xe1, 0xff, 0xff, 0x54)
     }
     
+    func testB_le() throws {
+        XCTAssertM1OpDesc(M1Op.b_le(4), "b.le #4")
+        XCTAssertM1OpDesc(M1Op.b_le(-4), "b.le #-4")
+        XCTAssertM1Op(.b_le(4), 0x2d, 0x00, 0x00, 0x54)
+        XCTAssertM1Op(.b_le(-4), 0xed, 0xff, 0xff, 0x54)
+    }
+    
+    func testB_ge() throws {
+        XCTAssertM1OpDesc(M1Op.b_ge(4), "b.ge #4")
+        XCTAssertM1OpDesc(M1Op.b_ge(-4), "b.ge #-4")
+        XCTAssertM1Op(.b_ge(4), 0x2a, 0x00, 0x00, 0x54)
+        XCTAssertM1Op(.b_ge(-4), 0xea, 0xff, 0xff, 0x54)
+    }
+    
     func testB_eq() throws {
         XCTAssertM1OpDesc(M1Op.b_eq(16), "b.eq #16")
         XCTAssertM1OpDesc(M1Op.b_eq(-4), "b.eq #-4")

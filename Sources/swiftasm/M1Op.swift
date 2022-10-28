@@ -139,6 +139,10 @@ enum M1Op : CpuOp {
           return "b.gt #\(imm.signedImmediate)"
       case .b_ne(let imm):
           return "b.ne #\(imm.signedImmediate)"
+      case .b_le(let imm):
+          return "b.le #\(imm.signedImmediate)"
+      case .b_ge(let imm):
+          return "b.ge #\(imm.signedImmediate)"
       case .stp(_, .reg32shift(_, _)):
           return "stp reg32shift not implemented"
       case .ldp(_, .reg32shift(_, _)):
@@ -199,6 +203,8 @@ enum M1Op : CpuOp {
     
     case b_lt(Immediate19)
     case b_gt(Immediate19)
+    case b_le(Immediate19)
+    case b_ge(Immediate19)
     case b_eq(Immediate19)
     case b_ne(Immediate19)
 

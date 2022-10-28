@@ -58,30 +58,41 @@ struct VariableImmediate: Immediate {
     }
 }
 
-// struct AbsoluteAddressImmediate: Immediate, ExpressibleByIntegerLiteral {
-//     let bits: Int64
-//     let value: Int64 
-
-//     var immediate: Int64 { value }
-
-//     init(_ val: UnsafeMutableRawPointer) {
-//         self.value = Int64(Int(bitPattern: val))
-//         self.bits = 64
-//     }
-
-//     init(_ val: Int64, bits: Int64) throws {
-//         guard bits == 64 else { throw GlobalError.invalidValue("\(type(of: self)) expects 64 bits") }
-//         self.value = val
-//         self.bits = bits
-//     }
-
-//     init(integerLiteral: Int64) {
-//         self.value = integerLiteral
-//         self.bits = 64
-//     }
-// }
-
-// typealias DeferredAddressImmediate = DeferredImmediate<AbsoluteAddressImmediate>
+struct DeferredImmediateSum : Immediate, Equatable, Hashable {
+    static func == (lhs: DeferredImmediateSum, rhs: DeferredImmediateSum) -> Bool {
+        lhs.immediate == rhs.immediate
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(immediate)
+    }
+    
+    var bits: Int64 { a.bits }
+    
+    let a: any Immediate
+    let b: any Immediate
+    let bMul: Int
+    let bAdd: Int
+    
+    var immediate: Int64 {
+        a.immediate + b.immediate*Int64(bMul)+Int64(bAdd)
+    }
+    
+    init(_ a: any Immediate, _ b: any Immediate, _ bMul: Int = 1, _ bAdd: Int = 0) throws {
+        self.a = a
+        self.b = b
+        self.bMul = bMul
+        self.bAdd = bAdd
+    }
+    
+    init(_ val: Int64, bits: Int64) throws {
+        fatalError("not supported")
+    }
+    
+    init(integerLiteral: Int32) {
+        fatalError("not supported")
+    }
+}
 
 struct DeferredImmediate<T: Immediate> : Immediate {
     let ptr: SharedStorage<T?> = SharedStorage(wrappedValue: nil)
@@ -236,13 +247,7 @@ struct Immediate9: Immediate, ExpressibleByIntegerLiteral {
     }
 }
 
-struct Immediate19: Immediate, ExpressibleByIntegerLiteral {
-    let bits: Int64 = 19
-
-    let wrapped: VariableImmediate
-
-    var immediate: Int64 { wrapped.immediate }
-    
+extension Immediate {
     var signedImmediate: Int64 {
         guard self.isNegative else { return immediate }
         
@@ -252,7 +257,15 @@ struct Immediate19: Immediate, ExpressibleByIntegerLiteral {
         }
         return result
     }
+}
 
+struct Immediate19: Immediate, ExpressibleByIntegerLiteral {
+    let bits: Int64 = 19
+
+    let wrapped: VariableImmediate
+
+    var immediate: Int64 { wrapped.immediate }
+    
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
     }

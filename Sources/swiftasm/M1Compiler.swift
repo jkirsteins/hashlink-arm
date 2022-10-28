@@ -1,3 +1,5 @@
+import Darwin
+
 typealias HLTypeKinds = [HLTypeKind]
 
 protocol CompilerUtilities {
@@ -11,38 +13,13 @@ extension M1Compiler : CompilerUtilities {
 // x0 through x7
 private let ARG_REGISTER_COUNT = 8
 extension M1Compiler {
-    // Get offset into stack for a given register. This should skip void registers
-    func getRegStackOffset(_ regs: HLTypeKinds, args: HLTypeKinds, reg: Int) -> ByteCount {
-        fatalError("is this used?")
-        let base: ByteCount
-        let ptr: ArraySlice<HLTypeKind>
-        let skip: Int
-
-        /* If we want a non-function-arg register, then start
-        counting from stack reservation offset and look at regs.
-
-        Otherwise start counting args immediately. */
-        if reg >= min(ARG_REGISTER_COUNT, args.count) {
-            let (stackRes, _) = calcStackArgReq(regs: regs, args: args)
-            base = ByteCount(stackRes)
-            skip = args.count
-            ptr = regs.dropFirst(args.count)
-        }
-        else {
-            base = 0
-            skip = 0
-            ptr = args.dropFirst(0)
-        }
-        
-        var result: ByteCount = base
-        // note: careful, arrayslice inherits indexes from base array
-        for ix in (skip..<reg) { result += ptr[ix].hlRegSize }
-        return result
-    }
-
-    /* SP movements must be aligned to 16-bytes */func roundUpStackReservation(
+    /* SP movements must be aligned to 16-bytes */
+    func roundUpStackReservation(
         _ val: Int16
-    ) -> Int16 { return (val + (16 &- 1)) & (0 &- 16) }
+    ) -> Int16 {
+        guard val % 16 != 0 else { return val }
+        return (val + (16 &- 1)) & (0 &- 16)
+    }
 
     /// Stack space should be allocated for first 8 function args (will be filled from registers) and
     /// any register, which is not part of args.
@@ -112,12 +89,24 @@ extension M1Compiler {
             builder.append(
                 PseudoOp.debugMarker(
                     "Moving \(Register64(rawValue: UInt8(ix))!) to \(offset)"
-                ),
-                M1Op.str(
-                    Register64(rawValue: UInt8(ix))!,
-                    .reg64offset(Register64.sp, offset, nil)
                 )
             )
+                switch(reg.hlRegSize) {
+                case 4:
+                    builder.append(
+                    M1Op.str(
+                        Register32(rawValue: UInt8(ix))!,
+                        .reg64offset(Register64.sp, offset, nil)
+                    ))
+                case 8:
+                    builder.append(M1Op.str(
+                        Register64(rawValue: UInt8(ix))!,
+                        .reg64offset(Register64.sp, offset, nil)
+                    ))
+                default:
+                    fatalError("wip")
+                }
+            
             print("Inc offset by \(reg.hlRegSize) from \(reg)")
             offset += reg.hlRegSize
         }
@@ -125,6 +114,49 @@ extension M1Compiler {
         return neededExtraStackSize
     }
 
+    func appendDebugPrintRegisterAligned4(_ reg: Register64, builder: OpBuilder) {
+        guard let printfAddr = dlsym(dlopen(nil, RTLD_LAZY), "printf") else {
+            fatalError("No printf addr")
+        }
+        
+        var adr = RelativeDeferredOffset()
+        var jmpTarget = RelativeDeferredOffset()
+        let str = "[jitdebug] Register \(reg): %llu\n\0"
+        
+        guard stripDebugMessages == false else {
+            builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
+            return
+        }
+        builder.append(PseudoOp.debugMarker("Printing debug register: \(reg)"))
+        
+        builder.append(
+            // Stash registers we'll use (so we can reset)
+            .str(reg, .reg64offset(.sp, -32, .pre)),
+            .str(Register64.x1, .reg64offset(.sp, 8, nil)),
+            .str(Register64.x0, .reg64offset(.sp, 16, nil)),
+            .str(Register64.x16, .reg64offset(.sp, 24, nil))
+        )
+        adr.start(at: builder.byteSize)
+        builder.append(.adr64(.x0, adr))
+        
+        builder.append(
+            PseudoOp.mov(.x16, printfAddr),
+            M1Op.blr(.x16),
+            // restore
+            M1Op.ldr(Register64.x16, .reg64offset(.sp, 24, nil)),
+            M1Op.ldr(Register64.x0, .reg64offset(.sp, 16, nil)),
+            M1Op.ldr(Register64.x1, .reg64offset(.sp, 8, nil)),
+            M1Op.ldr(reg, .reg64offset(.sp, 32, .post))
+        )
+        
+        jmpTarget.start(at: builder.byteSize)
+        builder.append(.b(jmpTarget))
+        adr.stop(at: builder.byteSize)
+        builder.append(ascii: str).align(4)
+
+        jmpTarget.stop(at: builder.byteSize)
+    }
+    
     func appendDebugPrintAligned4(_ val: String, builder: OpBuilder) {
         var adr = RelativeDeferredOffset()
         var jmpTarget = RelativeDeferredOffset()
@@ -387,26 +419,40 @@ class M1Compiler {
             builder: mem
         )
         
-        for op in compilable.ops {
+        let addrBetweenOps: [DeferredImmediate<Immediate19>] = (0..<compilable.ops.count).map { _ in
+            return DeferredImmediate()
+        }
+        
+        for (currentInstruction, op) in compilable.ops.enumerated() {
+            
+            addrBetweenOps[currentInstruction].finalize(try Immediate19(mem.byteSize))
+            
+            mem.append(
+                PseudoOp.debugMarker("Marking position for \(currentInstruction) at \(mem.byteSize)")
+            )
+            
             print("Compiling \(op)")
-            appendDebugPrintAligned4("Executing \(op.debugDescription)", builder: mem)
-
+            mem.append(
+                PseudoOp.debugMarker("#\(currentInstruction): \(op.debugDescription)")
+            )
+            
             switch op {
             case .ORet(let dst):
                 // store
                 let regStackOffset = getRegStackOffset(regKinds, dst)
                 mem.append(
-                    PseudoOp.debugMarker("Returning stack offset \(regStackOffset)"),
+                    PseudoOp.debugPrint(self, "Returning stack offset \(regStackOffset)"),
                     M1Op.ldr(X.x0, .reg64offset(.sp, regStackOffset, nil))
                 )
+                
+                mem.append(PseudoOp.debugPrint(self, "Jumping to epilogue"))
 
-                // jmp to end
+                // jmp to end (NOTE: DO NOT ADD ANYTHING BETWEEN .start() and mem.append()
                 var retTarget = RelativeDeferredOffset()
+                print("Starting retTarget at \(mem.byteSize)")
                 retTarget.start(at: mem.byteSize)
                 retTargets.append(retTarget)
-                mem.append(
-                    PseudoOp.debugMarker("Jumping to epilogue"),
-                    M1Op.b(retTarget)
+                mem.append(M1Op.b(retTarget)
                 )
 
             case .OCall0(let dst, let funRef):
@@ -551,6 +597,7 @@ class M1Compiler {
                 let c = ctx.storage.int32Resolver.get(iRef)
                 let regStackOffset = getRegStackOffset(regKinds, dst)
                 mem.append(
+                    PseudoOp.debugPrint(self, "--> Storing int \(iRef) (val \(c)) in \(dst)"),
                     PseudoOp.debugMarker(
                         "Mov \(c) into \(X.x0) and store in stack for HL reg \(iRef) at offset \(regStackOffset)"
                     ),
@@ -616,14 +663,62 @@ class M1Compiler {
                     fatalError("OSetField not implemented for \(objRegKind)")
                 }
             case .OJULt(let a, let b, let offset):
-                let wordsToSkip = offset + 1
-                fatalError()
+                
+                let wordsToSkip = Int(offset) + 1
+                let targetInstructionIx = currentInstruction + wordsToSkip
+                guard targetInstructionIx < addrBetweenOps.count else {
+                    fatalError("Jump going to an invalid op (\(targetInstructionIx))")
+                }
+                
+                let startPos = mem.byteSize
+                
+                let regOffsetA = getRegStackOffset(regKinds, a)
+                let regOffsetB = getRegStackOffset(regKinds, b)
+                
+                let sizeA = requireTypeKind(reg: a, from: regKinds).hlRegSize
+                let sizeB = requireTypeKind(reg: b, from: regKinds).hlRegSize
+                
+                mem.append(
+                    PseudoOp.debugMarker("OJULt \(a)@\(regOffsetA) < \(b)@\(regOffsetB) --> \(offset) (target instruction: \(targetInstructionIx))"),
+                    M1Op.ldr(sizeA == 4 ? W.w0 : X.x0, .reg64offset(.sp, regOffsetA, nil)),
+                    M1Op.ldr(sizeB == 4 ? W.w1 : X.x1, .reg64offset(.sp, regOffsetB, nil))
+                    )
+                
+                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
+                appendDebugPrintRegisterAligned4(X.x1, builder: mem)
+                
+                mem.append(M1Op.cmp(X.x0, X.x1))
+                
+                
+                // calculate what to skip
+                let skip = mem.byteSize - startPos
+                let jumpOffset_partA = try Immediate19(mem.byteSize)
+                let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
+                let jumpOffset = try DeferredImmediateSum(
+                    jumpOffset_partB,
+                    jumpOffset_partA,
+                    -1,
+                    -Int(0)) // -3*4 /* ignore the ldr+ldr+cmp in current instruction */ )
+                //
+                
+                
+                mem.append(
+                    PseudoOp.deferred(4) {
+                        M1Op.b_lt(try Immediate19(jumpOffset.immediate))
+                    })
+                mem.append(
+                    PseudoOp.debugPrint(self, "NOT JUMPING")
+                )
+                
             default: fatalError("Can't compile \(op.debugDescription)")
             }
         }
 
         // initialize targets for 'ret' jumps
-        for var retTarget in retTargets { retTarget.stop(at: mem.byteSize) }
+        for var retTarget in retTargets {
+            print("Stopping retTarget at \(mem.byteSize)")
+            retTarget.stop(at: mem.byteSize)
+        }
 
         if reservedStackBytes > 0 {
             mem.append(

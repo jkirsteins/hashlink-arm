@@ -167,9 +167,14 @@ struct HLTypeKind: HLRegisterSizeProvider, CustomDebugStringConvertible, Express
         switch self {
         case .void: return 0  // void not really a value, used for typing purpose
 
-        case .bool, .u8: return 1  // an unsigned 8 bits integer (0-255)
-
-        case .u16: return 2
+        case .bool, .u8:
+            /* using 4 bytes instead of 1 because it's easier.
+             Registers are either 4 or 8 bytes */
+            fallthrough
+        case .u16:
+            /* using 4 bytes instead of 2 because it's easier.
+             Registers are either 4 or 8 bytes */
+            fallthrough
         case .i32, .f32: return 4
         case .i64, .f64: return 8
 

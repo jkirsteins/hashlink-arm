@@ -61,7 +61,9 @@ class OpBuilder {
             )
         }
 
-        let increase = instructions.reduce(0) { $0 + $1.size }
+        let increase: Int64 = instructions.reduce(0) {
+            return $0 + $1.size
+        }
         byteSize += increase
         ops.append(contentsOf: instructions)
         return self
@@ -114,7 +116,7 @@ class OpBuilder {
                     debugString = op.debugDescription
                 }
                 else {
-                    debugString = ""
+                    debugString = "... \(op.debugDescription)"
                 }
                 print(
                     strs.joined(separator: ", ")

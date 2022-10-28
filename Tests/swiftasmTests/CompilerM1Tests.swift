@@ -174,7 +174,7 @@ final class CompilerM1Tests: XCTestCase {
         let rFuncType: Resolvable<HLType> = .init(funcType)
         
         // constants
-        let constI_3 = 1 // constant value 1
+        let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
         
         let storage = ModuleStorage(
@@ -197,22 +197,26 @@ final class CompilerM1Tests: XCTestCase {
                         .ORet(ret: 0)
                     ]
                 )
-        ])
+            ], ints: [0, 3, 57005])
 
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
 
-        // mem.hexPrint()
+        // TODO: need to test w i64
+         mem.hexPrint()
 
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
         
-        XCTAssertEqual(3, entrypoint(2, 2))
-        XCTAssertEqual(3, entrypoint(3, 2))
-        XCTAssertEqual(57005, entrypoint(1, 2))
+        // jump
+        XCTAssertEqual(57005, entrypoint(2, 3))
+        
+        // no jump
+        XCTAssertEqual(3, entrypoint(3, 3))
+        XCTAssertEqual(3, entrypoint(4, 3))
     }
 
     func testCompile_emptyFunction() throws {
@@ -489,27 +493,8 @@ final class CompilerM1Tests: XCTestCase {
         let mem = OpBuilder(ctx: ctx)
         let sut = sut()
         try sut.compile(findex: 0, into: mem)
-        // mem.hexPrint()
 
-        XCTAssertEqual(
-            mem.lockAddressesAndBuild(),
-            [
-                0xfd, 0x7b, 0xbf, 0xa9,  // stp x29, x30, [sp, #-16]!
-                0xfd, 0x03, 0x00, 0x91,  // movr x29, sp
-                0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
-                0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
-                0xa0, 0x14, 0x80, 0xd2,  // .mov x0, #165
-                0x00, 0x00, 0xa0, 0xf2,  //
-                0x00, 0x00, 0xc0, 0xf2,  //
-                0x00, 0x00, 0xe0, 0xf2,  //
-                0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
-                0xe0, 0x03, 0x40, 0xf9,  // ldr x0, [sp, #0]
-                0x01, 0x00, 0x00, 0x14,  // b #4
-                0xff, 0x43, 0x00, 0x91,  // add sp, sp, #16
-                0xfd, 0x7b, 0xc1, 0xa8,  // ldp x29, x30, [sp], #16
-                0xc0, 0x03, 0x5f, 0xd6,  // ret
-            ]
-        )
+        // mem.hexPrint()
 
         let entrypoint: JitInt64 = try mem.buildEntrypoint(0)
         let res: Int64 = entrypoint()
@@ -589,37 +574,6 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(mem.lockAddressesAndBuild(), [0xfd, 0x7b, 0xc1, 0xa8])
     }
 
-    func testGetRegStackOffset_min16() throws {
-        let regs: HLTypeKinds = [.i32, .void, .void, .i32, .void]
-        // we need 4 bytes but stack for x0 has moved 16 bytes
-        let args: HLTypeKinds = [.i32]
-        let sut = sut()
-
-        // First reg is in args, so offset 0
-        XCTAssertEqual(0, sut.getRegStackOffset(regs, args: args, reg: 0))
-
-        // Second reg is in stack after the register area,
-        // which is aligned to 16 bytes
-        XCTAssertEqual(16, sut.getRegStackOffset(regs, args: args, reg: 3))
-    }
-
-    func testGetRegStackOffset_noMin_funcArgs() throws {
-        let regs: HLTypeKinds = [.i32, .void, .i32]
-        // we need 4 bytes but stack for x0 has moved 16 bytes
-        let args: HLTypeKinds = [.i32, .void, .i32]
-
-        // Second reg is in stack after the register area,
-        // which is aligned to 16 bytes
-        XCTAssertEqual(4, sut().getRegStackOffset(regs, args: args, reg: 1))
-    }
-
-    func testGetRegStackOffset_void() throws {
-        let regs: HLTypeKinds = [.void]
-        // we need 4 bytes but stack for x0 has moved 16 bytes
-        let args: HLTypeKinds = [.void]
-        XCTAssertEqual(0, sut().getRegStackOffset(regs, args: args, reg: 0))
-    }
-
     func testAppendStackInit_skipVoid() throws {
         let mem = builder()
         try sut().appendStackInit([.void], args: [.void], builder: mem)
@@ -634,10 +588,11 @@ final class CompilerM1Tests: XCTestCase {
         // 4 byte requirement should still be aligned to 16 byte boundary
         let mem1 = builder()
         try sut.appendStackInit(_1_need16, args: _1_need16, builder: mem1)
+        //mem1.hexPrint()
         XCTAssertEqual(
             [
                 0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
-                0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
+                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
             ],
             mem1.lockAddressesAndBuild()
         )
@@ -645,27 +600,29 @@ final class CompilerM1Tests: XCTestCase {
         // 16 byte requirement should not round to 32
         let mem2 = builder()
         try sut.appendStackInit(_4_need16, args: _4_need16, builder: mem2)
+        //mem2.hexPrint()
         XCTAssertEqual(
             [
                 0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
-                0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
-                0xe1, 0x43, 0x00, 0xf8,  // str x1, [sp, #4]
-                0xe2, 0x83, 0x00, 0xf8,  // str x2, [sp, #8]
-                0xe3, 0xc3, 0x00, 0xf8,  // str x3, [sp, #12]
+                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
+                0xe1, 0x43, 0x00, 0xb8,  // str w1, [sp, #4]
+                0xe2, 0x83, 0x00, 0xb8,  // str w2, [sp, #8]
+                0xe3, 0xc3, 0x00, 0xb8,  // str w3, [sp, #12]
             ],
             mem2.lockAddressesAndBuild()
         )
         // 20 byte requirement should round to 32
         let mem3 = builder()
         try sut.appendStackInit(_5_need32, args: _5_need32, builder: mem3)
+        //mem3.hexPrint()
         XCTAssertEqual(
             [
                 0xff, 0x83, 0x00, 0xd1,  // sub sp, sp, #32
-                0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
-                0xe1, 0x43, 0x00, 0xf8,  // str x1, [sp, #4]
-                0xe2, 0x83, 0x00, 0xf8,  // str x2, [sp, #8]
-                0xe3, 0xc3, 0x00, 0xf8,  // str x3, [sp, #12]
-                0xe4, 0x03, 0x01, 0xf8,  // str x4, [sp, #16]
+                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
+                0xe1, 0x43, 0x00, 0xb8,  // str w1, [sp, #4]
+                0xe2, 0x83, 0x00, 0xb8,  // str w2, [sp, #8]
+                0xe3, 0xc3, 0x00, 0xb8,  // str w3, [sp, #12]
+                0xe4, 0x03, 0x01, 0xb8,  // str w4, [sp, #16]
             ],
             mem3.lockAddressesAndBuild()
         )
@@ -679,10 +636,11 @@ final class CompilerM1Tests: XCTestCase {
             args: [.void, .i32, .i64],
             builder: mem
         )
+        //mem.hexPrint()
         XCTAssertEqual(
             [
                 0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
-                0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
+                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
                 0xe1, 0x43, 0x00, 0xf8,  // str x1, [sp, #4]
             ],
             mem.lockAddressesAndBuild()
@@ -696,17 +654,18 @@ final class CompilerM1Tests: XCTestCase {
             args: Array(repeating: HLTypeKind.i32, count: 12),
             builder: mem
         )
+        mem.hexPrint()
         XCTAssertEqual(
             [
                 0xff, 0x83, 0x00, 0xd1,  // sub sp, sp, #32
-                0xe0, 0x03, 0x00, 0xf8,  // str x0, [sp, #0]
-                0xe1, 0x43, 0x00, 0xf8,  // str x1, [sp, #4]
-                0xe2, 0x83, 0x00, 0xf8,  // str x2, [sp, #8]
-                0xe3, 0xc3, 0x00, 0xf8,  // str x3, [sp, #12]
-                0xe4, 0x03, 0x01, 0xf8,  // str x4, [sp, #16]
-                0xe5, 0x43, 0x01, 0xf8,  // str x5, [sp, #20]
-                0xe6, 0x83, 0x01, 0xf8,  // str x6, [sp, #24]
-                0xe7, 0xc3, 0x01, 0xf8,  // str x7, [sp, #28]
+                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
+                0xe1, 0x43, 0x00, 0xb8,  // str w1, [sp, #4]
+                0xe2, 0x83, 0x00, 0xb8,  // str w2, [sp, #8]
+                0xe3, 0xc3, 0x00, 0xb8,  // str w3, [sp, #12]
+                0xe4, 0x03, 0x01, 0xb8,  // str w4, [sp, #16]
+                0xe5, 0x43, 0x01, 0xb8,  // str w5, [sp, #20]
+                0xe6, 0x83, 0x01, 0xb8,  // str w6, [sp, #24]
+                0xe7, 0xc3, 0x01, 0xb8,  // str w7, [sp, #28]
             ],
             mem.lockAddressesAndBuild()
         )

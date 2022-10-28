@@ -30,13 +30,12 @@ struct JitContext {
             wrappedValue: nil
         )
         
-        printerr("Creating FunAddr \(hlcode)")
         if let hlcode = hlcode {
             self.callTargets = FunctionAddresses(hlcode.pointee, jitBase: jitBase)
         } else {
             self.callTargets = FunctionAddresses(storage, jitBase: jitBase)
         }
-        printerr("Creating FunAddr2")
+        
         self._compiledFunctions = SharedStorage(
             wrappedValue: storage.functionResolver.table.map {
                 HLCompiledFunction(
