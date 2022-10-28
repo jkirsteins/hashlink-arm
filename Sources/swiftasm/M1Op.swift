@@ -137,6 +137,8 @@ enum M1Op : CpuOp {
           return "b.eq #\(imm.signedImmediate)"
       case .b_gt(let imm):
           return "b.gt #\(imm.signedImmediate)"
+      case .b_ne(let imm):
+          return "b.ne #\(imm.signedImmediate)"
       case .stp(_, .reg32shift(_, _)):
           return "stp reg32shift not implemented"
       case .ldp(_, .reg32shift(_, _)):
@@ -198,6 +200,7 @@ enum M1Op : CpuOp {
     case b_lt(Immediate19)
     case b_gt(Immediate19)
     case b_eq(Immediate19)
+    case b_ne(Immediate19)
 
     // https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/MOVZ
     case movz32(Register32, UInt16, Register32.Shift?)

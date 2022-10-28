@@ -39,6 +39,15 @@ extension XCTestCase {
 }
 
 final class EmitterM1Tests: XCTestCase {
+    
+    func testB_ne() throws {
+        XCTAssertM1OpDesc(M1Op.b_ne(4), "b.ne #4")
+        XCTAssertM1OpDesc(M1Op.b_ne(-4), "b.ne #-4")
+        
+        XCTAssertM1Op(.b_ne(4), 0x21, 0x00, 0x00, 0x54)
+        XCTAssertM1Op(.b_ne(-4), 0xe1, 0xff, 0xff, 0x54)
+    }
+    
     func testB_eq() throws {
         XCTAssertM1OpDesc(M1Op.b_eq(16), "b.eq #16")
         XCTAssertM1OpDesc(M1Op.b_eq(-4), "b.eq #-4")
