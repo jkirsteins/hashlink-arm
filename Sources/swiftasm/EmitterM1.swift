@@ -505,9 +505,18 @@ public class EmitterM1 {
         case .b_lt(let imm):
             //                           imm19                 cond
             let mask: Int64 = 0b01010100_0000000000000000000_0_1011
-            
-//            01010100001111111111111111101011 // bad
-//            01010100111111111111111111101011 // good
+            let imm16: Int64 = (imm.shiftedRight(2) /* div by 4 */) << 5
+            let encoded = mask | imm16
+            return returnAsArray(encoded)
+        case .b_eq(let imm):
+            //                           imm19                 cond
+            let mask: Int64 = 0b01010100_0000000000000000000_0_1011
+            let imm16: Int64 = (imm.shiftedRight(2) /* div by 4 */) << 5
+            let encoded = mask | imm16
+            return returnAsArray(encoded)
+        case .b_gt(let imm):
+            //                           imm19                 cond
+            let mask: Int64 = 0b01010100_0000000000000000000_0_1011
             let imm16: Int64 = (imm.shiftedRight(2) /* div by 4 */) << 5
             let encoded = mask | imm16
             return returnAsArray(encoded)
