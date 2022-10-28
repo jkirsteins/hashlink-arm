@@ -510,13 +510,13 @@ public class EmitterM1 {
             return returnAsArray(encoded)
         case .b_eq(let imm):
             //                           imm19                 cond
-            let mask: Int64 = 0b01010100_0000000000000000000_0_1011
+            let mask: Int64 = 0b01010100_0000000000000000000_0_0000
             let imm16: Int64 = (imm.shiftedRight(2) /* div by 4 */) << 5
             let encoded = mask | imm16
             return returnAsArray(encoded)
         case .b_gt(let imm):
             //                           imm19                 cond
-            let mask: Int64 = 0b01010100_0000000000000000000_0_1011
+            let mask: Int64 = 0b01010100_0000000000000000000_0_1100
             let imm16: Int64 = (imm.shiftedRight(2) /* div by 4 */) << 5
             let encoded = mask | imm16
             return returnAsArray(encoded)

@@ -42,6 +42,25 @@ final class EmitterM1Tests: XCTestCase {
     func testB_eq() throws {
         XCTAssertM1OpDesc(M1Op.b_eq(16), "b.eq #16")
         XCTAssertM1OpDesc(M1Op.b_eq(-4), "b.eq #-4")
+        
+        XCTAssertM1Op(.b_eq(16), 0x80, 0x00, 0x00, 0x54)
+        XCTAssertM1Op(.b_eq(-4), 0xe0, 0xff, 0xff, 0x54)
+        XCTAssertM1Op(.b_eq(-8), 0xc0, 0xff, 0xff, 0x54)
+        XCTAssertM1Op(.b_eq(-12), 0xa0, 0xff, 0xff, 0x54)
+        XCTAssertM1Op(.b_eq(-16), 0x80, 0xff, 0xff, 0x54)
+        XCTAssertM1Op(.b_eq(0), 0x00, 0x00, 0x00, 0x54)
+    }
+    
+    func testB_gt() throws {
+        XCTAssertM1OpDesc(M1Op.b_gt(16), "b.gt #16")
+        XCTAssertM1OpDesc(M1Op.b_gt(-4), "b.gt #-4")
+        
+        XCTAssertM1Op(.b_gt(16), 0x8c, 0x00, 0x00, 0x54)
+        XCTAssertM1Op(.b_gt(-4), 0xec, 0xff, 0xff, 0x54)
+        XCTAssertM1Op(.b_gt(-8), 0xcc, 0xff, 0xff, 0x54)
+        XCTAssertM1Op(.b_gt(-12), 0xac, 0xff, 0xff, 0x54)
+        XCTAssertM1Op(.b_gt(-16), 0x8c, 0xff, 0xff, 0x54)
+        XCTAssertM1Op(.b_gt(0), 0x0c, 0x00, 0x00, 0x54)
     }
     
     func testB_lt() throws {
