@@ -12,17 +12,17 @@ extension String {
 
 extension [UInt8] {
     var b16: String {
-        let c = String(i32, radix: 16).leftPadding(toLength: 8, withPad: "0")
+        let c = String(u32, radix: 16).leftPadding(toLength: 8, withPad: "0")
         return "0x\(c.chunked(into: 2))"
     }
     
     var b2: String {
-        let c = String(i32, radix: 2).leftPadding(toLength: 32, withPad: "0")
+        let c = String(u32, radix: 2).leftPadding(toLength: 32, withPad: "0")
         return "0b\(c.chunked(into: 4))"
     }
     
-    var i32: Int32 {
-        Int32(self[0]) | (Int32(self[1]) << 8) | (Int32(self[2]) << 16) | (Int32(self[3]) << 24)
+    var u32: UInt32 {
+        UInt32(self[0]) | (UInt32(self[1]) << 8) | (UInt32(self[2]) << 16) | (UInt32(self[3]) << 24)
     }
 }
 
@@ -39,6 +39,35 @@ extension XCTestCase {
 }
 
 final class EmitterM1Tests: XCTestCase {
+    
+    func testLsl_i() throws {
+        XCTAssertM1OpDesc(M1Op.lsl_i(X.x0, X.x1, 1), "lsl x0, x1, #1")
+        XCTAssertM1OpDesc(M1Op.lsl_i(X.x0, X.x1, 40), "lsl x0, x1, #40")
+        XCTAssertM1OpDesc(M1Op.lsl_i(X.x0, X.x1, 63), "lsl x0, x1, #63")
+        XCTAssertM1OpDesc(M1Op.lsl_i(W.w0, W.w1, 31), "lsl w0, w1, #31")
+        
+        XCTAssertM1Op(M1Op.lsl_i(X.x0, X.x1, 1), 0x20, 0xf8, 0x7f, 0xd3)
+        XCTAssertM1Op(M1Op.lsl_i(X.x0, X.x1, 40), 0x20, 0x5c, 0x58, 0xd3)
+        XCTAssertM1Op(M1Op.lsl_i(X.x0, X.x1, 63), 0x20, 0x00, 0x41, 0xd3)
+        XCTAssertM1Op(M1Op.lsl_i(W.w0, W.w1, 31), 0x20, 0x00, 0x01, 0x53)
+    }
+    
+    func testLsl_r() throws {
+        XCTAssertM1OpDesc(M1Op.lsl_r(X.x0, X.x1, X.x2), "lsl x0, x1, x2")
+        XCTAssertM1OpDesc(M1Op.lsl_r(W.w1, W.w2, W.w3), "lsl w1, w2, w3")
+        
+        XCTAssertM1Op(M1Op.lsl_r(X.x0, X.x1, X.x2), 0x20, 0x20, 0xc2, 0x9a)
+        XCTAssertM1Op(M1Op.lsl_r(W.w1, W.w2, W.w3), 0x41, 0x20, 0xc3, 0x1a)
+    }
+    
+    func testUbfm() throws {
+        XCTAssertM1OpDesc(M1Op.ubfm(X.x0, X.x2, 3, 1), "ubfx x0, x2, #3, #1")
+        XCTAssertM1OpDesc(M1Op.ubfm(W.w0, W.w2, 3, 1), "ubfx w0, w2, #3, #1")
+        
+        // TODO
+//        XCTAssertM1Op(M1Op.ubfm(X.x0, X.x2, 3, 1), 0x40, 0x0c, 0x43, 0xd3)
+//        XCTAssertM1Op(M1Op.ubfm(W.w0, W.w2, 3, 1), 0x40, 0x0c, 0x03, 0x53)
+    }
     
     func testB_ne() throws {
         XCTAssertM1OpDesc(M1Op.b_ne(4), "b.ne #4")

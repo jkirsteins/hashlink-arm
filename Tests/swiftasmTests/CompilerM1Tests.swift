@@ -435,6 +435,96 @@ final class CompilerM1Tests: XCTestCase {
         // HL called Swift func. Swift func returned 145. HL returned the result it received.
         XCTAssertEqual(246, res)
     }
+    
+    func testCompile__OShl() throws {
+        // Prepare function we'll call from JIT
+        let f = prepareFunction(
+            retType: .i32,
+            findex: 0,
+            regs: [.i32, .i32, .i32],
+            args: [.i32, .i32],
+            ops: [
+                .OShl(dst: 2, a: 0, b: 1),
+                .ORet(ret: 2),
+            ]
+        )
+
+        // Misc. JIT stuff
+        let storage = ModuleStorage(
+            functions: [f]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        // Compile HL function with function index 0 (from the whole functions table)
+        let sut = sut()
+        try sut.compile(findex: 0, into: mem)
+        
+        mem.hexPrint()
+        
+        typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(4, entrypoint(1, 2))
+        XCTAssertEqual(20480, entrypoint(5, 12))
+        XCTAssertEqual(Int32(bitPattern: UInt32(2147483648)), entrypoint(1, 31))
+        // overflow returns 0
+        XCTAssertEqual(0, entrypoint(1, 32))
+    }
+    
+    func testCompile__OCall2() throws {
+        // Prepare function we'll call from JIT
+        typealias _JitFunc = (@convention(c) (UInt16, Int32) -> Int32)
+        let swiftFunc: _JitFunc = { (_ a: UInt16, _ b: Int32) in
+            return Int32(Int16(bitPattern: a)) + b
+        }
+        let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
+        
+        let f = prepareFunction(
+            retType: .i32,
+            findex: 0,
+            regs: [.u16, .i32],
+            args: [.u16],
+            ops: [
+                .OCall2(dst: 1, fun: 1, arg0: 0, arg1: 1),
+                .ORet(ret: 1),
+            ]
+        )
+
+        // Misc. JIT stuff
+        let storage = ModuleStorage(
+            functions: [f],
+            natives: [
+                HLNative(
+                    lib: Resolvable("builtin"),
+                    name: Resolvable("swiftFunc"),
+                    type: Resolvable(
+                        .fun(
+                            HLTypeFun(
+                                args: Resolvable.array([.u16, .i32]),
+                                ret: Resolvable(.i32)
+                            )
+                        )
+                    ),
+                    findex: 1,
+                    memory: swiftFuncPtr
+                )
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        // Compile HL function with function index 0 (from the whole functions table)
+        let sut = sut()
+        try sut.compile(findex: 0, into: mem)
+        // Print debug output of the generated Aarch64 bytecode
+        mem.hexPrint()
+        // Now place the compiled bytecode in executable memory and get a pointer to it in
+        // form of function (JitInt64 means (void)->Int64)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        let res: Int32 = entrypoint(100, 156)
+
+        // HL called Swift func. Swift func returned 145. HL returned the result it received.
+        XCTAssertEqual(256, res)
+    }
 
     func testCompile_callAndReturn_callNative() throws {
         // Prepare function we'll call from JIT

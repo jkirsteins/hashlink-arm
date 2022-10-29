@@ -512,8 +512,26 @@ class M1Compiler {
                     M1Op.blr(.x10),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
-            // fatalError("Jumping to \(fn) for funIx \(fun)")
-            // fatalError("OCall0")
+            case .OCall2(let dst, let fun, let arg0, let arg1):
+                let callTarget = ctx.callTargets.get(fun)
+                
+                assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
+                assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
+                assert(reg: arg1, from: regKinds, matchesCallArg: 1, inFun: callTarget)
+                
+                let fnAddr = callTarget.entrypoint
+                let regStackOffset = getRegStackOffset(regKinds, dst)
+                let arg0StackOffset = getRegStackOffset(regKinds, arg0)
+                let arg1StackOffset = getRegStackOffset(regKinds, arg1)
+                
+                mem.append(
+                    PseudoOp.debugMarker("Call2 fn@\(fun)(\(arg0), \(arg1)) -> \(dst)"),
+                    M1Op.ldr(X.x0, .reg64offset(X.sp, arg0StackOffset, nil)),
+                    M1Op.ldr(X.x1, .reg64offset(X.sp, arg1StackOffset, nil)),
+                    PseudoOp.mov(.x10, fnAddr),
+                    M1Op.blr(.x10),
+                    M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
+                )
             case .ONew(let dst):
                 appendDebugPrintAligned4("Entering ONew", builder: mem)
                 // LOOK AT: https://github.com/HaxeFoundation/hashlink/blob/284301f11ea23d635271a6ecc604fa5cd902553c/src/jit.c#L3263
@@ -740,7 +758,12 @@ class M1Compiler {
                 let dstOffset = getRegStackOffset(regKinds, dst)
                 let aOffset = getRegStackOffset(regKinds, a)
                 let bOffset = getRegStackOffset(regKinds, b)
-                fatalError("Shl not implemented")
+                mem.append(
+                    M1Op.ldr(X.x0, .reg64offset(.sp, aOffset, nil)),
+                    M1Op.ldr(X.x1, .reg64offset(.sp, bOffset, nil)),
+                    M1Op.lsl_r(X.x2, X.x0, X.x1),
+                    M1Op.str(X.x2, .reg64offset(.sp, dstOffset, nil))
+                )
             default: fatalError("Can't compile \(op.debugDescription)")
             }
         }

@@ -7,6 +7,10 @@ public protocol Register: CustomDebugStringConvertible {
     var is32: Bool { get }
 }
 
+extension Register {
+    var is64: Bool { !is32 }
+}
+
 typealias X = Register64 
 typealias W = Register32
 
@@ -178,6 +182,10 @@ public class EmitterM1 {
 
     static func encodeReg(_ reg: any Register, shift: Int64) -> Int64 {
         (Int64(0b11111) & Int64(reg.rawValue)) << shift
+    }
+    
+    static func sizeMask(is64: Bool, offset: Int = 31) -> Int64 {
+        (is64 ? 1 : 0) << offset
     }
 
     static func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throws
@@ -537,6 +545,47 @@ public class EmitterM1 {
             let mask: Int64 = 0b01010100_0000000000000000000_0_1101
             let imm16: Int64 = (imm.shiftedRight(2) /* div by 4 */) << 5
             let encoded = mask | imm16
+            return returnAsArray(encoded)
+        case .ubfm(let Rd, let Rn, let immr, let imms):
+            guard Rd.is32 == Rn.is32 else { fatalError("Registers must have the same size") }
+            let N: Int64
+            if Rd.is32 {
+                guard immr.immediate > 0 && immr.immediate < 32 else {
+                    fatalError("immediate must be an integer in range [0, 31]")
+                }
+                N = 0 << 22
+                
+                guard imms.immediate != 0b011111 else {
+                    fatalError("imms can not be 011111 in 32-bit mode")
+                }
+            }
+            else if Rd.is64 {
+                guard immr.immediate > 0 && immr.immediate < 64 else {
+                    fatalError("immediate must be an integer in range [0, 63]")
+                }
+                N = 1 << 22
+                
+                guard imms.immediate != 0b111111 else {
+                    fatalError("imms can not be 111111 in 64-bit mode")
+                }
+            } else {
+                fatalError("Registers must be either 32 bit or 64 bit")
+            }
+            //                  S          N immr   imms   Rn    Rd
+            let mask: Int64 = 0b0_10100110_0_000000_000000_00000_00000
+            let size: Int64 = (Rd.is32 ? 0 : 1) << 31
+            let encodedRd = encodeReg(Rd, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let encoded = size | mask | N | immr.shiftedLeft(16) | imms.shiftedLeft(10) | encodedRd | encodedRn
+            return returnAsArray(encoded)
+        case .lslv(let Rd, let Rn, let Rm):
+            //                  S            Rm           Rn    Rd
+            let mask: Int64 = 0b0_0011010110_00000_001000_00000_00000
+            let encodedRd = encodeReg(Rd, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let encodedRm = encodeReg(Rm, shift: 16)
+            let size = sizeMask(is64: Rd.is64)
+            let encoded = mask | encodedRd | encodedRn | encodedRm | size
             return returnAsArray(encoded)
         default: throw EmitterM1Error.unsupportedOp
         }
