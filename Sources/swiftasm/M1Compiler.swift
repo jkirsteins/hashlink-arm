@@ -20,7 +20,7 @@ extension M1Compiler {
         guard val % 16 != 0 else { return val }
         return (val + (16 &- 1)) & (0 &- 16)
     }
-
+    
     /// Stack space should be allocated for first 8 function args (will be filled from registers) and
     /// any register, which is not part of args.
     /// - Parameters:
@@ -28,7 +28,7 @@ extension M1Compiler {
     ///   - args:
     /// - Returns:
     func calcStackArgReq(regs unfilteredRegs: HLTypeKinds, args unfilteredArgs: HLTypeKinds)
-        -> (Int16, HLTypeKinds)
+    -> (Int16, HLTypeKinds)
     {
         let regs = unfilteredRegs.filter { $0 != .void }
         let args = unfilteredArgs.filter { $0 != .void }
@@ -45,12 +45,12 @@ extension M1Compiler {
         let result = stackArgs.reduce(0) { $0 + Int16($1.hlRegSize) }
         return (roundUpStackReservation(result), stackArgs)
     }
-
+    
     /*
-    First 7 args are in registers [x0;x7]. Others are on the stack.
-    Stack should be extended to account for data which is in registers.
-    Subsequently data should be moved from regs to stack, to enable use of all registers.
-*/
+     First 7 args are in registers [x0;x7]. Others are on the stack.
+     Stack should be extended to account for data which is in registers.
+     Subsequently data should be moved from regs to stack, to enable use of all registers.
+     */
     @discardableResult func appendStackInit(
         _ unfilteredRegs: HLTypeKinds,
         args unfilteredArgs: HLTypeKinds,
@@ -66,24 +66,24 @@ extension M1Compiler {
                 "Up to first \(ARG_REGISTER_COUNT) registers must be the same for a function and its type.args"
             )
         }
-
+        
         // filter after testing for mismatched
         let regs = unfilteredRegs.filter { $0 != .void }
         let args = unfilteredArgs.filter { $0 != .void }
         // only the first args need stack space, because we want to move them from the registers
         // into stack
         let (neededExtraStackSize, stackArgs) = calcStackArgReq(regs: regs, args: args)
-
+        
         guard neededExtraStackSize > 0 else {
             builder.append(PseudoOp.debugMarker("No extra stack space needed"))
             return neededExtraStackSize
         }
-
+        
         builder.append(
             PseudoOp.debugMarker("Reserving \(neededExtraStackSize) bytes for stack"),
             M1Op.sub(X.sp, X.sp, try .i(neededExtraStackSize))
         )
-
+        
         var offset: ByteCount = 0
         for (ix, reg) in stackArgs.enumerated() {
             builder.append(
@@ -91,29 +91,29 @@ extension M1Compiler {
                     "Moving \(Register64(rawValue: UInt8(ix))!) to \(offset)"
                 )
             )
-                switch(reg.hlRegSize) {
-                case 4:
-                    builder.append(
+            switch(reg.hlRegSize) {
+            case 4:
+                builder.append(
                     M1Op.str(
                         Register32(rawValue: UInt8(ix))!,
                         .reg64offset(Register64.sp, offset, nil)
                     ))
-                case 8:
-                    builder.append(M1Op.str(
-                        Register64(rawValue: UInt8(ix))!,
-                        .reg64offset(Register64.sp, offset, nil)
-                    ))
-                default:
-                    fatalError("wip")
-                }
+            case 8:
+                builder.append(M1Op.str(
+                    Register64(rawValue: UInt8(ix))!,
+                    .reg64offset(Register64.sp, offset, nil)
+                ))
+            default:
+                fatalError("wip")
+            }
             
             print("Inc offset by \(reg.hlRegSize) from \(reg)")
             offset += reg.hlRegSize
         }
-
+        
         return neededExtraStackSize
     }
-
+    
     func appendDebugPrintRegisterAligned4(_ reg: Register64, builder: OpBuilder) {
         guard let printfAddr = dlsym(dlopen(nil, RTLD_LAZY), "printf") else {
             fatalError("No printf addr")
@@ -153,7 +153,7 @@ extension M1Compiler {
         builder.append(.b(jmpTarget))
         adr.stop(at: builder.byteSize)
         builder.append(ascii: str).align(4)
-
+        
         jmpTarget.stop(at: builder.byteSize)
     }
     
@@ -172,7 +172,7 @@ extension M1Compiler {
             .str(Register64.x1, .reg64offset(.sp, 8, nil)),
             .str(Register64.x2, .reg64offset(.sp, 16, nil)),
             .str(Register64.x16, .reg64offset(.sp, 24, nil)),
-
+            
             // unix write system call
             .movz64(.x0, 1, nil)
         )
@@ -192,10 +192,10 @@ extension M1Compiler {
         builder.append(.b(jmpTarget))
         adr.stop(at: builder.byteSize)
         builder.append(ascii: str).align(4)
-
+        
         jmpTarget.stop(at: builder.byteSize)
     }
-
+    
     func appendSystemExit(_ code: UInt8, builder: OpBuilder) {
         builder.append(
             .movz64(.x0, UInt16(code), nil),
@@ -203,7 +203,7 @@ extension M1Compiler {
             .svc(0x80)
         )
     }
-
+    
     func appendPrologue(builder: OpBuilder) {
         builder.append(
             PseudoOp.debugMarker("Starting prologue"),
@@ -211,7 +211,7 @@ extension M1Compiler {
             M1Op.movr64(.x29_fp, .sp)
         )
     }
-
+    
     func appendEpilogue(builder: OpBuilder) {
         builder.append(
             PseudoOp.debugMarker("Starting epilogue"),
@@ -224,10 +224,10 @@ typealias Registers = [Resolvable<HLType>]
 
 class M1Compiler {
     /*
-    stp    x29, x30, [sp, #-16]!
-    mov    x29, sp
-    */let emitter = EmitterM1()
-
+     stp    x29, x30, [sp, #-16]!
+     mov    x29, sp
+     */let emitter = EmitterM1()
+    
     let stripDebugMessages: Bool
     
     func assertEnoughRegisters(_ ix: Reg, regs: Registers) {
@@ -248,7 +248,7 @@ class M1Compiler {
     
     func requireFieldOffset(fieldRef: Int, objIx: Reg, regs: Registers) -> Int64 {
         let mem = requireTypeMemory(reg: objIx, regs: regs)
-  
+        
         switch(mem.pointee.kind) {
         case .obj:
             fallthrough
@@ -271,7 +271,7 @@ class M1Compiler {
         guard let mem = regs[Int(reg)].memory else {
             fatalError("requireTypeAddress(reg:from:): Register \(reg) has no type address available.")
         }
-
+        
         return mem
     }
     
@@ -279,16 +279,16 @@ class M1Compiler {
         guard reg < resolvedRegs.count else {
             fatalError("requireType(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(resolvedRegs)")
         }
-
+        
         return resolvedRegs[Int(reg)]
     }
-
+    
     func assertKind(_ op: HLOpCode, _ actual: HLTypeKind, _ expected: HLTypeKind) {
         guard expected == actual else {
             fatalError("\(op): type kind must be \(expected) but got \(actual)")
         }
     }
-
+    
     func assert(reg: Reg, from: HLTypeKinds, matchesCallArg argReg: Reg, inFun callable: any Callable) {
         guard from.count > reg else {
             fatalError(
@@ -306,7 +306,7 @@ class M1Compiler {
             )
         }
     }
-
+    
     func assert(reg: Reg, from: HLTypeKinds, matches type: HLType) {
         guard from.count > reg else {
             fatalError(
@@ -332,17 +332,17 @@ class M1Compiler {
             )
         }
     }
-
+    
     init(stripDebugMessages: Bool = false) {
         self.stripDebugMessages = stripDebugMessages
     }
-
+    
     func getRegStackOffset(_ regs: HLTypeKinds, _ ix: Reg) -> ByteCount {
         var result = ByteCount(0)
         for i in 0..<ix { result += regs[Int(i)].hlRegSize }
         return result
     }
-
+    
     func getFieldOffset(_ obj: HLType, _ field: Int) -> ByteCount {
         guard let objData = obj.objData else {
             fatalError("Field offset only supports .obj and .struct (got \(obj))")
@@ -354,16 +354,16 @@ class M1Compiler {
         }
         return startOffset
     }
-
+    
     func push(to buffer: ByteBuffer, _ ops: M1Op...) throws {
         for op in ops { buffer.push(try emitter.emit(for: op)) }
     }
-
+    
     /// Will compile and update the JIT context with the functions addresses.
     /// - Parameters:
-    ///   - findex: 
-    ///   - mem: 
-    /// - Returns: 
+    ///   - findex:
+    ///   - mem:
+    /// - Returns:
     func compile(findex: Int32, into mem: OpBuilder) throws
     {
         let ctx = mem.ctx
@@ -386,7 +386,7 @@ class M1Compiler {
     func compile(compilable: Compilable, into mem: OpBuilder) throws
     {
         let ctx = mem.ctx
-
+        
         // grab it before it changes from prologue
         // let memory = mem.getDeferredPosition()
         let regs = compilable.regs
@@ -396,16 +396,16 @@ class M1Compiler {
         
         let relativeBaseAddr = mem.getDeferredPosition()
         compilable.entrypoint.update(from: relativeBaseAddr)
-
+        
         // if we need to return early, we jump to these
         var retTargets: [RelativeDeferredOffset] = []
         
         print("Compiling function \(findex) at deferred address \(compilable.entrypoint)")
         print("REGS: \n--" + regs.map { String(reflecting: $0) }.joined(separator: "\n--"))
-//        print("OPS: \n--" + funPtr.pointee.ops.map { String(reflecting: $0) }.joined(separator: "\n--"))
-
+        //        print("OPS: \n--" + funPtr.pointee.ops.map { String(reflecting: $0) }.joined(separator: "\n--"))
+        
         let argKinds = compilable.args.map { $0.value.kind }
-
+        
         mem.append(PseudoOp.debugMarker("==> STARTING FUNCTION \(findex)"))
         appendPrologue(builder: mem)
         let reservedStackBytes = try appendStackInit(
@@ -413,7 +413,7 @@ class M1Compiler {
             args: argKinds,
             builder: mem
         )
-
+        
         appendDebugPrintAligned4(
             "Entering function \(findex)@\(relativeBaseAddr.offsetFromBase)",
             builder: mem
@@ -446,7 +446,7 @@ class M1Compiler {
                 )
                 
                 mem.append(PseudoOp.debugPrint(self, "Jumping to epilogue"))
-
+                
                 // jmp to end (NOTE: DO NOT ADD ANYTHING BETWEEN .start() and mem.append()
                 var retTarget = RelativeDeferredOffset()
                 print("Starting retTarget at \(mem.byteSize)")
@@ -454,7 +454,7 @@ class M1Compiler {
                 retTargets.append(retTarget)
                 mem.append(M1Op.b(retTarget)
                 )
-
+                
             case .OCall0(let dst, let funRef):
                 let fn = ctx.callTargets.get(funRef)
                 
@@ -463,9 +463,9 @@ class M1Compiler {
                     from: regKinds,
                     matches: fn.ret.value
                 )
-            
+                
                 let regStackOffset = getRegStackOffset(regKinds, dst)
-
+                
                 mem.append(
                     PseudoOp.debugMarker("Call0 fn@\(funRef) -> \(dst)"),
                     PseudoOp.mov(.x10, fn.entrypoint),
@@ -496,13 +496,13 @@ class M1Compiler {
                 assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
                 assert(reg: arg1, from: regKinds, matchesCallArg: 1, inFun: callTarget)
                 assert(reg: arg2, from: regKinds, matchesCallArg: 2, inFun: callTarget)
-
+                
                 let fnAddr = callTarget.entrypoint
                 let regStackOffset = getRegStackOffset(regKinds, dst)
                 let arg0StackOffset = getRegStackOffset(regKinds, arg0)
                 let arg1StackOffset = getRegStackOffset(regKinds, arg1)
                 let arg2StackOffset = getRegStackOffset(regKinds, arg2)
-
+                
                 mem.append(
                     PseudoOp.debugMarker("Call3 fn@\(fun)(\(arg0), \(arg1), \(arg2)) -> \(dst)"),
                     M1Op.ldr(X.x0, .reg64offset(X.sp, arg0StackOffset, nil)),
@@ -545,7 +545,7 @@ class M1Compiler {
                 
                 switch(typeToAllocate) {
                 case .struct:
-                fallthrough
+                    fallthrough
                 case .obj:
                     mem.append(
                         PseudoOp.debugMarker("Using hl_alloc_obj to allocate reg \(dst))")
@@ -563,7 +563,7 @@ class M1Compiler {
                     )
                     allocFunc_jumpTarget = unsafeBitCast(LibHl._hl_alloc_virtual, to: UnsafeRawPointer.self)
                 default:
-                fatalError("ONew not implemented for \(typeToAllocate)")
+                    fatalError("ONew not implemented for \(typeToAllocate)")
                 }
                 
                 if needX0 {
@@ -575,7 +575,7 @@ class M1Compiler {
                 } else {
                     mem.append(
                         PseudoOp.debugMarker("Not moving reg \(dst) in x0 b/c alloc func doesn't need it")
-                        )
+                    )
                 }
                 
                 let dstOffset = getRegStackOffset(regKinds, dst)
@@ -604,21 +604,21 @@ class M1Compiler {
                 
                 guard fieldRef < objData.fields.count else {
                     fatalError("OGetThis: expected field \(fieldRef) to exist but got \(objData.fields)")
-                } 
+                }
                 let sourceObjectFieldType = objData.fields[fieldRef]
                 
                 assert(reg: regDst, from: regKinds, is: sourceObjectFieldType.value.type.value.kind)
-
+                
                 let objOffset = getRegStackOffset(regKinds, 0)
                 let dstOffset = getRegStackOffset(regKinds, regDst)
                 let fieldOffset = getFieldOffset(sourceObjectType.value, fieldRef)
-
+                
                 /* We should:
-                - load x0 from reg0
-                - access (x0 + 8) + fieldN (accounting for N-1 field sizes)
-                - move to regN
-                */
-
+                 - load x0 from reg0
+                 - access (x0 + 8) + fieldN (accounting for N-1 field sizes)
+                 - move to regN
+                 */
+                
                 mem.append(
                     PseudoOp.debugMarker("Loading x0 from SP + \(objOffset) (offset for reg0)"),
                     M1Op.ldr(X.x0, .reg64offset(X.sp, objOffset, nil)),     // point x0 to reg0 (i.e. obj)
@@ -642,12 +642,12 @@ class M1Compiler {
             case .OSetField(let objReg, let fieldRef, let srcReg):
                 appendDebugPrintAligned4("Entering OSetField", builder: mem)
                 let objRegKind = requireTypeKind(reg: objReg, from: regKinds)
-
+                
                 /**
                  field indexes are fetched from runtime_object,
                  and match what you might expect. E.g. for String:
                  
-                    Example offsets for 0) bytes, 1) i32
+                 Example offsets for 0) bytes, 1) i32
                  
                  (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.pointee
                  (Int32?) $R0 = 8   // <----- first is 8 offset, on account of hl_type* at the top
@@ -655,10 +655,10 @@ class M1Compiler {
                  (Int32?) $R1 = 16 // <----- second is 8 more offset, cause bytes is a pointer
                  (lldb)
                  
-                    NOTE: keep alignment in mind. E.g. 0) int32 and 1) f64 will have 8 and 16 offsets respectively.
-                        But 0) int32, 1) u8, 2) u8, 3) u16, 4) f64 will have 8, 12, 13, 14, 16 offsets respectively.
+                 NOTE: keep alignment in mind. E.g. 0) int32 and 1) f64 will have 8 and 16 offsets respectively.
+                 But 0) int32, 1) u8, 2) u8, 3) u16, 4) f64 will have 8, 12, 13, 14, 16 offsets respectively.
                  
-                    See below:
+                 See below:
                  
                  (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 0).pointee
                  (Int32?) $R0 = 8
@@ -688,12 +688,12 @@ class M1Compiler {
                         M1Op.str(X.x0, .reg64offset(.x1, fieldOffset, nil))
                     )
                     // nop
-//                        {
-//                            hl_runtime_obj *rt = hl_get_obj_rt(dst->t);
-//                            preg *rr = alloc_cpu(ctx, dst, true);
-//                            copy_from(ctx, pmem(&p, (CpuReg)rr->id, rt->fields_indexes[o->p2]), rb);
-//                        }
-//                        break;
+                    //                        {
+                    //                            hl_runtime_obj *rt = hl_get_obj_rt(dst->t);
+                    //                            preg *rr = alloc_cpu(ctx, dst, true);
+                    //                            copy_from(ctx, pmem(&p, (CpuReg)rr->id, rt->fields_indexes[o->p2]), rb);
+                    //                        }
+                    //                        break;
                 default:
                     fatalError("OSetField not implemented for \(objRegKind)")
                 }
@@ -717,7 +717,7 @@ class M1Compiler {
                     PseudoOp.debugMarker("OJULt \(a)@\(regOffsetA) < \(b)@\(regOffsetB) --> \(offset) (target instruction: \(targetInstructionIx))"),
                     M1Op.ldr(sizeA == 4 ? W.w0 : X.x0, .reg64offset(.sp, regOffsetA, nil)),
                     M1Op.ldr(sizeB == 4 ? W.w1 : X.x1, .reg64offset(.sp, regOffsetB, nil))
-                    )
+                )
                 
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendDebugPrintRegisterAligned4(X.x1, builder: mem)
@@ -778,23 +778,35 @@ class M1Compiler {
                 let byteOffset = getRegStackOffset(regKinds, bytes)
                 let indexOffset = getRegStackOffset(regKinds, index)
                 
-//                mem.append(
-//                    // Load byte address (base) in X.x0
-//                    M1Op.ldr(X.x0, .reg64offset(.sp, byteOffset, nil)),
-//                )
+                mem.append(
+                    // Load byte address (base) in X.x0
+                    M1Op.ldr(X.x0, .reg64offset(.sp, byteOffset, nil)),
+                    // Load index into X.x1
+                    M1Op.ldr(X.x1, .reg64offset(.sp, indexOffset, nil))
+                )
                 
+                if op.id == .OGetI8 {
+                    mem.append(
+                        M1Op.ldrb(W.w0, .reg64(X.x0, .r64shift(X.x1, .lsl(0))))
+                    )
+                } else if op.id == .OGetI16 {
+                    fatalError("wip")
+                    mem.append(
+//                        M1Op.ldrb(W.w0, .reg64(X.x0, .r64shift(X.x1, .lsl(0))))
+                    )
+                }
                 
                 fatalError("wip")
             default: fatalError("Can't compile \(op.debugDescription)")
             }
         }
-
+        
         // initialize targets for 'ret' jumps
         for var retTarget in retTargets {
             print("Stopping retTarget at \(mem.byteSize)")
             retTarget.stop(at: mem.byteSize)
         }
-
+        
         if reservedStackBytes > 0 {
             mem.append(
                 PseudoOp.debugMarker("Free \(reservedStackBytes) bytes"),
@@ -808,7 +820,7 @@ class M1Compiler {
                 )
             )
         }
-
+        
         appendEpilogue(builder: mem)
         mem.append(.ret)
     }

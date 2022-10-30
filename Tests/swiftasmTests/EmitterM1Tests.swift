@@ -28,6 +28,9 @@ extension [UInt8] {
 
 extension XCTestCase {
     func XCTAssertM1OpDesc(_ op: M1Op, _ dd: String) {
+        if op.debugDescription != dd {
+            print("\(op) description: \n  expected: \(dd)\n  actual:   \(op.debugDescription)")
+        }
         XCTAssertEqual(dd, op.debugDescription)
     }
     func XCTAssertM1OpBytes(_ op: M1Op, _ expected: UInt8...) {
@@ -48,20 +51,88 @@ extension XCTestCase {
 }
 
 final class EmitterM1Tests: XCTestCase {
+    func testLdrh() throws {
+        
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .reg64(X.sp, .r32ext(.w1, .uxtw(0)))),
+            "ldrh w0, [sp, w1, uxtw #0]",
+            0xe0, 0x4b, 0x61, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .reg64(X.sp, .r32ext(.w1, .uxtw(1)))),
+            "ldrh w0, [sp, w1, uxtw #1]",
+            0xe0, 0x5b, 0x61, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .reg64(X.sp, .r32ext(.w1, .sxtw(0)))),
+            "ldrh w0, [sp, w1, sxtw #0]",
+            0xe0, 0xcb, 0x61, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .reg64(X.sp, .r32ext(.w1, .sxtw(1)))),
+            "ldrh w0, [sp, w1, sxtw #1]",
+            0xe0, 0xdb, 0x61, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .reg64(X.sp, .r64ext(.x1, .sxtx(0)))),
+            "ldrh w0, [sp, x1, sxtx #0]",
+            0xe0, 0xeb, 0x61, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .reg64(X.sp, .r64ext(.x1, .sxtx(1)))),
+            "ldrh w0, [sp, x1, sxtx #1]",
+            0xe0, 0xfb, 0x61, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .reg64(X.sp, .r64shift(.x1, .lsl(0)))),
+            "ldrh w0, [sp, x1]",
+            0xe0, 0x6b, 0x61, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .reg64(X.sp, .r64shift(.x1, .lsl(1)))),
+            "ldrh w0, [sp, x1, lsl #1]",
+            0xe0, 0x7b, 0x61, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w1, .reg64(X.sp, nil)),
+            "ldrh w1, [sp]",
+            0xe1, 0x03, 0x40, 0x79
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w2, .reg64(X.x1, nil)),
+            "ldrh w2, [x1]",
+            0x22, 0x00, 0x40, 0x79
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .imm64(X.sp, 24, .post)),
+            "ldrh w0, [sp], #24",
+            0xe0, 0x87, 0x41, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .imm64(X.sp, 24, nil)),
+            "ldrh w0, [sp, #24]",
+            0xe0, 0x33, 0x40, 0x79
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .imm64(X.sp, 24, .pre)),
+            "ldrh w0, [sp, #24]!",
+            0xe0, 0x8f, 0x41, 0x78
+        )
+    }
     
     func testLdrb() throws {
         XCTAssertM1Op(
-            M1Op.ldrb(.w0, .reg64(X.sp, .r32ext(.w1, .uxtw(nil)))),
+            M1Op.ldrb(.w0, .reg64(X.sp, .r32ext(.w1, .uxtw(0)))),
             "ldrb w0, [sp, w1, uxtw #0]",
             0xe0, 0x5b, 0x61, 0x38
         )
         XCTAssertM1Op(
-            M1Op.ldrb(.w0, .reg64(X.sp, .r64ext(.x1, .sxtx(nil)))),
+            M1Op.ldrb(.w0, .reg64(X.sp, .r64ext(.x1, .sxtx(0)))),
             "ldrb w0, [sp, x1, sxtx #0]",
             0xe0, 0xfb, 0x61, 0x38
         )
         XCTAssertM1Op(
-            M1Op.ldrb(.w0, .reg64(X.sp, .r64shift(.x1, ._0))),
+            M1Op.ldrb(.w0, .reg64(X.sp, .r64shift(.x1, .lsl(0)))),
             "ldrb w0, [sp, x1]",
             0xe0, 0x6b, 0x61, 0x38
         )

@@ -36,36 +36,47 @@ public enum Shift64: Int, CustomDebugStringConvertible {
     }
 }
 
+typealias ShiftAmount = UInt8
+
 enum ExtendOp32 : CustomDebugStringConvertible {
-    case sxtw(Register32.Shift?)  // ExtendSigned32To64
-    case uxtw(Register32.Shift?)  // ExtendUnsigned32To64
+    case sxtw(ShiftAmount)  // ExtendSigned32To64
+    case uxtw(ShiftAmount)  // ExtendUnsigned32To64
     
     var debugDescription: String {
         switch(self) {
         case .sxtw(let shift):
-            return "sxtw #\(shift ?? ._0)"
+            return "sxtw #\(shift)"
         case .uxtw(let shift):
-            return "uxtw #\(shift ?? ._0)"
+            return "uxtw #\(shift)"
         }
     }
 }
 
 enum ExtendOp64 : CustomDebugStringConvertible {
-    case sxtx(Register64.Shift?)  // ExtendSigned32To64
+    case sxtx(ShiftAmount)  // ExtendSigned64To64
     
     var debugDescription: String {
         switch(self) {
         case .sxtx(let shift):
-            return "sxtx #\(shift ?? ._0)"
+            return "sxtx #\(shift)"
         }
     }
 }
 
-public enum Shift64_Real {
+public enum Shift64_Real : CustomDebugStringConvertible {
     case lsl(Int) 
     case lsr(Int) 
     case asr(Int) 
     case ror(Int)
+    
+    public var debugDescription: String {
+        switch(self) {
+        case .lsl(let v): return "lsl #\(v)"
+        case .lsr(let v): return "lsr #\(v)"
+        case .asr(let v): return "asr #\(v)"
+        case .ror(let v): return "ror #\(v)"
+        }
+    }
 }
 
 
@@ -186,14 +197,29 @@ enum LdrMode {
 enum RegModifier {
     case r64ext(Register64, Register64.ExtendOp)
     case r32ext(Register32, Register32.ExtendOp)
-    case r64shift(Register64, Register64.Shift)
+    case r64shift(Register64, Shift64_Real)
     case imm(Int64, IndexingMode?)
 }
 
 // TODO: this should be more accurately named M1Address or something like that (to signify
 // it represents where source data comes from, which is not necessarily an offset)
 
-enum Offset {
+fileprivate func getIxModeDebugDesc(_ r: any Register, _ immVal: Int64, _ ix: IndexingMode?) -> String {
+    switch(ix) {
+    case .post:
+        return "[\(r)], #\(immVal)"
+    case .pre:
+        return "[\(r), #\(immVal)]!"
+    case nil:
+        if immVal == 0 {
+            return "[\(r)]"
+        } else {
+            return "[\(r), #\(immVal)]"
+        }
+    }
+}
+
+enum Offset : CustomDebugStringConvertible {
 
     // Register base + immediate offset
     case imm64(/*Xn|SP*/Register64, Int64, IndexingMode?)
@@ -207,6 +233,38 @@ enum Offset {
     case reg32shift(Register32, Register32.Shift?)
     case reg64shift(Register64, Register64.Shift?)
     case reg32(Register32, Register32.ExtendOp, IndexingMode?)
+    
+    var debugDescription: String {
+        switch(self) {
+        
+        case .imm64(let Rt, let immVal, let ixMode):
+            return getIxModeDebugDesc(Rt, immVal, ixMode)
+        case .reg64(let Rt, .r64shift(let Rn, .lsl(0))):
+            return "[\(Rt), \(Rn)]"
+        case .reg64(let Rt, .r64shift(let Rn, let shift)):
+            return "[\(Rt), \(Rn), \(shift)]"
+        case .reg64(let Rt, nil):
+            return "[\(Rt)]"
+        case .reg64(let Rt, .r64ext(let Rn as any Register, let ext as CustomDebugStringConvertible)):
+            fallthrough
+        case .reg64(let Rt, .r32ext(let Rn as any Register, let ext as CustomDebugStringConvertible)):
+            return "[\(Rt), \(Rn), \(ext)]"
+        case .reg64(let Rt, .imm(let immVal, let ixMode)):
+            return getIxModeDebugDesc(Rt, immVal, ixMode)
+            
+        // DEPRECATED
+        case .immediate(_):
+            return "imm DEPRECATED"
+        case .reg64offset(_, _, _):
+            return "reg64offset DEPRECATED"
+        case .reg32shift(_, _):
+            return "reg32shift DEPRECATED"
+        case .reg64shift(_, _):
+            return "reg64shift DEPRECATED"
+        case .reg32(_, _, _):
+            return "reg32 DEPRECATED"
+        }
+    }
 }
 
 public enum EmitterM1Error: Error, Equatable {
@@ -670,7 +728,7 @@ public class EmitterM1 {
             case .r64ext(let _Rm, let mod):
                 Rm = _Rm
                 switch(mod) {
-                case .sxtx(nil):
+                case .sxtx(0):
                     S = 1
                     option = 0b111
                 case .sxtx:
@@ -680,23 +738,105 @@ public class EmitterM1 {
                 Rm = _Rm
                 S = 1
                 switch(mod) {
-                case .uxtw(nil):
+                case .uxtw(0):
                     option = 0b010
-                case .sxtw(nil):
+                case .sxtw(0):
                     option = 0b110
                 case .sxtw:
                     fatalError("Expected .sxtw #0")
                 case .uxtw:
                     fatalError("Expected .uxtw #0")
                 }
-            case .r64shift(let _Rm, let shiftAmt):
+            case .r64shift(let _Rm, .lsl(0)):
                 Rm = _Rm
                 option = 0b011
-                switch(shiftAmt) {
-                    case ._0:
-                        S = 0
-                    default:
-                        fatalError("Expected no shift amount")
+                S = 0
+            case nil:
+                Rm = X.x0
+                S = 0
+                option = 0b000
+            default:
+                fatalError("not implemented")
+            }
+            let shiftedS: Int64 = S << 12
+            let shiftedOpt = option << 13
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Wt, shift: 0)
+            let encodedRm = encodeReg(Rm, shift: 16)
+            
+            let encoded = mask | encodedRn | encodedRt | encodedRm | shiftedOpt | shiftedS
+            return returnAsArray(encoded)
+        case .ldrh(let Wt, .imm64(let Xn, let immRaw, let ixMode)):
+            let mask: Int64
+            let imm: any Immediate
+            let immShift: Int
+            switch(ixMode) {
+            case .post:
+                //                   imm9         Rn    Rt
+                mask = 0b01111000010_000000000_01_00000_00000
+                imm = try Immediate9(immRaw)
+                immShift = 12
+            case .pre:
+                //                   imm9         Rn    Rt
+                mask = 0b01111000010_000000000_11_00000_00000
+                imm = try Immediate9(immRaw)
+                immShift = 12
+            case nil:
+                //                  imm12        Rn    Rt
+                mask = 0b0111100101_000000000000_00000_00000_
+                imm = try Immediate12(immRaw)
+                immShift = 9 // shift left +10 for the position, but shift -1 back cause pimm==imm*2. So total shift 9
+            }
+            let encodedRt = encodeReg(Wt, shift: 0)
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedPimm = imm.shiftedLeft(immShift)
+            let encoded = encodedRt | encodedRn | encodedPimm | mask
+            return returnAsArray(encoded)
+        case .ldrh(let Wt, .reg64(let Xn, let mod)):
+            //                              Rm    opt      Rn    Rt
+            let mask: Int64 = 0b01111000011_00000_000_0_10_00000_00000
+            let option: Int64
+            let Rm: any Register
+            let S: Int64
+            switch(mod) {
+            case .r64shift(let _Rm, .lsl(let lslAmount)):
+                Rm = _Rm
+                guard lslAmount == 0 || lslAmount == 1 else {
+                    fatalError("Expected .lsl #0 or #1")
+                }
+                S = Int64(lslAmount)
+                option = 0b011
+            case .r64ext(let _Rm, let mod):
+                Rm = _Rm
+                switch(mod) {
+                case .sxtx(0):
+                    S = 0
+                    option = 0b111
+                case .sxtx(1):
+                    S = 1
+                    option = 0b111
+                case .sxtx:
+                    fatalError("Expected .sxtx #0 or #1")
+                }
+            case .r32ext(let _Rm, let mod):
+                Rm = _Rm
+                switch(mod) {
+                case .uxtw(0):
+                    S = 0
+                    option = 0b010
+                case .uxtw(1):
+                    S = 1
+                    option = 0b010
+                case .sxtw(0):
+                    S = 0
+                    option = 0b110
+                case .sxtw(1):
+                    S = 1
+                    option = 0b110
+                case .sxtw:
+                    fatalError("Expected .sxtw #0 or #1")
+                case .uxtw:
+                    fatalError("Expected .uxtw #0 or #1")
                 }
             case nil:
                 Rm = X.x0
