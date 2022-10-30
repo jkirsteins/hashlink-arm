@@ -25,11 +25,40 @@ extension OpBuilder
 }
 
 // TODO: wrong, fix w Shift64_Real
-public enum Shift64: Int {
+public enum Shift64: Int, CustomDebugStringConvertible {
     case _0 = 0
     case _16 = 16
     case _32 = 32
     case _48 = 48
+    
+    public var debugDescription: String {
+        "\(self.rawValue)"
+    }
+}
+
+enum ExtendOp32 : CustomDebugStringConvertible {
+    case sxtw(Register32.Shift?)  // ExtendSigned32To64
+    case uxtw(Register32.Shift?)  // ExtendUnsigned32To64
+    
+    var debugDescription: String {
+        switch(self) {
+        case .sxtw(let shift):
+            return "sxtw #\(shift ?? ._0)"
+        case .uxtw(let shift):
+            return "uxtw #\(shift ?? ._0)"
+        }
+    }
+}
+
+enum ExtendOp64 : CustomDebugStringConvertible {
+    case sxtx(Register64.Shift?)  // ExtendSigned32To64
+    
+    var debugDescription: String {
+        switch(self) {
+        case .sxtx(let shift):
+            return "sxtx #\(shift ?? ._0)"
+        }
+    }
 }
 
 public enum Shift64_Real {
@@ -40,13 +69,18 @@ public enum Shift64_Real {
 }
 
 
-public enum Shift32: Int {
+public enum Shift32: Int, CustomDebugStringConvertible {
     case _0 = 0
     case _16 = 16
+    
+    public var debugDescription: String {
+        "\(self.rawValue)"
+    }
 }
 
 enum Register64: UInt8, Register {
     typealias Shift = Shift64
+    typealias ExtendOp = ExtendOp64
 
     var is32: Bool { false }
 
@@ -95,11 +129,6 @@ enum Register64: UInt8, Register {
                 return "x\(self.rawValue)"
         }
     }
-}
-
-enum ExtendOp32 {
-    case sxtw(Register32.Shift?)  // ExtendSigned32To64
-    case uxtw(Register32.Shift?)  // ExtendUnsigned32To64
 }
 
 enum IndexingMode {
@@ -154,7 +183,25 @@ enum LdrMode {
     case _64(Register64, Register64, Offset?)  // e.g. x0 <- [x1]
 }
 
+enum RegModifier {
+    case r64ext(Register64, Register64.ExtendOp)
+    case r32ext(Register32, Register32.ExtendOp)
+    case r64shift(Register64, Register64.Shift)
+    case imm(Int64, IndexingMode?)
+}
+
+// TODO: this should be more accurately named M1Address or something like that (to signify
+// it represents where source data comes from, which is not necessarily an offset)
+
 enum Offset {
+
+    // Register base + immediate offset
+    case imm64(/*Xn|SP*/Register64, Int64, IndexingMode?)
+    
+    // Register base + register offset
+    case reg64(/*Xn|SP*/Register64, /*Wm|Xm...*/RegModifier?)
+    
+    // DEPRECATED
     case immediate(Int16)
     case reg64offset(Register64, Int64, IndexingMode?)
     case reg32shift(Register32, Register32.Shift?)
@@ -586,6 +633,85 @@ public class EmitterM1 {
             let encodedRm = encodeReg(Rm, shift: 16)
             let size = sizeMask(is64: Rd.is64)
             let encoded = mask | encodedRd | encodedRn | encodedRm | size
+            return returnAsArray(encoded)
+        case .ldrb(let Wt, .imm64(let Xn, let immRaw, let ixMode)):
+            let mask: Int64
+            let imm: any Immediate
+            let immShift: Int
+            switch(ixMode) {
+            case .post:
+                //                   imm9         Rn    Rt
+                mask = 0b00111000010_000000000_01_00000_00000
+                imm = try Immediate9(immRaw)
+                immShift = 12
+            case .pre:
+                //                   imm9         Rn    Rt
+                mask = 0b00111000010_000000000_11_00000_00000
+                imm = try Immediate9(immRaw)
+                immShift = 12
+            case nil:
+                //                  imm12        Rn    Rt
+                mask = 0b0011100101_000000000000_00000_00000_
+                imm = try Immediate12(immRaw)
+                immShift = 10
+            }
+            let encodedRt = encodeReg(Wt, shift: 0)
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedImm = imm.shiftedLeft(immShift)
+            let encoded = encodedRt | encodedRn | encodedImm | mask
+            return returnAsArray(encoded)
+        case .ldrb(let Wt, .reg64(let Xn, let mod)):
+            //                              Rm    opt      Rn    Rt
+            let mask: Int64 = 0b00111000011_00000_000_0_10_00000_00000
+            let option: Int64
+            let Rm: any Register
+            let S: Int64
+            switch(mod) {
+            case .r64ext(let _Rm, let mod):
+                Rm = _Rm
+                switch(mod) {
+                case .sxtx(nil):
+                    S = 1
+                    option = 0b111
+                case .sxtx:
+                    fatalError("Expected .sxtx #0")
+                }
+            case .r32ext(let _Rm, let mod):
+                Rm = _Rm
+                S = 1
+                switch(mod) {
+                case .uxtw(nil):
+                    option = 0b010
+                case .sxtw(nil):
+                    option = 0b110
+                case .sxtw:
+                    fatalError("Expected .sxtw #0")
+                case .uxtw:
+                    fatalError("Expected .uxtw #0")
+                }
+            case .r64shift(let _Rm, let shiftAmt):
+                Rm = _Rm
+                option = 0b011
+                switch(shiftAmt) {
+                    case ._0:
+                        S = 0
+                    default:
+                        fatalError("Expected no shift amount")
+                }
+            case nil:
+                Rm = X.x0
+                S = 0
+                option = 0b000
+            default:
+                fatalError("not implemented")
+            }
+            let shiftedS: Int64 = S << 12
+            let shiftedOpt = option << 13
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Wt, shift: 0)
+            let encodedRm = encodeReg(Rm, shift: 16)
+            
+            let encoded = mask | encodedRn | encodedRt | encodedRm | shiftedOpt | shiftedS
             return returnAsArray(encoded)
         default: throw EmitterM1Error.unsupportedOp
         }

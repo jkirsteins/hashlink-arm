@@ -7,6 +7,8 @@ protocol CpuOp : CustomDebugStringConvertible {
 extension M1Op {
     func resolveFinalForm() -> M1Op {
         switch(self) {
+        case .ldrb(let Wt, .reg64(let Rn, nil)):
+            return .ldrb(Wt, .imm64(Rn, 0, nil))
         case .lsl_r(let Rd, let Rn, let Rm):
             return .lslv(Rd, Rn, Rm)
         case .lsl_i(let Rd, let Rn, let immr) where Rd.is32 && Rn.is32:
@@ -167,6 +169,30 @@ enum M1Op : CpuOp {
             return "lsl \(Rd), \(Rn), \(Rm)"
         case .lslv(let Rd, let Rn, let Rm):
             return "lslv \(Rd), \(Rn), \(Rm)"
+        case .ldrb(let Rt, .reg64(let Rn, nil)):
+            return "ldrb \(Rt), [\(Rn)]"
+        case .ldrb(let Rt, .reg64(let Rn, .r64ext(let Xm, let extMode))):
+            return "ldrb \(Rt), [\(Rn), \(Xm), \(extMode)]"
+        case .ldrb(let Rt, .reg64(let Rn, .r32ext(let Wm, let extMode))):
+            return "ldrb \(Rt), [\(Rn), \(Wm), \(extMode)]"
+        case .ldrb(let Rt, .imm64(let Rn, let imm, nil)):
+            return "ldrb \(Rt), [\(Rn), #\(imm)]"
+        case .ldrb(let Rt, .imm64(let Rn, let imm, .post)):
+            return "ldrb \(Rt), [\(Rn)], #\(imm)"
+        case .ldrb(let Rt, .imm64(let Rn, let imm, .pre)):
+            return "ldrb \(Rt), [\(Rn), #\(imm)]!"
+       case .ldrb(let Rt, .reg64(let Rn, .r64shift(let Rm, ._0))):
+            return "ldrb \(Rt), [\(Rn), \(Rm)]"
+        case .ldrb(_, let mod):
+            return "ldrb mod \(String(describing: mod)) NOT IMPLEMENTED"
+        case .str(_, let mod):
+            return "str mod \(String(describing: mod)) NOT IMPLEMENTED"
+        case .stp(_, let mod):
+            return "stp mod \(String(describing: mod)) NOT IMPLEMENTED"
+        case .ldp(_, let mod):
+            return "ldp mod \(String(describing: mod)) NOT IMPLEMENTED"
+        case .ldr(_, let mod):
+            return "ldr mod \(String(describing: mod)) NOT IMPLEMENTED"
         }
     }
     
@@ -283,5 +309,9 @@ enum M1Op : CpuOp {
      - https://developer.arm.com/documentation/ddi0596/2021-06/Base-Instructions/LDR--immediate---Load-Register--immediate--?lang=en
      */
     case ldr(any Register, Offset)
+    
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LDRB--register---Load-Register-Byte--register--
+    case ldrb(/*Wt*/Register32, Offset)
 }
+
 

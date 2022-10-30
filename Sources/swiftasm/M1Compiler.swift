@@ -726,14 +726,13 @@ class M1Compiler {
                 
                 
                 // calculate what to skip
-                let skip = mem.byteSize - startPos
                 let jumpOffset_partA = try Immediate19(mem.byteSize)
                 let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
                 let jumpOffset = try DeferredImmediateSum(
                     jumpOffset_partB,
                     jumpOffset_partA,
                     -1,
-                    -Int(0)) // -3*4 /* ignore the ldr+ldr+cmp in current instruction */ )
+                    -Int(0))
                 //
                 
                 
@@ -764,6 +763,28 @@ class M1Compiler {
                     M1Op.lsl_r(X.x2, X.x0, X.x1),
                     M1Op.str(X.x2, .reg64offset(.sp, dstOffset, nil))
                 )
+            case .OGetI8(let dst, let bytes, let index):
+                fallthrough
+            case .OGetI16(let dst, let bytes, let index):
+                assert(reg: bytes, from: regKinds, is: .bytes)
+                assert(reg: index, from: regKinds, is: .i32)
+                if op.id == .OGetI16 {
+                    assert(reg: dst, from: regKinds, is: .u16)
+                } else if op.id == .OGetI8 {
+                    assert(reg: dst, from: regKinds, is: .u8)
+                }
+                
+                let dstOffset = getRegStackOffset(regKinds, dst)
+                let byteOffset = getRegStackOffset(regKinds, bytes)
+                let indexOffset = getRegStackOffset(regKinds, index)
+                
+//                mem.append(
+//                    // Load byte address (base) in X.x0
+//                    M1Op.ldr(X.x0, .reg64offset(.sp, byteOffset, nil)),
+//                )
+                
+                
+                fatalError("wip")
             default: fatalError("Can't compile \(op.debugDescription)")
             }
         }
