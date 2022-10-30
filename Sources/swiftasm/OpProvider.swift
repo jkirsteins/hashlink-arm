@@ -134,6 +134,14 @@ extension HLOpCode {
             return .OGetI16(dst: cop.p1, bytes: cop.p2, index: cop.p3)
         case .OSetI16:
             return .OSetI16(bytes: cop.p1, index: cop.p2, src: cop.p3)
+        case .OGetI8:
+            return .OGetI8(dst: cop.p1, bytes: cop.p2, index: cop.p3)
+        case .OSetI8:
+            return .OSetI8(bytes: cop.p1, index: cop.p2, src: cop.p3)
+        case .ONullCheck:
+            return .ONullCheck(reg: cop.p1)
+        case .OField:
+            return .OField(dst: cop.p1, obj: cop.p2, field: RefField(cop.p3))
         default:
             fatalError("Unknown op to parse \(String(describing: opId))")
         }

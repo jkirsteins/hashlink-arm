@@ -792,8 +792,8 @@ class M1Compiler {
                 } else if op.id == .OGetI16 {
                     mem.append(
                         // lsl1 the index register b/c index is
-                        //    HL-side: specified in item size (i.e. multiples of sizeof(.u16))
-                        //    M1-side: expected in bytes
+                        //    HL-side: ??? TODO: verify in a test that we need the .lsl(1) here
+                        //    M1-side: expected in bytes not half-words
                         M1Op.ldrh(W.w0, .reg64(X.x0, .r64shift(X.x1, .lsl(1))))
                     )
                 }
@@ -806,7 +806,35 @@ class M1Compiler {
                 } else {
                     fatalError("Invalid register size")
                 }
-            default: fatalError("Can't compile \(op.debugDescription)")
+            case .ONullCheck(let dst):
+                let dstOffset = getRegStackOffset(regKinds, dst)
+                let size = requireTypeKind(reg: dst, from: regKinds).hlRegSize
+                if size == 4 {
+                    mem.append(M1Op.ldr(W.w0, .reg64offset(.sp, dstOffset, nil)))
+                } else if size == 8 {
+                    mem.append(M1Op.ldr(X.x0, .reg64offset(.sp, dstOffset, nil)))
+                } else {
+                    fatalError("Invalid size for null check")
+                }
+                
+                mem.append(
+                    M1Op.movz64(X.x1, 0, nil),
+                    M1Op.cmp(X.x0, X.x1)
+                )
+                var jumpOverDeath = RelativeDeferredOffset()
+                jumpOverDeath.start(at: mem.byteSize)
+                mem.append(
+                    PseudoOp.deferred(4) {
+                        M1Op.b_ne(try Immediate19(jumpOverDeath.value))
+                    }
+                )
+                appendDebugPrintAligned4("Null access exception", builder: mem)
+                appendSystemExit(1, builder: mem)
+                jumpOverDeath.stop(at: mem.byteSize)
+            case .OField(let dst, let obj, let field):
+                fatalError("WIP")
+            default:
+                fatalError("Can't compile \(op.debugDescription)")
             }
         }
         

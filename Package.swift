@@ -21,7 +21,8 @@ let package = Package(
             name: "swiftasmTests",
             dependencies: ["swiftasm"],
             resources: [
-              .copy("Resources/mod1.hl")
+                .copy("Resources/mod1.hl"),
+                .copy("Resources/mod2.hl")
             ]
         ),
     ]
