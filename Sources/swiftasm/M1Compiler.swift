@@ -779,10 +779,10 @@ class M1Compiler {
                 let indexOffset = getRegStackOffset(regKinds, index)
                 
                 mem.append(
-                    // Load byte address (base) in X.x0
+                    // Load byte address (base) in X.x0. It is 8 bytes
                     M1Op.ldr(X.x0, .reg64offset(.sp, byteOffset, nil)),
-                    // Load index into X.x1
-                    M1Op.ldr(X.x1, .reg64offset(.sp, indexOffset, nil))
+                    // Load index into X.x1. It is 4 bytes
+                    M1Op.ldr(W.w1, .reg64offset(.sp, indexOffset, nil))
                 )
                 
                 if op.id == .OGetI8 {
@@ -790,13 +790,22 @@ class M1Compiler {
                         M1Op.ldrb(W.w0, .reg64(X.x0, .r64shift(X.x1, .lsl(0))))
                     )
                 } else if op.id == .OGetI16 {
-                    fatalError("wip")
                     mem.append(
-//                        M1Op.ldrb(W.w0, .reg64(X.x0, .r64shift(X.x1, .lsl(0))))
+                        // lsl1 the index register b/c index is
+                        //    HL-side: specified in item size (i.e. multiples of sizeof(.u16))
+                        //    M1-side: expected in bytes
+                        M1Op.ldrh(W.w0, .reg64(X.x0, .r64shift(X.x1, .lsl(1))))
                     )
                 }
                 
-                fatalError("wip")
+                let size = requireTypeKind(reg: dst, from: regKinds).hlRegSize
+                if size == 4 {
+                    mem.append(M1Op.str(W.w0, .reg64offset(.sp, dstOffset, nil)))
+                } else if size == 8 {
+                    mem.append(M1Op.str(X.x0, .reg64offset(.sp, dstOffset, nil)))
+                } else {
+                    fatalError("Invalid register size")
+                }
             default: fatalError("Can't compile \(op.debugDescription)")
             }
         }

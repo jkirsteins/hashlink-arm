@@ -378,7 +378,7 @@ public class EmitterM1 {
         case .str(let Rt, let offset ):
             guard case .reg64offset(let Rn, let offsetCount, let ixMode) = offset else {
                 throw EmitterM1Error.invalidOffset(
-                    "STR can only have .reg64offset offset"
+                    "STR can only have .reg64offset offset (todo: this is deprecated. Should implement other offset cases)"
                 )
             }
             let mask: Int64

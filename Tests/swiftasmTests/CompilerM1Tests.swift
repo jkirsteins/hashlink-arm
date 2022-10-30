@@ -9,7 +9,7 @@ extension Sequence where Iterator.Element: Hashable {
     }
 }
 
-func sut() -> M1Compiler { M1Compiler(stripDebugMessages: true) }
+func sut(strip: Bool = true) -> M1Compiler { M1Compiler(stripDebugMessages: strip) }
 
 func builder() -> OpBuilder {
     printerr("Builder1")
@@ -434,6 +434,67 @@ final class CompilerM1Tests: XCTestCase {
 
         // HL called Swift func. Swift func returned 145. HL returned the result it received.
         XCTAssertEqual(246, res)
+    }
+    
+    func testCompile__OGetI8() throws {
+        typealias _JitFunc = (@convention(c) (UnsafeRawPointer, Int32) -> UInt8)
+        
+        let f = prepareFunction(
+            retType: .u8,
+            findex: 0,
+            regs: [.bytes, .i32, .u8],
+            args: [.bytes, .i32],
+            ops: [
+                .OGetI8(dst: 2, bytes: 0, index: 1),
+                .ORet(ret: 2),
+            ]
+        )
+
+        let storage = ModuleStorage(functions: [f])
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: false)
+        try sut.compile(findex: 0, into: mem)
+        
+//        mem.hexPrint()
+        
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        var x: [UInt8] = [11, 22, 33, 44, 55, 66, 77, 88, 99]
+        
+        XCTAssertEqual(11, entrypoint(&x, 0))
+        XCTAssertEqual(66, entrypoint(&x, 5))
+    }
+    
+    func testCompile__OGetI16() throws {
+        typealias _JitFunc = (@convention(c) (UnsafeRawPointer, Int32) -> UInt16)
+        
+        let f = prepareFunction(
+            retType: .u16,
+            findex: 0,
+            regs: [.bytes, .i32, .u16],
+            args: [.bytes, .i32],
+            ops: [
+                .OGetI16(dst: 2, bytes: 0, index: 1),
+                .ORet(ret: 2),
+            ]
+        )
+
+        let storage = ModuleStorage(functions: [f])
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut()
+        try sut.compile(findex: 0, into: mem)
+        
+//        mem.hexPrint()
+        
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        var x: [UInt16] = [11, 22, 33, 44, 55, 66, 77, 88, 99]
+        
+        XCTAssertEqual(11, entrypoint(&x, 0))
+        XCTAssertEqual(22, entrypoint(&x, 1))
+        XCTAssertEqual(66, entrypoint(&x, 5))
     }
     
     func testCompile__OShl() throws {
