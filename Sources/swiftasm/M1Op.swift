@@ -7,6 +7,7 @@ protocol CpuOp : CustomDebugStringConvertible {
 extension M1Op {
     func resolveFinalForm() -> M1Op {
         switch(self) {
+            
         case .ldrh(let Wt, .reg64(let Rn, nil)):
             return .ldrh(Wt, .imm64(Rn, 0, nil))
         case .ldrb(let Wt, .reg64(let Rn, nil)):
@@ -189,8 +190,6 @@ enum M1Op : CpuOp {
             return "ldrh \(Rt), \(val)"
         case .ldrb(let Rt, let val):
             return "ldrb \(Rt), \(val)"
-        case .ldrb(_, let mod):
-            return "ldrb mod \(String(describing: mod)) NOT IMPLEMENTED"
         case .str(_, let mod):
             return "str mod \(String(describing: mod)) NOT IMPLEMENTED"
         case .stp(_, let mod):
@@ -199,6 +198,18 @@ enum M1Op : CpuOp {
             return "ldp mod \(String(describing: mod)) NOT IMPLEMENTED"
         case .ldr(_, let mod):
             return "ldr mod \(String(describing: mod)) NOT IMPLEMENTED"
+        case .and(let Rd, let Rn, .imm(let imm, nil)):
+            return "and \(Rd), \(Rn), #\(imm)"
+        case .and(let Rd, let Rn, .r64shift(let Rm, .lsl(0))):
+            return "and \(Rd), \(Rn), \(Rm)"
+        case .and(_, _, .r64ext(_, _)):
+            fallthrough
+        case .and(_, _, .r32ext(_, _)):
+            fallthrough
+        case .and(_, _, .r64shift(_, _)):
+            fallthrough
+        case .and(_, _, .imm(_, .some(_))):
+            return "and invalid w provided args"
         }
     }
     
@@ -291,6 +302,12 @@ enum M1Op : CpuOp {
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ORR--shifted-register---Bitwise-OR--shifted-register--?lang=en
     case orr64(Register64, Register64, Register64, Register64.Shift?)
+    
+    // Shifted register
+    //     https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/AND--shifted-register---Bitwise-AND--shifted-register--?lang=en
+    // Immediate
+    //    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/AND--immediate---Bitwise-AND--immediate--?lang=en
+    case and(any Register, any Register, RegModifier)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOVK--Move-wide-with-keep-
     case movk64(Register64, UInt16, Register64.Shift?)

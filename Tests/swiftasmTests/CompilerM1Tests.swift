@@ -168,10 +168,10 @@ final class CompilerM1Tests: XCTestCase {
     
     func testCompile_OJULt() throws {
         let i32Type = code.pointee.getType(3)   // i32
-        let ri32Type: Resolvable<HLType> = .init(i32Type)
+        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
         
         let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
-        let rFuncType: Resolvable<HLType> = .init(funcType)
+        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
         
         // constants
         let constI_3 = 1 // constant value 3
@@ -270,10 +270,10 @@ final class CompilerM1Tests: XCTestCase {
         let byteType = code.pointee.getType(14)   // bytes
         let i32Type = code.pointee.getType(3)   // i32
         
-        let rFuncType: Resolvable<HLType> = .init(funcType)
-        let rStringType: Resolvable<HLType> = .init(stringType)
-        let rByteType: Resolvable<HLType> = .init(byteType)
-        let ri32Type: Resolvable<HLType> = .init(i32Type)
+        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
+        let rStringType: Resolvable<HLType> = .init(unsafeType: stringType)
+        let rByteType: Resolvable<HLType> = .init(unsafeType: byteType)
+        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
         
         let storage = ModuleStorage(
             functions: [
@@ -311,7 +311,6 @@ final class CompilerM1Tests: XCTestCase {
             
             // check type
             XCTAssertEqual(typePtr.pointee.kind, .obj)
-            XCTAssertNotNil(typePtr.pointee.obj.pointee.rt)
                         
             // bytes/str
             let bytes = result.advanced(by: 8).bindMemory(to: UnsafePointer<CChar16>.self, capacity: 1)

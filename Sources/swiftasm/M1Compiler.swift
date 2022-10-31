@@ -255,9 +255,7 @@ class M1Compiler {
         case .struct:
             // if this is not set, the module has not
             // been initialized
-            guard let rt = mem.pointee.obj.pointee.rt else {
-                fatalError("Can not get field offset for obj without rt initialized")
-            }
+            let rt = mem.pointee.obj.pointee.getRt(mem) 
             return Int64(rt.pointee.fields_indexes.advanced(by: fieldRef).pointee)
         default:
             fatalError("Can not get field offset for obj type \(mem.pointee.kind)")
@@ -329,6 +327,19 @@ class M1Compiler {
         guard target == from[Int(reg)] else {
             fatalError(
                 "Register \(reg) expected to be \(target) but is \(from[Int(reg)])"
+            )
+        }
+    }
+    
+    func assert(reg: Reg, from: HLTypeKinds, in targets: HLTypeKinds) {
+        guard from.count > reg else {
+            fatalError(
+                "Register with index \(reg) does not exist. Available registers: \(from)."
+            )
+        }
+        guard targets.contains(from[Int(reg)]) else {
+            fatalError(
+                "Register \(reg) expected to be one of \(targets) but is \(from[Int(reg)])"
             )
         }
     }
@@ -591,6 +602,39 @@ class M1Compiler {
                 
                 // let g = ctx.storage.globalResolver.get(Int(global!))
                 // fatalError("No ONew yet. Allocating: \(typeToAllocate) -> global \(global) \(g)")
+            case .OSetThis(field: let fieldRef, src: let srcReg):
+                guard regKinds.count > 0 && srcReg < regKinds.count else {
+                    fatalError("Not enough registers. Expected register 0 and \(srcReg) to be available. Got: \(regKinds)")
+                }
+                let sourceObjectType = regs[0]
+                assertKind(op, sourceObjectType.value.kind, .obj)
+                
+                guard case .obj(let objData) = sourceObjectType.value else {
+                    fatalError("source object should be .obj but was \(sourceObjectType)")
+                }
+                
+                guard fieldRef < objData.fields.count else {
+                    fatalError("OGetThis: expected field \(fieldRef) to exist but got \(objData.fields)")
+                }
+                let sourceObjectFieldType = objData.fields[fieldRef]
+                
+                assert(reg: srcReg, from: regKinds, is: sourceObjectFieldType.value.type.value.kind)
+                
+                let objOffset = getRegStackOffset(regKinds, 0)
+                let srcOffset = getRegStackOffset(regKinds, srcReg)
+                let fieldOffset = getFieldOffset(sourceObjectType.value, fieldRef)
+                
+                /* We should:
+                 - load x0 from reg0 -- x0 is the base address of the type
+                 - load x1 from the source register
+                 - store x1 in x0 + field offset
+                 */
+                
+                mem.append(
+                    M1Op.ldr(X.x0, .reg64offset(X.sp, objOffset, nil)),
+                    M1Op.ldr(X.x1, .reg64offset(X.sp, srcOffset, nil)),
+                    M1Op.str(X.x1, .reg64offset(X.x0, fieldOffset, nil))
+                )
             case .OGetThis(let regDst, let fieldRef):
                 guard regKinds.count > 0 && regDst < regKinds.count else {
                     fatalError("Not enough registers. Expected register 0 and \(regDst) to be available. Got: \(regKinds)")
@@ -615,7 +659,7 @@ class M1Compiler {
                 
                 /* We should:
                  - load x0 from reg0
-                 - access (x0 + 8) + fieldN (accounting for N-1 field sizes)
+                 - access (x0 + fieldoffset) 
                  - move to regN
                  */
                 
@@ -769,9 +813,9 @@ class M1Compiler {
                 assert(reg: bytes, from: regKinds, is: .bytes)
                 assert(reg: index, from: regKinds, is: .i32)
                 if op.id == .OGetI16 {
-                    assert(reg: dst, from: regKinds, is: .u16)
+                    assert(reg: dst, from: regKinds, in: [.u16, .i32])
                 } else if op.id == .OGetI8 {
-                    assert(reg: dst, from: regKinds, is: .u8)
+                    assert(reg: dst, from: regKinds, in: [.u8, .u16, .i32])
                 }
                 
                 let dstOffset = getRegStackOffset(regKinds, dst)
@@ -831,8 +875,59 @@ class M1Compiler {
                 appendDebugPrintAligned4("Null access exception", builder: mem)
                 appendSystemExit(1, builder: mem)
                 jumpOverDeath.stop(at: mem.byteSize)
-            case .OField(let dst, let obj, let field):
-                fatalError("WIP")
+            case .OField(let dstReg, let objReg, let fieldRef):
+                appendDebugPrintAligned4("Entering OField", builder: mem)
+                let objRegKind = requireTypeKind(reg: objReg, from: regKinds)
+                appendDebugPrintAligned4("Required obj kind \(objRegKind)", builder: mem)
+                let dstKind = requireTypeKind(reg: dstReg, from: regKinds)
+                appendDebugPrintAligned4("Dst kind \(dstKind)", builder: mem)
+                /* See comments on `OSetField` for notes on accessing field indexes */
+                 
+                switch(objRegKind) {
+                case .obj: fallthrough
+                case .struct:
+                    // offset from obj address
+                    let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
+                    appendDebugPrintAligned4("Required field offset \(fieldOffset)", builder: mem)
+                    
+                    // offsets from .sp
+                    let dstOffset = getRegStackOffset(regKinds, dstReg)
+                    appendDebugPrintAligned4("Required dstOffset \(dstOffset)", builder: mem)
+                    let objOffset = getRegStackOffset(regKinds, objReg)
+                    appendDebugPrintAligned4("Required objOffset \(objOffset)", builder: mem)
+                    
+                    // TODO: OField and OSetField need a test based on inheritance
+                    
+                    mem.append(
+                        PseudoOp.debugPrint(self, "Loading x0."),
+                        M1Op.ldr(X.x0, .reg64offset(.sp, objOffset, nil)),
+                        PseudoOp.debugPrint(self, "Done. Loading x1."),
+                        M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil))
+                    )
+                    
+                    if dstKind.hlRegSize == 8 {
+                        mem.append(
+                            PseudoOp.debugPrint(self, "Done. Storing x1 in 8 bytes"),
+                            M1Op.str(X.x1, .reg64offset(.sp, dstOffset, nil)),
+                            PseudoOp.debugPrint(self, "Stored 8 bytes")
+                        )
+                    } else if dstKind.hlRegSize == 4 {
+                        mem.append(
+                            PseudoOp.debugPrint(self, "Done. Storing x1 in 4 bytes"),
+                            M1Op.str(W.w1, .reg64offset(.sp, dstOffset, nil)),
+                            PseudoOp.debugPrint(self, "Stored 4 bytes")
+                        )
+                    } else {
+                        fatalError("Dst size must be 4 or 8")
+                    }
+                default:
+                    fatalError("OSetField not implemented for \(objRegKind)")
+                }
+            case .OAnd(let dst, let a, let b):
+                let dstOffset = getRegStackOffset(regKinds, dst)
+                let aOffset = getRegStackOffset(regKinds, a)
+                let bOffset = getRegStackOffset(regKinds, b)
+                fatalError("wip")
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

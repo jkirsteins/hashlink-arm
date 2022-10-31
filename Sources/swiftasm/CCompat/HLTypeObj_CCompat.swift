@@ -56,7 +56,12 @@ struct HLTypeObj_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
     let moduleContext: UnsafeMutableRawPointer
 
     // hl_runtime_obj *rt;
-    let rt: UnsafePointer<HLRuntimeObj_CCompat>?
+    // NOTE: you should never access this directly, as it might not be initialized
+    let _rtDontAccess: UnsafePointer<HLRuntimeObj_CCompat>?
+    
+    func getRt(_ type: UnsafePointer<HLType_CCompat>) -> UnsafePointer<HLRuntimeObj_CCompat> {
+        LibHl.hl_get_obj_rt(type)
+    }
 
     var `super`: HLType_CCompat? {
         guard let rawPtr = self.superPtr else {

@@ -61,7 +61,7 @@ extension Resolvable<HLType> {
         }
     }
     
-    init(_ t: UnsafePointer<HLType_CCompat>) {
+    init(unsafeType t: UnsafePointer<HLType_CCompat>) {
         self.ix = 0
         self.table = TableResolver(table: SharedStorage(wrappedValue: [HLType(t.pointee)]), count: 1)
         self.memory = UnsafeRawPointer(t)

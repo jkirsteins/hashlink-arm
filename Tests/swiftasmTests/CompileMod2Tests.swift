@@ -32,7 +32,6 @@ final class CompileMod2Tests: XCTestCase {
                 
         //
         let fakeMod = ModuleStorage(code.pointee)
-        
         self.ctx = JitContext(storage: fakeMod, hlcode: code)
     }
 
@@ -41,7 +40,7 @@ final class CompileMod2Tests: XCTestCase {
     }
     
     /**
-        This tests proper GetI16 behaviour in the wild.
+        This tests proper GetI16 behaviour in the wild. Example disassembly (indexes might be wrong):
      
             30 : fn testGetUI16@30 (i32) -> (i32)@81 (5 regs, 6 ops)
             reg0  i32@3
@@ -56,11 +55,12 @@ final class CompileMod2Tests: XCTestCase {
             Main.hx:13    4: GetI16 { dst: Reg(4), bytes: Reg(3), index: Reg(0) }
             Main.hx:13    5: Ret         reg4
      */
-    func testCompileFn30__testGetUI16() throws {
+    func testCompileFn233__testGetUI16() throws {
         let sut = M1Compiler()
         let mem = OpBuilder(ctx: ctx)
         
-        try sut.compile(findex: 27, into: mem)
+        try sut.compile(findex: 231, into: mem)
+        try sut.compile(findex: 233, into: mem)
 
         let entrypoint: (@convention(c) (Int32) -> Int32) = try mem.buildEntrypoint(0)
         
@@ -86,11 +86,12 @@ final class CompileMod2Tests: XCTestCase {
             Main.hx:7     4: GetI8 { dst: Reg(4), bytes: Reg(3), index: Reg(0) }
             Main.hx:7     5: Ret         reg4
      */
-    func testCompileFn27__testGetUI8() throws {
+    func testCompileFn230__testGetUI8() throws {
         let sut = M1Compiler()
         let mem = OpBuilder(ctx: ctx)
         
-        try sut.compile(findex: 27, into: mem)
+        try sut.compile(findex: 231, into: mem)
+        try sut.compile(findex: 230, into: mem)
 
         let entrypoint: (@convention(c) (Int32) -> Int32) = try mem.buildEntrypoint(0)
         
@@ -98,6 +99,31 @@ final class CompileMod2Tests: XCTestCase {
         XCTAssertEqual(0x12, entrypoint(1))
         XCTAssertEqual(0x13, entrypoint(2))
         XCTAssertEqual(0x14, entrypoint(3))
+    }
+    
+    /** Test field access.
+     
+            280: fn testFieldAccess@280 () -> (i32)@88 (3 regs, 5 ops)
+            reg0  Path@172
+            reg1  i32@3
+            reg2  void@0
+            Main.hx:43    0: New         reg0 = new Path@172
+            Main.hx:43    1: Int         reg1 = 2
+            Main.hx:43    2: Call2       reg2 = __constructor__@229(reg0, reg1)
+            Main.hx:44    3: Field       reg1 = reg0.test
+            Main.hx:44    4: Ret         reg1
+     */
+    
+    func testCompileFn280__testFieldAccess() throws {
+        let sut = M1Compiler(stripDebugMessages: false)
+        let mem = OpBuilder(ctx: ctx)
+        
+        try sut.compile(findex: 229, into: mem)
+        try sut.compile(findex: 280, into: mem)
+
+        let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(280)
+        
+        XCTAssertEqual(2, entrypoint())
     }
 }
 

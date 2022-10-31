@@ -853,6 +853,55 @@ public class EmitterM1 {
             
             let encoded = mask | encodedRn | encodedRt | encodedRm | shiftedOpt | shiftedS
             return returnAsArray(encoded)
+        case .and(let Rd, let Rn, .imm(let imm, nil)):
+            let sf = sizeMask(is64: Rd.is64)
+            //                  S          N immr   imms   Rn    Rd
+            let mask: Int64 = 0b0_00100100_0_000000_000000_00000_00000
+            
+            guard Rd.is32 == Rn.is32 else {
+                fatalError("Rd and Rn must be the same size for AND (immediate)")
+            }
+            
+            let bmi = try! BitmaskImmediate(UInt64(bitPattern: imm))
+            guard (Rd.is32 && bmi.n == 0) || Rd.is64 else {
+                fatalError("n can't be 1 for 32-bit operation")
+            }
+            
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let encodedRd = encodeReg(Rd, shift: 0)
+            let encoded = sf | mask | (Int64(bmi.n) << 22) | Int64(bmi.imms) << 10 | Int64(bmi.immr) << 16 | encodedRn | encodedRd
+            return returnAsArray(encoded)
+        case .and(let Rd, let Rn, .r64shift(let Rm, let shift)):
+            let sf = sizeMask(is64: Rd.is64)
+            //                  S        SH N Rm    imm6   Rn    Rd
+            let mask: Int64 = 0b00001010_00_0_00000_000000_00000_00000
+                              
+            let imm6: Int64
+            let sh: Int64
+            switch(shift) {
+            case .lsl(let amt):
+                sh = 0b00
+                imm6 = Int64(amt)
+            case .lsr(let amt):
+                sh = 0b01
+                imm6 = Int64(amt)
+            case .asr(let amt):
+                sh = 0b10
+                imm6 = Int64(amt)
+            case .ror(let amt):
+                sh = 0b11
+                imm6 = Int64(amt)
+            }
+            
+            guard Rd.is32 == Rn.is32, Rd.is32 == Rm.is32 else {
+                fatalError("Rd, Rn, Rm must be the same size for AND (shifted register)")
+            }
+            
+            let encodedRd = encodeReg(Rd, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let encodedRm = encodeReg(Rm, shift: 16)
+            let encoded = sf | mask | (Int64(imm6) << 10) | encodedRm | encodedRn | encodedRd | (sh << 22)
+            return returnAsArray(encoded)
         default: throw EmitterM1Error.unsupportedOp
         }
     }
