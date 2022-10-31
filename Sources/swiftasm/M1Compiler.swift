@@ -741,6 +741,10 @@ class M1Compiler {
                 default:
                     fatalError("OSetField not implemented for \(objRegKind)")
                 }
+            case .OJNotEq(let a, let b, let offset):
+                fallthrough
+            case .OJEq(let a, let b, let offset):
+                fallthrough
             case .OJULt(let a, let b, let offset):
                 
                 let wordsToSkip = Int(offset) + 1
@@ -748,8 +752,6 @@ class M1Compiler {
                 guard targetInstructionIx < addrBetweenOps.count else {
                     fatalError("Jump going to an invalid op (\(targetInstructionIx))")
                 }
-                
-                let startPos = mem.byteSize
                 
                 let regOffsetA = getRegStackOffset(regKinds, a)
                 let regOffsetB = getRegStackOffset(regKinds, b)
@@ -782,7 +784,16 @@ class M1Compiler {
                 
                 mem.append(
                     PseudoOp.deferred(4) {
-                        M1Op.b_lt(try Immediate19(jumpOffset.immediate))
+                        switch(op.id) {
+                        case .OJULt:
+                            return M1Op.b_lt(try Immediate19(jumpOffset.immediate))
+                        case .OJEq:
+                            return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
+                        case .OJNotEq:
+                            return M1Op.b_ne(try Immediate19(jumpOffset.immediate))
+                        default:
+                            fatalError("Unsupported jump id \(op.id)")
+                        }
                     })
                 mem.append(
                     PseudoOp.debugPrint(self, "NOT JUMPING")
@@ -927,7 +938,13 @@ class M1Compiler {
                 let dstOffset = getRegStackOffset(regKinds, dst)
                 let aOffset = getRegStackOffset(regKinds, a)
                 let bOffset = getRegStackOffset(regKinds, b)
-                fatalError("wip")
+                
+                mem.append(
+                    M1Op.ldr(X.x0, .reg64offset(X.sp, aOffset, nil)),
+                    M1Op.ldr(X.x1, .reg64offset(X.sp, bOffset, nil)),
+                    M1Op.and(X.x2, X.x0, .r64shift(X.x1, .lsl(0))),
+                    M1Op.str(X.x2, .reg64offset(X.sp, dstOffset, nil))
+                )
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

@@ -218,6 +218,148 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(3, entrypoint(3, 3))
         XCTAssertEqual(3, entrypoint(4, 3))
     }
+    
+    func testCompile_OJEq() throws {
+        let i32Type = code.pointee.getType(3)   // i32
+        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
+        
+        let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
+        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
+        
+        // constants
+        let constI_3 = 1 // constant value 3
+        let constI_57005 = 2 // constant value 57005
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: ri32Type,
+                    findex: 0,
+                    regs: [ri32Type, ri32Type],
+                    ops: [
+                        .OJEq(a: 0, b: 1, offset: 2),
+                        
+                        // return 3
+                        .OInt(dst: 0, ptr: constI_3),
+                        .ORet(ret: 0),
+                        
+                        // return 57005
+                        .OInt(dst: 0, ptr: constI_57005),
+                        .ORet(ret: 0)
+                    ]
+                )
+            ], ints: [0, 3, 57005])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: true)
+        try sut.compile(findex: 0, into: mem)
+
+        // TODO: need to test w i64
+         mem.hexPrint()
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        // jump
+        XCTAssertEqual(57005, entrypoint(3, 3))
+        
+        // no jump
+        XCTAssertEqual(3, entrypoint(3, 2))
+        XCTAssertEqual(3, entrypoint(451, 0))
+    }
+    
+    func testCompile_OJNotEq() throws {
+        let i32Type = code.pointee.getType(3)   // i32
+        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
+        
+        let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
+        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
+        
+        // constants
+        let constI_3 = 1 // constant value 3
+        let constI_57005 = 2 // constant value 57005
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: ri32Type,
+                    findex: 0,
+                    regs: [ri32Type, ri32Type],
+                    ops: [
+                        .OJNotEq(a: 0, b: 1, offset: 2),
+                        
+                        // return 3
+                        .OInt(dst: 0, ptr: constI_3),
+                        .ORet(ret: 0),
+                        
+                        // return 57005
+                        .OInt(dst: 0, ptr: constI_57005),
+                        .ORet(ret: 0)
+                    ]
+                )
+            ], ints: [0, 3, 57005])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: true)
+        try sut.compile(findex: 0, into: mem)
+
+        // TODO: need to test w i64
+         mem.hexPrint()
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        // jump
+        XCTAssertEqual(57005, entrypoint(2, 3))
+        XCTAssertEqual(57005, entrypoint(3, 2))
+        
+        // no jump
+        XCTAssertEqual(3, entrypoint(3, 3))
+        XCTAssertEqual(3, entrypoint(0, 0))
+    }
+    
+    func testCompile_OAnd() throws {
+        let i32Type = code.pointee.getType(3)   // i32
+        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
+        
+        let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
+        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: ri32Type,
+                    findex: 0,
+                    regs: [ri32Type, ri32Type],
+                    ops: [
+                        .OAnd(dst: 0, a: 0, b: 1),
+                        .ORet(ret: 0)
+                    ]
+                )
+            ])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: true)
+        try sut.compile(findex: 0, into: mem)
+
+        mem.hexPrint()
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(0b00000, entrypoint(0b00000, 0b11111))
+        XCTAssertEqual(0b00100, entrypoint(0b00111, 0b11100))
+        XCTAssertEqual(0b11111, entrypoint(0b11111, 0b11111))
+    }
 
     func testCompile_emptyFunction() throws {
         let storage = ModuleStorage(functions: [
