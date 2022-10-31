@@ -790,6 +790,10 @@ class M1Compiler {
                 fallthrough
             case .OJEq(let a, let b, let offset):
                 fallthrough
+            case .OJSLte(let a, let b, let offset):
+                fallthrough
+            case .OJSLt(let a, let b, let offset):
+                fallthrough
             case .OJULt(let a, let b, let offset):
                 
                 let wordsToSkip = Int(offset) + 1
@@ -804,11 +808,21 @@ class M1Compiler {
                 let sizeA = requireTypeKind(reg: a, from: regKinds).hlRegSize
                 let sizeB = requireTypeKind(reg: b, from: regKinds).hlRegSize
                 
+                if case .OJSLte = op {
+                    mem.append(
+                        PseudoOp.debugPrint(self, "TODO: OJSLte test")
+                    )
+                }
+                if case .OJSLt = op {
+                    mem.append(
+                        PseudoOp.debugPrint(self, "TODO: OJSLt test")
+                    )
+                }
                 mem.append(
-                    PseudoOp.debugMarker("\(op.id) <\(a)@\(regOffsetA), \(b)@\(regOffsetB)> --> \(offset) (target instruction: \(targetInstructionIx))"),
-                    M1Op.ldr(sizeA == 4 ? W.w0 : X.x0, .reg64offset(.sp, regOffsetA, nil)),
-                    M1Op.ldr(sizeB == 4 ? W.w1 : X.x1, .reg64offset(.sp, regOffsetB, nil))
-                )
+                        PseudoOp.debugMarker("\(op.id) <\(a)@\(regOffsetA), \(b)@\(regOffsetB)> --> \(offset) (target instruction: \(targetInstructionIx))"),
+                        M1Op.ldr(sizeA == 4 ? W.w0 : X.x0, .reg64offset(.sp, regOffsetA, nil)),
+                        M1Op.ldr(sizeB == 4 ? W.w1 : X.x1, .reg64offset(.sp, regOffsetB, nil))
+                    )
                 
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendDebugPrintRegisterAligned4(X.x1, builder: mem)
@@ -846,6 +860,9 @@ class M1Compiler {
             
             // TODO: somehow combine all the jumps with fallthroughs?
             case .OJNotNull(let reg, let offset):
+                fallthrough
+            case .OJFalse(let reg, let offset):
+                fatalError("wip")
                 fallthrough
             case .OJNull(let reg, let offset):
                 
@@ -1100,6 +1117,20 @@ class M1Compiler {
                     M1Op.movz64(X.x0, UInt16(value), nil),
                     M1Op.str(W.w0, .reg64offset(.sp, dstOffset, nil))
                 )
+            case .OMov(let dst, let src):
+                mem.append(
+                    PseudoOp.debugPrint(self, "TODO OMov test")
+                )
+                fallthrough
+            case .OSafeCast(let dst, let src):
+                let dstOffset = getRegStackOffset(regKinds, dst)
+                let srcOffset = getRegStackOffset(regKinds, src)
+                mem.append(
+                    M1Op.ldr(X.x0, .reg64offset(.sp, srcOffset, nil)),
+                    M1Op.str(X.x0, .reg64offset(.sp, dstOffset, nil))
+                )
+            case .OLabel:
+                mem.append(PseudoOp.debugPrint(self, "OLabel"))
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

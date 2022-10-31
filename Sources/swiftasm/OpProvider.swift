@@ -203,6 +203,21 @@ extension HLOpCode {
             return .ONull(dst: cop.p1)
         case .OBool:
             return .OBool(dst: cop.p1, value: cop.p2)
+        case .OJFalse:
+            return .OJFalse(cond: cop.p1, offset: cop.p2)
+        case .OJTrue:
+            return .OJTrue(cond: cop.p1, offset: cop.p2)
+        case .OSub:
+            return .OSub(dst: cop.p1, a: cop.p2, b: cop.p3)
+        case .OCallN:
+            let c = cop.p3
+            guard let extra = cop.extra else {
+                fatalError("OCallN missing extra")
+            }
+            let args = (0..<c).map {
+                Reg(extra.advanced(by: Int($0)).pointee)
+            }
+            return .OCallN(dst: cop.p1, fun: RefFun(cop.p2), args: args)
         default:
             fatalError("Unknown op to parse \(String(describing: opId))")
         }
