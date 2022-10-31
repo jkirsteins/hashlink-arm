@@ -2,6 +2,10 @@ import Foundation
 
 typealias TableIndex = Int
 
+fileprivate var __typeCache: [UnsafeRawPointer:Resolvable<HLType>] = [:]
+fileprivate var __objFieldCache: [UnsafeRawPointer:Resolvable<HLObjField>] = [:]
+fileprivate var __objProtoCache: [UnsafeRawPointer:Resolvable<HLObjProto>] = [:]
+
 struct Resolvable<T: CustomDebugStringConvertible> : Equatable, CustomDebugStringConvertible, Hashable where T: Equatable, T: Hashable {
     let ix: TableIndex
     let table: TableResolver<T>
@@ -61,10 +65,50 @@ extension Resolvable<HLType> {
         }
     }
     
-    init(unsafeType t: UnsafePointer<HLType_CCompat>) {
-        self.ix = 0
-        self.table = TableResolver(table: SharedStorage(wrappedValue: [HLType(t.pointee)]), count: 1)
-        self.memory = UnsafeRawPointer(t)
+    static func type(fromUnsafe t: UnsafePointer<HLType_CCompat>) -> Resolvable<HLType> {
+        if let exists = __typeCache[t] {
+            return exists
+        }
+        
+        let table: TableResolver<HLType> = TableResolver(table: SharedStorage(wrappedValue: []), count: 1)
+        let res = Resolvable(ix: 0, table: table)
+        __typeCache[t] = res
+        
+        table.storage.wrappedValue = [HLType(t)]
+        
+        return res
+    }
+}
+ 
+extension Resolvable<HLObjField> {
+    static func objField(fromUnsafe t: UnsafePointer<HLObjField_CCompat>) -> Resolvable<HLObjField> {
+        if let exists = __objFieldCache[t] {
+            return exists
+        }
+        
+        let table: TableResolver<HLObjField> = TableResolver(table: SharedStorage(wrappedValue: []), count: 1)
+        let res = Resolvable(ix: 0, table: table)
+        __objFieldCache[t] = res
+        
+        table.storage.wrappedValue = [HLObjField(t)]
+        
+        return res
+    }
+}
+
+extension Resolvable<HLObjProto> {
+    static func objProto(fromUnsafe t: UnsafePointer<HLObjProto_CCompat>) -> Resolvable<HLObjProto> {
+        if let exists = __objProtoCache[t] {
+            return exists
+        }
+        
+        let table: TableResolver<HLObjProto> = TableResolver(table: SharedStorage(wrappedValue: []), count: 1)
+        let res = Resolvable(ix: 0, table: table)
+        __objProtoCache[t] = res
+        
+        table.storage.wrappedValue = [HLObjProto(t)]
+        
+        return res
     }
 }
 

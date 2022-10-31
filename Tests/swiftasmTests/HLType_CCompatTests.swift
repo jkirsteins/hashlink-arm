@@ -20,7 +20,7 @@ final class HLType_CCompatTests: XCTestCase {
     
     func testHLTypeObj__String() throws {
         let type = code.pointee.getType(13)
-        let native = HLType(type.pointee)
+        let native = HLType(type)
         
         XCTAssertEqual(native.kind, .obj)
         XCTAssertEqual(native.objData!.name.value, "String")
@@ -41,7 +41,7 @@ final class HLType_CCompatTests: XCTestCase {
 
     func testHLTypeObj__$SysError() throws {
         let type = code.pointee.getType(44)
-        let native = HLType(type.pointee)
+        let native = HLType(type)
         
         
         XCTAssertEqual(native.kind, .obj)

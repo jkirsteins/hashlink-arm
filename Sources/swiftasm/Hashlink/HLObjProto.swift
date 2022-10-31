@@ -19,10 +19,10 @@ struct HLObjProto: Equatable, CustomDebugStringConvertible, Hashable {
         self.pIx = pIx
     }
     
-    init(_ ccompat: HLObjProto_CCompat) {
-        self.name = Resolvable(ccompat.name, memory: ccompat.namePtr)
-        self.functionIx = ccompat.findex
-        self.pIx = ccompat.pindex
+    init(_ ccompat: UnsafePointer<HLObjProto_CCompat>) {
+        self.name = Resolvable(ccompat.pointee.name, memory: ccompat.pointee.namePtr)
+        self.functionIx = ccompat.pointee.findex
+        self.pIx = ccompat.pointee.pindex
     }
 }
 

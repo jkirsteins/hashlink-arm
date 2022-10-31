@@ -47,8 +47,8 @@ extension HLTypeFun {
     init(_ ccompat: HLTypeFun_CCompat) {
         self.args = ccompat.args.enumerated().map { ix, item in
             let ptr = ccompat.argsPtr.advanced(by: ix)
-            return Resolvable(HLType(item), memory: ptr.pointee)
+            return Resolvable(HLType(ptr.pointee), memory: ptr.pointee)
         }
-        self.ret = Resolvable(HLType(ccompat.ret), memory: ccompat.retPtr)
+        self.ret = Resolvable(HLType(ccompat.retPtr), memory: ccompat.retPtr)
     }
 }

@@ -39,6 +39,66 @@ final class CompileMod2Tests: XCTestCase {
         LibHl.hl_global_free()
     }
     
+    /** Test traps
+     
+            fn testTrap@32 () -> (i32)@83 (6 regs, 10 ops)
+            reg0  dynamic@9
+            reg1  void@0
+            reg2  haxe.Exception@29
+            reg3  String@13
+            reg4  haxe.Exception@29
+            reg5  i32@3
+            Main.hx:27    0: Trap        try reg0 jump to 8
+            Main.hx:28    1: New         reg2 = new haxe.Exception@29
+            Main.hx:28    2: GetGlobal   reg3 = global@8
+            Main.hx:28    3: Null        reg4 = null
+            Main.hx:28    4: Null        reg0 = null
+            Main.hx:28    5: Call4       reg1 = __constructor__@40(reg2, reg3,reg4, reg0)
+            Main.hx:28    6: Throw       throw reg2
+            Main.hx:28    7: EndTrap     catch reg1
+            Main.hx:30    8: Int         reg5 = 1
+            Main.hx:30    9: Ret         reg5
+     */
+    func testCompileFn32__testTrap() throws {
+        let sut = M1Compiler()
+        let mem = OpBuilder(ctx: ctx)
+        
+        try sut.compile(findex: 40, into: mem)
+        try sut.compile(findex: 32, into: mem)
+
+        let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(1, entrypoint())
+    }
+    
+    /** Test parsing a type that refers to itself in a field (See `__previousException`)
+     
+            > t 29
+            29 : haxe.Exception
+            global: 8
+            fields:
+                __exceptionMessage: String@13
+                __nativeStack: array@11
+                __skipStack: i32@3
+                __nativeException: dynamic@9
+                __previousException: haxe.Exception@29
+            protos:
+                unwrap: fn unwrap@33 (haxe.Exception) -> (dynamic)@178 (0)
+                toString: fn toString@34 (haxe.Exception) -> (String)@179 (1)
+                get_message: fn get_message@35 (haxe.Exception) -> (String)@179 (-1)
+                get_native: fn get_native@36 (haxe.Exception) -> (dynamic)@178 (-1)
+                __string: fn __string@37 (haxe.Exception) -> (bytes)@180 (-1)
+            bindings:
+     */
+    func testParseRecursiveType() throws {
+        guard let excT = ctx.hlcode?.pointee.getType(29) else {
+            fatalError("Type 29 missing")
+        }
+        let hlType = HLType(excT)
+
+        XCTAssertEqual(hlType.objData!.name.value, "haxe.Exception")
+    }
+    
     /**
         This tests proper GetI16 behaviour in the wild. Example disassembly (indexes might be wrong):
      

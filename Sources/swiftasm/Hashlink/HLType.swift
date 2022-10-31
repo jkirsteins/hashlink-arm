@@ -46,28 +46,6 @@ struct HLTypeVirtualData: Equatable, CustomDebugStringConvertible, Hashable {
     }
 }
 
-///
-/// Reference to writing the data: https://github.com/HaxeFoundation/haxe/blob/c35bbd4472c3410943ae5199503c23a2b7d3c5d6/src/generators/genhl.ml#L3840
-struct HLTypeObj: Equatable, CustomDebugStringConvertible, Hashable {
-    let name: Resolvable<String>
-    let superType: Resolvable<HLType>?
-    let global: Int32?
-
-    let fields: [Resolvable<HLObjField>]
-    let proto: [Resolvable<HLObjProto>]
-    let bindings: [HLTypeBinding]
-
-    var debugDescription: String {
-        """
-        \(name.debugDescription) \(superType == nil ? "" : "extends \(superType!.debugDescription)")
-        global: \(global?.debugDescription ?? "nil")
-        fields: \(fields.count > 0 ? "\n" : "")\((fields.map { "  \($0.debugDescription)" }).joined(separator: "\n"))
-        protos: \(proto.count > 0 ? "\n" : "")\(proto.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
-        bindings: \(bindings.count > 0 ? "\n" : "")\(bindings.map { "  \($0.debugDescription)" }.joined(separator: "\n"))
-        """
-    }
-}
-
 protocol HLRegisterSizeProvider: Equatable, Hashable { var hlRegSize: ByteCount { get } }
 
 extension HLType: HLRegisterSizeProvider {
@@ -82,7 +60,7 @@ extension HLType: HLRegisterSizeProvider {
         case .i64, .f64: return 8
 
         // All the following values are memory addresse pointers and takes either 4 bytes in x86 mode or 8 bytes in x86-64 mode:
-
+            
         case .bytes: fallthrough
         case .dyn, .fun, .array, .obj, .dynobj, .virtual, .enum, .ref, .null, .type,
             .abstract:

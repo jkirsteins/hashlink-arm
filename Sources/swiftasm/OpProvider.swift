@@ -20,12 +20,12 @@ extension HLNative_CCompat : IncompleteCallable {
         (0..<self.typePtr.pointee.fun.pointee.nargs).map { ix in
             let ptrPtr = self.typePtr.pointee.fun.pointee.argsPtr.advanced(by: Int(ix))
             
-            return Resolvable(unsafeType: ptrPtr.pointee)
+            return Resolvable.type(fromUnsafe: ptrPtr.pointee)
         }
     }
     
     var ret: Resolvable<HLType> {
-        Resolvable(HLType(self.type.fun.pointee.ret), memory: self.type.fun.pointee.retPtr)
+        Resolvable(HLType(self.type.fun.pointee.retPtr), memory: self.type.fun.pointee.retPtr)
     }
 }
 
@@ -121,6 +121,10 @@ extension HLOpCode {
             return .ORet(ret: cop.p1)
         case .OJULt:
             return .OJULt(a: cop.p1, b: cop.p2, offset: cop.p3)
+        case .OJNull:
+            return .OJNull(reg: cop.p1, offset: cop.p2)
+        case .OJNotNull:
+            return .OJNotNull(reg: cop.p1, offset: cop.p2)
         case .OGetGlobal:
             return .OGetGlobal(dst: cop.p1, global: RefGlobal(cop.p2))
         case .OCall0:
@@ -132,6 +136,15 @@ extension HLOpCode {
         case .OCall3:
             guard let extra = cop.extra else { fatalError("OCall3 missing extra") }
             return .OCall3(dst: cop.p1, fun: RefFun(cop.p2), arg0: cop.p3, arg1: extra.pointee, arg2: extra.advanced(by: 1).pointee)
+        case .OCall4:
+            guard let extra = cop.extra else { fatalError("OCall4 missing extra") }
+            return .OCall4(
+                dst: cop.p1,
+                fun: RefFun(cop.p2),
+                arg0: cop.p3,
+                arg1: extra.pointee,
+                arg2: extra.advanced(by: 1).pointee,
+                arg3: extra.advanced(by: 2).pointee)
         case .OShl:
             return .OShl(dst: cop.p1, a: cop.p2, b: cop.p3)
         case .OGetI16:
@@ -155,6 +168,10 @@ extension HLOpCode {
             return .OJEq(a: cop.p1, b: cop.p2, offset: cop.p3)
         case .OThrow:
             return .OThrow(exc: cop.p1)
+        case .OTrap:
+            return .OTrap(exc: cop.p1, offset: cop.p2)
+        case .OEndTrap:
+            return .OEndTrap(exc: cop.p1)
         case .OSShr:
             return .OSShr(dst: cop.p1, a: cop.p2, b: cop.p3)
         case .OLabel:
@@ -175,6 +192,8 @@ extension HLOpCode {
             return .OOr(dst: cop.p1, a: cop.p2, b: cop.p3)
         case .OJAlways:
             return .OJAlways(offset: cop.p1)
+        case .ONull:
+            return .ONull(dst: cop.p1)
         default:
             fatalError("Unknown op to parse \(String(describing: opId))")
         }
@@ -182,8 +201,8 @@ extension HLOpCode {
 }
 
 extension HLType {
-    init(_ c: HLType_CCompat) {
-        switch(c.kind) {
+    init(_ c: UnsafePointer<HLType_CCompat>) {
+        switch(c.pointee.kind) {
         case .void: self = .void
         case .i32: self = .i32
         case .u8: self = .u8
@@ -196,16 +215,16 @@ extension HLType {
         case .dyn: self = .dyn
         case .bytes: self = .bytes
         case .array: self = .array
-        case .null: self = .null(HLTypeNullData(type: Resolvable(HLType(c.tparam.pointee), memory: c.tparam)))
-        case .obj: self = .obj(HLTypeObj(c.obj.pointee))
-        case .struct: self = .struct(HLTypeObj(c.obj.pointee))
+        case .null: self = .null(HLTypeNullData(type: .type(fromUnsafe: c.pointee.tparam)))
+        case .obj: self = .obj(.fromPointer(c.pointee.obj))
+        case .struct: self = .struct(.fromPointer(c.pointee.obj))
         case .bool: self = .bool
         
-        case .method: self = .method(HLTypeFun(c.fun.pointee))
-        case .fun: self = .fun(HLTypeFun(c.fun.pointee))
+        case .method: self = .method(HLTypeFun(c.pointee.fun.pointee))
+        case .fun: self = .fun(HLTypeFun(c.pointee.fun.pointee))
             
         default:
-            fatalError("not implemented HLType from \(c.kind)")
+            fatalError("not implemented HLType from \(c.pointee.kind)")
         }
     }
 }
@@ -220,7 +239,7 @@ extension HLFunction_CCompat : Compilable {
                 fatalError("No pointer available")
             }
             
-            return Resolvable(unsafeType: ptr)
+            return .type(fromUnsafe: ptr)
         }
     }
     
@@ -231,13 +250,13 @@ extension HLFunction_CCompat : Compilable {
     var args: [Resolvable<HLType>] {
         let res = (0..<cType.fun.pointee.nargs).map { ix in
             let ptr: UnsafePointer<HLType_CCompat> = self.cType.fun.pointee.argsPtr.advanced(by: Int(ix)).pointee
-            return Resolvable(unsafeType: ptr)
+            return Resolvable.type(fromUnsafe: ptr)
         }
         
         return res
     }
     var ret: Resolvable<HLType> {
-        Resolvable(HLType(self.cType.fun.pointee.ret), memory: self.cType.fun.pointee.retPtr)
+        Resolvable(HLType(self.cType.fun.pointee.retPtr), memory: self.cType.fun.pointee.retPtr)
     }
     
     var ops: [HLOpCode] { cOps.map { HLOpCode.parseCCompat($0) } }

@@ -18,8 +18,9 @@ struct HLObjField: Equatable, CustomDebugStringConvertible, Hashable {
         self.type = Resolvable(type, memory: nil)
     }
     
-    init(_ ccompat: HLObjField_CCompat) {
-        self.name = Resolvable(ccompat.name, memory: nil)
-        self.type = Resolvable(HLType(ccompat.tPtr.pointee), memory: ccompat.tPtr)
+    init(_ ccompat: UnsafePointer<HLObjField_CCompat>) {
+        let name = Resolvable(ccompat.pointee.name, memory: ccompat.pointee.namePtr)
+        self.name = name
+        self.type = .type(fromUnsafe: ccompat.pointee.tPtr)
     }
 }

@@ -222,6 +222,11 @@ extension M1Compiler {
 
 typealias Registers = [Resolvable<HLType>]
 
+let _throw: (@convention(c) (UnsafeRawPointer) -> ()) = { (_ dyn: UnsafeRawPointer) in
+    fatalError("not implemented")
+}
+let _throwAddress = unsafeBitCast(_throw, to: UnsafeMutableRawPointer.self)
+
 class M1Compiler {
     /*
      stp    x29, x30, [sp, #-16]!
@@ -298,7 +303,7 @@ class M1Compiler {
         }
         let regKind = from[Int(reg)]
         let argKind = callable.args[Int(argReg)].value.kind
-        guard regKind == argKind else {
+        guard argKind == .dyn || regKind == .dyn || regKind == argKind else {
             fatalError(
                 "Register \(reg) kind \(regKind) expected to match arg \(argReg) but arg was \(argKind) "
             )
@@ -324,7 +329,7 @@ class M1Compiler {
                 "Register with index \(reg) does not exist. Available registers: \(from)."
             )
         }
-        guard target == from[Int(reg)] else {
+        guard target == .dyn || from[Int(reg)] == .dyn || target == from[Int(reg)] else {
             fatalError(
                 "Register \(reg) expected to be \(target) but is \(from[Int(reg)])"
             )
@@ -760,7 +765,7 @@ class M1Compiler {
                 let sizeB = requireTypeKind(reg: b, from: regKinds).hlRegSize
                 
                 mem.append(
-                    PseudoOp.debugMarker("OJULt \(a)@\(regOffsetA) < \(b)@\(regOffsetB) --> \(offset) (target instruction: \(targetInstructionIx))"),
+                    PseudoOp.debugMarker("\(op.id) <\(a)@\(regOffsetA), \(b)@\(regOffsetB)> --> \(offset) (target instruction: \(targetInstructionIx))"),
                     M1Op.ldr(sizeA == 4 ? W.w0 : X.x0, .reg64offset(.sp, regOffsetA, nil)),
                     M1Op.ldr(sizeB == 4 ? W.w1 : X.x1, .reg64offset(.sp, regOffsetB, nil))
                 )
@@ -798,7 +803,86 @@ class M1Compiler {
                 mem.append(
                     PseudoOp.debugPrint(self, "NOT JUMPING")
                 )
+            
+            // TODO: somehow combine all the jumps with fallthroughs?
+            case .OJNotNull(let reg, let offset):
+                fallthrough
+            case .OJNull(let reg, let offset):
                 
+                let wordsToSkip = Int(offset) + 1
+                let targetInstructionIx = currentInstruction + wordsToSkip
+                guard targetInstructionIx < addrBetweenOps.count else {
+                    fatalError("Jump going to an invalid op (\(targetInstructionIx))")
+                }
+                
+                let regOffset = getRegStackOffset(regKinds, reg)
+                
+                let size = requireTypeKind(reg: reg, from: regKinds).hlRegSize
+                
+                mem.append(
+                    PseudoOp.debugMarker("\(op.id) \(reg)@\(regOffset) --> \(offset) (target instruction: \(targetInstructionIx))"))
+                if size == 8 {
+                    mem.append(
+                        M1Op.movz64(X.x0, 0, nil),
+                        M1Op.ldr(X.x1, .reg64offset(.sp, regOffset, nil))
+                    )
+                } else {
+                    fatalError("Reg size must be 8")
+                }
+                
+                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
+                appendDebugPrintRegisterAligned4(X.x1, builder: mem)
+                
+                mem.append(M1Op.cmp(X.x0, X.x1))
+                
+                // calculate what to skip
+                let jumpOffset_partA = try Immediate19(mem.byteSize)
+                let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
+                let jumpOffset = try DeferredImmediateSum(
+                    jumpOffset_partB,
+                    jumpOffset_partA,
+                    -1,
+                    -Int(0))
+                //
+                
+                
+                mem.append(
+                    PseudoOp.deferred(4) {
+                        switch(op.id) {
+                        case .OJNull:
+                            return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
+                        case .OJNotNull:
+                            return M1Op.b_ne(try Immediate19(jumpOffset.immediate))
+                        default:
+                            fatalError("Unsupported jump id \(op.id)")
+                        }
+                    })
+                mem.append(
+                    PseudoOp.debugPrint(self, "NOT JUMPING")
+                )
+            // TODO: combine with above jumps
+            case .OJAlways(let offset):
+                let wordsToSkip = Int(offset) + 1
+                let targetInstructionIx = currentInstruction + wordsToSkip
+                guard targetInstructionIx < addrBetweenOps.count else {
+                    fatalError("Jump going to an invalid op (\(targetInstructionIx))")
+                }
+                
+                // calculate what to skip
+                let jumpOffset_partA = try Immediate19(mem.byteSize)
+                let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
+                let jumpOffset = try DeferredImmediateSum(
+                    jumpOffset_partB,
+                    jumpOffset_partA,
+                    -1,
+                    -Int(0))
+                //
+                
+                
+                mem.append(
+                    PseudoOp.deferred(4) {
+                        return M1Op.b(jumpOffset.immediate)
+                    })
             case .OGetGlobal(let dst, let globalRef):
                 guard let globalTypePtr = ctx.hlcode?.pointee.globals.advanced(by: globalRef).pointee else {
                     fatalError("Can't resolve global \(globalRef)")
@@ -944,6 +1028,18 @@ class M1Compiler {
                     M1Op.ldr(X.x1, .reg64offset(X.sp, bOffset, nil)),
                     M1Op.and(X.x2, X.x0, .r64shift(X.x1, .lsl(0))),
                     M1Op.str(X.x2, .reg64offset(X.sp, dstOffset, nil))
+                )
+            case .OThrow(let exc):
+                fatalError("not implemented")
+            case .OTrap(let exc, let offset):
+                fatalError("not implemented")
+            case .OEndTrap(let exc):
+                fatalError("not implemented")
+            case .ONull(let dst):
+                let dstOffset = getRegStackOffset(regKinds, dst)
+                mem.append(
+                    M1Op.movz64(X.x0, 0, nil),
+                    M1Op.str(X.x0, .reg64offset(.sp, dstOffset, nil))
                 )
             default:
                 fatalError("Can't compile \(op.debugDescription)")

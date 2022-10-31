@@ -23,12 +23,13 @@ class Main {
 		return a.getUI16(ix);
 	}
 
-	static public function testTrap() {
+	static public function testTrap(): Int {
 		try {
 			throw new Exception("test message");
 		} catch (e:Exception) {
-			trace('stack: ${e.stack}');
+			return 1;
 		}
+        return 0;
 	}
 
     static public function testTrap2() {

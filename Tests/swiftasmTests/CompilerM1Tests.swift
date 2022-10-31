@@ -166,12 +166,157 @@ final class CompilerM1Tests: XCTestCase {
         }
     }
     
+    func testCompile_OJNotNull() throws {
+        let strType = code.pointee.getType(13)   // String
+        let rstrType: Resolvable<HLType> = .type(fromUnsafe: strType)
+        
+        let i32Type = code.pointee.getType(3)   // i32
+        let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
+        
+        let funcType = code.pointee.getType(10) // (String) -> (String)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
+        
+        // constants
+        let constI_3 = 1 // constant value 3
+        let constI_57005 = 2 // constant value 57005
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: rstrType,
+                    findex: 0,
+                    regs: [rstrType, ri32Type],
+                    ops: [
+                        // if first arg < second arg, skip 2 following ops
+                        .OJNotNull(reg: 0, offset: 2),
+                        
+                        // return 3
+                        .OInt(dst: 1, ptr: constI_3),
+                        .ORet(ret: 1),
+                        
+                        // return 57005
+                        .OInt(dst: 1, ptr: constI_57005),
+                        .ORet(ret: 1)
+                    ]
+                )
+            ], ints: [0, 3, 57005])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: true)
+        try sut.compile(findex: 0, into: mem)
+
+//         mem.hexPrint()
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (UnsafeRawPointer?) -> Int32)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        // jump
+        XCTAssertEqual(57005, entrypoint(UnsafeRawPointer(bitPattern: 123)))
+        
+        // no jump
+        XCTAssertEqual(3, entrypoint(nil))
+    }
+    
+    func testCompile_OJAlways() throws {
+        let i32Type = code.pointee.getType(3)   // i32
+        let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
+        
+        let funcType = code.pointee.getType(103) // (i32, i32) -> (i32)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: ri32Type,
+                    findex: 0,
+                    regs: [ri32Type, ri32Type],
+                    ops: [
+                        .OJAlways(offset: 1),
+                        .ORet(ret: 0),
+                        .ORet(ret: 1)
+                    ]
+                )
+            ])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: true)
+        try sut.compile(findex: 0, into: mem)
+
+//         mem.hexPrint()
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        // always jump
+        XCTAssertEqual(456, entrypoint(123, 456))
+    }
+    
+    func testCompile_OJNull() throws {
+        let strType = code.pointee.getType(13)   // String
+        let rstrType: Resolvable<HLType> = .type(fromUnsafe: strType)
+        
+        let i32Type = code.pointee.getType(3)   // i32
+        let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
+        
+        let funcType = code.pointee.getType(10) // (String) -> (String)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
+        
+        // constants
+        let constI_3 = 1 // constant value 3
+        let constI_57005 = 2 // constant value 57005
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: rstrType,
+                    findex: 0,
+                    regs: [rstrType, ri32Type],
+                    ops: [
+                        // if first arg < second arg, skip 2 following ops
+                        .OJNull(reg: 0, offset: 2),
+                        
+                        // return 3
+                        .OInt(dst: 1, ptr: constI_3),
+                        .ORet(ret: 1),
+                        
+                        // return 57005
+                        .OInt(dst: 1, ptr: constI_57005),
+                        .ORet(ret: 1)
+                    ]
+                )
+            ], ints: [0, 3, 57005])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: true)
+        try sut.compile(findex: 0, into: mem)
+
+//         mem.hexPrint()
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (UnsafeRawPointer?) -> Int32)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        // jump
+        XCTAssertEqual(57005, entrypoint(nil))
+        
+        // no jump
+        XCTAssertEqual(3, entrypoint(UnsafeRawPointer(bitPattern: 123)))
+    }
+    
     func testCompile_OJULt() throws {
         let i32Type = code.pointee.getType(3)   // i32
-        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
+        let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
         
         let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
-        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
         
         // constants
         let constI_3 = 1 // constant value 3
@@ -221,10 +366,10 @@ final class CompilerM1Tests: XCTestCase {
     
     func testCompile_OJEq() throws {
         let i32Type = code.pointee.getType(3)   // i32
-        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
+        let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
         
         let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
-        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
         
         // constants
         let constI_3 = 1 // constant value 3
@@ -273,10 +418,10 @@ final class CompilerM1Tests: XCTestCase {
     
     func testCompile_OJNotEq() throws {
         let i32Type = code.pointee.getType(3)   // i32
-        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
+        let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
         
         let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
-        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
         
         // constants
         let constI_3 = 1 // constant value 3
@@ -326,10 +471,10 @@ final class CompilerM1Tests: XCTestCase {
     
     func testCompile_OAnd() throws {
         let i32Type = code.pointee.getType(3)   // i32
-        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
+        let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
         
         let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
-        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
         
         let storage = ModuleStorage(
             functions: [
@@ -359,6 +504,41 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(0b00000, entrypoint(0b00000, 0b11111))
         XCTAssertEqual(0b00100, entrypoint(0b00111, 0b11100))
         XCTAssertEqual(0b11111, entrypoint(0b11111, 0b11111))
+    }
+    
+    func testCompile_ONull() throws {
+        let dynType = code.pointee.getType(9)   // dyn
+        let rdynType: Resolvable<HLType> = .type(fromUnsafe: dynType)
+        
+        let funcType = code.pointee.getType(50) // (dyn) -> (dyn)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: rdynType,
+                    findex: 0,
+                    regs: [rdynType],
+                    ops: [
+                        .ONull(dst: 0),
+                        .ORet(ret: 0)
+                    ]
+                )
+            ])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: true)
+        try sut.compile(findex: 0, into: mem)
+
+        mem.hexPrint()
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer?)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(nil, entrypoint(UnsafeRawPointer(bitPattern: 0x7b)!))
     }
 
     func testCompile_emptyFunction() throws {
@@ -412,10 +592,10 @@ final class CompilerM1Tests: XCTestCase {
         let byteType = code.pointee.getType(14)   // bytes
         let i32Type = code.pointee.getType(3)   // i32
         
-        let rFuncType: Resolvable<HLType> = .init(unsafeType: funcType)
-        let rStringType: Resolvable<HLType> = .init(unsafeType: stringType)
-        let rByteType: Resolvable<HLType> = .init(unsafeType: byteType)
-        let ri32Type: Resolvable<HLType> = .init(unsafeType: i32Type)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
+        let rStringType: Resolvable<HLType> = .type(fromUnsafe: stringType)
+        let rByteType: Resolvable<HLType> = .type(fromUnsafe: byteType)
+        let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
         
         let storage = ModuleStorage(
             functions: [
