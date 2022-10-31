@@ -222,10 +222,18 @@ extension M1Compiler {
 
 typealias Registers = [Resolvable<HLType>]
 
-let _throw: (@convention(c) (UnsafeRawPointer) -> ()) = { (_ dyn: UnsafeRawPointer) in
-    fatalError("not implemented")
+let _throw: (@convention(c) (Int64) -> ()) = { (_ exc: Int64) in
+    print("Throwing \(exc)")
+}
+let _trap: (@convention(c) (Int64, Int64) -> ()) = { (_ exc: Int64, _ offset: Int64) in
+    print("Trapping \(exc) \(offset)")
+}
+let _endTrap: (@convention(c) (Int64) -> ()) = { (_ exc: Int64) in
+    print("Ending trap \(exc)")
 }
 let _throwAddress = unsafeBitCast(_throw, to: UnsafeMutableRawPointer.self)
+let _trapAddress = unsafeBitCast(_trap, to: UnsafeMutableRawPointer.self)
+let _endTrapAddress = unsafeBitCast(_endTrap, to: UnsafeMutableRawPointer.self)
 
 class M1Compiler {
     /*
@@ -410,6 +418,12 @@ class M1Compiler {
         
         let findex = compilable.getFindex()
         
+        // Memory might not be set in some tests that don't
+        // properly initialize types :(
+//        Swift.assert(
+//            regs.map { $0.memory }.filter { $0 != nil }.count > 0,
+//            "regs must have memory")
+        
         let relativeBaseAddr = mem.getDeferredPosition()
         compilable.entrypoint.update(from: relativeBaseAddr)
         
@@ -524,6 +538,32 @@ class M1Compiler {
                     M1Op.ldr(X.x0, .reg64offset(X.sp, arg0StackOffset, nil)),
                     M1Op.ldr(X.x1, .reg64offset(X.sp, arg1StackOffset, nil)),
                     M1Op.ldr(X.x2, .reg64offset(X.sp, arg2StackOffset, nil)),
+                    PseudoOp.mov(.x10, fnAddr),
+                    M1Op.blr(.x10),
+                    M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
+                )
+            case .OCall4(let dst, let fun, let arg0, let arg1, let arg2, let arg3):
+                let callTarget = ctx.callTargets.get(fun)
+                
+                assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
+                assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
+                assert(reg: arg1, from: regKinds, matchesCallArg: 1, inFun: callTarget)
+                assert(reg: arg2, from: regKinds, matchesCallArg: 2, inFun: callTarget)
+                assert(reg: arg3, from: regKinds, matchesCallArg: 3, inFun: callTarget)
+                
+                let fnAddr = callTarget.entrypoint
+                let regStackOffset = getRegStackOffset(regKinds, dst)
+                let arg0StackOffset = getRegStackOffset(regKinds, arg0)
+                let arg1StackOffset = getRegStackOffset(regKinds, arg1)
+                let arg2StackOffset = getRegStackOffset(regKinds, arg2)
+                let arg3StackOffset = getRegStackOffset(regKinds, arg3)
+                
+                mem.append(
+                    PseudoOp.debugMarker("Call4 fn@\(fun)(\(arg0), \(arg1), \(arg2)) -> \(dst)"),
+                    M1Op.ldr(X.x0, .reg64offset(X.sp, arg0StackOffset, nil)),
+                    M1Op.ldr(X.x1, .reg64offset(X.sp, arg1StackOffset, nil)),
+                    M1Op.ldr(X.x2, .reg64offset(X.sp, arg2StackOffset, nil)),
+                    M1Op.ldr(X.x3, .reg64offset(X.sp, arg3StackOffset, nil)),
                     PseudoOp.mov(.x10, fnAddr),
                     M1Op.blr(.x10),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
@@ -686,7 +726,7 @@ class M1Compiler {
                         "Mov \(c) into \(X.x0) and store in stack for HL reg \(iRef) at offset \(regStackOffset)"
                     ),
                     PseudoOp.mov(X.x0, c),
-                    M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
+                    M1Op.str(W.w0, .reg64offset(X.sp, regStackOffset, nil))
                 )
             case .OSetField(let objReg, let fieldRef, let srcReg):
                 appendDebugPrintAligned4("Entering OSetField", builder: mem)
@@ -1030,16 +1070,35 @@ class M1Compiler {
                     M1Op.str(X.x2, .reg64offset(X.sp, dstOffset, nil))
                 )
             case .OThrow(let exc):
-                fatalError("not implemented")
+                mem.append(
+                    M1Op.movz64(X.x0, UInt16(exc), nil),
+                    PseudoOp.mov(X.x1, _throwAddress),
+                    M1Op.blr(X.x1)
+                )
             case .OTrap(let exc, let offset):
-                fatalError("not implemented")
+                mem.append(
+                    M1Op.movz64(X.x0, UInt16(exc), nil),
+                    M1Op.movz64(X.x1, UInt16(offset), nil),
+                    PseudoOp.mov(X.x2, _trapAddress),
+                    M1Op.blr(X.x2)
+                )
             case .OEndTrap(let exc):
-                fatalError("not implemented")
+                mem.append(
+                    M1Op.movz64(X.x0, UInt16(exc), nil),
+                    PseudoOp.mov(X.x1, _endTrapAddress),
+                    M1Op.blr(X.x1)
+                )
             case .ONull(let dst):
                 let dstOffset = getRegStackOffset(regKinds, dst)
                 mem.append(
                     M1Op.movz64(X.x0, 0, nil),
                     M1Op.str(X.x0, .reg64offset(.sp, dstOffset, nil))
+                )
+            case .OBool(let dst, let value):
+                let dstOffset = getRegStackOffset(regKinds, dst)
+                mem.append(
+                    M1Op.movz64(X.x0, UInt16(value), nil),
+                    M1Op.str(W.w0, .reg64offset(.sp, dstOffset, nil))
                 )
             default:
                 fatalError("Can't compile \(op.debugDescription)")

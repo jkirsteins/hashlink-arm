@@ -702,6 +702,67 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(0b111, res)
     }
     
+    func testCompile__OCall4() throws {
+        // Prepare function we'll call from JIT
+        typealias _JitFunc = (@convention(c) (UInt8, UInt8, UInt8, UInt8) -> UInt8)
+        let swiftFunc: _JitFunc = { (_ a: UInt8, _ b: UInt8, _ c: UInt8, _ d: UInt8) in
+            return ((a & 1) << 3) | ((b & 1) << 2) | ((c & 1) << 1) | (d & 1)
+        }
+        let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
+        
+        let f = prepareFunction(
+            retType: .u8,
+            findex: 0,
+            regs: [.u8, .u8, .u8, .u8],
+            args: [.u8, .u8, .u8, .u8],
+            ops: [
+                // NOTE: sending registers to diff numbered args
+                .OCall4(dst: 0, fun: 1, arg0: 3, arg1: 2, arg2: 1, arg3: 0),
+                .ORet(ret: 0),
+            ]
+        )
+
+        // Misc. JIT stuff
+        let storage = ModuleStorage(
+            functions: [f],
+            natives: [
+                HLNative(
+                    lib: Resolvable("builtin"),
+                    name: Resolvable("swiftFunc"),
+                    type: Resolvable(
+                        .fun(
+                            HLTypeFun(
+                                args: Resolvable.array([.u8, .u8, .u8, .u8]),
+                                ret: Resolvable(.u8)
+                            )
+                        )
+                    ),
+                    findex: 1,
+                    memory: swiftFuncPtr
+                )
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        // Compile HL function with function index 0 (from the whole functions table)
+        let sut = sut()
+        try sut.compile(findex: 0, into: mem)
+        // Print debug output of the generated Aarch64 bytecode
+        mem.hexPrint()
+        // Now place the compiled bytecode in executable memory and get a pointer to it in
+        // form of function (JitInt64 means (void)->Int64)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(0, entrypoint(0, 0, 0, 0))
+        XCTAssertEqual(0b0001, entrypoint(1, 0, 0, 0))
+        XCTAssertEqual(0b0010, entrypoint(0, 1, 0, 0))
+        XCTAssertEqual(0b0100, entrypoint(0, 0, 1, 0))
+        XCTAssertEqual(0b1000, entrypoint(0, 0, 0, 1))
+        XCTAssertEqual(0b1111, entrypoint(1, 1, 1, 1))
+        XCTAssertEqual(0b0000, entrypoint(0, 0, 0, 0))
+        XCTAssertEqual(0b0110, entrypoint(0, 1, 1, 0))
+    }
+    
     func testCompile__OCall1() throws {
         // Prepare function we'll call from JIT
         typealias _JitFunc = (@convention(c) (UInt16) -> Int32)
@@ -966,7 +1027,6 @@ final class CompilerM1Tests: XCTestCase {
     }
 
     func testCompile_callAndReturn_callCompiled() throws {
-        // Misc. JIT stuff
         let storage = ModuleStorage(
             functions: [
                 prepareFunction(
@@ -992,15 +1052,76 @@ final class CompilerM1Tests: XCTestCase {
         try sut.compile(findex: 0, into: mem)
         try sut.compile(findex: 1, into: mem)
 
-        // Print debug output of the generated Aarch64 bytecode
-        mem.hexPrint()
-        let entrypoint: JitInt64 = try mem.buildEntrypoint(0)
-        let entrypoint2: JitInt64 = try mem.buildEntrypoint(1)
-        let res1: Int64 = entrypoint()
-        let res2: Int64 = entrypoint2()
+        let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(0)
+        let entrypoint2: (@convention(c) () -> Int32) = try mem.buildEntrypoint(1)
+        let res1: Int32 = entrypoint()
+        let res2: Int32 = entrypoint2()
 
         XCTAssertEqual(152, res1)
         XCTAssertEqual(res1, res2)
+    }
+    
+    func testCompile_OBool() throws {
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .i32,
+                    findex: 0,
+                    regs: [.i32, .bool, .i32],
+                    args: [],
+                    ops: [
+                        .OInt(dst: 0, ptr: 0),
+                        .OInt(dst: 2, ptr: 0),
+                        .OBool(dst: 1, value: 0),
+                        // check the bool didn't overwrite the ints
+                        .ORet(ret: 0)
+                    ]
+                ),
+                prepareFunction(
+                    retType: .i32,
+                    findex: 1,
+                    regs: [.i32, .bool, .i32],
+                    args: [],
+                    ops: [
+                        .OInt(dst: 0, ptr: 0),
+                        .OInt(dst: 2, ptr: 0),
+                        .OBool(dst: 1, value: 0),
+                        // check the bool didn't overwrite the ints
+                        .ORet(ret: 2)
+                    ]
+                ),
+                prepareFunction(
+                    retType: .bool,
+                    findex: 2,
+                    regs: [.i32, .bool, .i32],
+                    args: [],
+                    ops: [
+                        .OBool(dst: 1, value: 0),
+                        .OInt(dst: 0, ptr: 0),
+                        .OInt(dst: 2, ptr: 0),
+                        // check the bool didn't overwrite the ints
+                        .ORet(ret: 1)
+                    ]
+                ),
+            ],
+            ints: [
+                Int32(bitPattern: UInt32.max)
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut()
+        try sut.compile(findex: 0, into: mem)
+        try sut.compile(findex: 1, into: mem)
+        try sut.compile(findex: 2, into: mem)
+
+        let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(0)
+        let entrypoint2: (@convention(c) () -> Int32) = try mem.buildEntrypoint(1)
+        let entrypoint3: (@convention(c) () -> UInt8) = try mem.buildEntrypoint(2)
+        
+        XCTAssertEqual(-1, entrypoint())
+        XCTAssertEqual(-1, entrypoint2())
+        XCTAssertEqual(0, entrypoint3())
     }
 
     func testCompile_simpleReturn() throws {

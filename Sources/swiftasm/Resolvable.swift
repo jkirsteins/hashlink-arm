@@ -26,14 +26,15 @@ struct Resolvable<T: CustomDebugStringConvertible> : Equatable, CustomDebugStrin
         self.memory = memory
     }
     
+    // deprecated. Might be useful in some tests be
     init(_ val: T) {
         self.init(val, memory: nil)
     }
     
-    init(ix: TableIndex, table: TableResolver<T>) {
+    init(ix: TableIndex, table: TableResolver<T>, memory: UnsafeRawPointer? = nil) {
         self.ix = ix
         self.table = table
-        self.memory = nil
+        self.memory = memory
     }
 
     var value: T {
@@ -71,8 +72,11 @@ extension Resolvable<HLType> {
         }
         
         let table: TableResolver<HLType> = TableResolver(table: SharedStorage(wrappedValue: []), count: 1)
-        let res = Resolvable(ix: 0, table: table)
+        let res = Resolvable(ix: 0, table: table, memory: t)
         __typeCache[t] = res
+        
+        assert(res.memory != nil)
+        assert(__typeCache[t]?.memory != nil)
         
         table.storage.wrappedValue = [HLType(t)]
         

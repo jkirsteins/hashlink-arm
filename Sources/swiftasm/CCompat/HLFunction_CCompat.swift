@@ -50,3 +50,32 @@ struct HLFunction_CCompat : Equatable, Hashable {
         return unionPtr.boundPointee()
     }
 } 
+
+extension HLFunction_CCompat : Compilable {
+    func getFindex() -> Int { Int(self.findex) }
+    
+    var regs: [Resolvable<HLType>] {
+        (0..<nregs).map { ix in
+            let ptrPtr = self.regsPtr!.advanced(by: Int(ix))
+            return .type(fromUnsafe: ptrPtr.pointee)
+        }
+    }
+    
+    var entrypoint: any MemoryAddress {
+        fatalError("No memory, need to wrap this in HLFunction_CCompat__WithMemory")
+    }
+    
+    var args: [Resolvable<HLType>] {
+        let res = (0..<cType.fun.pointee.nargs).map { ix in
+            let ptr: UnsafePointer<HLType_CCompat> = self.cType.fun.pointee.argsPtr.advanced(by: Int(ix)).pointee
+            return Resolvable.type(fromUnsafe: ptr)
+        }
+        
+        return res
+    }
+    var ret: Resolvable<HLType> {
+        .type(fromUnsafe: self.cType.fun.pointee.retPtr)
+    }
+    
+    var ops: [HLOpCode] { cOps.map { HLOpCode.parseCCompat($0) } }
+}

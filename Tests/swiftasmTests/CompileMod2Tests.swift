@@ -63,6 +63,8 @@ final class CompileMod2Tests: XCTestCase {
         let sut = M1Compiler()
         let mem = OpBuilder(ctx: ctx)
         
+        try sut.compile(findex: 5, into: mem)
+        try sut.compile(findex: 321, into: mem)
         try sut.compile(findex: 40, into: mem)
         try sut.compile(findex: 32, into: mem)
 
@@ -95,8 +97,10 @@ final class CompileMod2Tests: XCTestCase {
             fatalError("Type 29 missing")
         }
         let hlType = HLType(excT)
+        let resolvable = Resolvable.type(fromUnsafe: excT)
 
         XCTAssertEqual(hlType.objData!.name.value, "haxe.Exception")
+        XCTAssertNotNil(resolvable.memory)
     }
     
     /**
