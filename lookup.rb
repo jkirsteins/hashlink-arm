@@ -271,6 +271,74 @@ def lookup_loads_stores(val)
     end
 end
 
+# https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Immediate?lang=en#log_imm
+def lookup_data_processing__immediate__logical(val)
+    sf = p(val, 1, 31)
+    opc = p(val, 2, 29)
+    n = p(val, 1, 22)
+    immr = p(val, 6, 16)
+    imms = p(val, 6, 10)
+    rn = p(val, 5, 5)
+    rd = p(val, 5, 0)
+
+    puts("Logical (immediate): https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Immediate?lang=en#log_imm")
+    puts("    sf = #{sf}")
+    puts("    opc = #{opc}")
+    puts("    n = #{n}")
+    puts("    immr = #{immr}")
+    puts("    imms = #{imms}")
+    puts("    rn = #{rn}")
+    puts("    rd = #{rd}")
+    valStr = "#{sf}#{opc}#{n}"
+
+    if match("0 xx 1", valStr)
+        abort("UNALLOCATED")
+    elsif match("0 00 0", valStr)
+        abort("AND (immediate) — 32-bit")
+    elsif match("0	01	0", valStr)
+        abort("ORR (immediate) — 32-bit")
+    elsif match("0	10	0", valStr)
+        abort("EOR (immediate) — 32-bit")
+    elsif match("0	11	0", valStr)
+        abort("ANDS (immediate) — 32-bit")
+    elsif match("1	00 x", valStr) 
+        puts("AND (immediate) — 64-bit")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/AND--immediate---Bitwise-AND--immediate--?lang=en")
+    elsif match("1	01 x", valStr)
+        abort("ORR (immediate) — 64-bit")
+    elsif match("1	10 x", valStr)
+        abort("EOR (immediate) — 64-bit")
+    elsif match("1	11 x", valStr)
+        abort("ANDS (immediate) — 64-bit")
+    else 
+        abort("Unknown")
+    end 
+end
+
+# https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Immediate
+def lookup_data_processing__immediate(val)
+    op0 = p(val, 3, 23)
+
+    valStr = "#{op0}"	
+    if match("00x", valStr)
+        abort("PC-rel. addressing")
+    elsif match("010", valStr)
+        abort("Add/subtract (immediate)")
+    elsif match("011", valStr)
+        abort("Add/subtract (immediate, with tags)")
+    elsif match("100", valStr)
+        lookup_data_processing__immediate__logical(val)
+    elsif match("101", valStr)
+        abort("Move wide (immediate)")
+    elsif match("110", valStr)
+        abort("Bitfield")
+    elsif match("111", valStr)
+        abort("Extract")
+    else 
+        abort("Unknown")
+    end 
+end
+
 # https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding?lang=en
 def lookup(val)
     op0 = p(val, 4, 25)
@@ -285,7 +353,7 @@ def lookup(val)
     when "0011"
         abort("UNALLOCATED")
     when "1000", "1001" 
-        abort("Data Processing -- Immediate")
+        lookup_data_processing__immediate(val)
     when "1010", "1011" 
         abort("Branches, Exception Generating and System instructions")
     when "0100", "0110", "1100", "1110" 
@@ -299,4 +367,9 @@ def lookup(val)
     end
 end
 
-puts lookup(0b0111100101_000000001100_11111_00000)
+puts lookup(0x8a020061)
+
+# 0: 61 10 40 92  	and	x1, x3, #0x1f
+# 4: 61 00 02 8a  	and	x1, x3, x2
+# 8: 61 10 40 b2  	orr	x1, x3, #0x1f
+# c: 61 00 02 aa  	orr	x1, x3, x2
