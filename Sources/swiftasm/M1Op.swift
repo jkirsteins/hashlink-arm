@@ -57,10 +57,10 @@ enum M1Op : CpuOp {
         case .ret: return "ret"
         case .add(let rt, let rn, let off) where off.imm.isNegative:
             // We're sure this fits
-            return M1Op.sub(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
-        case .sub(let rt, let rn, let off) where off.imm.isPositive:
+            return M1Op.subImm12(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
+        case .subImm12(let rt, let rn, let off) where off.imm.isPositive:
             return "sub \(rt), \(rn), \(off.debugDescription)"
-        case .sub(let rt, let rn, let off):
+        case .subImm12(let rt, let rn, let off):
             // We're sure this fits
             return M1Op.add(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
         case .add(let rt, let rn, let off):
@@ -230,6 +230,20 @@ enum M1Op : CpuOp {
             return "uxth \(Wd), \(Wn)"
         case .sxtb(let Xd, let Wn):
             return "sxtb \(Xd), \(Wn)"
+        case .sub(let Rd, let Rn, .r64shift(let Rm, let shift)):
+            if case .lsl(0) = shift {
+                return "sub \(Rd), \(Rn), \(Rm)"
+            } else {
+                return "sub \(Rd), \(Rn), \(Rm), \(shift)"
+            }
+        case .sub(_, _, .none):
+            fallthrough
+        case .sub(_, _, .some(.r64ext(_, _))):
+            fallthrough
+        case .sub(_, _, .some(.r32ext(_, _))):
+            fallthrough
+        case .sub(_, _, .some(.imm(_, _))):
+            return "sub NOT IMPLEMENTED"
         }
     }
     
@@ -272,7 +286,9 @@ enum M1Op : CpuOp {
      */
     case adr64(Register64, RelativeOffset)
     
-    case sub(any Register, any Register, Imm12Lsl12) // negative -> alias for add
+    // deprecated
+    case subImm12(any Register, any Register, Imm12Lsl12) // negative -> alias for add
+    case sub(any Register, any Register, RegModifier?)
     case add(any Register, any Register, Imm12Lsl12) // negative -> alias for sub
     
     case b(RelativeOffset) // 26 bits max

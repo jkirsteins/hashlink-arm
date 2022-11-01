@@ -94,6 +94,10 @@ enum Register64: UInt8, Register {
     typealias ExtendOp = ExtendOp64
 
     var is32: Bool { false }
+    
+    var to32: Register32 {
+        Register32(rawValue: rawValue)!
+    }
 
     case x0 = 0
     case x1 = 1
@@ -201,7 +205,8 @@ enum LdrMode {
 enum RegModifier {
     case r64ext(Register64, Register64.ExtendOp)
     case r32ext(Register32, Register32.ExtendOp)
-    case r64shift(Register64, Shift64_Real)
+    // TODO: rename rshift ?
+    case r64shift(any Register, Shift64_Real)
     case imm(Int64, IndexingMode?)
 }
 
@@ -336,7 +341,7 @@ public class EmitterM1 {
 
     static func emit(for op: M1Op) throws -> [UInt8] {
         switch op.resolveFinalForm() {  // resolve potential aliases
-        case .sub(let Rd, let Rn, let offset):
+        case .subImm12(let Rd, let Rn, let offset):
             guard Rd.is32 == Rn.is32 else {
                 throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
             }
@@ -358,7 +363,7 @@ public class EmitterM1 {
                 throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
             }
             guard offset.imm.isPositive else {
-                return try emit(for: .sub(Rd, Rn, Imm12Lsl12(offset.imm.flippedSign, lsl: offset.lsl)))
+                return try emit(for: .subImm12(Rd, Rn, Imm12Lsl12(offset.imm.flippedSign, lsl: offset.lsl)))
             }
             
             //                  S          sh imm12        Rn    Rd
@@ -917,6 +922,30 @@ public class EmitterM1 {
             let encodedRd = encodeReg(Rd, shift: 0)
             let encodedRn = encodeReg(Rn, shift: 5)
             let encoded = mask | s | (n << 22) | immr.shiftedLeft(16) | imms.shiftedLeft(10) | encodedRn | encodedRd
+            return returnAsArray(encoded)
+        case .sub(let Rd, let Rn, .r64shift(let Rm, let shift)):
+            //                  S        SH   Rm    imm6   Rn    Rd
+            let mask: Int64 = 0b01001011_00_0_00000_000000_00000_00000
+            let s = sizeMask(is64: Rd.is64)
+            let imm6: Immediate6
+            let sh: Int64
+            switch(shift) {
+            case .lsl(let shiftAmt):
+                sh = 0b00
+                imm6 = try! Immediate6(shiftAmt)
+            case .lsr(let shiftAmt):
+                sh = 0b01
+                imm6 = try! Immediate6(shiftAmt)
+            case .asr(let shiftAmt):
+                sh = 0b11
+                imm6 = try! Immediate6(shiftAmt)
+            default:
+                fatalError("Unsupported shift")
+            }
+            let encodedRd = encodeReg(Rd, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let encodedRm = encodeReg(Rm, shift: 16)
+            let encoded = s | mask | (sh << 22) | encodedRd | encodedRm | encodedRn | imm6.shiftedLeft(10)
             return returnAsArray(encoded)
         default: throw EmitterM1Error.unsupportedOp
         }

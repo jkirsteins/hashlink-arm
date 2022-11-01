@@ -46,6 +46,40 @@ extension M1Compiler {
         return (roundUpStackReservation(result), stackArgs)
     }
     
+    func appendLoad(reg: Register64, from vreg: Reg, kinds: HLTypeKinds, mem: OpBuilder) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        let offset = getRegStackOffset(kinds, vreg)
+        
+        if vregKind.hlRegSize == 8 {
+            mem.append(
+                M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
+            )
+        } else if vregKind.hlRegSize == 4 {
+            mem.append(
+                M1Op.ldr(reg.to32, .reg64offset(.sp, offset, nil))
+            )
+        } else {
+            fatalError("Size must be 4 or 8")
+        }
+    }
+    
+    func appendStore(reg: Register64, into vreg: Reg, kinds: HLTypeKinds, mem: OpBuilder) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        let offset = getRegStackOffset(kinds, vreg)
+        
+        if vregKind.hlRegSize == 8 {
+            mem.append(
+                M1Op.str(reg, .reg64offset(.sp, offset, nil))
+            )
+        } else if vregKind.hlRegSize == 4 {
+            mem.append(
+                M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
+            )
+        } else {
+            fatalError("Size must be 4 or 8")
+        }
+    }
+    
     /*
      First 7 args are in registers [x0;x7]. Others are on the stack.
      Stack should be extended to account for data which is in registers.
@@ -81,7 +115,7 @@ extension M1Compiler {
         
         builder.append(
             PseudoOp.debugMarker("Reserving \(neededExtraStackSize) bytes for stack"),
-            M1Op.sub(X.sp, X.sp, try .i(neededExtraStackSize))
+            M1Op.subImm12(X.sp, X.sp, try .i(neededExtraStackSize))
         )
         
         var offset: ByteCount = 0
@@ -1159,6 +1193,15 @@ class M1Compiler {
                 )
             case .OLabel:
                 mem.append(PseudoOp.debugPrint(self, "OLabel"))
+            case .OSub(let dst, let a, let b):
+                appendLoad(reg: .x0, from: a, kinds: regKinds, mem: mem)
+                appendLoad(reg: .x1, from: b, kinds: regKinds, mem: mem)
+                
+                mem.append(
+                    M1Op.sub(X.x2, X.x0, .r64shift(X.x1, .lsl(0)))
+                )
+                
+                appendStore(reg: .x2, into: dst, kinds: regKinds, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

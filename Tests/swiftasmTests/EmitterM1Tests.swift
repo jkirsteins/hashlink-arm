@@ -129,12 +129,12 @@ final class EmitterM1Tests: XCTestCase {
             0xe0, 0xfb, 0x61, 0x78
         )
         XCTAssertM1Op(
-            M1Op.ldrh(.w0, .reg64(X.sp, .r64shift(.x1, .lsl(0)))),
+            M1Op.ldrh(.w0, .reg64(X.sp, .r64shift(X.x1, .lsl(0)))),
             "ldrh w0, [sp, x1]",
             0xe0, 0x6b, 0x61, 0x78
         )
         XCTAssertM1Op(
-            M1Op.ldrh(.w0, .reg64(X.sp, .r64shift(.x1, .lsl(1)))),
+            M1Op.ldrh(.w0, .reg64(X.sp, .r64shift(X.x1, .lsl(1)))),
             "ldrh w0, [sp, x1, lsl #1]",
             0xe0, 0x7b, 0x61, 0x78
         )
@@ -177,7 +177,7 @@ final class EmitterM1Tests: XCTestCase {
             0xe0, 0xfb, 0x61, 0x38
         )
         XCTAssertM1Op(
-            M1Op.ldrb(.w0, .reg64(X.sp, .r64shift(.x1, .lsl(0)))),
+            M1Op.ldrb(.w0, .reg64(X.sp, .r64shift(X.x1, .lsl(0)))),
             "ldrb w0, [sp, x1]",
             0xe0, 0x6b, 0x61, 0x38
         )
@@ -297,27 +297,40 @@ final class EmitterM1Tests: XCTestCase {
             [0x1f, 0x00, 0x01, 0xeb]
         )
     }
+    
     func testSub() throws {
-        XCTAssertEqual("sub sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, 16).debugDescription)
+        XCTAssertM1Op(.sub(X.x0, X.x1, .r64shift(X.x2, .lsl(0))),
+                      "sub x0, x1, x2",
+                      0x20, 0x00, 0x02, 0xcb)
+        XCTAssertM1Op(.sub(X.x1, X.x2, .r64shift(X.x3, .lsl(12))),
+                      "sub x1, x2, x3, lsl #12",
+                      0x41, 0x30, 0x03, 0xcb)
+        XCTAssertM1Op(.sub(W.w1, W.w2, .r64shift(W.w3, .lsl(12))),
+                      "sub w1, w2, w3, lsl #12",
+                      0x41, 0x30, 0x03, 0x4b)
+    }
+    
+    func testSubImm12() throws {
+        XCTAssertEqual("sub sp, sp, #16", M1Op.subImm12(Register64.sp, Register64.sp, 16).debugDescription)
         XCTAssertEqual("sub sp, sp, #16",
-                       M1Op.sub(Register64.sp, Register64.sp,
+                       M1Op.subImm12(Register64.sp, Register64.sp,
                                 Imm12Lsl12(16)).debugDescription)
-        XCTAssertEqual("sub sp, sp, #16, lsl 12", M1Op.sub(Register64.sp, Register64.sp, try Imm12Lsl12(16, lsl: ._12)).debugDescription)
-        XCTAssertEqual("add sp, sp, #16", M1Op.sub(Register64.sp, Register64.sp, -16).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16, lsl 12", M1Op.subImm12(Register64.sp, Register64.sp, try Imm12Lsl12(16, lsl: ._12)).debugDescription)
+        XCTAssertEqual("add sp, sp, #16", M1Op.subImm12(Register64.sp, Register64.sp, -16).debugDescription)
         XCTAssertEqual(
-            try EmitterM1.emit(for: .sub(X.sp, X.sp, 16)),
+            try EmitterM1.emit(for: .subImm12(X.sp, X.sp, 16)),
             [0xff, 0x43, 0x00, 0xd1]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .sub(W.w0, W.w0, 16)),
+            try EmitterM1.emit(for: .subImm12(W.w0, W.w0, 16)),
             [0x00, 0x40, 0x00, 0x51]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .sub(X.sp, X.sp, -16)),
+            try EmitterM1.emit(for: .subImm12(X.sp, X.sp, -16)),
             [0xff, 0x43, 0x00, 0x91]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .sub(X.sp, X.sp, Imm12Lsl12(16, lsl: ._12))),
+            try EmitterM1.emit(for: .subImm12(X.sp, X.sp, Imm12Lsl12(16, lsl: ._12))),
             [0xff, 0x43, 0x40, 0xd1]
         )
     }

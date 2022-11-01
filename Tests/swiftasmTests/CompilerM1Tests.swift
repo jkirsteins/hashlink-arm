@@ -675,6 +675,42 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(0b11111, entrypoint(0b11111, 0b11111))
     }
     
+    func testCompile_OSub() throws {
+        let i32Type = code.pointee.getType(3)   // i32
+        let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
+        
+        let funcType = code.pointee.getType(104) // (i32, i32) -> (i32)
+        let rFuncType: Resolvable<HLType> = .type(fromUnsafe: funcType)
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    funcType: rFuncType,
+                    retType: ri32Type,
+                    findex: 0,
+                    regs: [ri32Type, ri32Type],
+                    ops: [
+                        .OSub(dst: 0, a: 0, b: 1),
+                        .ORet(ret: 0)
+                    ]
+                )
+            ])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = M1Compiler(stripDebugMessages: true)
+        try sut.compile(findex: 0, into: mem)
+
+        mem.hexPrint()
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
+        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(11, entrypoint(12, 1))
+        XCTAssertEqual(1000, entrypoint(1252, 252))
+    }
+    
     func testCompile_ONull() throws {
         let dynType = code.pointee.getType(9)   // dyn
         let rdynType: Resolvable<HLType> = .type(fromUnsafe: dynType)
