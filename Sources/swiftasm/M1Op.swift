@@ -7,7 +7,22 @@ protocol CpuOp : CustomDebugStringConvertible {
 extension M1Op {
     func resolveFinalForm() -> M1Op {
         switch(self) {
-            
+        case .strh(let Wt, .imm64(let Rn, let off, nil)) where off % 2 != 0:
+            return .sturh(Wt, .imm64(Rn, off, nil))
+        case .strh(let Wt, .reg64offset(let Rn, let off, let ixMode)):
+            fallthrough
+        case .strh(let Wt, .reg64(let Rn, .imm(let off, let ixMode))):
+            return .strh(Wt, .imm64(Rn, off, ixMode))
+        case .strh(let Wt, .reg64(let Rn, nil)):
+            return .strh(Wt, .imm64(Rn, 0, nil))
+        case .strb(let Wt, .reg64offset(let Rn, let off, let ixMode)):
+            fallthrough
+        case .strb(let Wt, .reg64(let Rn, .imm(let off, let ixMode))):
+            return .strb(Wt, .imm64(Rn, off, ixMode))
+        case .strb(let Wt, .reg64(let Rn, nil)):
+            return .strb(Wt, .imm64(Rn, 0, nil))
+        case .ldrh(let Wt, .imm64(let Rn, let off, nil)) where off % 2 != 0:
+            return .ldurh(Wt, .imm64(Rn, off, nil))
         case .ldrh(let Wt, .reg64(let Rn, nil)):
             return .ldrh(Wt, .imm64(Rn, 0, nil))
         case .ldrb(let Wt, .reg64(let Rn, nil)):
@@ -195,6 +210,9 @@ enum M1Op : CpuOp {
 //        case .ldrb(let Rt, .reg64(let Rn, .r64shift(let Rm, ._0))):
 //            return "ldrb \(Rt), [\(Rn), \(Rm)]"
         case .ldrh(let Rt, let val):
+            if case .imm64(_, let offv, _) = val, offv % 2 != 0 {
+                return M1Op.ldurh(Rt, val).debugDescription
+            }
             return "ldrh \(Rt), \(val)"
         case .ldrb(let Rt, let val):
             return "ldrb \(Rt), \(val)"
@@ -204,8 +222,8 @@ enum M1Op : CpuOp {
             return "stp mod \(String(describing: mod)) NOT IMPLEMENTED"
         case .ldp(_, let mod):
             return "ldp mod \(String(describing: mod)) NOT IMPLEMENTED"
-        case .ldr(_, let mod):
-            return "ldr mod \(String(describing: mod)) NOT IMPLEMENTED"
+        case .ldr(let Rd, let mod):
+            return "ldr \(Rd), \(mod)"
         case .and(let Rd, let Rn, .imm(let imm, nil)):
             return "and \(Rd), \(Rn), #\(imm)"
         case .and(let Rd, let Rn, .r64shift(let Rm, .lsl(0))):
@@ -244,6 +262,17 @@ enum M1Op : CpuOp {
             fallthrough
         case .sub(_, _, .some(.imm(_, _))):
             return "sub NOT IMPLEMENTED"
+        case .strb(let Rd, let off):
+            return "strb \(Rd), \(off)"
+        case .strh(let Rd, let off):
+            if case .imm64(_, let offv, _) = off, offv % 2 != 0 {
+                return M1Op.sturh(Rd, off).debugDescription
+            }
+            return "strh \(Rd), \(off)"
+        case .sturh(let Rd, let off):
+            return "sturh \(Rd), \(off)"
+        case .ldurh(let Rd, let off):
+            return "ldurh \(Rd), \(off)"
         }
     }
     
@@ -272,6 +301,11 @@ enum M1Op : CpuOp {
      https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STR--immediate---Store-Register--immediate--?lang=en
      */
     case str(any Register, Offset)
+    case strb(Register32, Offset)
+    case strh(Register32, Offset)
+    
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STURH--Store-Register-Halfword--unscaled--
+    case sturh(Register32, Offset)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STUR--Store-Register--unscaled--?lang=en
     case stur(any Register, Register64, Int16)
@@ -388,6 +422,9 @@ enum M1Op : CpuOp {
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LDRH--register---Load-Register-Halfword--register--?lang=en
     case ldrh(/*Wt*/Register32, Offset)
+    
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LDURH--Load-Register-Halfword--unscaled--
+    case ldurh(Register32, Offset)
 }
 
 

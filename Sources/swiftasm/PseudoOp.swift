@@ -3,6 +3,13 @@ import Foundation
 enum PseudoOp: CpuOp, CustomDebugStringConvertible {
     case zero
     case ascii(String)
+    
+    // load value from SP+offset using the correct size of the reg
+    case ldrVreg(Register64, /*offset from sp*/ByteCount, /*vreg size*/ByteCount)
+    
+    // store value at SP+offset using the correct size of the reg
+    case strVreg(Register64, /*offset from sp*/ByteCount, /*vreg size*/ByteCount)
+    
     case deferred(ByteCount, () throws->CpuOp)
     
     // This will only show up in bytecode debug output (e.g. hexPrint()) and
@@ -16,6 +23,10 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
     
     var size: ByteCount {
         switch(self) {
+        case .ldrVreg(let reg, let off, let s):
+            return Self._ldrVreg(reg, off, s).size
+        case .strVreg(let reg, let off, let s):
+            return Self._strVreg(reg, off, s).size
         case .deferred(let size, _):
             return size
         case .debugPrint:
@@ -40,13 +51,43 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
         case .mov(let Rd, let val):
             return ".mov \(Rd), #\(val)"
         case .zero: return ".zero"
+        case .ldrVreg(let reg, let offset, let regSize):
+            return Self._ldrVreg(reg, offset, regSize).debugDescription
+        case .strVreg(let reg, let offset, let regSize):
+            return Self._strVreg(reg, offset, regSize).debugDescription
         case .ascii(let val):
             return ".ascii(\(val))"
         }
     }
     
+    static func _ldrVreg(_ reg: Register64, _ offset: ByteCount, _ regSize: ByteCount) -> M1Op {
+        switch(regSize) {
+        case 8: return M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
+        case 4: return M1Op.ldr(reg.to32, .reg64offset(.sp, offset, nil))
+        case 2: return M1Op.ldrh(reg.to32, .imm64(.sp, offset, nil))
+        case 1: return M1Op.ldrb(reg.to32, .imm64(.sp, offset, nil))
+        default:
+            fatalError("Unsupported vreg size \(regSize)")
+        }
+    }
+    
+    static func _strVreg(_ reg: Register64, _ offset: ByteCount, _ regSize: ByteCount) -> M1Op {
+        switch(regSize) {
+        case 8: return M1Op.str(reg, .reg64offset(.sp, offset, nil))
+        case 4: return M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
+        case 2: return M1Op.strh(reg.to32, .imm64(.sp, offset, nil))
+        case 1: return M1Op.strb(reg.to32, .imm64(.sp, offset, nil))
+        default:
+            fatalError("Unsupported vreg size \(regSize)")
+        }
+    }
+    
     func emit() throws -> [UInt8] {
         switch(self) {
+        case .strVreg(let reg, let offset, let regSize):
+            return try Self._strVreg(reg, offset, regSize).emit()
+        case .ldrVreg(let reg, let offset, let regSize):
+            return try Self._ldrVreg(reg, offset, regSize).emit()
         case .deferred(_, let closure):
             return try closure().emit()
         case .debugPrint(let comp, let message):

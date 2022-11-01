@@ -51,6 +51,87 @@ extension XCTestCase {
 }
 
 final class EmitterM1Tests: XCTestCase {
+          
+    func testStrb() throws {
+        XCTAssertM1Op(
+            M1Op.strb(.w0, .reg64(.sp, .imm(0, nil))),
+            "strb w0, [sp]",
+            0xe0, 0x03, 0x00, 0x39
+        )
+        XCTAssertM1Op(
+            M1Op.strb(.w0, .imm64(.sp, 0, nil)),
+            "strb w0, [sp]",
+            0xe0, 0x03, 0x00, 0x39
+        )
+        XCTAssertM1Op(
+            M1Op.strb(.w0, .imm64(.sp, 4, .pre)),
+            "strb w0, [sp, #4]!",
+            0xe0, 0x4f, 0x00, 0x38
+        )
+        XCTAssertM1Op(
+            M1Op.strb(.w0, .imm64(.sp, 4, .post)),
+            "strb w0, [sp], #4",
+            0xe0, 0x47, 0x00, 0x38
+        )
+    }
+    
+    func testStr_regression() throws {
+        XCTAssertM1Op(
+            M1Op.strb(.w0, .reg64(.sp, .imm(0, nil))),
+            "strb w0, [sp]",
+            0xe0, 0x03, 0x00, 0x39
+        )
+        XCTAssertM1Op(
+            M1Op.strh(.w0, .imm64(.sp, 1, nil)),
+            "sturh w0, [sp, #1]",
+            0xe0, 0x13, 0x00, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.str(W.w0, .reg64offset(.sp, 3, nil)),
+            "str w0, [sp, #3]",
+            0xe0, 0x33, 0x00, 0xb8
+        )
+        
+        XCTAssertM1Op(
+            M1Op.ldrb(.w0, .reg64(.sp, .imm(0, nil))),
+            "ldrb w0, [sp]",
+            0xe0, 0x03, 0x40, 0x39
+        )
+        XCTAssertM1Op(
+            M1Op.ldrh(.w0, .imm64(.sp, 1, nil)),
+            "ldurh w0, [sp, #1]",
+            0xe0, 0x13, 0x40, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.ldr(W.w0, .reg64offset(.sp, 3, nil)),
+            "ldr w0, [sp, #3]",
+            0xe0, 0x33, 0x40, 0xb8
+        )
+    }
+    
+    func testStrh() throws {
+        XCTAssertM1Op(
+            M1Op.strh(.w0, .reg64(.sp, .imm(0, nil))),
+            "strh w0, [sp]",
+            0xe0, 0x03, 0x00, 0x79
+        )
+        XCTAssertM1Op(
+            M1Op.strh(.w0, .imm64(.sp, 0, nil)),
+            "strh w0, [sp]",
+            0xe0, 0x03, 0x00, 0x79
+        )
+        XCTAssertM1Op(
+            M1Op.strh(.w0, .imm64(.sp, 4, .pre)),
+            "strh w0, [sp, #4]!",
+            0xe0, 0x4f, 0x00, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.strh(.w0, .imm64(.sp, 4, .post)),
+            "strh w0, [sp], #4",
+            0xe0, 0x47, 0x00, 0x78
+        )
+    }
+    
     func testSxtw() throws {
         XCTAssertM1Op(
             M1Op.sxtw(.x2, .w3),
@@ -71,7 +152,7 @@ final class EmitterM1Tests: XCTestCase {
         XCTAssertM1Op(
             M1Op.sxtb(.x2, .w3),
             "sxtb x2, w3",
-            0x40, 0x1c, 0x62
+            0x62, 0x1c, 0x40, 0x93
         )
     }
     

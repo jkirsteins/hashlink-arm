@@ -761,17 +761,16 @@ final class CompilerM1Tests: XCTestCase {
         let sut = sut()
         try sut.compile(findex: 0, into: mem)
 
-        // mem.hexPrint()
+         mem.hexPrint()
 
         XCTAssertEqual(
             mem.lockAddressesAndBuild(),
             [
-                0xfd, 0x7b, 0xbf, 0xa9,  // stp x29, x30, [sp, #-16]!
-                0xfd, 0x03, 0x00, 0x91,  // movr x29, sp
-                0xe0, 0x03, 0x40, 0xf9,  // ldr x0, [sp, #0]
-                0x01, 0x00, 0x00, 0x14,  // b #4
-                0xfd, 0x7b, 0xc1, 0xa8,  // ldp x29, x30, [sp], #16
-                0xc0, 0x03, 0x5f, 0xd6,  // ret
+                0xfd, 0x7b, 0xbf, 0xa9, // stp x29, x30, [sp, #-16]!
+                0xfd, 0x03, 0x00, 0x91, // movr x29, sp
+                0x01, 0x00, 0x00, 0x14, // b #4
+                0xfd, 0x7b, 0xc1, 0xa8, // ldp x29, x30, [sp], #16
+                0xc0, 0x03, 0x5f, 0xd6, // ret
             ]
         )
 
@@ -856,7 +855,14 @@ final class CompilerM1Tests: XCTestCase {
         // Prepare function we'll call from JIT
         typealias _JitFunc = (@convention(c) (UInt8, UInt16, Int32) -> Int32)
         let swiftFunc: _JitFunc = { (_ a: UInt8, _ b: UInt16, _ c: Int32) in
-            return Int32(bitPattern: UInt32(UInt16(a) | b)) | c
+            let b1 = Int32(bitPattern: UInt32(b))
+            let a1 = Int32(bitPattern: UInt32(a))
+            let res = a1 | b1 | c
+            print("a: \(a)")
+            print("b: \(b)")
+            print("c: \(c)")
+            print("Returning \(res)")
+            return res
         }
         let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
         
@@ -894,14 +900,14 @@ final class CompilerM1Tests: XCTestCase {
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         // Compile HL function with function index 0 (from the whole functions table)
-        let sut = sut()
+        let sut = sut(strip: false)
         try sut.compile(findex: 0, into: mem)
         // Print debug output of the generated Aarch64 bytecode
         mem.hexPrint()
         // Now place the compiled bytecode in executable memory and get a pointer to it in
         // form of function (JitInt64 means (void)->Int64)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
-        let res: Int32 = entrypoint(1, 2, 4)
+        let res: Int32 = entrypoint(1, 2, 6)
 
         // HL called Swift func. Swift func returned 145. HL returned the result it received.
         XCTAssertEqual(0b111, res)
@@ -968,28 +974,51 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(0b0110, entrypoint(0, 1, 1, 0))
     }
     
-    func testCompile__OCall1() throws {
-        // Prepare function we'll call from JIT
-        typealias _JitFunc = (@convention(c) (UInt16) -> Int32)
-        let swiftFunc: _JitFunc = { (_ a: UInt16) in
-            return Int32(a * 2)
+    func testCompile__OCallN() throws {
+        typealias _JitFunc = (@convention(c) (UInt8, UInt8, UInt32, UInt8, UInt8, UInt8, UInt32, UInt8, UInt8) -> UInt32)
+        let swiftFunc: _JitFunc = { (_ a: UInt8, _ b: UInt8, _ c: UInt32, _ d: UInt8, _ e: UInt8, _ f: UInt8, _ g: UInt32, _ h: UInt8, _ i: UInt8) in
+            
+            print("Got a: \(a)")
+            print("Got b: \(b)")
+            print("Got c: \(c)")
+            print("Got d: \(d)")
+            print("Got e: \(e)")
+            print("Got f: \(f)")
+            print("Got g: \(g)")
+            print("Got h: \(h)")
+            print("Got i: \(i)")
+            
+            var hash: UInt32 = 17
+            hash = hash &* 37 &+ UInt32(a);
+            hash = hash &* 37 &+ UInt32(b);
+            hash = hash &* 37 &+ UInt32(c);
+            hash = hash &* 37 &+ UInt32(d);
+            hash = hash &* 37 &+ UInt32(e);
+            hash = hash &* 37 &+ UInt32(f);
+            hash = hash &* 37 &+ UInt32(g);
+            hash = hash &* 37 &+ UInt32(h);
+            hash = hash &* 37 &+ UInt32(i);
+            
+            let c = String(hash, radix: 2).leftPadding(toLength: 16, withPad: "0")
+            print("0b\(c.chunked(into: 4))")
+            return hash
         }
         let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
         
-        let f = prepareFunction(
-            retType: .i32,
-            findex: 0,
-            regs: [.u16, .i32],
-            args: [.u16],
-            ops: [
-                .OCall1(dst: 1, fun: 1, arg0: 0),
-                .ORet(ret: 1),
-            ]
-        )
-
-        // Misc. JIT stuff
         let storage = ModuleStorage(
-            functions: [f],
+            functions: [
+                prepareFunction(
+                    retType: .i32,
+                    findex: 0,
+                    regs: [.u8, .u8, .i32, .u8, .u8, .u8, .i32, .u8, .u8],
+                    args: [.u8, .u8, .i32, .u8, .u8, .u8, .i32, .u8, .u8],
+                    ops: [
+                        // NOTE: sending registers to diff numbered args
+                        .OCallN(dst: 2, fun: 1, args: [8, 1, 2, 3, 4, 5, 6, 7, 0]),
+                        .ORet(ret: 2),
+                    ]
+                )
+            ],
             natives: [
                 HLNative(
                     lib: Resolvable("builtin"),
@@ -997,7 +1026,7 @@ final class CompilerM1Tests: XCTestCase {
                     type: Resolvable(
                         .fun(
                             HLTypeFun(
-                                args: Resolvable.array([.u16]),
+                                args: Resolvable.array([.u8, .u8, .i32, .u8, .u8, .u8, .i32, .u8, .u8]),
                                 ret: Resolvable(.i32)
                             )
                         )
@@ -1009,18 +1038,112 @@ final class CompilerM1Tests: XCTestCase {
         )
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        try sut.compile(findex: 0, into: mem)
+        let entrypoint: (@convention(c) (UInt8, UInt8, UInt32, UInt8, UInt8, UInt8, UInt32, UInt8, UInt8) -> UInt32) = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(
+            848006100,
+            entrypoint(3, 0, 1, 0, 1, 0, 1, 0, 9))
+    }
+    
+    func testGetRegStackOffset() throws {
+        let c = sut()
+        let regs: [HLTypeKind] = [
+            .u8, .u8, .i32, .u8, .u8, .u8, .i32, .u8, .u8]
+        
+        XCTAssertEqual(c.getRegStackOffset(regs, 0), 0)
+        XCTAssertEqual(c.getRegStackOffset(regs, 1), 1)
+        XCTAssertEqual(c.getRegStackOffset(regs, 2), 2)
+        XCTAssertEqual(c.getRegStackOffset(regs, 3), 6)
+        XCTAssertEqual(c.getRegStackOffset(regs, 7), 13)
+        XCTAssertEqual(c.getRegStackOffset(regs, 8), 14)
+    }
+    
+    func testCompile__OCall1() throws {
+        // Prepare function we'll call from JIT
+        typealias _JitFunc16 = (@convention(c) (UInt16) -> Int32)
+        let swiftFunc16: _JitFunc16 = { (_ a: UInt16) in
+            return Int32(a) * 2
+        }
+        let swiftFuncPtr16 = unsafeBitCast(swiftFunc16, to: UnsafeMutableRawPointer.self)
+        
+        typealias _JitFunc8 = (@convention(c) (UInt8) -> Int32)
+        let swiftFunc8: _JitFunc8 = { (_ a: UInt8) in
+            return Int32(a) * 4
+        }
+        let swiftFuncPtr8 = unsafeBitCast(swiftFunc8, to: UnsafeMutableRawPointer.self)
+        
+        // Misc. JIT stuff
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .i32,
+                    findex: 0,
+                    regs: [.u16, .i32],
+                    args: [.u16],
+                    ops: [
+                        .OCall1(dst: 1, fun: 1, arg0: 0),
+                        .ORet(ret: 1),
+                    ]
+                ),
+                prepareFunction(
+                    retType: .i32,
+                    findex: 2,
+                    regs: [.u8, .i32],
+                    args: [.u8],
+                    ops: [
+                        .OCall1(dst: 1, fun: 3, arg0: 0),
+                        .ORet(ret: 1),
+                    ]
+                )
+            ],
+            natives: [
+                HLNative(
+                    lib: Resolvable("builtin"),
+                    name: Resolvable("swiftFunc16"),
+                    type: Resolvable(
+                        .fun(
+                            HLTypeFun(
+                                args: Resolvable.array([.u16]),
+                                ret: Resolvable(.i32)
+                            )
+                        )
+                    ),
+                    findex: 1,
+                    memory: swiftFuncPtr16
+                ),
+                HLNative(
+                    lib: Resolvable("builtin"),
+                    name: Resolvable("swiftFunc8"),
+                    type: Resolvable(
+                        .fun(
+                            HLTypeFun(
+                                args: Resolvable.array([.u8]),
+                                ret: Resolvable(.i32)
+                            )
+                        )
+                    ),
+                    findex: 3,
+                    memory: swiftFuncPtr8
+                )
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
         // Compile HL function with function index 0 (from the whole functions table)
         let sut = sut()
         try sut.compile(findex: 0, into: mem)
+        try sut.compile(findex: 2, into: mem)
         // Print debug output of the generated Aarch64 bytecode
         mem.hexPrint()
         // Now place the compiled bytecode in executable memory and get a pointer to it in
         // form of function (JitInt64 means (void)->Int64)
-        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
-        let res: Int32 = entrypoint(123)
-
-        // HL called Swift func. Swift func returned 145. HL returned the result it received.
-        XCTAssertEqual(246, res)
+        let entrypoint16: _JitFunc16 = try mem.buildEntrypoint(0)
+        let entrypoint8: _JitFunc8 = try mem.buildEntrypoint(2)
+        
+        XCTAssertEqual(246, entrypoint16(123))
+        XCTAssertEqual(492, entrypoint8(123))
     }
     
     func testCompile__OGetI8() throws {
@@ -1412,7 +1535,7 @@ final class CompilerM1Tests: XCTestCase {
 
     func testAppendPrologue() throws {
         let mem = builder()
-        sut().appendPrologue(builder: mem)
+        _ = sut().appendPrologue(builder: mem)
 
         XCTAssertEqual(
              mem.lockAddressesAndBuild(),
@@ -1429,7 +1552,7 @@ final class CompilerM1Tests: XCTestCase {
 
     func testAppendStackInit_skipVoid() throws {
         let mem = builder()
-        try sut().appendStackInit([.void], args: [.void], builder: mem)
+        try sut().appendStackInit([.void], args: [.void], builder: mem, prologueSize: 0)
         XCTAssertEqual([], mem.lockAddressesAndBuild())
     }
 
@@ -1440,7 +1563,7 @@ final class CompilerM1Tests: XCTestCase {
         let sut = sut()
         // 4 byte requirement should still be aligned to 16 byte boundary
         let mem1 = builder()
-        try sut.appendStackInit(_1_need16, args: _1_need16, builder: mem1)
+        try sut.appendStackInit(_1_need16, args: _1_need16, builder: mem1, prologueSize: 0)
         //mem1.hexPrint()
         XCTAssertEqual(
             [
@@ -1452,7 +1575,7 @@ final class CompilerM1Tests: XCTestCase {
 
         // 16 byte requirement should not round to 32
         let mem2 = builder()
-        try sut.appendStackInit(_4_need16, args: _4_need16, builder: mem2)
+        try sut.appendStackInit(_4_need16, args: _4_need16, builder: mem2, prologueSize: 0)
         //mem2.hexPrint()
         XCTAssertEqual(
             [
@@ -1466,7 +1589,7 @@ final class CompilerM1Tests: XCTestCase {
         )
         // 20 byte requirement should round to 32
         let mem3 = builder()
-        try sut.appendStackInit(_5_need32, args: _5_need32, builder: mem3)
+        try sut.appendStackInit(_5_need32, args: _5_need32, builder: mem3, prologueSize: 0)
         //mem3.hexPrint()
         XCTAssertEqual(
             [
@@ -1487,7 +1610,8 @@ final class CompilerM1Tests: XCTestCase {
         try sut.appendStackInit(
             [.void, .i32, .i64],
             args: [.void, .i32, .i64],
-            builder: mem
+            builder: mem,
+            prologueSize: 0
         )
         //mem.hexPrint()
         XCTAssertEqual(
@@ -1505,20 +1629,30 @@ final class CompilerM1Tests: XCTestCase {
         try sut().appendStackInit(
             Array(repeating: HLTypeKind.i32, count: 12),
             args: Array(repeating: HLTypeKind.i32, count: 12),
-            builder: mem
+            builder: mem,
+            prologueSize: 0
         )
-        mem.hexPrint()
+//        mem.hexPrint()
         XCTAssertEqual(
             [
-                0xff, 0x83, 0x00, 0xd1,  // sub sp, sp, #32
-                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
-                0xe1, 0x43, 0x00, 0xb8,  // str w1, [sp, #4]
-                0xe2, 0x83, 0x00, 0xb8,  // str w2, [sp, #8]
-                0xe3, 0xc3, 0x00, 0xb8,  // str w3, [sp, #12]
-                0xe4, 0x03, 0x01, 0xb8,  // str w4, [sp, #16]
-                0xe5, 0x43, 0x01, 0xb8,  // str w5, [sp, #20]
-                0xe6, 0x83, 0x01, 0xb8,  // str w6, [sp, #24]
-                0xe7, 0xc3, 0x01, 0xb8,  // str w7, [sp, #28]
+                // Reserving 48 bytes for entire stack
+                0xff, 0xc3, 0x00, 0xd1, // sub sp, sp, #48
+                0xe0, 0x03, 0x00, 0xb8, // str w0, [sp, #0]
+                0xe1, 0x43, 0x00, 0xb8, // str w1, [sp, #4]
+                0xe2, 0x83, 0x00, 0xb8, // str w2, [sp, #8]
+                0xe3, 0xc3, 0x00, 0xb8, // str w3, [sp, #12]
+                0xe4, 0x03, 0x01, 0xb8, // str w4, [sp, #16]
+                0xe5, 0x43, 0x01, 0xb8, // str w5, [sp, #20]
+                0xe6, 0x83, 0x01, 0xb8, // str w6, [sp, #24]
+                0xe7, 0xc3, 0x01, 0xb8, // str w7, [sp, #28]
+                0xe1, 0x33, 0x40, 0xb9, // ldr w1, [sp, #48]
+                0xe1, 0x03, 0x02, 0xb8, // str w1, [sp, #32]
+                0xe1, 0x43, 0x43, 0xb8, // ldr w1, [sp, #52]
+                0xe1, 0x43, 0x02, 0xb8, // str w1, [sp, #36]
+                0xe1, 0x3b, 0x40, 0xb9, // ldr w1, [sp, #56]
+                0xe1, 0x83, 0x02, 0xb8, // str w1, [sp, #40]
+                0xe1, 0xc3, 0x43, 0xb8, // ldr w1, [sp, #60]
+                0xe1, 0xc3, 0x02, 0xb8, // str w1, [sp, #44]
             ],
             mem.lockAddressesAndBuild()
         )
@@ -1528,7 +1662,7 @@ final class CompilerM1Tests: XCTestCase {
         let mem = builder()
 
         XCTAssertThrowsError(
-            try sut().appendStackInit([.i32], args: [.void], builder: mem)
+            try sut().appendStackInit([.i32], args: [.void], builder: mem, prologueSize: 0)
         )
     }
 

@@ -535,14 +535,10 @@ public class EmitterM1 {
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
             let encoded = mask | encodedRt | encodedRn | offs | size
             return returnAsArray(encoded)
-        case .ldr(let Rt, let offset):
-        
-            guard case .reg64offset(let Rn, let offsetCount, let ixMode) = offset else {
-                throw EmitterM1Error.invalidOffset(
-                    "LDR can only have .reg64offset offset"
-                )
-            }
-
+        case .ldr(let Rt, .reg64offset(let Rn, let offsetCount, let ixMode)):
+            // TODO: reg64offset should be removed
+            fallthrough
+        case .ldr(let Rt, .imm64(let Rn, let offsetCount, let ixMode)):
             let mask: Int64
             let immBits: Int64
             let immShift: Int64
@@ -701,6 +697,8 @@ public class EmitterM1 {
             let size = sizeMask(is64: Rd.is64)
             let encoded = mask | encodedRd | encodedRn | encodedRm | size
             return returnAsArray(encoded)
+        case .ldrb(let Wt, .reg64(let Xn, .imm(let immRaw, let ixMode))):
+            fallthrough
         case .ldrb(let Wt, .imm64(let Xn, let immRaw, let ixMode)):
             let mask: Int64
             let imm: any Immediate
@@ -947,7 +945,73 @@ public class EmitterM1 {
             let encodedRm = encodeReg(Rm, shift: 16)
             let encoded = s | mask | (sh << 22) | encodedRd | encodedRm | encodedRn | imm6.shiftedLeft(10)
             return returnAsArray(encoded)
-        default: throw EmitterM1Error.unsupportedOp
+        case .sturh(let Rt, .imm64(let Xn, let off, nil)):
+            //                  S           imm9_        Rn    Rt
+            let mask: Int64 = 0b01111000000_000000000_00_00000_00000
+            let s = sizeMask(is64: false)
+            let imm12 = try Immediate12(off)
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Rt, shift: 0)
+            let encoded = mask | s | imm12.shiftedLeft(12).immediate | encodedRn | encodedRt
+            return returnAsArray(encoded)
+        case .ldurh(let Rt, .imm64(let Xn, let off, nil)):
+            //                  S           imm9_        Rn    Rt
+            let mask: Int64 = 0b01111000010_000000000_00_00000_00000
+            let s = sizeMask(is64: false)
+            let imm12 = try Immediate12(off)
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Rt, shift: 0)
+            let encoded = mask | s | imm12.shiftedLeft(12).immediate | encodedRn | encodedRt
+            return returnAsArray(encoded)
+        case .strh(let Rt, .imm64(let Xn, let off, let ixMode)):
+            let mask: Int64
+            let imm: Int64
+            switch(ixMode) {
+            case .post:
+                //                   imm9         Rn    Rt
+                mask = 0b01111000000_000000000_01_00000_00000
+                imm = off << 12
+            case .pre:
+                //                   imm9         Rn    Rt
+                mask = 0b01111000000_000000000_11_00000_00000
+                imm = off << 12
+            case nil:
+                //                  imm12        Rn    Rt
+                mask = 0b0111100100_000000000000_00000_00000
+                guard off % 2 == 0 else {
+                    throw EmitterM1Error.invalidOffset("Offset must be divisible by 2")
+                }
+                imm = (off/2) << 10
+            }
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Rt, shift: 0)
+            let s = sizeMask(is64: Rt.is64)
+            let encoded = mask | imm | encodedRn | encodedRt | s
+            return returnAsArray(encoded)
+        case .strb(let Rt, .imm64(let Xn, let off, let ixMode)):
+            let mask: Int64
+            let imm: Int64
+            switch(ixMode) {
+            case .post:
+                //                   imm9         Rn    Rt
+                mask = 0b00111000000_000000000_01_00000_00000
+                imm = off << 12
+            case .pre:
+                //                   imm9         Rn    Rt
+                mask = 0b00111000000_000000000_11_00000_00000
+                imm = off << 12
+            case nil:
+                //                  imm12        Rn    Rt
+                mask = 0b0011100100_000000000000_00000_00000
+                imm = off << 10
+            }
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Rt, shift: 0)
+            let s = sizeMask(is64: Rt.is64)
+            let encoded = mask | imm | encodedRn | encodedRt | s
+            return returnAsArray(encoded)
+        default:
+            throw EmitterM1Error.unsupportedOp
         }
     }
 }

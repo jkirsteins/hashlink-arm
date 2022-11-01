@@ -48,29 +48,6 @@ struct HLTypeVirtualData: Equatable, CustomDebugStringConvertible, Hashable {
 
 protocol HLRegisterSizeProvider: Equatable, Hashable { var hlRegSize: ByteCount { get } }
 
-extension HLType: HLRegisterSizeProvider {
-    var hlRegSize: ByteCount {
-        switch self {
-        case .void: return 0  // void not really a value, used for typing purpose
-
-        case .bool, .u8: return 1  // an unsigned 8 bits integer (0-255)
-
-        case .u16: return 2
-        case .i32, .f32: return 4
-        case .i64, .f64: return 8
-
-        // All the following values are memory addresse pointers and takes either 4 bytes in x86 mode or 8 bytes in x86-64 mode:
-            
-        case .bytes: fallthrough
-        case .dyn, .fun, .array, .obj, .dynobj, .virtual, .enum, .ref, .null, .type,
-            .abstract:
-            return 8
-
-        default: fatalError("Register size not available for \(self.debugName)")
-        }
-    }
-}
-
 
 /*
 union {
@@ -141,18 +118,15 @@ struct HLTypeKind: HLRegisterSizeProvider, CustomDebugStringConvertible, Express
     static let last = HLTypeKind(rawValue: 23)
     static let _H_FORCE_INT = HLTypeKind(rawValue: 0x7FFF_FFFF)
 
+    /// This value is used to allocate stack space for virtual registers
     var hlRegSize: ByteCount {
         switch self {
         case .void: return 0  // void not really a value, used for typing purpose
 
         case .bool, .u8:
-            /* using 4 bytes instead of 1 because it's easier.
-             Registers are either 4 or 8 bytes */
-            fallthrough
+            return 1
         case .u16:
-            /* using 4 bytes instead of 2 because it's easier.
-             Registers are either 4 or 8 bytes */
-            fallthrough
+            return 2
         case .i32, .f32: return 4
         case .i64, .f64: return 8
 
