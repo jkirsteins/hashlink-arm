@@ -34,6 +34,14 @@ extension M1Op {
                 fatalError("offsetCount must fit in 9 bits for .ldur")
             }
             return .ldur(Rt, Rn, imm9)
+        case .sxtw(let Rd, let Rn):
+            return .sbfm(Rd, Rn.to64, 0, 31)
+        case .sxth(let Rd, let Rn):
+            return .sbfm(Rd, Rn.to64, 0, 15)
+        case .sxtb(let Rd, let Rn):
+            return .sbfm(Rd, Rn.to64, 0, 7)
+        case .uxth(let Rd, let Rn):
+            return .ubfm(Rd, Rn, 0, 15)
         default:
             return self
         }
@@ -210,6 +218,18 @@ enum M1Op : CpuOp {
             fallthrough
         case .and(_, _, .imm(_, .some(_))):
             return "and invalid w provided args"
+        case .sxtw(let Rd, let Rn):
+            return "sxtw \(Rd), \(Rn)"
+        case .sbfm(let Rd, let Rn, let immr, let imms):
+            return "sbfm \(Rd), \(Rn), #\(immr.immediate), #\(imms.immediate)"
+        case .sxth(let Rd, let Rn):
+            return "sxth \(Rd), \(Rn)"
+        case .uxtw(let Wd, let Wn):
+            return "uxtw \(Wd), \(Wn)"
+        case .uxth(let Wd, let Wn):
+            return "uxth \(Wd), \(Wn)"
+        case .sxtb(let Xd, let Wn):
+            return "sxtb \(Xd), \(Wn)"
         }
     }
     
@@ -268,6 +288,20 @@ enum M1Op : CpuOp {
     case b_ge(Immediate19)
     case b_eq(Immediate19)
     case b_ne(Immediate19)
+    
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SXTW--Sign-Extend-Word--an-alias-of-SBFM-?lang=en
+    case sxtw(Register64, Register32)   // SBFM <Xd>, <Xn>, #0, #31
+
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SXTH--Sign-Extend-Halfword--an-alias-of-SBFM-?lang=en
+    case sxth(Register64, Register32)   // SBFM <Xd>, <Xn>, #0, #15
+    
+    case sxtb(Register64, Register32)   // SBFM <Xd>, <Xn>, #0, #7
+    
+    case uxtw(Register32, Register32)
+    case uxth(Register32, Register32)
+    
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SBFM--Signed-Bitfield-Move-?lang=en#sa_immr
+    case sbfm(any Register, any Register, Immediate6, Immediate6)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/UBFM--Unsigned-Bitfield-Move-?lang=en
     case ubfm(  /*Rd*/any Register,

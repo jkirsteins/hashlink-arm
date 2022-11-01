@@ -51,6 +51,38 @@ extension XCTestCase {
 }
 
 final class EmitterM1Tests: XCTestCase {
+    func testSxtw() throws {
+        XCTAssertM1Op(
+            M1Op.sxtw(.x2, .w3),
+            "sxtw x2, w3",
+            0x62, 0x7c, 0x40, 0x93
+        )
+    }
+    
+    func testSxth() throws {
+        XCTAssertM1Op(
+            M1Op.sxth(.x2, .w3),
+            "sxth x2, w3",
+            0x62, 0x3c, 0x40, 0x93
+        )
+    }
+    
+    func testSxtb() throws {
+        XCTAssertM1Op(
+            M1Op.sxtb(.x2, .w3),
+            "sxtb x2, w3",
+            0x40, 0x1c, 0x62
+        )
+    }
+    
+    func testUxth() throws {
+        XCTAssertM1Op(
+            M1Op.uxth(.w1, .w6),
+            "uxth w1, w6",
+            0xc1, 0x3c, 0x00, 0x53
+        )
+    }
+    
     func testAnd() throws {
         XCTAssertM1Op(
             M1Op.and(X.x1, X.x3, .imm(0x1f, nil)),

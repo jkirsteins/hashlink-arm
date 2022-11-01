@@ -156,6 +156,10 @@ enum Register32: UInt8, Register {
     var debugDescription: String {
         return "w\(self.rawValue)"
     }
+    
+    var to64: Register64 {
+        Register64(rawValue: self.rawValue)!
+    }
 
     case w0 = 0
     case w1 = 1
@@ -655,7 +659,7 @@ public class EmitterM1 {
             guard Rd.is32 == Rn.is32 else { fatalError("Registers must have the same size") }
             let N: Int64
             if Rd.is32 {
-                guard immr.immediate > 0 && immr.immediate < 32 else {
+                guard immr.immediate >= 0 && immr.immediate < 32 else {
                     fatalError("immediate must be an integer in range [0, 31]")
                 }
                 N = 0 << 22
@@ -665,7 +669,7 @@ public class EmitterM1 {
                 }
             }
             else if Rd.is64 {
-                guard immr.immediate > 0 && immr.immediate < 64 else {
+                guard immr.immediate >= 0 && immr.immediate < 64 else {
                     fatalError("immediate must be an integer in range [0, 63]")
                 }
                 N = 1 << 22
@@ -901,6 +905,18 @@ public class EmitterM1 {
             let encodedRn = encodeReg(Rn, shift: 5)
             let encodedRm = encodeReg(Rm, shift: 16)
             let encoded = sf | mask | (Int64(imm6) << 10) | encodedRm | encodedRn | encodedRd | (sh << 22)
+            return returnAsArray(encoded)
+        case .sbfm(let Rd, let Rn, let immr, let imms):
+            //                  S        N immr   imms  Rn    Rd
+            let mask: Int64 = 0b0001001100_000000_000000_00000_00000
+            guard Rd.is32 == Rn.is32 else {
+                fatalError("\(Rd) must be same size as second register. Received: \(Rn)")
+            }
+            let s = sizeMask(is64: Rd.is64)
+            let n: Int64 = Rd.is64 ? 1 : 0
+            let encodedRd = encodeReg(Rd, shift: 0)
+            let encodedRn = encodeReg(Rn, shift: 5)
+            let encoded = mask | s | (n << 22) | immr.shiftedLeft(16) | imms.shiftedLeft(10) | encodedRn | encodedRd
             return returnAsArray(encoded)
         default: throw EmitterM1Error.unsupportedOp
         }

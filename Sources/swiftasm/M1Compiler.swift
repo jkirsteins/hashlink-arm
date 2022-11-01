@@ -805,24 +805,42 @@ class M1Compiler {
                 let regOffsetA = getRegStackOffset(regKinds, a)
                 let regOffsetB = getRegStackOffset(regKinds, b)
                 
-                let sizeA = requireTypeKind(reg: a, from: regKinds).hlRegSize
-                let sizeB = requireTypeKind(reg: b, from: regKinds).hlRegSize
+                let kindA = requireTypeKind(reg: a, from: regKinds)
+                let kindB = requireTypeKind(reg: b, from: regKinds)
                 
-                if case .OJSLte = op {
-                    mem.append(
-                        PseudoOp.debugPrint(self, "TODO: OJSLte test")
-                    )
-                }
-                if case .OJSLt = op {
-                    mem.append(
-                        PseudoOp.debugPrint(self, "TODO: OJSLt test")
-                    )
-                }
+                let sizeA = kindA.hlRegSize
+                let sizeB = kindB.hlRegSize
+                
                 mem.append(
                         PseudoOp.debugMarker("\(op.id) <\(a)@\(regOffsetA), \(b)@\(regOffsetB)> --> \(offset) (target instruction: \(targetInstructionIx))"),
                         M1Op.ldr(sizeA == 4 ? W.w0 : X.x0, .reg64offset(.sp, regOffsetA, nil)),
                         M1Op.ldr(sizeB == 4 ? W.w1 : X.x1, .reg64offset(.sp, regOffsetB, nil))
                     )
+                
+                switch(op) {
+                case .OJSLte:
+                    fallthrough
+                case .OJSLt:
+                    switch(kindA) {
+                    case .u16:
+                        mem.append(M1Op.sxth(.x0, .w0))
+                    case .u8:
+                        mem.append(M1Op.sxtb(.x0, .w0))
+                    default:
+                        break
+                    }
+                    switch(kindB) {
+                    case .u16:
+                        mem.append(M1Op.sxth(.x1, .w1))
+                    case .u8:
+                        mem.append(M1Op.sxtb(.x1, .w1))
+                    default:
+                        break
+                    }
+                default:
+                    break
+                }
+                
                 
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendDebugPrintRegisterAligned4(X.x1, builder: mem)
@@ -844,8 +862,12 @@ class M1Compiler {
                 mem.append(
                     PseudoOp.deferred(4) {
                         switch(op.id) {
+                        case .OJSLt:
+                            fallthrough
                         case .OJULt:
                             return M1Op.b_lt(try Immediate19(jumpOffset.immediate))
+                        case .OJSLte:
+                            return M1Op.b_le(try Immediate19(jumpOffset.immediate))
                         case .OJEq:
                             return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
                         case .OJNotEq:
@@ -862,7 +884,6 @@ class M1Compiler {
             case .OJNotNull(let reg, let offset):
                 fallthrough
             case .OJFalse(let reg, let offset):
-                fatalError("wip")
                 fallthrough
             case .OJNull(let reg, let offset):
                 
@@ -883,8 +904,13 @@ class M1Compiler {
                         M1Op.movz64(X.x0, 0, nil),
                         M1Op.ldr(X.x1, .reg64offset(.sp, regOffset, nil))
                     )
+                } else if size == 4 {   // bool
+                    mem.append(
+                        M1Op.movz64(X.x0, 0, nil),
+                        M1Op.ldr(W.w1, .reg64offset(.sp, regOffset, nil))
+                    )
                 } else {
-                    fatalError("Reg size must be 8")
+                    fatalError("Reg size must be 8 or 4")
                 }
                 
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
@@ -906,6 +932,8 @@ class M1Compiler {
                 mem.append(
                     PseudoOp.deferred(4) {
                         switch(op.id) {
+                        case .OJFalse:
+                            fallthrough
                         case .OJNull:
                             return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
                         case .OJNotNull:
