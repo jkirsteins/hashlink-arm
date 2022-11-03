@@ -1,10 +1,13 @@
 import Darwin 
 
-public protocol Register: CustomDebugStringConvertible {
+protocol Register: CustomDebugStringConvertible {
     associatedtype Shift
 
     var rawValue: UInt8 { get }
     var is32: Bool { get }
+    
+    var to64: Register64 { get }
+    var to32: Register32 { get }
 }
 
 extension Register {
@@ -98,6 +101,10 @@ enum Register64: UInt8, Register {
     var to32: Register32 {
         Register32(rawValue: rawValue)!
     }
+    
+    var to64: Register64 {
+        self
+    }
 
     case x0 = 0
     case x1 = 1
@@ -159,6 +166,10 @@ enum Register32: UInt8, Register {
 
     var debugDescription: String {
         return "w\(self.rawValue)"
+    }
+    
+    var to32: Register32 {
+        self
     }
     
     var to64: Register64 {
@@ -231,13 +242,16 @@ fileprivate func getIxModeDebugDesc(_ r: any Register, _ immVal: Int64, _ ix: In
 enum Offset : CustomDebugStringConvertible {
 
     // Register base + immediate offset
+    // Not really an immediate, but more like an address
     case imm64(/*Xn|SP*/Register64, Int64, IndexingMode?)
     
     // Register base + register offset
-    case reg64(/*Xn|SP*/Register64, /*Wm|Xm...*/RegModifier?)
+    case reg(any Register, RegModifier?)
+    
+    case immediate6(Immediate6)
     
     // DEPRECATED
-    case immediate(Int16)
+    case immediate_depr(Int16)
     case reg64offset(Register64, Int64, IndexingMode?)
     case reg32shift(Register32, Register32.Shift?)
     case reg64shift(Register64, Register64.Shift?)
@@ -248,21 +262,23 @@ enum Offset : CustomDebugStringConvertible {
         
         case .imm64(let Rt, let immVal, let ixMode):
             return getIxModeDebugDesc(Rt, immVal, ixMode)
-        case .reg64(let Rt, .r64shift(let Rn, .lsl(0))):
+        case .reg(let Rt, .r64shift(let Rn, .lsl(0))):
             return "[\(Rt), \(Rn)]"
-        case .reg64(let Rt, .r64shift(let Rn, let shift)):
+        case .reg(let Rt, .r64shift(let Rn, let shift)):
             return "[\(Rt), \(Rn), \(shift)]"
-        case .reg64(let Rt, nil):
+        case .reg(let Rt, nil):
             return "[\(Rt)]"
-        case .reg64(let Rt, .r64ext(let Rn as any Register, let ext as CustomDebugStringConvertible)):
+        case .reg(let Rt, .r64ext(let Rn as any Register, let ext as CustomDebugStringConvertible)):
             fallthrough
-        case .reg64(let Rt, .r32ext(let Rn as any Register, let ext as CustomDebugStringConvertible)):
+        case .reg(let Rt, .r32ext(let Rn as any Register, let ext as CustomDebugStringConvertible)):
             return "[\(Rt), \(Rn), \(ext)]"
-        case .reg64(let Rt, .imm(let immVal, let ixMode)):
+        case .reg(let Rt, .imm(let immVal, let ixMode)):
             return getIxModeDebugDesc(Rt, immVal, ixMode)
+        case .immediate6(let imm6):
+            return imm6.immediate.debugDescription
             
         // DEPRECATED
-        case .immediate(_):
+        case .immediate_depr(_):
             return "imm DEPRECATED"
         case .reg64offset(_, _, _):
             return "reg64offset DEPRECATED"
@@ -707,20 +723,12 @@ public class EmitterM1 {
                     fatalError("immediate must be an integer in range [0, 31]")
                 }
                 N = 0 << 22
-                
-                guard imms.immediate != 0b011111 else {
-                    fatalError("imms can not be 011111 in 32-bit mode")
-                }
             }
             else if Rd.is64 {
                 guard immr.immediate >= 0 && immr.immediate < 64 else {
                     fatalError("immediate must be an integer in range [0, 63]")
                 }
                 N = 1 << 22
-                
-                guard imms.immediate != 0b111111 else {
-                    fatalError("imms can not be 111111 in 64-bit mode")
-                }
             } else {
                 fatalError("Registers must be either 32 bit or 64 bit")
             }
@@ -740,7 +748,7 @@ public class EmitterM1 {
             let size = sizeMask(is64: Rd.is64)
             let encoded = mask | encodedRd | encodedRn | encodedRm | size
             return returnAsArray(encoded)
-        case .ldrb(let Wt, .reg64(let Xn, .imm(let immRaw, let ixMode))):
+        case .ldrb(let Wt, .reg(let Xn as Register64, .imm(let immRaw, let ixMode))) where Xn.is64:
             fallthrough
         case .ldrb(let Wt, .imm64(let Xn, let immRaw, let ixMode)):
             let mask: Int64
@@ -768,7 +776,7 @@ public class EmitterM1 {
             let encodedImm = imm.shiftedLeft(immShift)
             let encoded = encodedRt | encodedRn | encodedImm | mask
             return returnAsArray(encoded)
-        case .ldrb(let Wt, .reg64(let Xn, let mod)):
+        case .ldrb(let Wt, .reg(let Xn, let mod)):
             //                              Rm    opt      Rn    Rt
             let mask: Int64 = 0b00111000011_00000_000_0_10_00000_00000
             let option: Int64
@@ -842,7 +850,7 @@ public class EmitterM1 {
             let encodedPimm = imm.shiftedLeft(immShift)
             let encoded = encodedRt | encodedRn | encodedPimm | mask
             return returnAsArray(encoded)
-        case .ldrh(let Wt, .reg64(let Xn, let mod)):
+        case .ldrh(let Wt, .reg(let Xn, let mod)):
             //                              Rm    opt      Rn    Rt
             let mask: Int64 = 0b01111000011_00000_000_0_10_00000_00000
             let option: Int64
@@ -1037,6 +1045,28 @@ public class EmitterM1 {
             let encodedRt = encodeReg(Rt, shift: 0)
             let s = sizeMask(is64: Rt.is64)
             let encoded = mask | imm | encodedRn | encodedRt | s
+            return returnAsArray(encoded)
+        case .asrv(let Rd, let Rn, let Rm):
+            let s = sizeMask(is64: Rd.is64)
+            guard Rd.is64 == Rn.is64, Rn.is64 == Rm.is64 else {
+                fatalError("All registers must be the same size")
+            }
+            
+            //                              Rm           Rn    Rd
+            let mask: Int64 = 0b00011010110_00000_001010_00000_00000
+            let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
+            let encoded = s | mask | regs
+            return returnAsArray(encoded)
+        case .lsrv(let Rd, let Rn, let Rm):
+            let s = sizeMask(is64: Rd.is64)
+            guard Rd.is64 == Rn.is64, Rn.is64 == Rm.is64 else {
+                fatalError("All registers must be the same size")
+            }
+            
+            //                              Rm           Rn    Rd
+            let mask: Int64 = 0b00011010110_00000_001001_00000_00000
+            let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
+            let encoded = s | mask | regs
             return returnAsArray(encoded)
         default:
             throw EmitterM1Error.unsupportedOp

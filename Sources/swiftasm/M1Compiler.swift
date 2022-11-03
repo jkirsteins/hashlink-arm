@@ -51,6 +51,28 @@ extension M1Compiler {
         appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
     }
     
+    func appendSignMode(_ signed: Bool, reg: Register64, from vreg: Reg, kinds: HLTypeKinds, mem: OpBuilder) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        switch(vregKind.hlRegSize, signed) {
+        case (8, _):
+            break
+        case (4, true):
+            mem.append(M1Op.sxtw(reg, reg.to32))
+        case (4, false):
+            mem.append(M1Op.uxtw(reg.to32, reg.to32))
+        case (2, true):
+            mem.append(M1Op.sxth(reg, reg.to32))
+        case (2, false):
+            mem.append(M1Op.uxth(reg.to32, reg.to32))
+        case (1, true):
+            mem.append(M1Op.sxtb(reg, reg.to32))
+        case (1, false):
+            mem.append(M1Op.uxtb(reg.to32, reg.to32))
+        default:
+            fatalError("Unknown size for setting size mode modifier")
+        }
+    }
+    
     func appendLoad(reg: Register64, from vreg: Reg, kinds: HLTypeKinds, offset: ByteCount, mem: OpBuilder) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         print("Loading \(reg) from vreg \(vreg) at offset \(offset) size \(vregKind.hlRegSize)")
@@ -1191,15 +1213,10 @@ class M1Compiler {
                     M1Op.str(X.x0, .reg64offset(.sp, dstOffset, nil))
                 )
             case .OShl(let dst, let a, let b):
-                let dstOffset = getRegStackOffset(regKinds, dst)
-                let aOffset = getRegStackOffset(regKinds, a)
-                let bOffset = getRegStackOffset(regKinds, b)
-                mem.append(
-                    M1Op.ldr(X.x0, .reg64offset(.sp, aOffset, nil)),
-                    M1Op.ldr(X.x1, .reg64offset(.sp, bOffset, nil)),
-                    M1Op.lsl_r(X.x2, X.x0, X.x1),
-                    M1Op.str(X.x2, .reg64offset(.sp, dstOffset, nil))
-                )
+                appendLoad(reg: .x0, from: a, kinds: regKinds, mem: mem)
+                appendLoad(reg: .x1, from: b, kinds: regKinds, mem: mem)
+                mem.append(M1Op.lsl_r(X.x2, X.x0, X.x1))
+                appendStore(reg: X.x2, into: dst, kinds: regKinds, mem: mem)
             case .OGetI8(let dst, let bytes, let index):
                 fallthrough
             case .OGetI16(let dst, let bytes, let index):
@@ -1224,14 +1241,14 @@ class M1Compiler {
                 
                 if op.id == .OGetI8 {
                     mem.append(
-                        M1Op.ldrb(W.w0, .reg64(X.x0, .r64shift(X.x1, .lsl(0))))
+                        M1Op.ldrb(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
                     )
                 } else if op.id == .OGetI16 {
                     mem.append(
                         // lsl1 the index register b/c index is
                         //    HL-side: ??? TODO: verify in a test that we need the .lsl(1) here
                         //    M1-side: expected in bytes not half-words
-                        M1Op.ldrh(W.w0, .reg64(X.x0, .r64shift(X.x1, .lsl(1))))
+                        M1Op.ldrh(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(1))))
                     )
                 }
                 
@@ -1391,6 +1408,22 @@ class M1Compiler {
                 appendLoad(reg: .x1, from: b, kinds: regKinds, mem: mem)
                 mem.append(M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))))
                 appendStore(reg: X.x0, into: dst, kinds: regKinds, mem: mem)
+            case .OUShr(let dst, let a, let b):
+                fallthrough
+            case .OSShr(let dst, let a, let b):
+                appendLoad(reg: .x0, from: a, kinds: regKinds, mem: mem)
+                appendLoad(reg: .x1, from: b, kinds: regKinds, mem: mem)
+                
+                if case .OSShr = op {
+                    appendSignMode(true, reg: .x0, from: a, kinds: regKinds, mem: mem)
+                    mem.append(M1Op.asrv(X.x2, X.x0, X.x1))
+                } else if case .OUShr = op {
+                    mem.append(M1Op.lsrv(X.x2, X.x0, X.x1))
+                } else {
+                    fatalError("Unknown shift op")
+                }
+                
+                appendStore(reg: X.x2, into: dst, kinds: regKinds, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

@@ -467,6 +467,48 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(3, entrypoint8(0b01000001, 0b10000001))
     }
     
+    func testCompile_OSShr_OUshr() throws {
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .u8,
+                    findex: 0,
+                    regs: [.u8, .u8, .u8],
+                    args: [.u8, .u8],
+                    ops: [
+                        .OSShr(dst: 2, a: 0, b: 1),
+                        .ORet(ret: 2)
+                    ]
+                ),
+                prepareFunction(
+                    retType: .u8,
+                    findex: 1,
+                    regs: [.u8, .u8, .u8],
+                    args: [.u8, .u8],
+                    ops: [
+                        .OUShr(dst: 2, a: 0, b: 1),
+                        .ORet(ret: 2)
+                    ]
+                )
+            ])
+
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        try sut.compile(findex: 0, into: mem)
+        try sut.compile(findex: 1, into: mem)
+
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (UInt8, UInt8) -> UInt8)
+        let entrypointS: _JitFunc = try mem.buildEntrypoint(0)
+        let entrypointU: _JitFunc = try mem.buildEntrypoint(1)
+        
+        // signed shift right
+        XCTAssertEqual(0b11110000, entrypointS(0b10000001, 3))
+        // unsigned shift right
+        XCTAssertEqual(0b00010000, entrypointU(0b10000001, 3))
+    }
+    
     func testCompile_OJSLte() throws {
         // constants
         let constI_3 = 1 // constant value 3

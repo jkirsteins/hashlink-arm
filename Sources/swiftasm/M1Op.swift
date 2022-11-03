@@ -7,26 +7,38 @@ protocol CpuOp : CustomDebugStringConvertible {
 extension M1Op {
     func resolveFinalForm() -> M1Op {
         switch(self) {
+        case .asr(let Rd, let Rn, .reg(let Rm, nil)):
+            return .asrv(Rd, Rn, Rm)
+        case .asr(let Rd, let Rn, .immediate6(let shift)) where Rd.is32 && Rn.is32:
+            return .sbfm(Rd, Rn, shift, 31)
+        case .asr(let Rd, let Rn, .immediate6(let shift)) where Rd.is64 && Rn.is64:
+            return .sbfm(Rd, Rn, shift, 63)
+        case .lsr(let Rd, let Rn, .reg(let Rm, nil)):
+            return .lsrv(Rd, Rn, Rm)
+        case .lsr(let Rd, let Rn, .immediate6(let shift)) where Rd.is32 && Rn.is32:
+            return .ubfm(Rd, Rn, shift, 31)
+        case .lsr(let Rd, let Rn, .immediate6(let shift)) where Rd.is64 && Rn.is64:
+            return .ubfm(Rd, Rn, shift, 63)
         case .strh(let Wt, .imm64(let Rn, let off, nil)) where off % 2 != 0:
             return .sturh(Wt, .imm64(Rn, off, nil))
-        case .strh(let Wt, .reg64offset(let Rn, let off, let ixMode)):
+        case .strh(let Wt, .reg64offset(let Rn as any Register, let off, let ixMode)):
             fallthrough
-        case .strh(let Wt, .reg64(let Rn, .imm(let off, let ixMode))):
-            return .strh(Wt, .imm64(Rn, off, ixMode))
-        case .strh(let Wt, .reg64(let Rn, nil)):
-            return .strh(Wt, .imm64(Rn, 0, nil))
-        case .strb(let Wt, .reg64offset(let Rn, let off, let ixMode)):
+        case .strh(let Wt, .reg(let Rn, .imm(let off, let ixMode))):
+            return .strh(Wt, .imm64(Rn.to64, off, ixMode))
+        case .strh(let Wt, .reg(let Rn, nil)):
+            return .strh(Wt, .imm64(Rn.to64, 0, nil))
+        case .strb(let Wt, .reg64offset(let Rn as any Register, let off, let ixMode)):
             fallthrough
-        case .strb(let Wt, .reg64(let Rn, .imm(let off, let ixMode))):
-            return .strb(Wt, .imm64(Rn, off, ixMode))
-        case .strb(let Wt, .reg64(let Rn, nil)):
-            return .strb(Wt, .imm64(Rn, 0, nil))
+        case .strb(let Wt, .reg(let Rn, .imm(let off, let ixMode))):
+            return .strb(Wt, .imm64(Rn.to64, off, ixMode))
+        case .strb(let Wt, .reg(let Rn, nil)):
+            return .strb(Wt, .imm64(Rn.to64, 0, nil))
         case .ldrh(let Wt, .imm64(let Rn, let off, nil)) where off % 2 != 0:
             return .ldurh(Wt, .imm64(Rn, off, nil))
-        case .ldrh(let Wt, .reg64(let Rn, nil)):
-            return .ldrh(Wt, .imm64(Rn, 0, nil))
-        case .ldrb(let Wt, .reg64(let Rn, nil)):
-            return .ldrb(Wt, .imm64(Rn, 0, nil))
+        case .ldrh(let Wt, .reg(let Rn, nil)):
+            return .ldrh(Wt, .imm64(Rn.to64, 0, nil))
+        case .ldrb(let Wt, .reg(let Rn, nil)):
+            return .ldrb(Wt, .imm64(Rn.to64, 0, nil))
         case .lsl_r(let Rd, let Rn, let Rm):
             return .lslv(Rd, Rn, Rm)
         case .lsl_i(let Rd, let Rn, let immr) where Rd.is32 && Rn.is32:
@@ -57,6 +69,8 @@ extension M1Op {
             return .sbfm(Rd, Rn.to64, 0, 7)
         case .uxth(let Rd, let Rn):
             return .ubfm(Rd, Rn, 0, 15)
+        case .uxtb(let Rd, let Rn):
+            return .ubfm(Rd, Rn, 0, 7)
         default:
             return self
         }
@@ -133,7 +147,7 @@ enum M1Op : CpuOp {
             return "ldr \(rt), [\(rn), #\(offset)]!"
         case .ldr(let rt, Offset.reg64offset(let rn, let offset, .post)):
             return "ldr \(rt), [\(rn)], #\(offset)"
-        case .str(_, .immediate(_)):
+        case .str(_, .immediate_depr(_)):
             return "str immediate not implemented"
         case .str(_, .reg64shift(_, _)):
             return "str reg64shift not implemented"
@@ -145,19 +159,19 @@ enum M1Op : CpuOp {
             return "movz64 .some not implemented"
         case .movk64(_, _, .some(_)):
             return "movk64 .some not implemented"
-        case .stp(_, .immediate(_)):
+        case .stp(_, .immediate_depr(_)):
             return "stp .immediate not implemented"
         case .stp(_, .reg64shift(_, _)):
             return "stp .reg64shift not implemented"
         case .stp(_, .reg32(_, _, _)):
             return "stp .reg32 not implemented"
-        case .ldp(_, .immediate(_)):
+        case .ldp(_, .immediate_depr(_)):
             return "ldp .immediate not implemented"
         case .ldp(_, .reg64shift(_, _)):
             return "ldp .reg64shift not implemented"
         case .ldp(_, .reg32(_, _, _)):
             return "ldp .reg32 not implemented"
-        case .ldr(_, .immediate(_)):
+        case .ldr(_, .immediate_depr(_)):
             return "ldr .immediate"
         case .ldr(_, .reg64shift(_, _)):
             return "ldr .reg64shift not implemented"
@@ -195,20 +209,6 @@ enum M1Op : CpuOp {
             return "lsl \(Rd), \(Rn), \(Rm)"
         case .lslv(let Rd, let Rn, let Rm):
             return "lslv \(Rd), \(Rn), \(Rm)"
-//        case .ldrb(let Rt, .reg64(let Rn, nil)):
-//            return "ldrb \(Rt), [\(Rn)]"
-//        case .ldrb(let Rt, .reg64(let Rn, .r64ext(let Xm, let extMode))):
-//            return "ldrb \(Rt), [\(Rn), \(Xm), \(extMode)]"
-//        case .ldrb(let Rt, .reg64(let Rn, .r32ext(let Wm, let extMode))):
-//            return "ldrb \(Rt), [\(Rn), \(Wm), \(extMode)]"
-//        case .ldrb(let Rt, .imm64(let Rn, let imm, nil)):
-//            return "ldrb \(Rt), [\(Rn), #\(imm)]"
-//        case .ldrb(let Rt, .imm64(let Rn, let imm, .post)):
-//            return "ldrb \(Rt), [\(Rn)], #\(imm)"
-//        case .ldrb(let Rt, .imm64(let Rn, let imm, .pre)):
-//            return "ldrb \(Rt), [\(Rn), #\(imm)]!"
-//        case .ldrb(let Rt, .reg64(let Rn, .r64shift(let Rm, ._0))):
-//            return "ldrb \(Rt), [\(Rn), \(Rm)]"
         case .ldrh(let Rt, let val):
             if case .imm64(_, let offv, _) = val, offv % 2 != 0 {
                 return M1Op.ldurh(Rt, val).debugDescription
@@ -242,12 +242,14 @@ enum M1Op : CpuOp {
             return "sbfm \(Rd), \(Rn), #\(immr.immediate), #\(imms.immediate)"
         case .sxth(let Rd, let Rn):
             return "sxth \(Rd), \(Rn)"
+        case .sxtb(let Xd, let Wn):
+            return "sxtb \(Xd), \(Wn)"
         case .uxtw(let Wd, let Wn):
             return "uxtw \(Wd), \(Wn)"
         case .uxth(let Wd, let Wn):
             return "uxth \(Wd), \(Wn)"
-        case .sxtb(let Xd, let Wn):
-            return "sxtb \(Xd), \(Wn)"
+        case .uxtb(let Wd, let Wn):
+            return "uxtb \(Wd), \(Wn)"
         case .sub(let Rd, let Rn, .r64shift(let Rm, let shift)):
             if case .lsl(0) = shift {
                 return "sub \(Rd), \(Rn), \(Rm)"
@@ -287,6 +289,34 @@ enum M1Op : CpuOp {
             fallthrough
         case .add(_, _, .some(.imm(_, _))):
             return "add <not impl>"
+        case .lsr(let Rd, let Rn, .immediate6(let imm)):
+            return "lsr \(Rd), \(Rn), #\(imm.immediate)"
+        case .lsr(let Rd, let Rn, .reg(let Rm, nil)):
+            return "lsr \(Rd), \(Rn), \(Rm)"
+        case .lsr(let Rd, let Rn, let off):
+            return "lsr \(Rd), \(Rn), \(off)"
+        case .asr(_, _, .imm64(_, _, _)):
+            fallthrough
+        case .asr(_, _, .immediate_depr(_)):
+            fallthrough
+        case .asr(_, _, .reg64offset(_, _, _)):
+            fallthrough
+        case .asr(_, _, .reg32shift(_, _)):
+            fallthrough
+        case .asr(_, _, .reg64shift(_, _)):
+            fallthrough
+        case .asr(_, _, .reg(_, .some(_))):
+            fallthrough
+        case .asr(_, _, .reg32(_, _, _)):
+            return "asr <not impl>"
+        case .asr(let Rd, let Rn, .immediate6(let imm)):
+            return "asr \(Rd), \(Rn), #\(imm.immediate)"
+        case .asr(let Rd, let Rn, .reg(let Rm, nil)):
+            return "asr \(Rd), \(Rn), \(Rm)"
+        case .asrv(let Rd, let Rn, let Rm):
+            return "asrv \(Rd), \(Rn), \(Rm)"
+        case .lsrv(let Rd, let Rn, let Rm):
+            return "lsrv \(Rd), \(Rn), \(Rm)"
         }
     }
     
@@ -366,6 +396,7 @@ enum M1Op : CpuOp {
     
     case uxtw(Register32, Register32)
     case uxth(Register32, Register32)
+    case uxtb(Register32, Register32)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SBFM--Signed-Bitfield-Move-?lang=en#sa_immr
     case sbfm(any Register, any Register, Immediate6, Immediate6)
@@ -388,6 +419,16 @@ enum M1Op : CpuOp {
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LSLV--Logical-Shift-Left-Variable-?lang=en#LSLV_32_dp_2src
     case lslv(/*Rd*/any Register, /*Rn*/any Register, /*Rm*/any Register)
+    
+    /* can be alias of ubfm or lsrv
+     */
+    case lsr(any Register, any Register, Offset)
+    
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LSRV--Logical-Shift-Right-Variable-?lang=en
+    case lsrv(any Register, any Register, any Register)
+    
+    case asr(any Register, any Register, Offset)
+    case asrv(any Register, any Register, any Register)
     
     // https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/MOVZ
     case movz32(Register32, UInt16, Register32.Shift?)
