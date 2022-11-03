@@ -974,7 +974,7 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(0b0110, entrypoint(0, 1, 1, 0))
     }
     
-    func testCompile__OCallN() throws {
+    func testCompile__OCallN__needStackArgs() throws {
         typealias _JitFunc = (@convention(c) (UInt8, UInt8, UInt32, UInt8, UInt8, UInt8, UInt32, UInt8, UInt8) -> UInt32)
         let swiftFunc: _JitFunc = { (_ a: UInt8, _ b: UInt8, _ c: UInt32, _ d: UInt8, _ e: UInt8, _ f: UInt8, _ g: UInt32, _ h: UInt8, _ i: UInt8) in
             
@@ -1045,6 +1045,144 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(
             848006100,
             entrypoint(3, 0, 1, 0, 1, 0, 1, 0, 9))
+    }
+    
+    func testCompile__OMov() throws {
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .u8,
+                    findex: 0,
+                    regs: [
+                        // args
+                        .u8, .u8
+                    ],
+                    args: [
+                        // args
+                        .u8
+                    ],
+                    ops: [
+                        .OMov(dst: 1, src: 0),
+                        .ORet(ret: 1),
+                    ]
+                ),
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        try sut.compile(findex: 0, into: mem)
+        let entrypoint: (@convention(c) (UInt8) -> UInt8) = try mem.buildEntrypoint(0)
+        XCTAssertEqual(6, entrypoint(6))
+    }
+    
+    func testCompile__OCall__regression1() throws {
+        let f1: (@convention(c) (UInt8) -> UInt8) = { $0 }
+        let f1p = unsafeBitCast(f1, to: UnsafeMutableRawPointer.self)
+        let f2: (@convention(c) (UInt8, UInt8) -> UInt8) = { a, _ in a }
+        let f2p = unsafeBitCast(f2, to: UnsafeMutableRawPointer.self)
+        let f3: (@convention(c) (UInt8, UInt8, UInt8) -> UInt8) = { a, _, _ in a }
+        let f3p = unsafeBitCast(f3, to: UnsafeMutableRawPointer.self)
+        let f4: (@convention(c) (UInt8, UInt8, UInt8, UInt8) -> UInt8) = { a, _, _, _ in a }
+        let f4p = unsafeBitCast(f4, to: UnsafeMutableRawPointer.self)
+        
+        for sutOp in [
+            HLOpCode.OCall1(dst: 0, fun: 1, arg0: 4),
+            HLOpCode.OCall2(dst: 0, fun: 2, arg0: 4, arg1: 4),
+            HLOpCode.OCall3(dst: 0, fun: 3, arg0: 4, arg1: 4, arg2: 4),
+            HLOpCode.OCall4(dst: 0, fun: 4, arg0: 4, arg1: 4, arg2: 4, arg3: 4),
+            HLOpCode.OCallN(dst: 0, fun: 4, args: [4, 4, 4, 4]),
+        ]
+        {
+            let storage = ModuleStorage(
+                functions: [
+                    prepareFunction(
+                        retType: .u8,
+                        findex: 0,
+                        regs: [
+                            // args
+                            .u8, .u8, .u8, .u8, .u8,
+                        ],
+                        args: [
+                            // args
+                            .u8
+                        ],
+                        ops: [
+                            .OMov(dst: 1, src: 0),
+                            .OMov(dst: 2, src: 0),
+                            .OMov(dst: 3, src: 0),
+                            .OMov(dst: 4, src: 0),
+                            sutOp,
+                            .ORet(ret: 0),
+                        ]
+                    ),
+                ],
+                natives: [
+                    HLNative(
+                        lib: Resolvable("builtin"),
+                        name: Resolvable("f1"),
+                        type: Resolvable(
+                            .fun(
+                                HLTypeFun(
+                                    args: Resolvable.array([.u8]),
+                                    ret: Resolvable(.u8)
+                                )
+                            )
+                        ),
+                        findex: 1,
+                        memory: f1p
+                    ),
+                    HLNative(
+                        lib: Resolvable("builtin"),
+                        name: Resolvable("f2"),
+                        type: Resolvable(
+                            .fun(
+                                HLTypeFun(
+                                    args: Resolvable.array([.u8, .u8]),
+                                    ret: Resolvable(.u8)
+                                )
+                            )
+                        ),
+                        findex: 2,
+                        memory: f2p
+                    ),
+                    HLNative(
+                        lib: Resolvable("builtin"),
+                        name: Resolvable("f3"),
+                        type: Resolvable(
+                            .fun(
+                                HLTypeFun(
+                                    args: Resolvable.array([.u8, .u8, .u8]),
+                                    ret: Resolvable(.u8)
+                                )
+                            )
+                        ),
+                        findex: 3,
+                        memory: f3p
+                    ),
+                    HLNative(
+                        lib: Resolvable("builtin"),
+                        name: Resolvable("f4"),
+                        type: Resolvable(
+                            .fun(
+                                HLTypeFun(
+                                    args: Resolvable.array([.u8, .u8, .u8, .u8]),
+                                    ret: Resolvable(.u8)
+                                )
+                            )
+                        ),
+                        findex: 4,
+                        memory: f4p
+                    )
+                ]
+            )
+            let ctx = JitContext(storage: storage)
+            let mem = OpBuilder(ctx: ctx)
+            let sut = sut(strip: false)
+            try sut.compile(findex: 0, into: mem)
+            let entrypoint: (@convention(c) (UInt8) -> UInt8) = try mem.buildEntrypoint(0)
+            XCTAssertEqual(6, entrypoint(6), "failed for \(sutOp.id)")
+        }
     }
     
     func testGetRegStackOffset() throws {

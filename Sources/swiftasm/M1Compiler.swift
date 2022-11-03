@@ -746,7 +746,7 @@ class M1Compiler {
                     appendLoad(reg: Register64(
                         rawValue: UInt8(regIx))!,
                                from: argReg,
-                               kinds: kindsToPass,
+                               kinds: regKinds, // careful, pass all kinds, not just the arg ones
                                offset: offset,
                                mem: mem)
                     appendDebugPrintRegisterAligned4(Register64(rawValue: UInt8(regIx))!, builder: mem)
@@ -1367,9 +1367,6 @@ class M1Compiler {
                     M1Op.strb(W.w0, .imm64(.sp, dstOffset, nil))
                 )
             case .OMov(let dst, let src):
-                mem.append(
-                    PseudoOp.debugPrint(self, "TODO OMov test")
-                )
                 fallthrough
             case .OSafeCast(let dst, let src):
                 let dstOffset = getRegStackOffset(regKinds, dst)
