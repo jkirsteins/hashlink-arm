@@ -70,15 +70,15 @@ enum M1Op : CpuOp {
         switch(self) {
         case .nop: return "nop"
         case .ret: return "ret"
-        case .add(let rt, let rn, let off) where off.imm.isNegative:
+        case .addImm12(let rt, let rn, let off) where off.imm.isNegative:
             // We're sure this fits
             return M1Op.subImm12(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
         case .subImm12(let rt, let rn, let off) where off.imm.isPositive:
             return "sub \(rt), \(rn), \(off.debugDescription)"
         case .subImm12(let rt, let rn, let off):
             // We're sure this fits
-            return M1Op.add(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
-        case .add(let rt, let rn, let off):
+            return M1Op.addImm12(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
+        case .addImm12(let rt, let rn, let off):
             return "add \(rt), \(rn), \(off.debugDescription)"
         case .svc(let x): return "svc 0x\(String(x, radix: 16).leftPadding(toLength: 4, withPad: "0"))"
         case .str(let rt, .reg64offset(let rn, let offsetC, nil)):
@@ -273,11 +273,25 @@ enum M1Op : CpuOp {
             return "sturh \(Rd), \(off)"
         case .ldurh(let Rd, let off):
             return "ldurh \(Rd), \(off)"
+        case .add(let Rd, let Rn, .r64shift(let Rm, let shift)):
+            if case .lsl(0) = shift {
+                return "add \(Rd), \(Rn), \(Rm)"
+            } else {
+                return "add \(Rd), \(Rn), \(Rm), \(shift)"
+            }
+        case .add(_, _, .none):
+            fallthrough
+        case .add(_, _, .some(.r64ext(_, _))):
+            fallthrough
+        case .add(_, _, .some(.r32ext(_, _))):
+            fallthrough
+        case .add(_, _, .some(.imm(_, _))):
+            return "add <not impl>"
         }
     }
     
     static func _add(_ r1: any Register, _ r2: any Register, _ offs: ByteCount) throws -> M1Op {
-        .add(r1, r2, try Imm12Lsl12(Immediate12(offs), lsl: ._0))
+        .addImm12(r1, r2, try Imm12Lsl12(Immediate12(offs), lsl: ._0))
     }
     
     func emit() throws -> [UInt8] {
@@ -323,7 +337,10 @@ enum M1Op : CpuOp {
     // deprecated
     case subImm12(any Register, any Register, Imm12Lsl12) // negative -> alias for add
     case sub(any Register, any Register, RegModifier?)
-    case add(any Register, any Register, Imm12Lsl12) // negative -> alias for sub
+    
+    // deprecated
+    case addImm12(any Register, any Register, Imm12Lsl12) // negative -> alias for sub
+    case add(any Register, any Register, RegModifier?)
     
     case b(RelativeOffset) // 26 bits max
     case blr(Register64)

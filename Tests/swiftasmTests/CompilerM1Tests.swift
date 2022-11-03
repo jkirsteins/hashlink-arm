@@ -1047,6 +1047,35 @@ final class CompilerM1Tests: XCTestCase {
             entrypoint(3, 0, 1, 0, 1, 0, 1, 0, 9))
     }
     
+    func testCompile__OAdd() throws {
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .u8,
+                    findex: 0,
+                    regs: [
+                        // args
+                        .u8, .u8
+                    ],
+                    args: [
+                        // args
+                        .u8
+                    ],
+                    ops: [
+                        .OAdd(dst: 1, a: 0, b: 1),
+                        .ORet(ret: 1),
+                    ]
+                ),
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        try sut.compile(findex: 0, into: mem)
+        let entrypoint: (@convention(c) (UInt8, UInt8) -> UInt8) = try mem.buildEntrypoint(0)
+        XCTAssertEqual(6, entrypoint(2, 4))
+    }
+    
     func testCompile__OMov() throws {
         let storage = ModuleStorage(
             functions: [

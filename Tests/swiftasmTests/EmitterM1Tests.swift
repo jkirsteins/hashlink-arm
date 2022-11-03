@@ -51,7 +51,20 @@ extension XCTestCase {
 }
 
 final class EmitterM1Tests: XCTestCase {
-          
+    
+    func testAdd() throws {
+        XCTAssertM1Op(
+            M1Op.add(W.w1, W.w2, .r64shift(W.w3, .lsl(0))),
+            "add w1, w2, w3",
+            0x41, 0x00, 0x03, 0x0b
+        )
+        XCTAssertM1Op(
+            M1Op.add(X.x1, X.x2, .r64shift(X.x3, .lsl(0))),
+            "add x1, x2, x3",
+            0x41, 0x00, 0x03, 0x8b
+        )
+    }
+        
     func testStrb() throws {
         XCTAssertM1Op(
             M1Op.strb(.w0, .reg64(.sp, .imm(0, nil))),
@@ -416,20 +429,20 @@ final class EmitterM1Tests: XCTestCase {
         )
     }
     
-    func testAdd() throws {
-        XCTAssertEqual("add sp, sp, #16", M1Op.add(X.sp, X.sp, 16).debugDescription)
-        XCTAssertEqual("add sp, sp, #16, lsl 12", M1Op.add(X.sp, X.sp, try Imm12Lsl12(16, lsl: ._12)).debugDescription)
-        XCTAssertEqual("sub sp, sp, #16", M1Op.add(X.sp, X.sp, -16).debugDescription)
+    func testAddImm12() throws {
+        XCTAssertEqual("add sp, sp, #16", M1Op.addImm12(X.sp, X.sp, 16).debugDescription)
+        XCTAssertEqual("add sp, sp, #16, lsl 12", M1Op.addImm12(X.sp, X.sp, try Imm12Lsl12(16, lsl: ._12)).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16", M1Op.addImm12(X.sp, X.sp, -16).debugDescription)
         XCTAssertEqual(
-            try EmitterM1.emit(for: .add(X.sp, X.sp, -16)),
+            try EmitterM1.emit(for: .addImm12(X.sp, X.sp, -16)),
             [0xff, 0x43, 0x00, 0xd1]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .add(X.sp, X.sp, 16)),
+            try EmitterM1.emit(for: .addImm12(X.sp, X.sp, 16)),
             [0xff, 0x43, 0x00, 0x91]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .add(X.sp, X.sp, Imm12Lsl12(16, lsl: ._12))),
+            try EmitterM1.emit(for: .addImm12(X.sp, X.sp, Imm12Lsl12(16, lsl: ._12))),
             [0xff, 0x43, 0x40, 0x91]
         )
     }

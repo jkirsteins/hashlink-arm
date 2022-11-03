@@ -338,6 +338,35 @@ public class EmitterM1 {
     func emit(for op: M1Op) throws -> [UInt8] {
         try Self.emit(for: op)
     }
+    
+    static fileprivate func encodeRegs(Rd: any Register, Rn: any Register, Rm: any Register, rdOff: Int64 = 0, rnOff: Int64 = 5, rmOff: Int64 = 16) -> Int64
+    {
+        let encodedRd = encodeReg(Rd, shift: rdOff)
+        let encodedRn = encodeReg(Rn, shift: rnOff)
+        let encodedRm = encodeReg(Rm, shift: rmOff)
+        return encodedRd | encodedRn | encodedRm
+    }
+    
+    static fileprivate func getShImm6(_ shift: Shift64_Real, shOff: Int = 22, immOff: Int = 10) -> (Int64, Int64) {
+        let imm6: Int64
+        let sh: Int64
+        switch(shift) {
+        case .lsl(let amt):
+            sh = 0b00
+            imm6 = Int64(amt)
+        case .lsr(let amt):
+            sh = 0b01
+            imm6 = Int64(amt)
+        case .asr(let amt):
+            sh = 0b10
+            imm6 = Int64(amt)
+        case .ror(let amt):
+            sh = 0b11
+            imm6 = Int64(amt)
+        }
+        
+        return ((sh << shOff), Int64(imm6) << immOff)
+    }
 
     static func emit(for op: M1Op) throws -> [UInt8] {
         switch op.resolveFinalForm() {  // resolve potential aliases
@@ -346,7 +375,7 @@ public class EmitterM1 {
                 throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
             }
             guard offset.imm.isPositive else {
-                return try emit(for: .add(Rd, Rn, Imm12Lsl12(offset.imm.flippedSign, lsl: offset.lsl)))
+                return try emit(for: .addImm12(Rd, Rn, Imm12Lsl12(offset.imm.flippedSign, lsl: offset.lsl)))
             }
 
             //                  S          sh imm12        Rn    Rd
@@ -358,7 +387,21 @@ public class EmitterM1 {
             let imm: Int64 = offset.imm.shiftedLeft(10)
             let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | imm
             return returnAsArray(encoded)
-        case .add(let Rd, let Rn, let offset):
+        case .add(let Rd, let Rn, .r64shift(let Rm, let shift)):
+            //                           SH   Rm    imm6   Rn    Rd
+            let mask: Int64 = 0b00001011_00_0_00000_000000_00000_00000
+            let s = sizeMask(is64: Rd.is64)
+            guard Rd.is64 == Rn.is64, Rd.is64 == Rm.is64 else {
+                fatalError("Expected all registers to be the same size")
+            }
+            
+            let (imm6, sh) = getShImm6(shift)
+            print(Rd, Rn, Rm)
+            let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
+            
+            let encoded = mask | s | imm6 | sh | regs
+            return returnAsArray(encoded)
+        case .addImm12(let Rd, let Rn, let offset):
             guard Rd.is32 == Rn.is32 else {
                 throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
             }
@@ -883,22 +926,7 @@ public class EmitterM1 {
             //                  S        SH N Rm    imm6   Rn    Rd
             let mask: Int64 = 0b00001010_00_0_00000_000000_00000_00000
                               
-            let imm6: Int64
-            let sh: Int64
-            switch(shift) {
-            case .lsl(let amt):
-                sh = 0b00
-                imm6 = Int64(amt)
-            case .lsr(let amt):
-                sh = 0b01
-                imm6 = Int64(amt)
-            case .asr(let amt):
-                sh = 0b10
-                imm6 = Int64(amt)
-            case .ror(let amt):
-                sh = 0b11
-                imm6 = Int64(amt)
-            }
+            let (sh, imm6) = getShImm6(shift)
             
             guard Rd.is32 == Rn.is32, Rd.is32 == Rm.is32 else {
                 fatalError("Rd, Rn, Rm must be the same size for AND (shifted register)")
@@ -907,7 +935,7 @@ public class EmitterM1 {
             let encodedRd = encodeReg(Rd, shift: 0)
             let encodedRn = encodeReg(Rn, shift: 5)
             let encodedRm = encodeReg(Rm, shift: 16)
-            let encoded = sf | mask | (Int64(imm6) << 10) | encodedRm | encodedRn | encodedRd | (sh << 22)
+            let encoded = sf | mask | imm6 | encodedRm | encodedRn | encodedRd | sh
             return returnAsArray(encoded)
         case .sbfm(let Rd, let Rn, let immr, let imms):
             //                  S        N immr   imms  Rn    Rd

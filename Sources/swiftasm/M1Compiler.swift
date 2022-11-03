@@ -1386,6 +1386,11 @@ class M1Compiler {
                 )
                 
                 appendStore(reg: .x2, into: dst, kinds: regKinds, mem: mem)
+            case .OAdd(let dst, let a, let b):
+                appendLoad(reg: .x0, from: a, kinds: regKinds, mem: mem)
+                appendLoad(reg: .x1, from: b, kinds: regKinds, mem: mem)
+                mem.append(M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))))
+                appendStore(reg: X.x0, into: dst, kinds: regKinds, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }
