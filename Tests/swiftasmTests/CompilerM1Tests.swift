@@ -54,14 +54,14 @@ func prepareFunction(
 }
 
 /*
-typedef struct {
-    hl_code *code;
-    hl_module *m;
-    vdynamic *ret;
-    pchar *file;
-    int file_time;
-} main_context;
-*/
+ typedef struct {
+ hl_code *code;
+ hl_module *m;
+ vdynamic *ret;
+ pchar *file;
+ int file_time;
+ } main_context;
+ */
 struct MainContext {
     var code: UnsafePointer<HLCode_CCompat>
     var module: UnsafeRawPointer?
@@ -89,26 +89,11 @@ final class CompilerM1Tests: XCTestCase {
         guard let m = self.context?.module else {
             fatalError("nil module")
         }
-            
+        
         let res = LibHl.hl_module_init(m, false)
         guard res == 1 else {
             fatalError("Failed to init module (got \(res))")
         }
-
-                
-        //
-        
-//        XCTAssertEqual(MemoryLayout<MainContext>.size, 40)
-//        
-//        "file-jk-yo.dat".withCString {
-//            LibHl._hl_sys_init(nil, 0, $0)
-//        }
-//        withUnsafeMutablePointer(to: &self.context!) {
-//            LibHl.hl_register_thread($0)
-//        }
-//        _hl_register_thread()
-//        hl_sys_init((void**)argv,argc,file);
-//        hl_register_thread(&ctx);
     }
     class override func tearDown() {
         LibHl.hl_global_free()
@@ -119,24 +104,24 @@ final class CompilerM1Tests: XCTestCase {
             var hl_type_addr: Int64 = 0xDEAD
             var field: Int32 = 0xBEEF
         }
-
+        
         XCTAssertEqual(MemoryLayout<_TestMemory>.size, 12)
-
+        
         let structType = HLType.obj(
             HLTypeObj(
-                name: Resolvable("_TestMemory"), 
-                superType: nil, 
-                global: 0, 
+                name: Resolvable("_TestMemory"),
+                superType: nil,
+                global: 0,
                 fields: Resolvable.array([
                     HLObjField(
-                        name: Resolvable("field"), 
-                        type: Resolvable(.i32))]), 
+                        name: Resolvable("field"),
+                        type: Resolvable(.i32))]),
                 proto: [],
                 bindings: []))
-
+        
         let storage = ModuleStorage(
-            types: [structType], 
-            functions: [ 
+            types: [structType],
+            functions: [
                 prepareFunction(
                     retType: .i32,
                     findex: 0,
@@ -144,7 +129,7 @@ final class CompilerM1Tests: XCTestCase {
                     args: [structType],
                     ops: [ .OGetThis(dst: 1, field: 0), .ORet(ret: 1) ]
                 )
-        ])
+            ])
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         
@@ -153,16 +138,16 @@ final class CompilerM1Tests: XCTestCase {
         mem.hexPrint()
         // return
         var obj = _TestMemory()
-
-        try withUnsafeMutableBytes(of: &obj) {  
+        
+        try withUnsafeMutableBytes(of: &obj) {
             guard let ptr = $0.baseAddress else { fatalError("Couldn't get ptr") }
             let objAddress = Int64(Int(bitPattern: ptr))
-
+            
             // run the entrypoint and ensure it works
             typealias _JitFunc = (@convention(c) (Int64) -> Int32)
-            let entrypoint: _JitFunc = try mem.buildEntrypoint(0) 
+            let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
             let result = entrypoint(objAddress)
-            XCTAssertEqual(result, 0xBEEF) 
+            XCTAssertEqual(result, 0xBEEF)
         }
     }
     
@@ -201,14 +186,14 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ], ints: [0, 3, 57005])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
-//         mem.hexPrint()
-
+        
+        //         mem.hexPrint()
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (UnsafeRawPointer?) -> Int32)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
@@ -245,12 +230,12 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ], ints: [0, 3, 57005])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = sut(strip: false)
         try sut.compile(findex: 0, into: mem)
-
+        
         typealias _JitFunc = (@convention(c) (UInt8) -> Int32)
         let entrypoint8: _JitFunc = try mem.buildEntrypoint(0)
         
@@ -279,14 +264,14 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
-//         mem.hexPrint()
-
+        
+        //         mem.hexPrint()
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
@@ -330,14 +315,14 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ], ints: [0, 3, 57005])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
-//         mem.hexPrint()
-
+        
+        //         mem.hexPrint()
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (UnsafeRawPointer?) -> Int32)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
@@ -381,15 +366,15 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ], ints: [0, 3, 57005])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
+        
         // TODO: need to test w i64
-         mem.hexPrint()
-
+        mem.hexPrint()
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
@@ -444,13 +429,13 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ], ints: [0, 3, 57005])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = sut(strip: false)
         try sut.compile(findex: 0, into: mem)
         try sut.compile(findex: 1, into: mem)
-
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (UInt16, UInt16) -> Int32)
         let entrypoint8: _JitFunc = try mem.buildEntrypoint(0)
@@ -491,13 +476,13 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = sut(strip: false)
         try sut.compile(findex: 0, into: mem)
         try sut.compile(findex: 1, into: mem)
-
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (UInt8, UInt8) -> UInt8)
         let entrypointS: _JitFunc = try mem.buildEntrypoint(0)
@@ -551,13 +536,13 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ], ints: [0, 3, 57005])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = sut(strip: false)
         try sut.compile(findex: 0, into: mem)
         try sut.compile(findex: 1, into: mem)
-
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (UInt16, UInt16) -> Int32)
         let entrypoint8: _JitFunc = try mem.buildEntrypoint(0)
@@ -606,15 +591,15 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ], ints: [0, 3, 57005])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
+        
         // TODO: need to test w i64
-         mem.hexPrint()
-
+        mem.hexPrint()
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
@@ -658,15 +643,15 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ], ints: [0, 3, 57005])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
+        
         // TODO: need to test w i64
-         mem.hexPrint()
-
+        mem.hexPrint()
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
@@ -700,14 +685,14 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
+        
         mem.hexPrint()
-
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
@@ -715,6 +700,30 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(0b00000, entrypoint(0b00000, 0b11111))
         XCTAssertEqual(0b00100, entrypoint(0b00111, 0b11100))
         XCTAssertEqual(0b11111, entrypoint(0b11111, 0b11111))
+    }
+    
+    func testCompile_OIncr() throws {
+        let f = prepareFunction(
+            retType: .u8,
+            findex: 0,
+            regs: [.u8],
+            args: [.u8],
+            ops: [
+                .OIncr(dst: 0),
+                .ORet(ret: 0),
+            ]
+        )
+        
+        let storage = ModuleStorage(functions: [f])
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        try sut.compile(findex: 0, into: mem)
+        
+        let entrypoint: (@convention(c) (UInt8) -> UInt8) = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(125, entrypoint(124))
+        XCTAssertEqual(126, entrypoint(125))
     }
     
     func testCompile_OSub() throws {
@@ -737,14 +746,14 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
+        
         mem.hexPrint()
-
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (Int32, Int32) -> Int32)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
@@ -773,21 +782,21 @@ final class CompilerM1Tests: XCTestCase {
                     ]
                 )
             ])
-
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
+        
         mem.hexPrint()
-
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer?)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
         
         XCTAssertEqual(nil, entrypoint(UnsafeRawPointer(bitPattern: 0x7b)!))
     }
-
+    
     func testCompile_emptyFunction() throws {
         let storage = ModuleStorage(functions: [
             prepareFunction(
@@ -802,9 +811,9 @@ final class CompilerM1Tests: XCTestCase {
         let mem = OpBuilder(ctx: ctx)
         let sut = sut()
         try sut.compile(findex: 0, into: mem)
-
-         mem.hexPrint()
-
+        
+        mem.hexPrint()
+        
         XCTAssertEqual(
             mem.lockAddressesAndBuild(),
             [
@@ -815,23 +824,23 @@ final class CompilerM1Tests: XCTestCase {
                 0xc0, 0x03, 0x5f, 0xd6, // ret
             ]
         )
-
+        
         // run the entrypoint and ensure it works
         let entrypoint: JitVoid = try mem.buildEntrypoint(0)
         entrypoint()
     }
-
+    
     /**
      > fn 16
      16 : fn __alloc__@16 (bytes, i32) -> (String)@18 (3 regs, 4 ops)
-         reg0  bytes@14
-         reg1  i32@3
-         reg2  String@13
+     reg0  bytes@14
+     reg1  i32@3
+     reg2  String@13
      /usr/local/lib/haxe/std/hl/_std/String.hx:220   0: New         reg2 = new String@13
      /usr/local/lib/haxe/std/hl/_std/String.hx:221   1: SetField    reg2.bytes = reg0
      /usr/local/lib/haxe/std/hl/_std/String.hx:222   2: SetField    reg2.length = reg1
      /usr/local/lib/haxe/std/hl/_std/String.hx:223   3: Ret         reg2
-    */
+     */
     func testCompile_ONew_OSetField() throws {
         let funcType: UnsafePointer<HLType_CCompat> = code.pointee.getType(18)     // (bytes, i32) -> (String)
         let stringType = code.pointee.getType(13)   // String
@@ -858,15 +867,15 @@ final class CompilerM1Tests: XCTestCase {
                         .OSetField(obj: 2, field: 1, src: 1),
                         .ORet(ret: 2)]
                 )
-        ])
-
+            ])
+        
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
+        
         // mem.hexPrint()
-
+        
         // run the entrypoint and ensure it works
         typealias _JitFunc = (@convention(c) (UnsafeRawPointer, Int32) -> UnsafeRawPointer)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
@@ -879,7 +888,7 @@ final class CompilerM1Tests: XCTestCase {
             
             // check type
             XCTAssertEqual(typePtr.pointee.kind, .obj)
-                        
+            
             // bytes/str
             let bytes = result.advanced(by: 8).bindMemory(to: UnsafePointer<CChar16>.self, capacity: 1)
             XCTAssertEqual(bytes.pointee, cstr.baseAddress!)
@@ -914,11 +923,11 @@ final class CompilerM1Tests: XCTestCase {
             regs: [.u8, .u16, .i32],
             args: [.u8, .u16, .i32],
             ops: [
-                .OCall3(dst: 2, fun: 1, arg0: 0, arg1: 1, arg2: 2), 
-                .ORet(ret: 2),
+                .OCall3(dst: 2, fun: 1, arg0: 0, arg1: 1, arg2: 2),
+                    .ORet(ret: 2),
             ]
         )
-
+        
         // Misc. JIT stuff
         let storage = ModuleStorage(
             functions: [f],
@@ -950,7 +959,7 @@ final class CompilerM1Tests: XCTestCase {
         // form of function (JitInt64 means (void)->Int64)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
         let res: Int32 = entrypoint(1, 2, 6)
-
+        
         // HL called Swift func. Swift func returned 145. HL returned the result it received.
         XCTAssertEqual(0b111, res)
     }
@@ -974,7 +983,7 @@ final class CompilerM1Tests: XCTestCase {
                 .ORet(ret: 0),
             ]
         )
-
+        
         // Misc. JIT stuff
         let storage = ModuleStorage(
             functions: [f],
@@ -1368,14 +1377,14 @@ final class CompilerM1Tests: XCTestCase {
                 .ORet(ret: 2),
             ]
         )
-
+        
         let storage = ModuleStorage(functions: [f])
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = M1Compiler(stripDebugMessages: false)
         try sut.compile(findex: 0, into: mem)
         
-//        mem.hexPrint()
+        //        mem.hexPrint()
         
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
         
@@ -1398,14 +1407,14 @@ final class CompilerM1Tests: XCTestCase {
                 .ORet(ret: 2),
             ]
         )
-
+        
         let storage = ModuleStorage(functions: [f])
         let ctx = JitContext(storage: storage)
         let mem = OpBuilder(ctx: ctx)
         let sut = sut()
         try sut.compile(findex: 0, into: mem)
         
-//        mem.hexPrint()
+        //        mem.hexPrint()
         
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
         
@@ -1428,7 +1437,7 @@ final class CompilerM1Tests: XCTestCase {
                 .ORet(ret: 2),
             ]
         )
-
+        
         // Misc. JIT stuff
         let storage = ModuleStorage(
             functions: [f]
@@ -1469,7 +1478,7 @@ final class CompilerM1Tests: XCTestCase {
                 .ORet(ret: 1),
             ]
         )
-
+        
         // Misc. JIT stuff
         let storage = ModuleStorage(
             functions: [f],
@@ -1501,17 +1510,17 @@ final class CompilerM1Tests: XCTestCase {
         // form of function (JitInt64 means (void)->Int64)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
         let res: Int32 = entrypoint(100, 156)
-
+        
         // HL called Swift func. Swift func returned 145. HL returned the result it received.
         XCTAssertEqual(256, res)
     }
-
+    
     func testCompile_callAndReturn_callNative() throws {
         // Prepare function we'll call from JIT
         let swiftFunc: JitInt64 = { return 145 }
         let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
         //       ^ pointer to the `swiftFunc` closure
-
+        
         // Function that consists of Hashlink ops:
         //   - call function with index 1, and store result in HL register 0
         //   - return value in register 0
@@ -1526,7 +1535,7 @@ final class CompilerM1Tests: XCTestCase {
                 .OCall0(dst: 0, fun: 1), .ORet(ret: 0),
             ]
         )
-
+        
         // Misc. JIT stuff
         let storage = ModuleStorage(
             functions: [f],
@@ -1558,11 +1567,11 @@ final class CompilerM1Tests: XCTestCase {
         // form of function (JitInt64 means (void)->Int64)
         let entrypoint: JitInt64 = try mem.buildEntrypoint(0)
         let res: Int64 = entrypoint()
-
+        
         // HL called Swift func. Swift func returned 145. HL returned the result it received.
         XCTAssertEqual(145, res)
     }
-
+    
     func testCompile_callAndReturn_callCompiled() throws {
         let storage = ModuleStorage(
             functions: [
@@ -1588,12 +1597,12 @@ final class CompilerM1Tests: XCTestCase {
         let sut = sut()
         try sut.compile(findex: 0, into: mem)
         try sut.compile(findex: 1, into: mem)
-
+        
         let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(0)
         let entrypoint2: (@convention(c) () -> Int32) = try mem.buildEntrypoint(1)
         let res1: Int32 = entrypoint()
         let res2: Int32 = entrypoint2()
-
+        
         XCTAssertEqual(152, res1)
         XCTAssertEqual(res1, res2)
     }
@@ -1651,7 +1660,7 @@ final class CompilerM1Tests: XCTestCase {
         try sut.compile(findex: 0, into: mem)
         try sut.compile(findex: 1, into: mem)
         try sut.compile(findex: 2, into: mem)
-
+        
         let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(0)
         let entrypoint2: (@convention(c) () -> Int32) = try mem.buildEntrypoint(1)
         let entrypoint3: (@convention(c) () -> UInt8) = try mem.buildEntrypoint(2)
@@ -1660,7 +1669,7 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(-1, entrypoint2())
         XCTAssertEqual(0, entrypoint3())
     }
-
+    
     func testCompile_simpleReturn() throws {
         let storage = ModuleStorage(
             functions: [
@@ -1678,36 +1687,36 @@ final class CompilerM1Tests: XCTestCase {
         let mem = OpBuilder(ctx: ctx)
         let sut = sut()
         try sut.compile(findex: 0, into: mem)
-
+        
         // mem.hexPrint()
-
+        
         let entrypoint: JitInt64 = try mem.buildEntrypoint(0)
         let res: Int64 = entrypoint()
         XCTAssertEqual(165, res)
     }
-
+    
     func testCalcStackArgReq() throws {
         let sut = sut()
-
+        
         // test different size combinations (ensure aligned to 16 bytes)
         var (size, _) = sut.calcStackArgReq(regs: [.array, .array], args: [])
         XCTAssertEqual(16, size)
-
+        
         (size, _) = sut.calcStackArgReq(regs: [.array, .array, .i32], args: [])
         XCTAssertEqual(32, size)
-
+        
         (size, _) = sut.calcStackArgReq(
             regs: [.array, .array, .i32, .dyn, .dynobj],
             args: []
         )
         XCTAssertEqual(48, size)
-
+        
         (size, _) = sut.calcStackArgReq(
             regs: [.array, .array, .i32, .dyn, .dynobj],
             args: [.array, .array, .i32, .dyn, .dynobj]
         )
         XCTAssertEqual(48, size)
-
+        
         // args exceeding first 8 should not allocate extra space (as it
         // should already be allocated due to calling convention)
         (size, _) = sut.calcStackArgReq(
@@ -1715,25 +1724,25 @@ final class CompilerM1Tests: XCTestCase {
             args: Array(repeating: .dyn, count: 16)
         )
         XCTAssertEqual(64, size)
-
+        
         // non args should take space
         (size, _) = sut.calcStackArgReq(regs: [.i32], args: [])
         XCTAssertEqual(16, size)
-
+        
         // 4 regs (all except 1st) and 1 arg should contribute to size here
         (size, _) = sut.calcStackArgReq(
             regs: [.array] + Array(repeating: .i32, count: 4),
             args: [.array]
         )
         XCTAssertEqual(32, size)
-
+        
         // first 8 args should take space
         (size, _) = sut.calcStackArgReq(
             regs: Array(repeating: .i32, count: 8),
             args: Array(repeating: .i32, count: 8)
         )
         XCTAssertEqual(32, size)
-
+        
         // void should be ignored
         (size, _) = sut.calcStackArgReq(
             regs: Array(repeating: .void, count: 8) + Array(repeating: .i32, count: 8),
@@ -1741,30 +1750,30 @@ final class CompilerM1Tests: XCTestCase {
         )
         XCTAssertEqual(32, size)
     }
-
+    
     func testAppendPrologue() throws {
         let mem = builder()
         _ = sut().appendPrologue(builder: mem)
-
+        
         XCTAssertEqual(
-             mem.lockAddressesAndBuild(),
+            mem.lockAddressesAndBuild(),
             [0xfd, 0x7b, 0xbf, 0xa9, 0xfd, 0x03, 0x00, 0x91]
         )
     }
-
+    
     func testAppendEpilogue() throws {
         let mem = builder()
         sut().appendEpilogue(builder: mem)
-
+        
         XCTAssertEqual(mem.lockAddressesAndBuild(), [0xfd, 0x7b, 0xc1, 0xa8])
     }
-
+    
     func testAppendStackInit_skipVoid() throws {
         let mem = builder()
         try sut().appendStackInit([.void], args: [.void], builder: mem, prologueSize: 0)
         XCTAssertEqual([], mem.lockAddressesAndBuild())
     }
-
+    
     func testAppendStackInit_min16() throws {
         let _1_need16 = Array(repeating: HLTypeKind.i32, count: 1)
         let _4_need16 = Array(repeating: HLTypeKind.i32, count: 4)
@@ -1781,7 +1790,7 @@ final class CompilerM1Tests: XCTestCase {
             ],
             mem1.lockAddressesAndBuild()
         )
-
+        
         // 16 byte requirement should not round to 32
         let mem2 = builder()
         try sut.appendStackInit(_4_need16, args: _4_need16, builder: mem2, prologueSize: 0)
@@ -1812,7 +1821,7 @@ final class CompilerM1Tests: XCTestCase {
             mem3.lockAddressesAndBuild()
         )
     }
-
+    
     func testAppendStackInit_multiple() throws {
         let mem = builder()
         let sut = sut()
@@ -1832,7 +1841,7 @@ final class CompilerM1Tests: XCTestCase {
             mem.lockAddressesAndBuild()
         )
     }
-
+    
     func testAppendStackInit_moreThan8Args() throws {
         let mem = builder()
         try sut().appendStackInit(
@@ -1841,7 +1850,7 @@ final class CompilerM1Tests: XCTestCase {
             builder: mem,
             prologueSize: 0
         )
-//        mem.hexPrint()
+        //        mem.hexPrint()
         XCTAssertEqual(
             [
                 // Reserving 48 bytes for entire stack
@@ -1866,15 +1875,15 @@ final class CompilerM1Tests: XCTestCase {
             mem.lockAddressesAndBuild()
         )
     }
-
+    
     func testAppendStackInit_mismatchedRegs() throws {
         let mem = builder()
-
+        
         XCTAssertThrowsError(
             try sut().appendStackInit([.i32], args: [.void], builder: mem, prologueSize: 0)
         )
     }
-
+    
     func testAppendDebugPrintAligned4() throws {
         let memWith = builder()
         let memWithout = builder()
@@ -1886,9 +1895,9 @@ final class CompilerM1Tests: XCTestCase {
             "Hello World",
             builder: memWithout
         )
-
+        
         XCTAssertEqual(memWithout.lockAddressesAndBuild(), [])
-
+        
         XCTAssertEqual(
             memWith.lockAddressesAndBuild(),
             [

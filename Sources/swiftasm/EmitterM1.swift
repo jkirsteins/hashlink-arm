@@ -403,6 +403,25 @@ public class EmitterM1 {
             let imm: Int64 = offset.imm.shiftedLeft(10)
             let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | imm
             return returnAsArray(encoded)
+        case .add(let Rd, let Rn, .imm(let off, let ixMode)):
+            // TODO: deduplicate with addImm12
+            let imm = try Imm12Lsl12(off)
+            guard Rd.is32 == Rn.is32 else {
+                throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
+            }
+            guard imm.isPositive else {
+                return try emit(for: .subImm12(Rd, Rn, imm.flippedSign))
+            }
+            
+            //                  S          sh imm12        Rn    Rd
+            let mask: Int64 = 0b0_00100010_0__000000000000_00000_00000
+            let encodedRd: Int64 = encodeReg(Rd, shift: 0)
+            let encodedRn: Int64 = encodeReg(Rn, shift: 5)
+            let size: Int64 = (Rd.is32 ? 0 : 1) << 31
+            let sh: Int64 = (/*offset.lsl == ._0*/true ? 0 : 1) << 22
+            let immf: Int64 = imm.shiftedLeft(10)
+            let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | immf
+            return returnAsArray(encoded)
         case .add(let Rd, let Rn, .r64shift(let Rm, let shift)):
             //                           SH   Rm    imm6   Rn    Rd
             let mask: Int64 = 0b00001011_00_0_00000_000000_00000_00000

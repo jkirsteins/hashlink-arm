@@ -281,13 +281,15 @@ enum M1Op : CpuOp {
             } else {
                 return "add \(Rd), \(Rn), \(Rm), \(shift)"
             }
+        case .add(let rt, let rn, .imm(let off, nil)):
+            return "add \(rt), \(rn), #\(off)"
+        case .add(_, _, .some(.imm(_, .some(_)))):
+            fallthrough
         case .add(_, _, .none):
             fallthrough
         case .add(_, _, .some(.r64ext(_, _))):
             fallthrough
         case .add(_, _, .some(.r32ext(_, _))):
-            fallthrough
-        case .add(_, _, .some(.imm(_, _))):
             return "add <not impl>"
         case .lsr(let Rd, let Rn, .immediate6(let imm)):
             return "lsr \(Rd), \(Rn), #\(imm.immediate)"

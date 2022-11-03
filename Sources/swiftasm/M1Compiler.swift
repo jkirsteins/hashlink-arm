@@ -1464,6 +1464,10 @@ class M1Compiler {
                 mem.append(
                     PseudoOp.mov(X.x1, _testAddress),
                     M1Op.blr(X.x1))
+            case .OIncr(let dst):
+                appendLoad(reg: .x0, from: dst, kinds: regKinds, mem: mem)
+                mem.append(M1Op.add(X.x0, X.x0, .imm(1, nil)))
+                appendStore(reg: .x0, into: dst, kinds: regKinds, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

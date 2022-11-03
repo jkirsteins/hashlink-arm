@@ -99,6 +99,11 @@ final class EmitterM1Tests: XCTestCase {
             "add x1, x2, x3",
             0x41, 0x00, 0x03, 0x8b
         )
+        XCTAssertM1Op(
+            M1Op.add(X.sp, X.sp, .imm(16, nil)),
+            "add sp, sp, #16",
+            0xff, 0x43, 0x00, 0x91
+        )
     }
         
     func testStrb() throws {
