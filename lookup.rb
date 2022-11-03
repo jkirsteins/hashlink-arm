@@ -315,9 +315,212 @@ def lookup_data_processing__immediate__logical(val)
     end 
 end
 
+def lookup_data_processing__immediate__bitfield(val)
+    sf = p(val, 1, 31)
+    opc = p(val, 2, 29)
+    n = p(val, 1, 22)
+    immr = p(val, 6, 16)
+    imms = p(val, 6, 10)
+    rn = p(val, 5, 5)
+    rd = p(val, 5, 0)
+
+    puts("Bitfield: https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Immediate?lang=en#bitfield")
+    puts("    sf = #{sf}")
+    puts("    opc = #{opc}")
+    puts("    n = #{n}")
+    puts("    immr = #{immr}")
+    puts("    imms = #{imms}")
+    puts("    rn = #{rn}")
+    puts("    rd = #{rd}")
+
+    valStr = "#{sf}#{opc}#{n}"	
+    if match("x 11 x", valStr)
+        abort("UNALLOCATED")
+    elsif match("0 xx 1", valStr)
+        abort("UNALLOCATED")
+    elsif match("0 00 0", valStr)
+        abort("SBFM — 32-bit")
+    elsif match("0 01 0", valStr)
+        abort("BFM — 32-bit")
+    elsif match("0 10 0", valStr)
+        puts("UBFM — 32-bit")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/UBFM--Unsigned-Bitfield-Move-?lang=en")
+    elsif match("1 xx 0", valStr)
+        abort("UNALLOCATED")
+    elsif match("1 00 1", valStr)
+        puts("SBFM — 64-bit")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SBFM--Signed-Bitfield-Move-?lang=en")
+    elsif match("1 01 1", valStr)
+        abort("BFM — 64-bit")
+    elsif match("1 10 1", valStr)
+        puts("UBFM — 64-bit")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/UBFM--Unsigned-Bitfield-Move-?lang=en")
+    else 
+        abort("UNALLOCATED")
+    end
+end
+
+def lookup_data_processing__register__addsub_shifted_register(val)
+    puts("Add/subtract (shifted register): https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Register?lang=en#addsub_shift")
+    sf = p(val, 1, 31)
+    op = p(val, 1, 30)
+    s = p(val, 1, 29)
+    sh = p(val, 2, 22)
+    rm = p(val, 5, 16)
+    imm6 = p(val, 6, 10)
+    rn = p(val, 5, 5)
+    rd = p(val, 5, 0)
+    puts("    sf: #{sf}")
+    puts("    op: #{op}")
+    puts("    S: #{s}")
+    puts("    shift: #{sh}")
+    puts("    Rm: #{rm}")
+    puts("    imm6: #{imm6}")
+    puts("    Rn: #{rn}")
+    puts("    Rd: #{rd}")
+
+    valStr = "#{sf} #{op} #{s} #{sh} #{imm6}"
+    if match("x x x 11 xxxxxx", valStr)
+        abort("UNALLOCATED")
+    elsif match("0 x x xx 1xxxxx", valStr)
+        abort("UNALLOCATED")
+    elsif match("0 0 0 xx xxxxxx", valStr)
+        puts("ADD (shifted register) — 32-bit")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ADD--shifted-register---Add--shifted-register--?lang=en")
+    elsif match("0 0 1 xx xxxxxx", valStr)
+        abort("ADDS (shifted register) — 32-bit")
+    elsif match("0 1 0 xx xxxxxx", valStr)
+        abort("SUB (shifted register) — 32-bit")
+    elsif match("0 1 1 xx xxxxxx", valStr)
+        abort("SUBS (shifted register) — 32-bit")
+    elsif match("1 0 0 xx xxxxxx", valStr)
+        puts("ADD (shifted register) — 64-bit")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ADD--shifted-register---Add--shifted-register--?lang=en")
+    elsif match("1 0 1 xx xxxxxx", valStr)
+        abort("ADDS (shifted register) — 64-bit")
+    elsif match("1 1 0 xx xxxxxx", valStr)
+        puts("SUB (shifted register) — 64-bit")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SUB--shifted-register---Subtract--shifted-register--?lang=en")
+    elsif match("1 1 1 xx xxxxxx", valStr)
+        abort("SUBS (shifted register) — 64-bit")
+    else 
+        abort("Unknown")
+    end
+end
+
+def lookup_data_processing__2source(val)
+    puts("Data processing (2 source): https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Register?lang=en#dp_2src")
+    sf = p(val, 1, 31)
+    s = p(val, 1, 29)
+    opcode = p(val, 6, 10)
+    rm = p(val, 5, 16)
+    rd = p(val, 5, 0)
+    rn = p(val, 5, 5)
+    valStr = "#{sf} #{s} #{opcode}"
+
+    puts("    sf = #{sf}")
+    puts("    s = #{s}")
+    puts("    opcode = #{opcode}")
+    puts("    rd = #{rd}")
+    puts("    rn = #{rn}")
+    puts("    rm = #{rm}")
+    
+    matches = {
+        [
+            "x x 000001", "x x 011xxx", "x x 1xxxxx",
+            "x 0	00011x", "x 0	001101", "x 0	00111x", "x 1	00001x", "x 1	0001xx", "x 1	001xxx", "x 1	01xxxx",
+            "0	x 000000",
+            "0	0	00010x",
+            "0	0	001100",
+            "0	0	010x11",
+            "1	0	010xx0",
+            "1	0	010x0x"
+        ] => "UNALLOCATED",
+["0	0	000010"] => "UDIV — 32-bit",
+["0	0	000011"] => "SDIV — 32-bit",
+["0	0	001000"] => "LSLV — 32-bit	-",
+["0	0	001001"] => ["LSRV — 32-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LSRV--Logical-Shift-Right-Variable-?lang=en"],
+["0	0	001010"] => ["ASRV — 32-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ASRV--Arithmetic-Shift-Right-Variable-?lang=en"],
+["0	0	001011"] => "RORV — 32-bit	-",
+["0	0	010000"] => "CRC32B, CRC32H, CRC32W, CRC32X — CRC32B	-",
+["0	0	010001"] => "CRC32B, CRC32H, CRC32W, CRC32X — CRC32H	-",
+["0	0	010010"] => "CRC32B, CRC32H, CRC32W, CRC32X — CRC32W	-",
+["0	0	010100"] => "CRC32CB, CRC32CH, CRC32CW, CRC32CX — CRC32CB	-",
+["0	0	010101"] => "CRC32CB, CRC32CH, CRC32CW, CRC32CX — CRC32CH	-",
+["0	0	010110"] => "CRC32CB, CRC32CH, CRC32CW, CRC32CX — CRC32CW	-",
+["1	0	000000"] => "SUBP	FEAT_MTE",
+["1	0	000010"] => "UDIV — 64-bit	-",
+["1	0	000011"] => "SDIV — 64-bit	-",
+["1	0	000100"] => "IRG	FEAT_MTE",
+["1	0	000101"] => "GMI	FEAT_MTE",
+["1	0	001000"] => "LSLV — 64-bit	-",
+["1	0	001001"] => ["LSRV — 64-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LSRV--Logical-Shift-Right-Variable-?lang=en"],
+["1	0	001010"] => ["ASRV — 64-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ASRV--Arithmetic-Shift-Right-Variable-?lang=en"],
+["1	0	001011"] => "RORV — 64-bit	-",
+["1	0	001100"] => "PACGA	FEAT_PAuth",
+["1	0	010011"] => "CRC32B, CRC32H, CRC32W, CRC32X — CRC32X	-",
+["1	0	010111"] => "CRC32CB, CRC32CH, CRC32CW, CRC32CX — CRC32CX	-",
+["1	1	000000"] => "SUBPS"
+    }
+    matches.each do |patterns, target|
+        patterns.each do |pattern|
+            if match(pattern, valStr)
+                if target.is_a? Array
+                    puts("#{target[0]}")
+                    puts("    #{target[1]}")
+                else
+                    abort(target)
+                end
+            end
+        end
+    end
+
+    nil
+end
+
+def lookup_data_processing__register(val)
+    op0 = p(val, 1, 29)
+    op1 = p(val, 1, 28)
+    op2 = p(val, 4, 21)
+    op3 = p(val, 6, 10)
+
+    valStr = "#{op0}#{op1}#{op2}#{op3}"
+
+    if match("0 1 0110 xxxxxx", valStr) 
+        lookup_data_processing__2source(val)
+    elsif match("1 1 0110 xxxxxx", valStr) 
+        abort("Data-processing (1 source)")
+    elsif match("x 0 0xxx xxxxxx", valStr) 
+        abort("Logical (shifted register)")
+    elsif match("x 0 1xx0 xxxxxx", valStr)
+        lookup_data_processing__register__addsub_shifted_register(val)
+    elsif match("x 0 1xx1 xxxxxx", valStr)
+        abort("Add/subtract (extended register)")
+    elsif match("x 1 0000 000000", valStr)
+        abort("Add/subtract (with carry)")
+    elsif match("x 1 0000 x00001", valStr)
+        abort("Rotate right into flags")
+    elsif match("x 1 0000 xx0010", valStr)
+        abort("Evaluate into flags")
+    elsif match("x 1 0010 xxxx0x", valStr)
+        abort("Conditional compare (register)")
+    elsif match("x 1 0010 xxxx1x", valStr)
+        abort("Conditional compare (immediate)")
+    elsif match("x 1 0100 xxxxxx", valStr)
+        abort("Conditional select")
+    elsif match("x 1 1xxx xxxxxx", valStr)
+        abort("Data-processing (3 source)")
+    else
+        abort("Unknown")
+    end
+end
+
 # https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Immediate
 def lookup_data_processing__immediate(val)
     op0 = p(val, 3, 23)
+
+    puts("Data processing (immediate):")
+    puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Immediate")
 
     valStr = "#{op0}"	
     if match("00x", valStr)
@@ -331,7 +534,7 @@ def lookup_data_processing__immediate(val)
     elsif match("101", valStr)
         abort("Move wide (immediate)")
     elsif match("110", valStr)
-        abort("Bitfield")
+        lookup_data_processing__immediate__bitfield(val)
     elsif match("111", valStr)
         abort("Extract")
     else 
@@ -359,7 +562,7 @@ def lookup(val)
     when "0100", "0110", "1100", "1110" 
         lookup_loads_stores(val)
     when "0101", "1101" 
-        abort("Data Processing -- Register")
+        lookup_data_processing__register(val)
     when "0111", "1111" 
         abort("Data Processing -- Scalar Floating-Point and Advanced SIMD")
     else
@@ -367,9 +570,4 @@ def lookup(val)
     end
 end
 
-puts lookup(0x8a020061)
-
-# 0: 61 10 40 92  	and	x1, x3, #0x1f
-# 4: 61 00 02 8a  	and	x1, x3, x2
-# 8: 61 10 40 b2  	orr	x1, x3, #0x1f
-# c: 61 00 02 aa  	orr	x1, x3, x2
+puts lookup(0x1ac32441)
