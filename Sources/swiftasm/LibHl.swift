@@ -96,4 +96,10 @@ struct LibHl {
     static func hl_get_obj_rt(_ hltype: UnsafePointer<HLType_CCompat>) -> UnsafePointer<HLRuntimeObj_CCompat> {
         UnsafePointer(OpaquePointer(_hl_get_obj_rt(hltype)))
     }
+    
+    // HL_PRIM varray *hl_alloc_array( hl_type *at, int size ) {
+    static let _hl_alloc_array: (@convention(c) (UnsafeRawPointer, Int32) -> UnsafeRawPointer) = { load("hl_alloc_array") }()
+    static func hl_alloc_array(_ hltype: UnsafePointer<HLType_CCompat>, _ size: Int32) -> UnsafePointer<varray> {
+        UnsafePointer(OpaquePointer(_hl_alloc_array(hltype, size)))
+    }
 }

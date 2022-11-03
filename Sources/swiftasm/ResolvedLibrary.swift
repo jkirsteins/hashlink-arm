@@ -27,11 +27,6 @@ struct ResolvedLibrary {
         let rname = Self.resolved(name: unresolvedName)
         self.name = LibraryName(name: unresolvedName, resolvedName: rname)
 
-        // print(dlopen("libhl", RTLD_LAZY))
-        // print(dlopen("libhl.dylib", RTLD_LAZY))
-        // print(dlopen("hl", RTLD_LAZY))
-        // print(dlopen("hl.dylib", RTLD_LAZY))
-        // print(dlopen("/usr/local/lib/libhl.dylib", RTLD_LAZY))
         guard let h = dlopen(rname, RTLD_NOW/*RTLD_LAZY*/) else {
             fatalError("Could not load library \(rname)")
         }
@@ -42,8 +37,9 @@ struct ResolvedLibrary {
         self.get(native.name.value)
     }
 
-    func get(_ name: String) -> UnsafeMutableRawPointer {        
-        let realName = "hlp_\(name)"
+    func get(_ name: String) -> UnsafeMutableRawPointer {
+        // Do NOT use hlp_. TODO: Understand what that is
+        let realName = "hl_\(name)"
         let result = dlsym(self.handle, realName)
 
         guard let result = result else {

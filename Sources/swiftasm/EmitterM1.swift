@@ -594,6 +594,8 @@ public class EmitterM1 {
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
             let encoded = mask | encodedRt | encodedRn | offs | size
             return returnAsArray(encoded)
+        case .ldr(let Rt, .reg(let Rn as Register64, .imm(let offsetCount, let ixMode))) where Rn.is64:
+            fallthrough
         case .ldr(let Rt, .reg64offset(let Rn, let offsetCount, let ixMode)):
             // TODO: reg64offset should be removed
             fallthrough
@@ -1069,6 +1071,7 @@ public class EmitterM1 {
             let encoded = s | mask | regs
             return returnAsArray(encoded)
         default:
+            print("Can't compile \(op)")
             throw EmitterM1Error.unsupportedOp
         }
     }

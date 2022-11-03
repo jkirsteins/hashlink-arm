@@ -103,18 +103,22 @@ extension M1Compiler {
         
         if vregKind.hlRegSize == 8 {
             mem.append(
+                PseudoOp.debugMarker("Storing 8 bytes in vreg \(vreg)"),
                 M1Op.str(reg, .reg64offset(.sp, offset, nil))
             )
         } else if vregKind.hlRegSize == 4 {
             mem.append(
+                PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
                 M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
             )
         } else if vregKind.hlRegSize == 2 {
             mem.append(
+                PseudoOp.debugMarker("Storing 2 bytes in vreg \(vreg)"),
                 M1Op.strh(reg.to32, .imm64(.sp, offset, nil))
             )
         } else if vregKind.hlRegSize == 1 {
             mem.append(
+                PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
                 M1Op.strb(reg.to32, .imm64(.sp, offset, nil))
             )
         } else {
@@ -405,6 +409,14 @@ class M1Compiler {
         }
         
         return resolvedRegs[Int(reg)]
+    }
+    
+    func requireTypeKind(reg: Reg, from resolvedRegs: HLTypeKinds, shouldMatch: HLTypeKind) -> HLTypeKind {
+        let kind = requireTypeKind(reg: reg, from: resolvedRegs)
+        guard kind == shouldMatch else {
+            fatalError("Expected reg \(reg) to be \(shouldMatch) but was \(kind)")
+        }
+        return kind
     }
     
     func assertKind(_ op: HLOpCode, _ actual: HLTypeKind, _ expected: HLTypeKind) {
@@ -1424,6 +1436,34 @@ class M1Compiler {
                 }
                 
                 appendStore(reg: X.x2, into: dst, kinds: regKinds, mem: mem)
+            case .OArraySize(let dst, let src):
+                _ = requireTypeKind(reg: src, from: regKinds, shouldMatch: .array)
+                
+                appendLoad(reg: .x0, from: src, kinds: regKinds, mem: mem)
+                mem.append(
+                    // varray: skip 2 pointers (16 bytes) and load 4 bytes
+                    M1Op.ldr(W.w0, .reg(X.x0, .imm(16, nil)))
+                )
+                appendStore(reg: .x0, into: dst, kinds: regKinds, mem: mem)
+            case .OType(let dst, let ty):
+                guard let typeBase = ctx.hlcode?.pointee.types else {
+                    fatalError("Fetching type failed")
+                }
+                let typeMemory = typeBase.advanced(by: ty)
+                let typeMemoryVal = Int(bitPattern: typeMemory)
+                print("Storing type mem \(typeMemoryVal)")
+                mem.append(PseudoOp.mov(.x0, typeMemoryVal))
+                appendStore(reg: .x0, into: dst, kinds: regKinds, mem: mem)
+                
+                let _test: (@convention(c) (UnsafeRawPointer) -> ()) = { (_ ptr: UnsafeRawPointer) in
+                    let p = UnsafePointer<HLType_CCompat>(OpaquePointer(ptr))
+                    print("Addr for type: \(p) \(Int(bitPattern: p))")
+                    print("Got kind: \(p.pointee.kind)")
+                }
+                let _testAddress = unsafeBitCast(_test, to: UnsafeMutableRawPointer.self)
+                mem.append(
+                    PseudoOp.mov(X.x1, _testAddress),
+                    M1Op.blr(X.x1))
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

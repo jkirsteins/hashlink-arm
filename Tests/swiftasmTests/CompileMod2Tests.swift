@@ -11,6 +11,10 @@ final class CompileMod2Tests: XCTestCase {
     var code: UnsafePointer<HLCode_CCompat> { Self.code! }
     var ctx: JitContext { Self.ctx! }
     
+    static let TEST_ARRAY_LENGTH_IX = 44
+    static let TEST_TRAP_IX = 32
+    static let TEST_TRAP__CALLS = [ 5, 322, 40 ]
+    
     override class func setUp() {
         LibHl.hl_global_init()
         //
@@ -39,6 +43,18 @@ final class CompileMod2Tests: XCTestCase {
         LibHl.hl_global_free()
     }
     
+    func testCompile__testArrayLength() throws {
+        let sut = sut(strip: true)
+        let mem = OpBuilder(ctx: ctx)
+        let fix = Self.TEST_ARRAY_LENGTH_IX
+        
+        try sut.compile(findex: Int32(fix), into: mem)
+
+        let entrypoint: (@convention(c) (Int32) -> Int32) = try mem.buildEntrypoint(fix)
+        
+        XCTAssertEqual(5, entrypoint(5))
+    }
+    
     /** Test traps
      
             fn testTrap@32 () -> (i32)@83 (6 regs, 10 ops)
@@ -59,14 +75,14 @@ final class CompileMod2Tests: XCTestCase {
             Main.hx:30    8: Int         reg5 = 1
             Main.hx:30    9: Ret         reg5
      */
-    func testCompileFn32__testTrap() throws {
+    func testCompile__testTrap() throws {
         let sut = M1Compiler()
         let mem = OpBuilder(ctx: ctx)
         
-        try sut.compile(findex: 5, into: mem)
-        try sut.compile(findex: 321, into: mem)
-        try sut.compile(findex: 40, into: mem)
-        try sut.compile(findex: 32, into: mem)
+        for fix in Self.TEST_TRAP__CALLS {
+            try sut.compile(findex: Int32(fix), into: mem)
+        }
+        try sut.compile(findex: Int32(Self.TEST_TRAP_IX), into: mem)
 
         let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(0)
         

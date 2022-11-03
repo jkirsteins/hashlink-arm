@@ -1,3 +1,4 @@
+import hl.NativeArray;
 import haxe.Exception;
 import hl.UI8;
 import hl.UI16;
@@ -45,25 +46,32 @@ class Main {
         return obj.test;
 	}
 
+	static public function testArrayLength(x: Int): Int {
+		var res = new hl.NativeArray(x);
+        return res.length;
+	}
+
 	static public function main():Void {
-		var path = new Path(3);
-		trace('${path.test}');
-		path = null;
-		trace('${path.test}');
+		// var path = new Path(3);
+		// trace('${path.test}');
+		// path = null;
+		// trace('${path.test}');
 
-		var a = testGetUI8(0);
-		var b = testGetUI8(1);
-		var c = testGetUI8(2);
-		var d = testGetUI8(3);
-		trace('getUI8 $a $b $c $d');
+		// var a = testGetUI8(0);
+		// var b = testGetUI8(1);
+		// var c = testGetUI8(2);
+		// var d = testGetUI8(3);
+		// trace('getUI8 $a $b $c $d');
 
-		var e = testGetUI16(0);
-		var f = testGetUI16(1);
-		var g = testGetUI16(2);
-		var h = testGetUI16(3);
-		trace('getUI16 $e $f $g $h');
+		// var e = testGetUI16(0);
+		// var f = testGetUI16(1);
+		// var g = testGetUI16(2);
+		// var h = testGetUI16(3);
+		// trace('getUI16 $e $f $g $h');
 
-        testTrap();
-        testTrap2();
+		trace('len: ${testArrayLength(58)}');
+
+        // testTrap();
+        // testTrap2();
 	}
 }

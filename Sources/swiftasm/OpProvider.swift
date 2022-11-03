@@ -140,7 +140,13 @@ extension HLOpCode {
         case .OCall1:
             return .OCall1(dst: cop.p1, fun: RefFun(cop.p2), arg0: cop.p3)
         case .OCall2:
-            return .OCall2(dst: cop.p1, fun: RefFun(cop.p2), arg0: cop.p3, arg1: Reg(Int(bitPattern: cop.extra!)))
+            let arg1: Reg
+            if let extra = cop.extra {
+                arg1 = Reg(Int(bitPattern: extra))
+            } else {
+                arg1 = 0
+            }
+            return .OCall2(dst: cop.p1, fun: RefFun(cop.p2), arg0: cop.p3, arg1: arg1)
         case .OCall3:
             guard let extra = cop.extra else { fatalError("OCall3 missing extra") }
             return .OCall3(dst: cop.p1, fun: RefFun(cop.p2), arg0: cop.p3, arg1: extra.pointee, arg2: extra.advanced(by: 1).pointee)
@@ -218,6 +224,12 @@ extension HLOpCode {
                 Reg(extra.advanced(by: Int($0)).pointee)
             }
             return .OCallN(dst: cop.p1, fun: RefFun(cop.p2), args: args)
+        case .OArraySize:
+            return .OArraySize(dst: cop.p1, array: cop.p2)
+        case .OGetArray:
+            return .OGetArray(dst: cop.p1, array: cop.p2, index: cop.p3)
+        case .OType:
+            return .OType(dst: cop.p1, ty: RefType(cop.p2))
         default:
             fatalError("Unknown op to parse \(String(describing: opId))")
         }
