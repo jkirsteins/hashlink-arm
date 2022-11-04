@@ -128,7 +128,7 @@ extension HLOpCode {
         case .OJSGt:
             return .OJSLt(a: cop.p1, b: cop.p2, offset: cop.p3)
         case .OJSGte:
-            return .OJSLte(a: cop.p1, b: cop.p2, offset: cop.p3)
+            return .OJSGte(a: cop.p1, b: cop.p2, offset: cop.p3)
         case .OJNull:
             return .OJNull(reg: cop.p1, offset: cop.p2)
         case .OJNotNull:

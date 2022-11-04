@@ -1038,6 +1038,8 @@ class M1Compiler {
                 fallthrough
             case .OJEq(let a, let b, let offset):
                 fallthrough
+            case .OJSGte(let a, let b, let offset):
+                fallthrough
             case .OJSLte(let a, let b, let offset):
                 fallthrough
             case .OJSLt(let a, let b, let offset):
@@ -1066,6 +1068,8 @@ class M1Compiler {
                     )
                 
                 switch(op) {
+                case .OJSGte:
+                    fallthrough
                 case .OJSLte:
                     fallthrough
                 case .OJSLt:
@@ -1116,6 +1120,8 @@ class M1Compiler {
                             return M1Op.b_lt(try Immediate19(jumpOffset.immediate))
                         case .OJSLte:
                             return M1Op.b_le(try Immediate19(jumpOffset.immediate))
+                        case .OJSGte:
+                            return M1Op.b_ge(try Immediate19(jumpOffset.immediate))
                         case .OJEq:
                             return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
                         case .OJNotEq:

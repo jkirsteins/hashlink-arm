@@ -627,6 +627,72 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(3, entrypoint8(0b01000001, 0b10000001))
     }
     
+    func testCompile_OJSGte() throws {
+        // constants
+        let constI_3 = 1 // constant value 3
+        let constI_57005 = 2 // constant value 57005
+        
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .i32,
+                    findex: 0,
+                    regs: [.u8, .u8, .i32],
+                    args: [.u8, .u8],
+                    ops: [
+                        .OJSGte(a: 0, b: 1, offset: 2),
+                        
+                        // return 3
+                        .OInt(dst: 2, ptr: constI_3),
+                        .ORet(ret: 2),
+                        
+                        // return 57005
+                        .OInt(dst: 2, ptr: constI_57005),
+                        .ORet(ret: 2)
+                    ]
+                ),
+                prepareFunction(
+                    retType: .i32,
+                    findex: 1,
+                    regs: [.u16, .u16, .i32],
+                    args: [.u16, .u16],
+                    ops: [
+                        .OJSGte(a: 0, b: 1, offset: 2),
+                        
+                        // return 3
+                        .OInt(dst: 2, ptr: constI_3),
+                        .ORet(ret: 2),
+                        
+                        // return 57005
+                        .OInt(dst: 2, ptr: constI_57005),
+                        .ORet(ret: 2)
+                    ]
+                )
+            ], ints: [0, 3, 57005])
+        
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        try sut.compile(findex: 0, into: mem)
+        try sut.compile(findex: 1, into: mem)
+        
+        // run the entrypoint and ensure it works
+        typealias _JitFunc = (@convention(c) (UInt16, UInt16) -> Int32)
+        let entrypoint8: _JitFunc = try mem.buildEntrypoint(0)
+        let entrypoint16: _JitFunc = try mem.buildEntrypoint(1)
+        
+        // jump >
+        XCTAssertEqual(57005, entrypoint16(0b0100000000000001, 0b1000000000000001))
+        XCTAssertEqual(57005, entrypoint8(0b01000001, 0b10000001))
+        // jump ==
+        XCTAssertEqual(57005, entrypoint16(0b1000000000000001, 0b1000000000000001))
+        XCTAssertEqual(57005, entrypoint8(0b10000001, 0b10000001))
+        
+        // no jump <
+        XCTAssertEqual(3, entrypoint16(0b1000000000000001, 0b0100000000000001))
+        XCTAssertEqual(3, entrypoint8(0b10000001, 0b01000001))
+    }
+    
     func testCompile_OJEq() throws {
         let i32Type = code.pointee.getType(3)   // i32
         let ri32Type: Resolvable<HLType> = .type(fromUnsafe: i32Type)
