@@ -1,0 +1,5 @@
+-cp haxesrc
+-main Main
+-debug 
+-D dump
+-hl haxebin/app.hl

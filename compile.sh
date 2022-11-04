@@ -1,2 +1,3 @@
 #!/bin/sh
-haxe compile.hxml
+haxe compile_hl.hxml
+haxe compile_c.hxml
