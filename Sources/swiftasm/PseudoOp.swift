@@ -66,6 +66,7 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
         case 4: return M1Op.ldr(reg.to32, .reg64offset(.sp, offset, nil))
         case 2: return M1Op.ldrh(reg.to32, .imm64(.sp, offset, nil))
         case 1: return M1Op.ldrb(reg.to32, .imm64(.sp, offset, nil))
+        case 0: return M1Op.nop
         default:
             fatalError("Unsupported vreg size \(regSize)")
         }
@@ -77,6 +78,7 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
         case 4: return M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
         case 2: return M1Op.strh(reg.to32, .imm64(.sp, offset, nil))
         case 1: return M1Op.strb(reg.to32, .imm64(.sp, offset, nil))
+        case 0: return M1Op.nop
         default:
             fatalError("Unsupported vreg size \(regSize)")
         }

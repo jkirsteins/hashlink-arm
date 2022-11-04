@@ -8,8 +8,8 @@
  */
 
 struct varray {
-    let t: UnsafePointer<HLType_CCompat>
-    let at: UnsafePointer<HLType_CCompat>
+    let t: UnsafePointer<HLType_CCompat>    // master type (.array)
+    let at: UnsafePointer<HLType_CCompat>   // stored type
     let size: UInt32
     let __pad: UInt32
 }

@@ -80,7 +80,13 @@ class OpBuilder {
                 "Memory should not be nil after locking addresses."
             )
         }
-        return try self.ops.flatMap { try $0.emit() }
+        return try self.ops.flatMap { op in
+            print("Emitting \(op.debugDescription)")
+            defer {
+                print("  finished emitting \(op.debugDescription)")
+            }
+            return try op.emit()
+        }
     }
 
     @discardableResult

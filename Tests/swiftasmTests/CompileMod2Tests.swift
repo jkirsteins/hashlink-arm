@@ -13,7 +13,11 @@ final class CompileMod2Tests: XCTestCase {
     
     static let TEST_ARRAY_LENGTH_IX = 44
     static let TEST_TRAP_IX = 32
-    static let TEST_TRAP__CALLS = [ 5, 322, 40 ]
+    static let TEST_TRAP__CALLS = [ 5, 327, 40 ]
+    
+    static let TEST_GET_ARRAY_INT32_IX = 46
+    static let TEST_GET_ARRAY_INT64_IX = 47
+    static let TEST_GET_ARRAY__CALLS = [ 5, 327, 40, 49 ]
     
     override class func setUp() {
         LibHl.hl_global_init()
@@ -43,6 +47,25 @@ final class CompileMod2Tests: XCTestCase {
         LibHl.hl_global_free()
     }
     
+    func testCompile__testGetSetArray() throws {
+        let sut = sut(strip: true)
+        let mem = OpBuilder(ctx: ctx)
+        let fix32 = Self.TEST_GET_ARRAY_INT32_IX
+        let fix64 = Self.TEST_GET_ARRAY_INT64_IX
+
+        for fix in Self.TEST_GET_ARRAY__CALLS {
+            try sut.compile(findex: Int32(fix), into: mem)
+        }
+        try sut.compile(findex: Int32(fix32), into: mem)
+        try sut.compile(findex: Int32(fix64), into: mem)
+
+        let entrypoint32: (@convention(c) (Int32, Int32, Int32) -> Int32) = try mem.buildEntrypoint(fix32)
+        let entrypoint64: (@convention(c) (Int32, Int64, Int32) -> Int64) = try mem.buildEntrypoint(fix64)
+        
+        XCTAssertEqual(1239, entrypoint32(10, 1234, 5))
+        XCTAssertEqual(5681, entrypoint64(10, 5678, 3))
+    }
+    
     func testCompile__testArrayLength() throws {
         let sut = sut(strip: true)
         let mem = OpBuilder(ctx: ctx)
@@ -51,7 +74,7 @@ final class CompileMod2Tests: XCTestCase {
         try sut.compile(findex: Int32(fix), into: mem)
 
         let entrypoint: (@convention(c) (Int32) -> Int32) = try mem.buildEntrypoint(fix)
-        
+
         XCTAssertEqual(5, entrypoint(5))
     }
     

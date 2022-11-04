@@ -92,8 +92,10 @@ extension M1Compiler {
             mem.append(
                 M1Op.ldrb(reg.to32, .imm64(.sp, offset, nil))
             )
+        } else if vregKind.hlRegSize == 0 {
+            // nop
         } else {
-            fatalError("Size must be 1, 2, 4 or 8")
+            fatalError("Size must be 8, 4, 2, 1, or 0")
         }
     }
     
@@ -121,8 +123,10 @@ extension M1Compiler {
                 PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
                 M1Op.strb(reg.to32, .imm64(.sp, offset, nil))
             )
+        } else if vregKind.hlRegSize == 0 {
+            // nop
         } else {
-            fatalError("Size must be 4 or 8")
+            fatalError("Size must be 8, 4, 2, 1, or 0")
         }
     }
     
@@ -411,6 +415,18 @@ class M1Compiler {
         return resolvedRegs[Int(reg)]
     }
     
+    func requireTypeSizeLsl(reg: Reg, from resolvedRegs: HLTypeKinds) -> UInt8 {
+        let kind = requireTypeKind(reg: reg, from: resolvedRegs)
+        switch(kind.hlRegSize) {
+        case 8: return 3
+        case 4: return 2
+        case 2: return 1
+        case 1: return 0
+        default:
+            fatalError("Unsupported size")
+        }
+    }
+    
     func requireTypeKind(reg: Reg, from resolvedRegs: HLTypeKinds, shouldMatch: HLTypeKind) -> HLTypeKind {
         let kind = requireTypeKind(reg: reg, from: resolvedRegs)
         guard kind == shouldMatch else {
@@ -617,6 +633,7 @@ class M1Compiler {
                 )
                 
             case .OCall0(let dst, let funRef):
+                print("OCall0 \(funRef)")
                 let fn = ctx.callTargets.get(funRef)
                 
                 assert(
@@ -635,6 +652,7 @@ class M1Compiler {
                     PseudoOp.strVreg(X.x0, dstStackOffset, dstKind.hlRegSize)
                 )
             case .OCall1(let dst, let fun, let arg0):
+                print("OCall1 \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
@@ -654,6 +672,7 @@ class M1Compiler {
                     PseudoOp.strVreg(X.x0, dstStackOffset, dstKind.hlRegSize)
                 )
             case .OCall3(let dst, let fun, let arg0, let arg1, let arg2):
+                print("OCall3 \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
@@ -685,6 +704,7 @@ class M1Compiler {
                     PseudoOp.strVreg(X.x0, dstStackOffset, dstKind.hlRegSize)
                 )
             case .OCall4(let dst, let fun, let arg0, let arg1, let arg2, let arg3):
+                print("OCall4 \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
@@ -711,6 +731,7 @@ class M1Compiler {
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
             case .OCallN(let dst, let fun, let args):
+                print("OCallN \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
@@ -722,7 +743,7 @@ class M1Compiler {
                     assert(reg: argReg, from: regKinds, matchesCallArg: Reg(reg), inFun: callTarget)
                     return (reg, requireTypeKind(reg: argReg, from: regKinds))
                 }
-                let kindsToPass = regWkindToPass.map { $0.1 }
+                
                 let additionalSizeUnrounded = regWkindToPass.dropFirst(ARG_REGISTER_COUNT).reduce(0) {
                     print("Adding size for \($1.1)")
                     return $0 + Int($1.1.hlRegSize)
@@ -746,22 +767,6 @@ class M1Compiler {
                         PseudoOp.ldrVreg(X.x0, offset, regKind.hlRegSize),
                         PseudoOp.strVreg(X.x0, argOffset, regKind.hlRegSize)
                     )
-//                    if regKind.hlRegSize == 8 {
-//                        mem.append(M1Op.ldr(X.x0, .reg64offset(.sp, offset, nil)))
-//                        mem.append(M1Op.str(X.x0, .reg64offset(.sp, argOffset, nil)))
-//                    } else if regKind.hlRegSize == 4 {
-//                        mem.append(M1Op.ldr(W.w0, .reg64offset(.sp, offset, nil)))
-//                        mem.append(M1Op.str(W.w0, .reg64offset(.sp, argOffset, nil)))
-//                    } else if regKind.hlRegSize == 2 {
-//                        mem.append(M1Op.ldrh(W.w0, .imm64(.sp, offset, nil)))
-//                        mem.append(M1Op.strh(W.w0, .imm64(.sp, argOffset, nil)))
-//                    } else if regKind.hlRegSize == 1 {
-//                        mem.append(M1Op.ldrb(W.w0, .imm64(.sp, offset, nil)))
-//                        mem.append(M1Op.strb(W.w0, .imm64(.sp, argOffset, nil)))
-//                    } else {
-//                        fatalError("Wrong size")
-//                    }
-//
                     mem.append(PseudoOp.debugPrint(self,
                                                    "Loaded \(offset) -> \(argOffset) -> \(regKind.hlRegSize)"))
                     
@@ -788,6 +793,7 @@ class M1Compiler {
                 
                 // TODOFIX
                 let fnAddr = callTarget.entrypoint
+                print("Target entrypoint is \(fun) \(fnAddr)")
                 
                 mem.append(
                     PseudoOp.mov(.x19, fnAddr),
@@ -806,6 +812,7 @@ class M1Compiler {
                 }
                     
             case .OCall2(let dst, let fun, let arg0, let arg1):
+                print("OCall2 \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
@@ -1306,11 +1313,8 @@ class M1Compiler {
                 appendSystemExit(1, builder: mem)
                 jumpOverDeath.stop(at: mem.byteSize)
             case .OField(let dstReg, let objReg, let fieldRef):
-                appendDebugPrintAligned4("Entering OField", builder: mem)
                 let objRegKind = requireTypeKind(reg: objReg, from: regKinds)
-                appendDebugPrintAligned4("Required obj kind \(objRegKind)", builder: mem)
                 let dstKind = requireTypeKind(reg: dstReg, from: regKinds)
-                appendDebugPrintAligned4("Dst kind \(dstKind)", builder: mem)
                 /* See comments on `OSetField` for notes on accessing field indexes */
                  
                 switch(objRegKind) {
@@ -1318,34 +1322,33 @@ class M1Compiler {
                 case .struct:
                     // offset from obj address
                     let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
-                    appendDebugPrintAligned4("Required field offset \(fieldOffset)", builder: mem)
                     
                     // offsets from .sp
                     let dstOffset = getRegStackOffset(regKinds, dstReg)
-                    appendDebugPrintAligned4("Required dstOffset \(dstOffset)", builder: mem)
                     let objOffset = getRegStackOffset(regKinds, objReg)
-                    appendDebugPrintAligned4("Required objOffset \(objOffset)", builder: mem)
                     
                     // TODO: OField and OSetField need a test based on inheritance
+                    mem.append(
+                        PseudoOp.debugPrint(
+                            self,
+                            "TODO: OField and OSetField need a test based on inheritance"))
+                    mem.append(
+                        PseudoOp.debugPrint(
+                            self,
+                            "TODO: OField and OSetField need to use appendLoad/appendStore"))
                     
                     mem.append(
-                        PseudoOp.debugPrint(self, "Loading x0."),
                         M1Op.ldr(X.x0, .reg64offset(.sp, objOffset, nil)),
-                        PseudoOp.debugPrint(self, "Done. Loading x1."),
                         M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil))
                     )
                     
                     if dstKind.hlRegSize == 8 {
                         mem.append(
-                            PseudoOp.debugPrint(self, "Done. Storing x1 in 8 bytes"),
-                            M1Op.str(X.x1, .reg64offset(.sp, dstOffset, nil)),
-                            PseudoOp.debugPrint(self, "Stored 8 bytes")
+                            M1Op.str(X.x1, .reg64offset(.sp, dstOffset, nil))
                         )
                     } else if dstKind.hlRegSize == 4 {
                         mem.append(
-                            PseudoOp.debugPrint(self, "Done. Storing x1 in 4 bytes"),
-                            M1Op.str(W.w1, .reg64offset(.sp, dstOffset, nil)),
-                            PseudoOp.debugPrint(self, "Stored 4 bytes")
+                            M1Op.str(W.w1, .reg64offset(.sp, dstOffset, nil))
                         )
                     } else {
                         fatalError("Dst size must be 4 or 8")
@@ -1468,6 +1471,31 @@ class M1Compiler {
                 appendLoad(reg: .x0, from: dst, kinds: regKinds, mem: mem)
                 mem.append(M1Op.add(X.x0, X.x0, .imm(1, nil)))
                 appendStore(reg: .x0, into: dst, kinds: regKinds, mem: mem)
+            case .OSetArray(let array, let index, let src):
+                let lsl = requireTypeSizeLsl(reg: src, from: regKinds)
+                appendLoad(reg: .x0, from: src, kinds: regKinds, mem: mem)
+                appendLoad(reg: .x1, from: index, kinds: regKinds, mem: mem)
+                appendLoad(reg: .x2, from: array, kinds: regKinds, mem: mem)
+                mem.append(
+                    M1Op.lsl_i(X.x1, X.x1, try Immediate6(lsl)),
+                    M1Op.str(X.x0, .reg(X.x2, .r64ext(X.x1, .sxtx(0))))
+                )
+            case .OGetArray(let dst, let array, let index):
+                let lsl = requireTypeSizeLsl(reg: dst, from: regKinds)
+                appendLoad(reg: .x1, from: index, kinds: regKinds, mem: mem)
+                appendLoad(reg: .x2, from: array, kinds: regKinds, mem: mem)
+                mem.append(
+                    M1Op.lsl_i(X.x1, X.x1, try Immediate6(lsl)),
+                    M1Op.ldr(X.x0, .reg(X.x2, .r64ext(X.x1, .sxtx(0))))
+                )
+                appendStore(reg: X.x0, into: dst, kinds: regKinds, mem: mem)
+            case .ONop:
+                mem.append(.nop)
+            case .OXor(let dst, let a, let b):
+                appendLoad(reg: .x0, from: a, kinds: regKinds, mem: mem)
+                appendLoad(reg: .x1, from: b, kinds: regKinds, mem: mem)
+                mem.append(M1Op.eor_r(X.x2, X.x0, X.x1, nil))
+                appendStore(reg: X.x2, into: dst, kinds: regKinds, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

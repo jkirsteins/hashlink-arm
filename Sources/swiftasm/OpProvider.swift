@@ -228,8 +228,12 @@ extension HLOpCode {
             return .OArraySize(dst: cop.p1, array: cop.p2)
         case .OGetArray:
             return .OGetArray(dst: cop.p1, array: cop.p2, index: cop.p3)
+        case .OSetArray:
+            return .OSetArray(array: cop.p1, index: cop.p2, src: cop.p3)
         case .OType:
             return .OType(dst: cop.p1, ty: RefType(cop.p2))
+        case .OXor:
+            return .OXor(dst: cop.p1, a: cop.p2, b: cop.p3)
         default:
             fatalError("Unknown op to parse \(String(describing: opId))")
         }

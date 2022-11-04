@@ -216,8 +216,8 @@ enum M1Op : CpuOp {
             return "ldrh \(Rt), \(val)"
         case .ldrb(let Rt, let val):
             return "ldrb \(Rt), \(val)"
-        case .str(_, let mod):
-            return "str mod \(String(describing: mod)) NOT IMPLEMENTED"
+        case .str(let Rt, let mod):
+            return "str \(Rt), \(mod)"
         case .stp(_, let mod):
             return "stp mod \(String(describing: mod)) NOT IMPLEMENTED"
         case .ldp(_, let mod):
@@ -319,6 +319,12 @@ enum M1Op : CpuOp {
             return "asrv \(Rd), \(Rn), \(Rm)"
         case .lsrv(let Rd, let Rn, let Rm):
             return "lsrv \(Rd), \(Rn), \(Rm)"
+        case .eor_r(let Rd, let Rn, let Rm, let sh):
+            if let sh = sh {
+                return "eor \(Rd), \(Rn), \(Rm), \(sh)"
+            } else {
+                return "eor \(Rd), \(Rn), \(Rm)"
+            }
         }
     }
     
@@ -485,6 +491,12 @@ enum M1Op : CpuOp {
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LDURH--Load-Register-Halfword--unscaled--
     case ldurh(Register32, Offset)
+    
+    // EOR shifted register
+    // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/EOR--shifted-register---Bitwise-Exclusive-OR--shifted-register--?lang=en
+    case eor_r(any Register, any Register, any Register, Shift64_Real?)
 }
+
+
 
 

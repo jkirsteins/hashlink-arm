@@ -321,32 +321,42 @@ public class EmitterM1 {
     static func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throws
         -> Int64
     {
-        if val % divisor != 0 {
-            throw EmitterM1Error.invalidOffset(
-                "truncateOffset: offset immediate must be a multiple of \(divisor) but was \(val)"
-            )
-        }
-
-        let divided = val / divisor
-        let mask: Int64 = ((1 << bits) - 1)
-        // Check if we fit in required number of bits
-        let compare: Int64
-        if divided >= 0 {
-            compare = divided & mask
-        }
-        else {
-            let rmask: Int64 = (~mask | 0b1000000)
-            compare = (divided & mask) | rmask
-        }
-        guard compare == divided else {
-            throw EmitterM1Error.invalidOffset(
-                "Offset immediate \(val) must fit in \(bits) bits"
-            )
-        }
-
-        // apply mask otherwise a negative value will contain leading 1s,
-        // which can mess up when shifting left later
-        return (mask & divided)
+        try truncateOffsetGlobal(val, divisor: divisor, bits: bits)
+//        if val % divisor != 0 {
+//            throw EmitterM1Error.invalidOffset(
+//                "truncateOffset: offset immediate must be a multiple of \(divisor) but was \(val)"
+//            )
+//        }
+//
+//        var divided = val / divisor
+//        let mask: Int64 = ((1 << bits) - 1)
+//        let msb: Int64 = (1 << (bits - 1))
+//        // Check if we fit in required number of bits
+//        let compare: Int64
+////        if divided >= 0 {
+//
+////        }
+//        // unset sign extended leading bits
+//        for bix in 0..<64-bits {
+//            divided = divided & ~(1 << 63 - bix);
+//        }
+////        0b0000000010101010
+////        0b1111111110101010
+//        compare = divided & mask
+//
+////        else {
+////            let rmask: Int64 = (~mask | 0b1000000)
+////            compare = (divided & mask) | rmask
+////        }
+//        guard compare == divided else {
+//            throw EmitterM1Error.invalidOffset(
+//                "Offset immediate \(val) must fit in \(bits) bits"
+//            )
+//        }
+//
+//        // apply mask otherwise a negative value will contain leading 1s,
+//        // which can mess up when shifting left later
+//        return (mask & divided)
     }
 
     // 0b0b10101010000000100000001111100000
@@ -363,7 +373,11 @@ public class EmitterM1 {
         return encodedRd | encodedRn | encodedRm
     }
     
-    static fileprivate func getShImm6(_ shift: Shift64_Real, shOff: Int = 22, immOff: Int = 10) -> (Int64, Int64) {
+    static fileprivate func getShImm6(_ shift: Shift64_Real?, shOff: Int = 22, immOff: Int = 10) -> (Int64, Int64) {
+        guard let shift = shift else {
+            return (0, 0)
+        }
+        
         let imm6: Int64
         let sh: Int64
         switch(shift) {
@@ -403,7 +417,7 @@ public class EmitterM1 {
             let imm: Int64 = offset.imm.shiftedLeft(10)
             let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | imm
             return returnAsArray(encoded)
-        case .add(let Rd, let Rn, .imm(let off, let ixMode)):
+        case .add(let Rd, let Rn, .imm(let off, nil)):
             // TODO: deduplicate with addImm12
             let imm = try Imm12Lsl12(off)
             guard Rd.is32 == Rn.is32 else {
@@ -462,12 +476,29 @@ public class EmitterM1 {
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
             let encoded = mask | encodedRt | encodedRn | offs | size
             return returnAsArray(encoded)
-        case .str(let Rt, let offset ):
-            guard case .reg64offset(let Rn, let offsetCount, let ixMode) = offset else {
-                throw EmitterM1Error.invalidOffset(
-                    "STR can only have .reg64offset offset (todo: this is deprecated. Should implement other offset cases)"
-                )
+        case .str(let Rt, .reg(let Rn as Register64, .r64ext(let Rm, let ext))):
+            //                   S          Rm    opt S    Rn    Rt
+            let mask: Int64 = 0b10111000001_00000_000_0_10_00000_00000
+            let regs = encodeRegs(Rd: Rt, Rn: Rn, Rm: Rm)
+            let s = sizeMask(is64: Rt.is64, offset: 30)
+            let optUnshifted: Int64
+            let shiftValUnshifted: Int64
+            switch(ext) {
+            case .sxtx(let shiftAmount) where shiftAmount == 0 || shiftAmount == 3:
+                optUnshifted = 0b111
+                shiftValUnshifted = shiftAmount == 0 ? 0 : 1
+            case .sxtx:
+                fatalError("sxtx amount should be #0 or #3")
+//                010    UXTW
+//                011    LSL
+//                110    SXTW
+//                111    SXTX
             }
+            let encoded = mask | regs | s | (shiftValUnshifted << 12) | (optUnshifted << 13)
+            return returnAsArray(encoded)
+        case .str(let Rt, .reg(let Rn as Register64, .imm(let offsetCount, let ixMode))) where Rn.is64:
+            fallthrough
+        case .str(let Rt, .reg64offset(let Rn, let offsetCount, let ixMode)):
             let mask: Int64
             switch(ixMode) {
                 case nil: 
@@ -580,6 +611,7 @@ public class EmitterM1 {
                 encodedRt1 | encodedRt2 | encodedRn | (opc << opcOffset) | mask | imm
             return returnAsArray(encoded)
         case .b(let imm26):
+            print("b \(imm26)")
             let imm = try truncateOffset(Int64(imm26.value), divisor: 4, bits: 26)
             //                         imm26
             let mask: Int64 = 0b000101_00000000000000000000000000
@@ -612,6 +644,26 @@ public class EmitterM1 {
             let offs = offset.immediate.shiftedLeft(12)
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
             let encoded = mask | encodedRt | encodedRn | offs | size
+            return returnAsArray(encoded)
+        case .ldr(let Rt, .reg(let Rn as Register64, .r64ext(let Rm, let ext))):
+            //                   S          Rm    opt S    Rn    Rt
+            let mask: Int64 = 0b10111000011_00000_000_0_10_00000_00000
+            let regs = encodeRegs(Rd: Rt, Rn: Rn, Rm: Rm)
+            let s = sizeMask(is64: Rt.is64, offset: 30)
+            let optUnshifted: Int64
+            let shiftValUnshifted: Int64
+            switch(ext) {
+            case .sxtx(let shiftAmount) where shiftAmount == 0 || shiftAmount == 3:
+                optUnshifted = 0b111
+                shiftValUnshifted = shiftAmount == 0 ? 0 : 1
+            case .sxtx:
+                fatalError("sxtx amount should be #0 or #3")
+//                010    UXTW
+//                011    LSL
+//                110    SXTW
+//                111    SXTX
+            }
+            let encoded = mask | regs | s | (shiftValUnshifted << 12) | (optUnshifted << 13)
             return returnAsArray(encoded)
         case .ldr(let Rt, .reg(let Rn as Register64, .imm(let offsetCount, let ixMode))) where Rn.is64:
             fallthrough
@@ -1089,9 +1141,25 @@ public class EmitterM1 {
             let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
             let encoded = s | mask | regs
             return returnAsArray(encoded)
+        case .eor_r(let Rd, let Rn, let Rm, let shift):
+            assertMatchingSize(Rd, Rn, Rm)
+            let mask: Int64 = 0b01001010_00_0_00000_000000_00000_00000
+            let s = sizeMask(is64: Rd.is64)
+            let (imm6, sh) = getShImm6(shift)
+            let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
+            let encoded = mask | s | imm6 | sh | regs
+            return returnAsArray(encoded)
         default:
             print("Can't compile \(op)")
             throw EmitterM1Error.unsupportedOp
+        }
+    }
+    
+    static func assertMatchingSize(_ regs: any Register...) {
+        guard regs.count > 0 else { return }
+        let f = regs[0]
+        for reg in regs.dropFirst(1) {
+            assert(reg.is64 == f.is64)
         }
     }
 }

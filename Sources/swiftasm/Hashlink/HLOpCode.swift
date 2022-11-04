@@ -476,7 +476,7 @@ extension HLOpCode {
             )
         case 81:
             return .OSetArray(
-                bytes: try reader.readReg(),
+                array: try reader.readReg(),
                 index: try reader.readReg(),
                 src: try reader.readReg()
             )
@@ -667,7 +667,7 @@ enum HLOpCode : Equatable, Hashable {
     case OSetI8(bytes: Reg, index: Reg, src: Reg)
     case OSetI16(bytes: Reg, index: Reg, src: Reg)
     case OSetMem(bytes: Reg, index: Reg, src: Reg)
-    case OSetArray(bytes: Reg, index: Reg, src: Reg)
+    case OSetArray(array: Reg, index: Reg, src: Reg)
 
     case ONew(dst: Reg)
     case OArraySize(dst: Reg, array: Reg)

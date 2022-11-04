@@ -14,7 +14,13 @@ extension Immediate {
     var hasUsableValue: Bool { true }
 }
 
-fileprivate func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throws
+func truncateOffsetGlobal(_ val: Int64, divisor: Int64, bits: Int64) throws
+    -> Int64
+{
+    try truncateOffset(val, divisor: divisor, bits: bits)
+}
+
+func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throws
     -> Int64
 {
     if val % divisor != 0 {
@@ -23,26 +29,27 @@ fileprivate func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throw
         )
     }
 
-    let divided = val / divisor
-    let mask: Int64 = ((1 << bits) - 1)
-    // Check if we fit in required number of bits
-    let compare: Int64
-    if divided >= 0 {
-        compare = divided & mask
+    let divided: Int64 = val / divisor
+    let mask: UInt64 = ((1 << bits) - 1)
+
+    let leadingBitsMask: UInt64
+    if val >= 0 {
+        leadingBitsMask = 0
+    } else {
+        leadingBitsMask = (UInt64(0)..<(64-UInt64(bits))).reduce(0) { $0 | (1 << (63 - $1)) }
     }
-    else {
-        let rmask: Int64 = (~mask | 0b1000000)
-        compare = (divided & mask) | rmask
-    }
-    guard compare == divided else {
+    
+    let compare: UInt64 = UInt64(bitPattern: divided) & mask
+    guard (leadingBitsMask | compare) == UInt64(bitPattern: divided) else {
         throw EmitterM1Error.invalidValue(
             "Immediate \(val) must fit in \(bits) bits"
         )
     }
-
+    
+    
     // apply mask otherwise a negative value will contain leading 1s,
     // which can mess up when shifting left later
-    return (mask & divided)
+    return Int64(bitPattern: mask) & divided
 }
 
 struct VariableImmediate: Immediate {

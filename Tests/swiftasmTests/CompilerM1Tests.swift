@@ -280,6 +280,73 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(456, entrypoint(123, 456))
     }
     
+    func testCompile_negativeJumps_regression() throws {
+        let f = prepareFunction(
+            retType: .u8,
+            findex: 0,
+            regs: [.u8],
+            args: [.u8],
+            ops: [
+                .OJAlways(offset: 14),
+                .OIncr(dst: 0),
+                .OIncr(dst: 0),
+                .OIncr(dst: 0),
+                .OIncr(dst: 0),
+                .OIncr(dst: 0),
+                .OIncr(dst: 0),
+                .OIncr(dst: 0),
+                .OIncr(dst: 0),
+                .OIncr(dst: 0),
+                .ORet(ret: 0),
+                .ONop,
+                .ONop,
+                .ONop,
+                .ONop,
+                .ONop,
+                .ONop,
+                .ONop,
+                .ONop,
+                .OJAlways(offset: -12),      // jump to Ret-2 (so should incr by 2 before returning)
+            ]
+        )
+        
+        let storage = ModuleStorage(functions: [f])
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        try sut.compile(findex: 0, into: mem)
+        
+        let entrypoint: (@convention(c) (UInt8) -> UInt8) = try mem.buildEntrypoint(0)
+        
+        XCTAssertEqual(127, entrypoint(125))
+//
+//        let storage = ModuleStorage(
+//            functions: [
+//                prepareFunction(
+//                    retType: .u8,
+//                    findex: 0,
+//                    regs: [.u8],
+//                    args: [.u8],
+//                    ops: [
+
+//                    ])
+//            ])
+//
+//        let ctx = JitContext(storage: storage)
+//        let mem = OpBuilder(ctx: ctx)
+//        let sut = M1Compiler(stripDebugMessages: true)
+//        try sut.compile(findex: 0, into: mem)
+//
+//        //         mem.hexPrint()
+//
+//        // run the entrypoint and ensure it works
+//        typealias _JitFunc = (@convention(c) (UInt8) -> UInt8)
+//        let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
+//
+//        // always jump
+//        XCTAssertEqual(15, entrypoint(15))
+    }
+    
     func testCompile_OJNull() throws {
         let strType = code.pointee.getType(13)   // String
         let rstrType: Resolvable<HLType> = .type(fromUnsafe: strType)
@@ -1265,6 +1332,109 @@ final class CompilerM1Tests: XCTestCase {
         }
     }
     
+    /// Test handling void return
+    func testCompile__OCall__regression2() throws {
+        let f1: (@convention(c) (UInt8) -> ()) = { _ in }
+        let f1p = unsafeBitCast(f1, to: UnsafeMutableRawPointer.self)
+        let f2: (@convention(c) (UInt8, UInt8) -> ()) = { a, _ in }
+        let f2p = unsafeBitCast(f2, to: UnsafeMutableRawPointer.self)
+        let f3: (@convention(c) (UInt8, UInt8, UInt8) -> ()) = { a, _, _ in }
+        let f3p = unsafeBitCast(f3, to: UnsafeMutableRawPointer.self)
+        let f4: (@convention(c) (UInt8, UInt8, UInt8, UInt8) -> ()) = { a, _, _, _ in }
+        let f4p = unsafeBitCast(f4, to: UnsafeMutableRawPointer.self)
+        
+        for sutOp in [
+            HLOpCode.OCall1(dst: 0, fun: 1, arg0: 4),
+            HLOpCode.OCall2(dst: 0, fun: 2, arg0: 4, arg1: 4),
+            HLOpCode.OCall3(dst: 0, fun: 3, arg0: 4, arg1: 4, arg2: 4),
+            HLOpCode.OCall4(dst: 0, fun: 4, arg0: 4, arg1: 4, arg2: 4, arg3: 4),
+            HLOpCode.OCallN(dst: 0, fun: 4, args: [4, 4, 4, 4]),
+        ]
+        {
+            let storage = ModuleStorage(
+                functions: [
+                    prepareFunction(
+                        retType: .void,
+                        findex: 0,
+                        regs: [
+                            // args
+                            .void, .void, .void, .void, .void
+                        ],
+                        args: [],
+                        ops: [
+                            sutOp,
+                            .ORet(ret: 0),
+                        ]
+                    ),
+                ],
+                natives: [
+                    HLNative(
+                        lib: Resolvable("builtin"),
+                        name: Resolvable("f1"),
+                        type: Resolvable(
+                            .fun(
+                                HLTypeFun(
+                                    args: Resolvable.array([.void]),
+                                    ret: Resolvable(.void)
+                                )
+                            )
+                        ),
+                        findex: 1,
+                        memory: f1p
+                    ),
+                    HLNative(
+                        lib: Resolvable("builtin"),
+                        name: Resolvable("f2"),
+                        type: Resolvable(
+                            .fun(
+                                HLTypeFun(
+                                    args: Resolvable.array([.void, .void]),
+                                    ret: Resolvable(.void)
+                                )
+                            )
+                        ),
+                        findex: 2,
+                        memory: f2p
+                    ),
+                    HLNative(
+                        lib: Resolvable("builtin"),
+                        name: Resolvable("f3"),
+                        type: Resolvable(
+                            .fun(
+                                HLTypeFun(
+                                    args: Resolvable.array([.void, .void, .void]),
+                                    ret: Resolvable(.void)
+                                )
+                            )
+                        ),
+                        findex: 3,
+                        memory: f3p
+                    ),
+                    HLNative(
+                        lib: Resolvable("builtin"),
+                        name: Resolvable("f4"),
+                        type: Resolvable(
+                            .fun(
+                                HLTypeFun(
+                                    args: Resolvable.array([.void, .void, .void, .void]),
+                                    ret: Resolvable(.void)
+                                )
+                            )
+                        ),
+                        findex: 4,
+                        memory: f4p
+                    )
+                ]
+            )
+            let ctx = JitContext(storage: storage)
+            let mem = OpBuilder(ctx: ctx)
+            let sut = sut(strip: false)
+            try sut.compile(findex: 0, into: mem)
+            let entrypoint: (@convention(c) () -> ()) = try mem.buildEntrypoint(0)
+            entrypoint()
+        }
+    }
+    
     func testGetRegStackOffset() throws {
         let c = sut()
         let regs: [HLTypeKind] = [
@@ -1925,5 +2095,34 @@ final class CompilerM1Tests: XCTestCase {
                 0x00,  // .zero
             ]
         )
+    }
+    
+    func testCompile__OXor() throws {
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .u8,
+                    findex: 0,
+                    regs: [
+                        // args
+                        .u8, .u8
+                    ],
+                    args: [
+                        // args
+                        .u8, .u8
+                    ],
+                    ops: [
+                        .OXor(dst: 1, a: 0, b: 1),
+                        .ORet(ret: 1),
+                    ]
+                ),
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        try sut.compile(findex: 0, into: mem)
+        let entrypoint: (@convention(c) (UInt8, UInt8) -> UInt8) = try mem.buildEntrypoint(0)
+        XCTAssertEqual(0b10011111, entrypoint(0b11010110, 0b01001001))
     }
 }

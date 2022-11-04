@@ -508,10 +508,23 @@ final class EmitterM1Tests: XCTestCase {
     }
     
     func testB() throws {
-        XCTAssertEqual(
-            try EmitterM1.emit(for: .b(RelativeLiteralOffset(8))),
-            [0x02, 0x00, 0x00, 0x14]
+        XCTAssertM1Op(
+            .b(RelativeLiteralOffset(-264)),
+            "b #-264",
+            0xbe, 0xff, 0xff, 0x17
         )
+        XCTAssertM1Op(
+            .b(RelativeLiteralOffset(84)),
+            "b #84",
+            0x15, 0x00, 0x00, 0x14
+        )
+        
+        // still fits when accounting for divisor
+        _ = try M1Op.b(RelativeLiteralOffset(134217728)).emit()
+        _ = try M1Op.b(RelativeLiteralOffset(-134217728)).emit()
+        XCTAssertThrowsError(try M1Op.b(RelativeLiteralOffset(268435456)).emit())
+        XCTAssertThrowsError(try M1Op.b(RelativeLiteralOffset(-268435457)).emit())
+        
         XCTAssertEqual(
             try EmitterM1.emit(for: .b(RelativeLiteralOffset(-16))),
             [0xfc, 0xff, 0xff, 0x17]
@@ -543,18 +556,25 @@ final class EmitterM1Tests: XCTestCase {
             try EmitterM1.emit(for: .str(Register64.x0, .reg64offset(.sp, -16, .post))),
             [0xe0, 0x07, 0x1f, 0xf8]
         )
-        
-        // stur should not be used for 0
-        // same for ldur
-        // TODO:
-        // XCTAssertEqual(
-        //     try EmitterM1.emit(for: .str(Register64.x0, .reg64offset(.sp, 0, nil))),
-        //     [0xe1, 0x03, 0x00, 0xf9]
-        // )
-        // XCTAssertNotEqual(
-        //     try EmitterM1.emit(for: .str(Register64.x0, .reg64offset(.sp, 0, nil))),
-        //     try EmitterM1.emit(for: .stur(Register64.x0, .sp, 0))
-        // )
+    }
+    
+    func testStrLdr_3regs_regression() {
+        XCTAssertM1Op(
+            M1Op.str(X.x3, .reg(X.x2, .r64ext(X.x1, .sxtx(0)))),
+                                   "str x3, [x2, x1, sxtx #0]",
+                                   0x43, 0xe8, 0x21, 0xf8)
+        XCTAssertM1Op(
+            M1Op.ldr(X.x3, .reg(X.x2, .r64ext(X.x1, .sxtx(0)))),
+                                   "ldr x3, [x2, x1, sxtx #0]",
+                                   0x43, 0xe8, 0x61, 0xf8)
+        XCTAssertM1Op(
+            M1Op.str(X.x3, .reg(X.x2, .r64ext(X.x1, .sxtx(3)))),
+                                   "str x3, [x2, x1, sxtx #3]",
+                                   0x43, 0xf8, 0x21, 0xf8)
+        XCTAssertM1Op(
+            M1Op.ldr(X.x3, .reg(X.x2, .r64ext(X.x1, .sxtx(3)))),
+                                   "ldr x3, [x2, x1, sxtx #3]",
+                                   0x43, 0xf8, 0x61, 0xf8)
     }
     
     func testSvc() throws {
@@ -819,6 +839,24 @@ final class EmitterM1Tests: XCTestCase {
         XCTAssertEqual(
             try EmitterM1.emit(for: .movz64(.x2, 2, ._48)),
             [0x42, 0x00, 0xe0, 0xd2]
+        )
+    }
+    
+    func testEor_r() throws {
+        XCTAssertM1Op(
+            .eor_r(W.w1, W.w2, W.w3, nil),
+            "eor w1, w2, w3",
+            0x41, 0x00, 0x03, 0x4a
+        )
+        XCTAssertM1Op(
+            .eor_r(X.x1, X.x2, X.x3, nil),
+            "eor x1, x2, x3",
+            0x41, 0x00, 0x03, 0xca
+        )
+        XCTAssertM1Op(
+            .eor_r(X.x1, X.x2, X.x3, .lsl(4)),
+            "eor x1, x2, x3, lsl #4",
+            0x41, 0x10, 0x03, 0xca
         )
     }
 }
