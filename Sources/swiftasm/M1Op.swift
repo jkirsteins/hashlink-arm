@@ -7,6 +7,8 @@ protocol CpuOp : CustomDebugStringConvertible {
 extension M1Op {
     func resolveFinalForm() -> M1Op {
         switch(self) {
+        case .mul(let Rd, let Rn, let Rm):
+            return .madd(Rd, Rn, Rm, X.xZR.sameSize(as: Rd))
         case .asr(let Rd, let Rn, .reg(let Rm, nil)):
             return .asrv(Rd, Rn, Rm)
         case .asr(let Rd, let Rn, .immediate6(let shift)) where Rd.is32 && Rn.is32:
@@ -325,6 +327,13 @@ enum M1Op : CpuOp {
             } else {
                 return "eor \(Rd), \(Rn), \(Rm)"
             }
+        case
+                .mul(let Rd, let Rn, let Rm),
+                .madd(let Rd, let Rn, let Rm, X.xZR as Register64),
+                .madd(let Rd, let Rn, let Rm, W.wZR as Register32):
+            return "mul \(Rd), \(Rn), \(Rm)"
+        case .madd(let Rd, let Rn, let Rm, let Ra):
+            return "madd \(Rd), \(Rn), \(Rm), \(Ra)"
         }
     }
     
@@ -495,6 +504,9 @@ enum M1Op : CpuOp {
     // EOR shifted register
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/EOR--shifted-register---Bitwise-Exclusive-OR--shifted-register--?lang=en
     case eor_r(any Register, any Register, any Register, Shift64_Real?)
+    
+    case mul(any Register, any Register, any Register)
+    case madd(any Register, any Register, any Register, any Register)
 }
 
 

@@ -1,3 +1,4 @@
+import hl.I64;
 import hl.NativeArray;
 import haxe.Exception;
 import hl.UI8;
@@ -51,6 +52,39 @@ class Main {
         return res.length;
 	}
 
+	static public function testGetArrayInt32(len: Int, start: Int, ix: Int): Int {
+		var res: NativeArray<Int> = new hl.NativeArray(len);
+		var curVal = 0;
+		for (i in (0...len)) {
+			res[i] = start + curVal++; 
+		}
+		return res[ix];
+	}
+
+	static public function testGetArrayInt64__haxe(len: Int, start: haxe.Int64, ix: Int): haxe.Int64 {
+		var res: NativeArray<haxe.Int64> = new hl.NativeArray(len);
+		var curVal = 0;
+		for (i in (0...len)) {
+			res[i] = start + curVal++; 
+		}
+		return res[ix];
+	}
+
+	static public function testGetArrayInt64__hl(len: Int, start: hl.I64, ix: Int): hl.I64 {
+		var res: NativeArray<hl.I64> = new hl.NativeArray(len);
+		var curVal = 0;
+		for (i in (0...len)) {
+			res[i] = start + curVal++; 
+		}
+		return res[ix];
+	}
+
+	static public function testGetSetField(newf: Int): Int {
+		var res = new Path(5);
+		res.test = newf * 2;
+		return res.test;
+	}
+
 	static public function main():Void {
 		// var path = new Path(3);
 		// trace('${path.test}');
@@ -69,7 +103,9 @@ class Main {
 		// var h = testGetUI16(3);
 		// trace('getUI16 $e $f $g $h');
 
-		trace('len: ${testArrayLength(58)}');
+		trace('got 32: ${testGetArrayInt32(10, 1234, 5)}');
+		trace('got 64b: ${testGetArrayInt64__haxe(10, 5678, 3)}');
+		trace('got 64n: ${testGetArrayInt64__hl(10, 5678, 3)}');
 
         // testTrap();
         // testTrap2();

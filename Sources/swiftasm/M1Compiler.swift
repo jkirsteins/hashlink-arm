@@ -551,6 +551,7 @@ class M1Compiler {
         try compile(compilable: compilable, into: mem)
     }
     
+    // MARK: compile
     func compile(compilable: Compilable, into mem: OpBuilder) throws
     {
         let ctx = mem.ctx
@@ -611,7 +612,7 @@ class M1Compiler {
             
             print("Compiling \(op)")
             mem.append(
-                PseudoOp.debugMarker("#\(currentInstruction): \(op.debugDescription)")
+                PseudoOp.debugPrint(self, "#\(currentInstruction): \(op.debugDescription)")
             )
             
             switch op {
@@ -977,7 +978,6 @@ class M1Compiler {
                     M1Op.str(W.w0, .reg64offset(X.sp, regStackOffset, nil))
                 )
             case .OSetField(let objReg, let fieldRef, let srcReg):
-                appendDebugPrintAligned4("Entering OSetField", builder: mem)
                 let objRegKind = requireTypeKind(reg: objReg, from: regKinds)
                 
                 /**
@@ -1019,18 +1019,9 @@ class M1Compiler {
                     let srcOffset = getRegStackOffset(regKinds, srcReg)
                     let objAddressOffset = getRegStackOffset(regKinds, objReg)
                     
-                    mem.append(
-                        M1Op.ldr(X.x0, .reg64offset(.sp, srcOffset, nil)),
-                        M1Op.ldr(X.x1, .reg64offset(.sp, objAddressOffset, nil)),
-                        M1Op.str(X.x0, .reg64offset(.x1, fieldOffset, nil))
-                    )
-                    // nop
-                    //                        {
-                    //                            hl_runtime_obj *rt = hl_get_obj_rt(dst->t);
-                    //                            preg *rr = alloc_cpu(ctx, dst, true);
-                    //                            copy_from(ctx, pmem(&p, (CpuReg)rr->id, rt->fields_indexes[o->p2]), rb);
-                    //                        }
-                    //                        break;
+                    appendLoad(reg: X.x0, from: srcReg, kinds: regKinds, mem: mem)
+                    appendLoad(reg: X.x1, from: objReg, kinds: regKinds, mem: mem)
+                    mem.append(M1Op.str(X.x0, .reg64offset(.x1, fieldOffset, nil)))
                 default:
                     fatalError("OSetField not implemented for \(objRegKind)")
                 }
@@ -1342,29 +1333,16 @@ class M1Compiler {
                         PseudoOp.debugPrint(
                             self,
                             "TODO: OField and OSetField need a test based on inheritance"))
-                    mem.append(
-                        PseudoOp.debugPrint(
-                            self,
-                            "TODO: OField and OSetField need to use appendLoad/appendStore"))
                     
-                    mem.append(
-                        M1Op.ldr(X.x0, .reg64offset(.sp, objOffset, nil)),
-                        M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil))
-                    )
-                    
-                    if dstKind.hlRegSize == 8 {
-                        mem.append(
-                            M1Op.str(X.x1, .reg64offset(.sp, dstOffset, nil))
-                        )
-                    } else if dstKind.hlRegSize == 4 {
-                        mem.append(
-                            M1Op.str(W.w1, .reg64offset(.sp, dstOffset, nil))
-                        )
-                    } else {
-                        fatalError("Dst size must be 4 or 8")
-                    }
+//                    mem.append(
+//                        M1Op.ldr(X.x0, .reg64offset(.sp, objOffset, nil)),
+//                        )
+//                    )
+                    appendLoad(reg: X.x0, from: objReg, kinds: regKinds, mem: mem)
+                    mem.append(M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil)))
+                    appendStore(reg: X.x1, into: dstReg, kinds: regKinds, mem: mem)
                 default:
-                    fatalError("OSetField not implemented for \(objRegKind)")
+                    fatalError("OField not implemented for \(objRegKind)")
                 }
             case .OAnd(let dst, let a, let b):
                 let dstOffset = getRegStackOffset(regKinds, dst)
@@ -1506,6 +1484,28 @@ class M1Compiler {
                 appendLoad(reg: .x1, from: b, kinds: regKinds, mem: mem)
                 mem.append(M1Op.eor_r(X.x2, X.x0, X.x1, nil))
                 appendStore(reg: X.x2, into: dst, kinds: regKinds, mem: mem)
+            case .OMul(let dst, let a, let b):
+                appendLoad(reg: X.x0, from: a, kinds: regKinds, mem: mem)
+                appendLoad(reg: X.x1, from: b, kinds: regKinds, mem: mem)
+                mem.append(M1Op.mul(X.x0, X.x0, X.x1))
+                appendStore(reg: X.x0, into: dst, kinds: regKinds, mem: mem)
+            case .OToInt(let dst, let src):
+                let dstKind = requireTypeKind(reg: dst, from: regKinds)
+                let srcKind = requireTypeKind(reg: src, from: regKinds)
+                
+                appendLoad(reg: X.x0, from: src, kinds: regKinds, mem: mem)
+                
+                switch(srcKind, dstKind) {
+                case (let a, let b) where a == b:
+                    appendStore(reg: X.x0, into: dst, kinds: regKinds, mem: mem)
+                case (.u8, .i64), (.u16, .i64), (.i32, .i64):
+                    appendStore(reg: X.x0, into: dst, kinds: regKinds, mem: mem)
+                case (.u8, .i32), (.u16, .i32), (.i64, .i32):
+                    mem.append(PseudoOp.debugPrint(self, "TODO: .ToInt i64->i32: investigate if size check needed"))
+                    appendStore(reg: X.x0, into: dst, kinds: regKinds, mem: mem)
+                default:
+                    fatalError("Don't know how to cast \(srcKind) to \(dstKind)")
+                }
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

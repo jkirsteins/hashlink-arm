@@ -1013,8 +1013,8 @@ final class CompilerM1Tests: XCTestCase {
         typealias _JitFunc = (@convention(c) (UnsafeRawPointer, Int32) -> UnsafeRawPointer)
         let entrypoint: _JitFunc = try mem.buildEntrypoint(0)
         
-        Array("Hello World".utf16).withUnsafeBytes { cstr in
-            let result = entrypoint(cstr.baseAddress!, 11)
+        Array("Hello World\0".utf16).withUnsafeBytes { cstr in
+            let result = entrypoint(cstr.baseAddress!, 12)
             
             let vPtr = result.bindMemory(to: vdynamic.self, capacity: 1)
             let typePtr = vPtr.pointee.t
@@ -1031,7 +1031,7 @@ final class CompilerM1Tests: XCTestCase {
             
             // len
             let len = Int(result.advanced(by: 16).bindMemory(to: Int32.self, capacity: 1).pointee)
-            XCTAssertEqual(len, 11)
+            XCTAssertEqual(len, 12)
         }
     }
     
@@ -2163,6 +2163,39 @@ final class CompilerM1Tests: XCTestCase {
         )
     }
     
+    func testCompile__OMul() throws {
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .u8,
+                    findex: 0,
+                    regs: [
+                        // args
+                        .u8, .u8
+                    ],
+                    args: [
+                        // args
+                        .u8, .u8
+                    ],
+                    ops: [
+                        .OMul(dst: 1, a: 0, b: 1),
+                        .ORet(ret: 1),
+                    ]
+                ),
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        try sut.compile(findex: 0, into: mem)
+        let entrypoint: (@convention(c) (Int8, Int8) -> Int8) = try mem.buildEntrypoint(0)
+        XCTAssertEqual(4, entrypoint(1, 4))
+        XCTAssertEqual(4, entrypoint(2, 2))
+        XCTAssertEqual(36, entrypoint(4, 9))
+        XCTAssertEqual(0, entrypoint(1, 0))
+        XCTAssertEqual(-10, entrypoint(-5, 2))
+    }
+    
     func testCompile__OXor() throws {
         let storage = ModuleStorage(
             functions: [
@@ -2190,5 +2223,49 @@ final class CompilerM1Tests: XCTestCase {
         try sut.compile(findex: 0, into: mem)
         let entrypoint: (@convention(c) (UInt8, UInt8) -> UInt8) = try mem.buildEntrypoint(0)
         XCTAssertEqual(0b10011111, entrypoint(0b11010110, 0b01001001))
+    }
+    
+    func testCompile__OToInt__i32_to_i64() throws {
+        let storage = ModuleStorage(
+            functions: [
+                prepareFunction(
+                    retType: .i64,
+                    findex: 0,
+                    regs: [.i32, .i64],
+                    args: [.i32],
+                    ops: [
+                        .OToInt(dst: 1, src: 0),
+                        .ORet(ret: 1),
+                    ]
+                ),
+                prepareFunction(
+                    retType: .i32,
+                    findex: 1,
+                    regs: [.i64, .i32],
+                    args: [.i64],
+                    ops: [
+                        .OToInt(dst: 1, src: 0),
+                        .ORet(ret: 1),
+                    ]
+                )
+            ]
+        )
+        let ctx = JitContext(storage: storage)
+        let mem = OpBuilder(ctx: ctx)
+        let sut = sut(strip: false)
+        let count = 2
+        try (0..<count).forEach { try sut.compile(findex: Int32($0), into: mem) }
+        
+        let entrypoint_32t64: (@convention(c) (Int32) -> Int64) = try mem.buildEntrypoint(0)
+        XCTAssertEqual(
+            0b10000000_10000000_10000000_10000000,
+            entrypoint_32t64(Int32(bitPattern: 0b10000000_10000000_10000000_10000000))
+        )
+        
+        let entrypoint_64t32: (@convention(c) (Int64) -> Int32) = try mem.buildEntrypoint(1)
+        XCTAssertEqual(
+            Int32(bitPattern: 0b10000000_10000000_10000000_10000000),
+            entrypoint_64t32(0b10000000_10000000_10000000_10000000_10000000)
+        )
     }
 }

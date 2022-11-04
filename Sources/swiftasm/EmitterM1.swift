@@ -1,6 +1,6 @@
 import Darwin 
 
-protocol Register: CustomDebugStringConvertible {
+protocol Register: Equatable, CustomDebugStringConvertible {
     associatedtype Shift
 
     var rawValue: UInt8 { get }
@@ -8,13 +8,15 @@ protocol Register: CustomDebugStringConvertible {
     
     var to64: Register64 { get }
     var to32: Register32 { get }
+    
+    func sameSize(as: any Register) -> any Register 
 }
 
 extension Register {
     var is64: Bool { !is32 }
 }
 
-typealias X = Register64 
+typealias X = Register64
 typealias W = Register32
 
 extension OpBuilder
@@ -138,6 +140,8 @@ enum Register64: UInt8, Register {
     case x29_fp = 29  // frame pointer
     case x30_lr = 30  // /link register
     case sp = 31
+    
+    static let xZR = Register64.sp
 
     var debugDescription: String {
         switch(self) {
@@ -159,6 +163,14 @@ enum IndexingMode {
     case post
 }
 
+extension Register {
+    func sameSize(as other: any Register) -> any Register {
+        if other.is64 == self.is64 { return self }
+        if other.is64 { return self.to64 }
+        return self.to32
+    }
+}
+
 enum Register32: UInt8, Register {
     typealias Shift = Shift32
     typealias ExtendOp = ExtendOp32
@@ -175,7 +187,7 @@ enum Register32: UInt8, Register {
     var to64: Register64 {
         Register64(rawValue: self.rawValue)!
     }
-
+    
     case w0 = 0
     case w1 = 1
     case w2 = 2
@@ -365,12 +377,30 @@ public class EmitterM1 {
         try Self.emit(for: op)
     }
     
-    static fileprivate func encodeRegs(Rd: any Register, Rn: any Register, Rm: any Register, rdOff: Int64 = 0, rnOff: Int64 = 5, rmOff: Int64 = 16) -> Int64
+    static fileprivate func encodeRegs(
+        Rd: (any Register)? = nil,
+        Rn: (any Register)? = nil,
+        Rm: (any Register)? = nil,
+        Ra: (any Register)? = nil,
+        rdOff: Int64 = 0,
+        rnOff: Int64 = 5,
+        rmOff: Int64 = 16,
+        raOff: Int64 = 10) -> Int64
     {
-        let encodedRd = encodeReg(Rd, shift: rdOff)
-        let encodedRn = encodeReg(Rn, shift: rnOff)
-        let encodedRm = encodeReg(Rm, shift: rmOff)
-        return encodedRd | encodedRn | encodedRm
+        var regs: Int64 = 0
+        if let _Rd = Rd {
+            regs = regs | encodeReg(_Rd, shift: rdOff)
+        }
+        if let _Rn = Rn {
+            regs = regs | encodeReg(_Rn, shift: rnOff)
+        }
+        if let _Rm = Rm {
+            regs = regs | encodeReg(_Rm, shift: rmOff)
+        }
+        if let _Ra = Ra {
+            regs = regs | encodeReg(_Ra, shift: raOff)
+        }
+        return regs
     }
     
     static fileprivate func getShImm6(_ shift: Shift64_Real?, shOff: Int = 22, immOff: Int = 10) -> (Int64, Int64) {
@@ -1148,6 +1178,15 @@ public class EmitterM1 {
             let (imm6, sh) = getShImm6(shift)
             let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
             let encoded = mask | s | imm6 | sh | regs
+            return returnAsArray(encoded)
+        case .madd(let Rd, let Rn, let Rm, let Ra):
+            assertMatchingSize(Rd, Rn, Rm, Ra)
+            
+            //                              Rm      Ra    Rn    Rd
+            let mask: Int64 = 0b00011011000_00000_0_00000_00000_00000
+            let sf = sizeMask(is64: Rd.is64)
+            let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm, Ra: Ra)
+            let encoded = mask | sf | regs
             return returnAsArray(encoded)
         default:
             print("Can't compile \(op)")

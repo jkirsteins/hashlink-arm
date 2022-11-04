@@ -13,11 +13,11 @@ final class CompileMod2Tests: XCTestCase {
     
     static let TEST_ARRAY_LENGTH_IX = 44
     static let TEST_TRAP_IX = 32
-    static let TEST_TRAP__CALLS = [ 5, 327, 40 ]
+    static let TEST_GET_SET_FIELD_IX = 50
     
     static let TEST_GET_ARRAY_INT32_IX = 46
-    static let TEST_GET_ARRAY_INT64_IX = 47
-    static let TEST_GET_ARRAY__CALLS = [ 5, 327, 40, 48, 49 ]
+    static let TEST_GET_ARRAY_INT64HAXE_IX = 47
+    static let TEST_GET_ARRAY_INT64HL_IX = 50
     
     override class func setUp() {
         LibHl.hl_global_init()
@@ -47,25 +47,79 @@ final class CompileMod2Tests: XCTestCase {
         LibHl.hl_global_free()
     }
     
-    func testCompile__testGetSetArray() throws {
-        let sut = sut(strip: true)
-        let mem = OpBuilder(ctx: ctx)
-        let fix32 = Self.TEST_GET_ARRAY_INT32_IX
-        let fix64 = Self.TEST_GET_ARRAY_INT64_IX
-
-        for fix in Self.TEST_GET_ARRAY__CALLS {
+    static func _compileDeps(sut: M1Compiler, mem: OpBuilder, _ ix: RefFun...) throws {
+        for fix in ix {
             try sut.compile(findex: Int32(fix), into: mem)
         }
-        try sut.compile(findex: Int32(fix32), into: mem)
-//        try sut.compile(findex: Int32(fix64), into: mem)
+    }
+    
+    func testCompile__testGetSetField() throws {
+        let sut = sut(strip: false)
+        let mem = OpBuilder(ctx: ctx)
+        let fix = Self.TEST_GET_SET_FIELD_IX
 
-        let entrypoint32: (@convention(c) (Int32, Int32, Int32) -> Int32) = try mem.buildEntrypoint(fix32)
-//        let entrypoint64: (@convention(c) (Int32, Int64, Int32) -> Int64) = try mem.buildEntrypoint(fix64)
+        try Self._compileDeps(sut: sut, mem: mem, 27)
+        try sut.compile(findex: Int32(fix), into: mem)
+
+        let entrypoint: (@convention(c) (Int32) -> Int32) = try mem.buildEntrypoint(fix)
         
-        mem.hexPrint()
+        XCTAssertEqual(46, entrypoint(23))
+    }
+    
+    func testCompile__testGetSetArray__32() throws {
+        let sut = sut(strip: false)
+        let mem = OpBuilder(ctx: ctx)
+        let fix = Self.TEST_GET_ARRAY_INT32_IX
+        
+        try sut.compile(findex: Int32(fix), into: mem)
+
+        let entrypoint32: (@convention(c) (Int32, Int64, Int32) -> Int64) = try mem.buildEntrypoint(fix)
         
         XCTAssertEqual(1239, entrypoint32(10, 1234, 5))
-//        XCTAssertEqual(5681, entrypoint64(10, 5678, 3))
+    }
+    
+    func testCompile__testGetSetArray__64hl() throws {
+        let sut = sut(strip: false)
+        let mem = OpBuilder(ctx: ctx)
+        let fix = Self.TEST_GET_ARRAY_INT64HL_IX
+
+        try Self._compileDeps(sut: sut, mem: mem, 48, 49)
+        try sut.compile(findex: Int32(fix), into: mem)
+
+        let entrypoint64: (@convention(c) (Int32, Int64, Int32) -> Int64) = try mem.buildEntrypoint(fix)
+        
+        XCTAssertEqual(5681, entrypoint64(10, 5678, 3))
+    }
+    
+    func testCompile__testGetSetArray__64haxe() throws {
+        let sut = sut(strip: false)
+        let mem = OpBuilder(ctx: ctx)
+        let fix = Self.TEST_GET_ARRAY_INT64HAXE_IX
+
+        try Self._compileDeps(sut: sut, mem: mem, 48, 49)
+        try sut.compile(findex: Int32(fix), into: mem)
+        
+        struct _haxeInt64 {
+            let tptr: UnsafeRawPointer
+            let high: Int32
+            let low: Int32
+        }
+        
+        let int64In: Int64 = 5678
+        let haxeInt64 = _haxeInt64(
+            tptr: code.pointee.getType(87),
+            high: Int32(truncatingIfNeeded: (int64In >> 32)),
+            low: Int32(truncatingIfNeeded: int64In)
+        )
+
+        let entrypoint64: (@convention(c) (Int32, UnsafeRawPointer, Int32) -> UnsafeRawPointer) = try mem.buildEntrypoint(fix)
+        withUnsafePointer(to: haxeInt64) { haxeInt64In in
+            let haxeInt64_out = entrypoint64(10, haxeInt64In, 3).bindMemory(to: _haxeInt64.self, capacity: 1)
+            var int64Out: Int64 = 0
+            int64Out = int64Out | (Int64(haxeInt64_out.pointee.high) &<< 32)
+            int64Out = int64Out | (Int64(haxeInt64_out.pointee.low))
+            XCTAssertEqual(5681, int64Out)
+        }
     }
     
     func testCompile__testArrayLength() throws {
@@ -104,9 +158,7 @@ final class CompileMod2Tests: XCTestCase {
         let sut = M1Compiler()
         let mem = OpBuilder(ctx: ctx)
         
-        for fix in Self.TEST_TRAP__CALLS {
-            try sut.compile(findex: Int32(fix), into: mem)
-        }
+        try Self._compileDeps(sut: sut, mem: mem)
         try sut.compile(findex: Int32(Self.TEST_TRAP_IX), into: mem)
 
         let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(0)

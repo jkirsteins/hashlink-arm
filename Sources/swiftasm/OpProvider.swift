@@ -234,6 +234,8 @@ extension HLOpCode {
             return .OType(dst: cop.p1, ty: RefType(cop.p2))
         case .OXor:
             return .OXor(dst: cop.p1, a: cop.p2, b: cop.p3)
+        case .OToInt:
+            return .OToInt(dst: cop.p1, src: cop.p2)
         default:
             fatalError("Unknown op to parse \(String(describing: opId))")
         }

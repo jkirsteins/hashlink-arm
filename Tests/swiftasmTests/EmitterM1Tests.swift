@@ -859,4 +859,35 @@ final class EmitterM1Tests: XCTestCase {
             0x41, 0x10, 0x03, 0xca
         )
     }
+    
+    func testMul() throws {
+        XCTAssertM1Op(
+            .mul(W.w1, W.w2, W.w3),
+            "mul w1, w2, w3",
+            0x41, 0x7c, 0x03, 0x1b
+        )
+        XCTAssertM1Op(
+            .mul(X.x1, X.x2, X.x3),
+            "mul x1, x2, x3",
+            0x41, 0x7c, 0x03, 0x9b
+        )
+        XCTAssertM1Op(
+            .madd(W.w1, W.w2, W.w3, W.wZR),
+            "mul w1, w2, w3",
+            0x41, 0x7c, 0x03, 0x1b
+        )
+        XCTAssertM1Op(
+            .madd(X.x1, X.x2, X.x3, X.xZR),
+            "mul x1, x2, x3",
+            0x41, 0x7c, 0x03, 0x9b
+        )
+    }
+    
+    func testMadd() throws {
+        XCTAssertM1Op(
+            .madd(X.x1, X.x2, X.x3, X.x4),
+            "madd x1, x2, x3, x4",
+            0x41, 0x10, 0x03, 0x9b
+        )
+    }
 }
