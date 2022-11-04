@@ -453,6 +453,57 @@ def lookup_data_processing__register__logical_shifted_register(val)
     _handle_matches(matches, valStr)
 end
 
+def lookup_data_processing__3source(val)
+    puts("Data processing (3 source): https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Register?lang=en#dp_3src")
+    sf = p(val, 1, 31)
+    op54 = p(val, 2, 29)
+    op31 = p(val, 3, 21)
+    oo = p(val, 1, 15)
+    rm = p(val, 5, 16)
+    rd = p(val, 5, 0)
+    rn = p(val, 5, 5)
+    ra = p(val, 5, 10)
+    valStr = "#{sf} #{op54} #{op31} #{oo}"
+
+    puts("    sf = #{sf}")
+    puts("    op54 = #{op54}")
+    puts("    op31 = #{op31}")
+    puts("    oo = #{oo}")
+    puts("    rn = #{rn}")
+    puts("    rm = #{rm}")
+    puts("    rd = #{rd}")
+    puts("    ra = #{ra}")
+    
+    matches = {
+        [
+		"x 00	010	1",
+        	"x 00	011	x",
+        	"x 00	100	x",
+        	"x 00	110	1",
+        	"x 00	111	x",
+        	"x 01    xxx	x",
+        	"x 1x    xxx	x",
+        	"0	00	001	0",
+        	"0	00	001	1",
+        	"0	00	010	0",
+        	"0	00	101	0",
+        	"0	00	101	1",
+        	"0	00	110	0"
+	] => "UNALLOCATED",
+        ["0	00	000	0"] => ["MADD — 32-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MADD--Multiply-Add-?lang=en"],
+        ["0	00	000	1"] => "MSUB — 32-bit",
+        ["1	00	000	0"] => ["MADD — 64-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MADD--Multiply-Add-?lang=en"],
+        ["1	00	000	1"] => "MSUB — 64-bit",
+        ["1	00	001	0"] => "SMADDL",
+        ["1	00	001	1"] => "SMSUBL",
+        ["1	00	010	0"] => "SMULH",
+        ["1	00	101	0"] => "UMADDL",
+        ["1	00	101	1"] => "UMSUBL",
+        ["1	00	110	0"] => "UMULH",
+    }
+    _handle_matches(matches, valStr)
+end
+
 def lookup_data_processing__2source(val)
     puts("Data processing (2 source): https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Register?lang=en#dp_2src")
     sf = p(val, 1, 31)
@@ -559,7 +610,7 @@ def lookup_data_processing__register(val)
     elsif match("x 1 0100 xxxxxx", valStr)
         abort("Conditional select")
     elsif match("x 1 1xxx xxxxxx", valStr)
-        abort("Data-processing (3 source)")
+        lookup_data_processing__3source(val)
     else
         abort("Unknown")
     end
@@ -647,4 +698,4 @@ def lookup(val)
     end
 end
 
-puts lookup(0xca020020)
+puts lookup(0x1b037c41)
