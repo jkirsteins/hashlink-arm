@@ -17,7 +17,7 @@ final class CompileMod2Tests: XCTestCase {
     
     static let TEST_GET_ARRAY_INT32_IX = 46
     static let TEST_GET_ARRAY_INT64_IX = 47
-    static let TEST_GET_ARRAY__CALLS = [ 5, 327, 40, 49 ]
+    static let TEST_GET_ARRAY__CALLS = [ 5, 327, 40, 48, 49 ]
     
     override class func setUp() {
         LibHl.hl_global_init()

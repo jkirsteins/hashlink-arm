@@ -219,6 +219,12 @@ class OpBuilder {
     /// Without locking, addresses might not be available. You have
     /// to call this before printing debug output, or before building entrypoints.
     func lockAddresses() throws {
+        
+        let missingCompiled = ctx.funcTracker.refs.subtracting(ctx.funcTracker.comps)
+        guard missingCompiled.isEmpty else {
+            fatalError("These functions are referenced but not compiled: \(missingCompiled)")
+        }
+        
         guard map == nil else {
             /* We might need to call this multiple times (e.g. if we add a hexPrint() debug statement ahead of proper emitting)
 

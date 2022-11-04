@@ -1,3 +1,17 @@
+class FunctionTracker {
+    var refs: Set<RefFun> = Set()
+    var comps: Set<RefFun> = Set()
+
+    func referenced(_ entry: FunctionAddresses.Entry) {
+        guard case .compilable(let compilable) = entry else {
+            return
+        }
+        
+        refs.insert(compilable.getFindex())
+    }
+    func compiled(_ ix: RefFun) { comps.insert(ix) }
+}
+
 struct JitContext {
 
     let jitBase: JitBase
@@ -12,7 +26,8 @@ struct JitContext {
     // v1
     let hlcode: UnsafePointer<HLCode_CCompat>?
     let callTargets: FunctionAddresses
-
+    let funcTracker = FunctionTracker()
+    
     init(module: Module, hlcode: UnsafePointer<HLCode_CCompat>) {
         self.init(storage: module.storage, hlcode: hlcode)
     }

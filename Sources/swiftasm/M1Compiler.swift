@@ -554,6 +554,9 @@ class M1Compiler {
     func compile(compilable: Compilable, into mem: OpBuilder) throws
     {
         let ctx = mem.ctx
+        defer {
+            ctx.funcTracker.compiled(compilable.getFindex())
+        }
         
         // grab it before it changes from prologue
         // let memory = mem.getDeferredPosition()
@@ -633,8 +636,8 @@ class M1Compiler {
                 )
                 
             case .OCall0(let dst, let funRef):
-                print("OCall0 \(funRef)")
                 let fn = ctx.callTargets.get(funRef)
+                ctx.funcTracker.referenced(fn)
                 
                 assert(
                     reg: dst,
@@ -652,8 +655,8 @@ class M1Compiler {
                     PseudoOp.strVreg(X.x0, dstStackOffset, dstKind.hlRegSize)
                 )
             case .OCall1(let dst, let fun, let arg0):
-                print("OCall1 \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
+                ctx.funcTracker.referenced(callTarget)
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
                 assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
@@ -672,8 +675,9 @@ class M1Compiler {
                     PseudoOp.strVreg(X.x0, dstStackOffset, dstKind.hlRegSize)
                 )
             case .OCall3(let dst, let fun, let arg0, let arg1, let arg2):
-                print("OCall3 \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
+                ctx.funcTracker.referenced(callTarget)
+                
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
                 assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
@@ -704,8 +708,8 @@ class M1Compiler {
                     PseudoOp.strVreg(X.x0, dstStackOffset, dstKind.hlRegSize)
                 )
             case .OCall4(let dst, let fun, let arg0, let arg1, let arg2, let arg3):
-                print("OCall4 \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
+                ctx.funcTracker.referenced(callTarget)
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
                 assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
@@ -731,8 +735,8 @@ class M1Compiler {
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
             case .OCallN(let dst, let fun, let args):
-                print("OCallN \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
+                ctx.funcTracker.referenced(callTarget)
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
                 let dstStackOffset = getRegStackOffset(regKinds, dst)
@@ -812,8 +816,8 @@ class M1Compiler {
                 }
                     
             case .OCall2(let dst, let fun, let arg0, let arg1):
-                print("OCall2 \(fun)")
                 let callTarget = ctx.callTargets.get(fun)
+                ctx.funcTracker.referenced(callTarget)
                 
                 assert(reg: dst, from: regKinds, matches: callTarget.ret.value)
                 assert(reg: arg0, from: regKinds, matchesCallArg: 0, inFun: callTarget)
