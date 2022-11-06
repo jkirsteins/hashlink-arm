@@ -15,8 +15,11 @@ struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
 	};
     */
     /// NOTE: important to not be optional. See `getUnion()` comments.
-    let union: UnsafeMutableRawPointer
+    let union: UnsafeMutableRawPointer?
     
+    /// NOTENOTE: should not be an optional! Testing....
+    ///
+    ///
     /// NOTE: very important that the underlying `union` pointer is not optional,
     /// otherwise the pointee down the chain can be set to nil at unexpected times, causing
     /// weird bugs. See `HLType_CCompatTests`.
@@ -24,7 +27,7 @@ struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
     /// I suspect it's because there's no strong reference to the unsafe pointer we initialize based on
     /// the optional, but not completely clear to me what's happening there.
     func getUnion<T>() -> UnsafePointer<T> {
-        return UnsafePointer(union.bindMemory(to: T.self, capacity: 1))
+        return UnsafePointer(union!.bindMemory(to: T.self, capacity: 1))
     }
     var obj: UnsafePointer<HLTypeObj_CCompat> { getUnion() }
     var fun: UnsafePointer<HLTypeFun_CCompat> { getUnion() }
@@ -34,7 +37,21 @@ struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
     let vobjProto: UnsafeMutableRawPointer?
 
     // unsigned int *mark_bits
-    let markBits: UnsafeMutableRawPointer
+    let markBits: UnsafeMutableRawPointer?
+    
+    init(kind: HLTypeKind, union: UnsafeMutableRawPointer?, vobjProto: UnsafeMutableRawPointer?, markBits: UnsafeMutableRawPointer?) {
+        self.kind = kind
+        self.union = union
+        self.vobjProto = vobjProto
+        self.markBits = markBits
+    }
+    
+    init(kind: HLTypeKind) {
+        self.kind = kind
+        self.union = .none
+        self.vobjProto = .none
+        self.markBits = .none
+    }
 
     var debugDescription: String {
         switch self.kind {

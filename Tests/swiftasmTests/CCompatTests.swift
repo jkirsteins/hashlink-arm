@@ -19,6 +19,8 @@ final class CCompatTests: XCTestCase {
         XCTAssertEqual(MemoryLayout<HLNative_CCompat>.size, 32)
         XCTAssertEqual(MemoryLayout<vdynamic>.size, 16)
         XCTAssertEqual(MemoryLayout<varray>.size, 24)
+        XCTAssertEqual(MemoryLayout<HLConstant_CCompat>.size, 16)
+        XCTAssertEqual(MemoryLayout<MainContext_CCompat>.size, 40)
     }
 }
 

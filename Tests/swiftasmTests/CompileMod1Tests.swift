@@ -19,7 +19,7 @@ final class CompileMod1Tests: XCTestCase {
         self.context = MainContext(code: code, module: nil, ret: nil, file: nil, file_time: 0)
         self.code = code
         
-        self.context!.module = LibHl.hl_module_alloc(self.context!.code);
+        self.context!.module = UnsafeRawPointer(LibHl.hl_module_alloc(self.context!.code));
         guard let m = self.context?.module else {
             fatalError("nil module")
         }

@@ -1,4 +1,4 @@
-/*
+/**
     int findex;
 	int nregs;
 	int nops;
@@ -57,6 +57,7 @@ extension HLFunction_CCompat : Compilable {
     var regs: [Resolvable<HLType>] {
         (0..<nregs).map { ix in
             let ptrPtr = self.regsPtr!.advanced(by: Int(ix))
+            print("Function \(getFindex()) loading reg \(ix)")
             return .type(fromUnsafe: ptrPtr.pointee)
         }
     }
@@ -77,5 +78,16 @@ extension HLFunction_CCompat : Compilable {
         .type(fromUnsafe: self.cType.fun.pointee.retPtr)
     }
     
-    var ops: [HLOpCode] { cOps.map { HLOpCode.parseCCompat($0) } }
+    var ops: [HLOpCode] {
+        let bufPtr = UnsafeBufferPointer(start: self.opsPtr!, count: Int(nops))
+        return bufPtr.map { HLOpCode.parseCCompat($0) }
+//        let res = (0..<nops).map { ix in
+//            let ptr: UnsafePointer<HLOpCode_CCompat> = self.opsPtr!.advanced(by: Int(ix))
+//            print("Parsing from \(ptr)")
+//            return HLOpCode.parseCCompat(ptr.pointee)
+//        }
+        
+//        return res
+//        return cOps.map { HLOpCode.parseCCompat($0) }
+    }
 }

@@ -183,7 +183,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     case bool  // 7
     case bytes  // 8
     case dyn  // 9
-    case fun(HLTypeFun)  // 10
+    case fun(HLTypeFun_Depr)  // 10
     case obj(HLTypeObj)  // 11
     case array  // 12
     case type  // 13
@@ -193,7 +193,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     case abstract(HLTypeAbstractData)  // 17
     case `enum`(HLTypeEnumData)  // 18
     case null(HLTypeNullData)  // 19
-    case method(HLTypeFun)  // 20
+    case method(HLTypeFun_Depr)  // 20
     case `struct`(HLTypeObj)  // 21
 
     // todo: find usages and move to debugDescription
@@ -206,7 +206,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
         }
     }
     
-    var funData: HLTypeFun? {
+    var funData: HLTypeFun_Depr? {
         switch(self) {
         case .fun(let data): return data
         default: return nil
@@ -348,14 +348,14 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     }
 
     static func readFunData(from reader: ByteReader, types: TableResolver<HLType>)
-        throws -> HLTypeFun
+        throws -> HLTypeFun_Depr
     {
         let nargs = try reader.readVarInt()
         let args = try Array(repeating: 0, count: Int(nargs)).map { _ in
             types.getResolvable(try reader.readIndex())
         }
         let ret = types.getResolvable(try reader.readIndex())
-        return HLTypeFun(args: args, ret: ret)
+        return HLTypeFun_Depr(args: args, ret: ret)
     }
 
     static func readAbstractData(

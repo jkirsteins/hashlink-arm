@@ -610,7 +610,7 @@ class M1Compiler {
                 PseudoOp.debugMarker("Marking position for \(currentInstruction) at \(mem.byteSize)")
             )
             
-            print("Compiling \(op)")
+            print("#\(currentInstruction): \(op.debugDescription)")
             mem.append(
                 PseudoOp.debugPrint(self, "#\(currentInstruction): \(op.debugDescription)")
             )
@@ -1190,6 +1190,8 @@ class M1Compiler {
                         case .OJFalse:
                             fallthrough
                         case .OJNull:
+                            print("reg \(reg)")
+                            print("reg kind \(regKinds[Int(reg)])")
                             return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
                         case .OJNotNull:
                             return M1Op.b_ne(try Immediate19(jumpOffset.immediate))

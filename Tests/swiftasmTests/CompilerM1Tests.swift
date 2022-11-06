@@ -48,7 +48,7 @@ func prepareFunction(
     let rArgs = Resolvable.array(args)
     let rRetType = Resolvable(retType)
     let rFuncType = Resolvable(HLType.fun(
-        HLTypeFun(args: rArgs, ret: rRetType)
+        HLTypeFun_Depr(args: rArgs, ret: rRetType)
     ))
     return prepareFunction(funcType: rFuncType, retType: rRetType, findex: findex, regs: rRegs, ops: ops)
 }
@@ -85,7 +85,7 @@ final class CompilerM1Tests: XCTestCase {
         self.context = MainContext(code: code, module: nil, ret: nil, file: nil, file_time: 0)
         self.code = code
         
-        self.context!.module = LibHl.hl_module_alloc(self.context!.code);
+        self.context!.module = UnsafeRawPointer(LibHl.hl_module_alloc(self.context!.code))
         guard let m = self.context?.module else {
             fatalError("nil module")
         }
@@ -1070,7 +1070,7 @@ final class CompilerM1Tests: XCTestCase {
                     name: Resolvable("swiftFunc"),
                     type: Resolvable(
                         .fun(
-                            HLTypeFun(
+                            HLTypeFun_Depr(
                                 args: Resolvable.array([.u8, .u16, .i32]),
                                 ret: Resolvable(.i32)
                             )
@@ -1126,7 +1126,7 @@ final class CompilerM1Tests: XCTestCase {
                     name: Resolvable("swiftFunc"),
                     type: Resolvable(
                         .fun(
-                            HLTypeFun(
+                            HLTypeFun_Depr(
                                 args: Resolvable.array([.u8, .u8, .u8, .u8]),
                                 ret: Resolvable(.u8)
                             )
@@ -1209,7 +1209,7 @@ final class CompilerM1Tests: XCTestCase {
                     name: Resolvable("swiftFunc"),
                     type: Resolvable(
                         .fun(
-                            HLTypeFun(
+                            HLTypeFun_Depr(
                                 args: Resolvable.array([.u8, .u8, .i32, .u8, .u8, .u8, .i32, .u8, .u8]),
                                 ret: Resolvable(.i32)
                             )
@@ -1336,7 +1336,7 @@ final class CompilerM1Tests: XCTestCase {
                         name: Resolvable("f1"),
                         type: Resolvable(
                             .fun(
-                                HLTypeFun(
+                                HLTypeFun_Depr(
                                     args: Resolvable.array([.u8]),
                                     ret: Resolvable(.u8)
                                 )
@@ -1350,7 +1350,7 @@ final class CompilerM1Tests: XCTestCase {
                         name: Resolvable("f2"),
                         type: Resolvable(
                             .fun(
-                                HLTypeFun(
+                                HLTypeFun_Depr(
                                     args: Resolvable.array([.u8, .u8]),
                                     ret: Resolvable(.u8)
                                 )
@@ -1364,7 +1364,7 @@ final class CompilerM1Tests: XCTestCase {
                         name: Resolvable("f3"),
                         type: Resolvable(
                             .fun(
-                                HLTypeFun(
+                                HLTypeFun_Depr(
                                     args: Resolvable.array([.u8, .u8, .u8]),
                                     ret: Resolvable(.u8)
                                 )
@@ -1378,7 +1378,7 @@ final class CompilerM1Tests: XCTestCase {
                         name: Resolvable("f4"),
                         type: Resolvable(
                             .fun(
-                                HLTypeFun(
+                                HLTypeFun_Depr(
                                     args: Resolvable.array([.u8, .u8, .u8, .u8]),
                                     ret: Resolvable(.u8)
                                 )
@@ -1439,7 +1439,7 @@ final class CompilerM1Tests: XCTestCase {
                         name: Resolvable("f1"),
                         type: Resolvable(
                             .fun(
-                                HLTypeFun(
+                                HLTypeFun_Depr(
                                     args: Resolvable.array([.void]),
                                     ret: Resolvable(.void)
                                 )
@@ -1453,7 +1453,7 @@ final class CompilerM1Tests: XCTestCase {
                         name: Resolvable("f2"),
                         type: Resolvable(
                             .fun(
-                                HLTypeFun(
+                                HLTypeFun_Depr(
                                     args: Resolvable.array([.void, .void]),
                                     ret: Resolvable(.void)
                                 )
@@ -1467,7 +1467,7 @@ final class CompilerM1Tests: XCTestCase {
                         name: Resolvable("f3"),
                         type: Resolvable(
                             .fun(
-                                HLTypeFun(
+                                HLTypeFun_Depr(
                                     args: Resolvable.array([.void, .void, .void]),
                                     ret: Resolvable(.void)
                                 )
@@ -1481,7 +1481,7 @@ final class CompilerM1Tests: XCTestCase {
                         name: Resolvable("f4"),
                         type: Resolvable(
                             .fun(
-                                HLTypeFun(
+                                HLTypeFun_Depr(
                                     args: Resolvable.array([.void, .void, .void, .void]),
                                     ret: Resolvable(.void)
                                 )
@@ -1558,7 +1558,7 @@ final class CompilerM1Tests: XCTestCase {
                     name: Resolvable("swiftFunc16"),
                     type: Resolvable(
                         .fun(
-                            HLTypeFun(
+                            HLTypeFun_Depr(
                                 args: Resolvable.array([.u16]),
                                 ret: Resolvable(.i32)
                             )
@@ -1572,7 +1572,7 @@ final class CompilerM1Tests: XCTestCase {
                     name: Resolvable("swiftFunc8"),
                     type: Resolvable(
                         .fun(
-                            HLTypeFun(
+                            HLTypeFun_Depr(
                                 args: Resolvable.array([.u8]),
                                 ret: Resolvable(.i32)
                             )
@@ -1724,7 +1724,7 @@ final class CompilerM1Tests: XCTestCase {
                     name: Resolvable("swiftFunc"),
                     type: Resolvable(
                         .fun(
-                            HLTypeFun(
+                            HLTypeFun_Depr(
                                 args: Resolvable.array([.u16, .i32]),
                                 ret: Resolvable(.i32)
                             )
@@ -1781,7 +1781,7 @@ final class CompilerM1Tests: XCTestCase {
                     name: Resolvable("swiftFunc"),
                     type: Resolvable(
                         .fun(
-                            HLTypeFun(
+                            HLTypeFun_Depr(
                                 args: Resolvable.array([]),
                                 ret: Resolvable(.i32)
                             )
@@ -2267,5 +2267,68 @@ final class CompilerM1Tests: XCTestCase {
             Int32(bitPattern: 0b10000000_10000000_10000000_10000000),
             entrypoint_64t32(0b10000000_10000000_10000000_10000000_10000000)
         )
+    }
+    
+    // MARK: testing v2
+    
+    func prepareFunction2(
+        retType: HLTypeKind,
+        findex: RefFun,
+        regs: HLTypeKinds,
+        args: HLTypeKinds,
+        ops: [HLOpCode]
+    ) -> any Compilable2 {
+        let funType = HLTypeFun(argsProvider: args, retProvider: retType)
+        return PointerCompilable(
+            findex: findex,
+            ops: ops,
+            address: RefAddressHolder(),
+            regs: regs,
+            ret: retType,
+            type: funType)
+    }
+    
+    func prepareContext(compilables: [any Compilable2]) throws -> CCompatJitContext {
+        let tm = TestJitModule(compilables)
+        assert(tm.ntypes > 0)
+        return try CCompatJitContext(ctx: tm)
+    }
+    
+    func testCompile__OMul_v2() throws {
+        let funcs = [
+                prepareFunction2(
+                    retType: .u8,
+                    findex: 0,
+                    regs: [
+                        // args
+                        .u8, .u8
+                    ],
+                    args: [
+                        // args
+                        .u8, .u8
+                    ],
+                    ops: [
+                        .OMul(dst: 1, a: 0, b: 1),
+                        .ORet(ret: 1),
+                    ]
+                ),
+            ]
+        let ctx = try prepareContext(compilables: funcs)
+        
+        let mem = CpuOpBuffer()
+        let sut = M1Compiler2(ctx: ctx, stripDebugMessages: false)
+        try sut.compile(findex: 0, into: mem)
+        
+        //
+        let mapper = BufferMapper(ctx: ctx, buffer: mem)
+        _ = try mapper.getMemory()
+        
+//
+//        let entrypoint: (@convention(c) (Int8, Int8) -> Int8) = try mem.buildEntrypoint(0)
+//        XCTAssertEqual(4, entrypoint(1, 4))
+//        XCTAssertEqual(4, entrypoint(2, 2))
+//        XCTAssertEqual(36, entrypoint(4, 9))
+//        XCTAssertEqual(0, entrypoint(1, 0))
+//        XCTAssertEqual(-10, entrypoint(-5, 2))
     }
 }

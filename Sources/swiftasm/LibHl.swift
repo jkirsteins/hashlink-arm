@@ -27,7 +27,25 @@ struct LibHl {
     static let hl_global_free: (@convention(c) () -> ()) = { load("hl_global_free") }()
     static let hl_global_init: (@convention(c) () -> ()) = { load("hl_global_init") }()
     
-    static let _hl_sys_init: (@convention(c) (UnsafePointer<UnsafeRawPointer>?, Int32, UnsafeRawPointer) -> ()) = { load("hl_sys_init") }()
+    static let _hl_sys_init: (@convention(c) (UnsafePointer<UnsafePointer<CChar>?>?, Int32, UnsafeRawPointer) -> ()) = { load("hl_sys_init") }()
+    
+    static func hl_sys_init(args: [String], file: String) {
+        withUnsafePointer(to: file) { filePtr in
+            // TODO: fix CStringArray to support empty arrays
+            if args.count > 0 {
+                let argsCcompat = CStringArray(args)
+                LibHl._hl_sys_init(
+                    argsCcompat.constPointer,
+                    Int32(args.count),
+                    filePtr)
+            } else {
+                LibHl._hl_sys_init(
+                    nil,
+                    0,
+                    filePtr)
+            }
+        }
+    }
     
     static let hl_utf8_length: (@convention(c) (UnsafePointer<Int8>?, Int) -> (Int)) = { load("hl_utf8_length") }()
     static func hl_utf8_length(_ val: String, pos: Int = 0) -> Int {
@@ -39,16 +57,28 @@ struct LibHl {
     /// hl_code *hl_code_read( const unsigned char *data, int size, char **error_msg );
     
     /// const pchar *file, char **error_msg, bool print_errors
-    static let load_code: (@convention(c) (UnsafePointer<Int8>?, UnsafePointer<UnsafePointer<Int8>?>?, Bool) -> (UnsafeMutableRawPointer?)) = { load("load_code", from: .bin) }()
+    static let _load_code: (@convention(c) (UnsafePointer<Int8>?, UnsafeMutablePointer<UnsafeMutablePointer<CChar>>, Bool) -> (UnsafeMutableRawPointer?)) = { load("load_code", from: .bin) }()
     static func load_code(_ val: String) -> UnsafeMutablePointer<HLCode_CCompat> {
-        let res = val.withCString {
-            charPtr in 
-            print("charPtr: \(charPtr)")
-            return load_code(charPtr, nil, true)
+        
+        var err: UnsafeMutablePointer<CChar> = .allocate(capacity: 1)
+        defer { err.deallocate() }
+        
+        var res: UnsafeMutableRawPointer? = nil
+        
+        withUnsafeMutablePointer(to: &err) {
+            errPtr in
+        
+            res = val.withCString {
+                charPtr in
+                print("charPtr: \(charPtr)")
+                return _load_code(charPtr, errPtr, true)
+            }
         }
-        print("res: \(res)")
+            
         guard let res = res?.bindMemory(to: HLCode_CCompat.self, capacity: 1) else {
-            fatalError("Failed to load code")
+            // TODO: print error
+            let str = String.wrapUtf8(from: err)
+            fatalError("Failed to load code: \(str)")
         }
         return res
     }
@@ -71,10 +101,19 @@ struct LibHl {
     static func hl_alloc_dynobj() -> UnsafeRawPointer { _hl_alloc_dynobj() }
     
     // HL_API void hl_register_thread( void *stack_top ) 
-    static let hl_register_thread: (@convention(c) (UnsafeMutableRawPointer) -> ()) = { load("hl_register_thread") }()
+    static let _hl_register_thread: (@convention(c) (UnsafeRawPointer) -> ()) = { load("hl_register_thread") }()
+    static func hl_register_thread(ctx: inout MainContext_CCompat) {
+        withUnsafeMutablePointer(to: &ctx) {
+            ctxPtr in
+            Self._hl_register_thread(ctxPtr)
+        }
+    }
     
     // hl_module *hl_module_alloc( hl_code *code );
-    static let hl_module_alloc: (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer) = { load("hl_module_alloc", from: .bin) }()
+    static let _hl_module_alloc: (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer) = { load("hl_module_alloc", from: .bin) }()
+    static func hl_module_alloc(_ code: UnsafePointer<HLCode_CCompat>) -> UnsafePointer<HLModule_CCompat> {
+        UnsafePointer(OpaquePointer(_hl_module_alloc(code)))
+    }
     
     // int hl_module_init( hl_module *m, h_bool hot_reload );
     static let hl_module_init: (@convention(c) (UnsafeRawPointer, Bool) -> Int32) = { load("hl_module_init", from: .bin) }()
@@ -101,5 +140,11 @@ struct LibHl {
     static let _hl_alloc_array: (@convention(c) (UnsafeRawPointer, Int32) -> UnsafeRawPointer) = { load("hl_alloc_array") }()
     static func hl_alloc_array(_ hltype: UnsafePointer<HLType_CCompat>, _ size: Int32) -> UnsafePointer<varray> {
         UnsafePointer(OpaquePointer(_hl_alloc_array(hltype, size)))
+    }
+    
+    // void hl_code_free( hl_code *c );
+    static let _hl_code_free: (@convention(c) (UnsafeRawPointer) -> ()) = { load("hl_code_free", from: .bin) }()
+    static func hl_code_free(_ hlcode: UnsafePointer<HLCode_CCompat>) -> () {
+        _hl_code_free(UnsafeRawPointer(hlcode))
     }
 }

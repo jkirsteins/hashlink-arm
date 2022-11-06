@@ -3,44 +3,56 @@ import XCTest
 @testable import swiftasm
 
 final class CompileMod2Tests: XCTestCase {
-    static var code: UnsafePointer<HLCode_CCompat>?
-    static var ctx: JitContext? = nil
+    static var code: UnsafePointer<HLCode_CCompat>? { ctx.hlcode }
+    static var ctx: JitContext = JitContext(storage: ModuleStorage(), hlcode: nil)
     
     static var context: MainContext? = nil
     
     var code: UnsafePointer<HLCode_CCompat> { Self.code! }
-    var ctx: JitContext { Self.ctx! }
+    var ctx: JitContext { Self.ctx }
     
     static let TEST_ARRAY_LENGTH_IX = 44
     static let TEST_TRAP_IX = 32
-    static let TEST_GET_SET_FIELD_IX = 50
+    static let TEST_GET_SET_FIELD_IX = 51
     
     static let TEST_GET_ARRAY_INT32_IX = 46
     static let TEST_GET_ARRAY_INT64HAXE_IX = 47
     static let TEST_GET_ARRAY_INT64HL_IX = 50
     
     override class func setUp() {
-        LibHl.hl_global_init()
-        //
+//        LibHl.hl_global_init()
+//        //
         let mod2 = Bundle.module.url(forResource: "mod2", withExtension: "hl")!.path
-        let code = UnsafePointer(LibHl.load_code(mod2))
-        self.context = MainContext(code: code, module: nil, ret: nil, file: nil, file_time: 0)
-        self.code = code
+//        let code = UnsafePointer(LibHl.load_code(mod2))
+//        self.context = MainContext(code: code, module: nil, ret: nil, file: nil, file_time: 0)
+//        self.code = code
+//
+//        self.context!.module = UnsafeRawPointer(LibHl.hl_module_alloc(self.context!.code))
+//        guard let m = self.context?.module else {
+//            fatalError("nil module")
+//        }
+//
+//        let res = LibHl.hl_module_init(m, false)
+//        guard res == 1 else {
+//            fatalError("Failed to init module (got \(res))")
+//        }
+//
+//
+//        //
+//        let fakeMod = ModuleStorage(code.pointee)
+//        self.ctx = JitContext(storage: fakeMod, hlcode: code)
+        Bootstrap.start(&ctx.hlMainContext, mod2, args: [])
         
-        self.context!.module = LibHl.hl_module_alloc(self.context!.code);
-        guard let m = self.context?.module else {
-            fatalError("nil module")
-        }
-            
-        let res = LibHl.hl_module_init(m, false)
-        guard res == 1 else {
-            fatalError("Failed to init module (got \(res))")
-        }
-
-                
-        //
-        let fakeMod = ModuleStorage(code.pointee)
-        self.ctx = JitContext(storage: fakeMod, hlcode: code)
+        ctx.callTargets = FunctionAddresses(ctx.hlMainContext.m!, jitBase: ctx.jitBase)
+        
+        let ct1 = ctx.callTargets.getMod(22)
+        let ct2 = ctx.callTargets.get(22)
+        print("findex(22) \(ct1.entrypoint) vs \(ct2.entrypoint)")
+        
+        assert(ctx.hlcode!.pointee.nfunctions > 3)
+//        Self.code = code
+//        let fakeMod = ModuleStorage(code.pointee)
+//        self.ctx = JitContext(storage: fakeMod, hlcode: code)
     }
 
     override class func tearDown() {
@@ -158,10 +170,10 @@ final class CompileMod2Tests: XCTestCase {
         let sut = M1Compiler()
         let mem = OpBuilder(ctx: ctx)
         
-        try Self._compileDeps(sut: sut, mem: mem)
+        try Self._compileDeps(sut: sut, mem: mem, 40, 329, 5)
         try sut.compile(findex: Int32(Self.TEST_TRAP_IX), into: mem)
 
-        let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(0)
+        let entrypoint: (@convention(c) () -> Int32) = try mem.buildEntrypoint(Self.TEST_TRAP_IX)
         
         XCTAssertEqual(1, entrypoint())
     }

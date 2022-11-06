@@ -5,6 +5,7 @@ typealias TableIndex = Int
 fileprivate var __typeCache: [UnsafeRawPointer:Resolvable<HLType>] = [:]
 fileprivate var __objFieldCache: [UnsafeRawPointer:Resolvable<HLObjField>] = [:]
 fileprivate var __objProtoCache: [UnsafeRawPointer:Resolvable<HLObjProto>] = [:]
+fileprivate var __opCodeCache: [UnsafeRawPointer:Resolvable<HLOpCode>] = [:]
 
 struct Resolvable<T: CustomDebugStringConvertible> : Equatable, CustomDebugStringConvertible, Hashable where T: Equatable, T: Hashable {
     let ix: TableIndex
@@ -95,6 +96,23 @@ extension Resolvable<HLObjField> {
         __objFieldCache[t] = res
         
         table.storage.wrappedValue = [HLObjField(t)]
+        
+        return res
+    }
+}
+
+extension Resolvable<HLOpCode> {
+    // TODO: remove?
+    static func opCode(fromUnsafe t: UnsafePointer<HLOpCode_CCompat>) -> Resolvable<HLOpCode> {
+        if let exists = __opCodeCache[t] {
+            return exists
+        }
+        
+        let table: TableResolver<HLOpCode> = TableResolver(table: SharedStorage(wrappedValue: []), count: 1)
+        let res = Resolvable(ix: 0, table: table)
+        __opCodeCache[t] = res
+        
+        table.storage.wrappedValue = [HLOpCode.parseCCompat(t.pointee)]
         
         return res
     }

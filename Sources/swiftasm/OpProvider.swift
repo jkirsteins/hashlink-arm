@@ -103,145 +103,6 @@ extension HLCompiledFunction : Compilable {
     var entrypoint: any MemoryAddress { self.memory }
 }
 
-extension HLOpCode {
-    static func parseCCompat(_ cop: HLOpCode_CCompat) -> HLOpCode {
-        let opId = HLOpCodeId(rawValue: UInt32(cop.op))
-        switch(opId) {
-        case .OMov:
-            return .OMov(dst: cop.p1, src: cop.p2)
-        case .OInt:
-            return .OInt(dst: cop.p1, ptr: RefInt(cop.p2))
-        case .OGetThis:
-            return .OGetThis(dst: cop.p1, field: RefField(cop.p2))
-        case .ONew:
-            return .ONew(dst: cop.p1)
-        case .OSetField:
-            return .OSetField(obj: cop.p1, field: RefField(cop.p2), src: cop.p3)
-        case .ORet:
-            return .ORet(ret: cop.p1)
-        case .OJULt:
-            return .OJULt(a: cop.p1, b: cop.p2, offset: cop.p3)
-        case .OJSLt:
-            return .OJSLt(a: cop.p1, b: cop.p2, offset: cop.p3)
-        case .OJSLte:
-            return .OJSLte(a: cop.p1, b: cop.p2, offset: cop.p3)
-        case .OJSGt:
-            return .OJSLt(a: cop.p1, b: cop.p2, offset: cop.p3)
-        case .OJSGte:
-            return .OJSGte(a: cop.p1, b: cop.p2, offset: cop.p3)
-        case .OJNull:
-            return .OJNull(reg: cop.p1, offset: cop.p2)
-        case .OJNotNull:
-            return .OJNotNull(reg: cop.p1, offset: cop.p2)
-        case .OGetGlobal:
-            return .OGetGlobal(dst: cop.p1, global: RefGlobal(cop.p2))
-        case .OCall0:
-            return .OCall0(dst: cop.p1, fun: RefFun(cop.p2))
-        case .OCall1:
-            return .OCall1(dst: cop.p1, fun: RefFun(cop.p2), arg0: cop.p3)
-        case .OCall2:
-            let arg1: Reg
-            if let extra = cop.extra {
-                arg1 = Reg(Int(bitPattern: extra))
-            } else {
-                arg1 = 0
-            }
-            return .OCall2(dst: cop.p1, fun: RefFun(cop.p2), arg0: cop.p3, arg1: arg1)
-        case .OCall3:
-            guard let extra = cop.extra else { fatalError("OCall3 missing extra") }
-            return .OCall3(dst: cop.p1, fun: RefFun(cop.p2), arg0: cop.p3, arg1: extra.pointee, arg2: extra.advanced(by: 1).pointee)
-        case .OCall4:
-            guard let extra = cop.extra else { fatalError("OCall4 missing extra") }
-            return .OCall4(
-                dst: cop.p1,
-                fun: RefFun(cop.p2),
-                arg0: cop.p3,
-                arg1: extra.pointee,
-                arg2: extra.advanced(by: 1).pointee,
-                arg3: extra.advanced(by: 2).pointee)
-        case .OShl:
-            return .OShl(dst: cop.p1, a: cop.p2, b: cop.p3)
-        case .OGetI16:
-            return .OGetI16(dst: cop.p1, bytes: cop.p2, index: cop.p3)
-        case .OSetI16:
-            return .OSetI16(bytes: cop.p1, index: cop.p2, src: cop.p3)
-        case .OGetI8:
-            return .OGetI8(dst: cop.p1, bytes: cop.p2, index: cop.p3)
-        case .OSetI8:
-            return .OSetI8(bytes: cop.p1, index: cop.p2, src: cop.p3)
-        case .ONullCheck:
-            return .ONullCheck(reg: cop.p1)
-        case .OField:
-            return .OField(dst: cop.p1, obj: cop.p2, field: RefField(cop.p3))
-        case .OSetThis:
-            return .OSetThis(field: RefField(cop.p1), src: cop.p2)
-        case .OAnd:
-            return .OAnd(dst: cop.p1, a: cop.p2, b: cop.p3)
-        case .OJEq:
-            return .OJEq(a: cop.p1, b: cop.p2, offset: cop.p3)
-        case .OJNotEq:
-            return .OJNotEq(a: cop.p1, b: cop.p2, offset: cop.p3)
-        case .OThrow:
-            return .OThrow(exc: cop.p1)
-        case .OTrap:
-            return .OTrap(exc: cop.p1, offset: cop.p2)
-        case .OEndTrap:
-            return .OEndTrap(exc: cop.p1)
-        case .OSShr:
-            return .OSShr(dst: cop.p1, a: cop.p2, b: cop.p3)
-        case .OLabel:
-            return .OLabel
-        case .OIncr:
-            return .OIncr(dst: cop.p1)
-        case .OMul:
-            return .OMul(dst: cop.p1, a: cop.p2, b: cop.p3)
-        case .OAdd:
-            return .OAdd(dst: cop.p1, a: cop.p2, b: cop.p3)
-        case .OSafeCast:
-            return .OSafeCast(dst: cop.p1, src: cop.p2)
-        case .OToDyn:
-            return .OToDyn(dst: cop.p1, src: cop.p2)
-        case .OOr:
-            return .OOr(dst: cop.p1, a: cop.p2, b: cop.p3)
-        case .OJAlways:
-            return .OJAlways(offset: cop.p1)
-        case .ONull:
-            return .ONull(dst: cop.p1)
-        case .OBool:
-            return .OBool(dst: cop.p1, value: cop.p2)
-        case .OJFalse:
-            return .OJFalse(cond: cop.p1, offset: cop.p2)
-        case .OJTrue:
-            return .OJTrue(cond: cop.p1, offset: cop.p2)
-        case .OSub:
-            return .OSub(dst: cop.p1, a: cop.p2, b: cop.p3)
-        case .OCallN:
-            let c = cop.p3
-            guard let extra = cop.extra else {
-                fatalError("OCallN missing extra")
-            }
-            let args = (0..<c).map {
-                Reg(extra.advanced(by: Int($0)).pointee)
-            }
-            return .OCallN(dst: cop.p1, fun: RefFun(cop.p2), args: args)
-        case .OArraySize:
-            return .OArraySize(dst: cop.p1, array: cop.p2)
-        case .OGetArray:
-            return .OGetArray(dst: cop.p1, array: cop.p2, index: cop.p3)
-        case .OSetArray:
-            return .OSetArray(array: cop.p1, index: cop.p2, src: cop.p3)
-        case .OType:
-            return .OType(dst: cop.p1, ty: RefType(cop.p2))
-        case .OXor:
-            return .OXor(dst: cop.p1, a: cop.p2, b: cop.p3)
-        case .OToInt:
-            return .OToInt(dst: cop.p1, src: cop.p2)
-        default:
-            fatalError("Unknown op to parse \(String(describing: opId))")
-        }
-    }
-}
-
 extension HLType {
     init(_ c: UnsafePointer<HLType_CCompat>) {
         switch(c.pointee.kind) {
@@ -262,8 +123,8 @@ extension HLType {
         case .struct: self = .struct(.fromPointer(c.pointee.obj))
         case .bool: self = .bool
         
-        case .method: self = .method(HLTypeFun(c.pointee.fun.pointee))
-        case .fun: self = .fun(HLTypeFun(c.pointee.fun.pointee))
+        case .method: self = .method(HLTypeFun_Depr(c.pointee.fun.pointee))
+        case .fun: self = .fun(HLTypeFun_Depr(c.pointee.fun.pointee))
             
         default:
             fatalError("not implemented HLType from \(c.pointee.kind)")
@@ -277,7 +138,8 @@ struct HLFunction_CCompat__WithMemory : Compilable {
         self.ptr.pointee.getFindex()
     }
     var ops: [HLOpCode] {
-        self.ptr.pointee.ops
+        print("CCompatWMem", self.ptr.pointee.opsPtr)
+        return self.ptr.pointee.ops
     }
     var regs: [Resolvable<HLType>] {
         self.ptr.pointee.regs

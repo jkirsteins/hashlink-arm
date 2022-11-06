@@ -1,5 +1,6 @@
 import Foundation 
 
+// TODO: rename to PseudoM1Op, this is M1 specific
 enum PseudoOp: CpuOp, CustomDebugStringConvertible {
     case zero
     case ascii(String)
