@@ -179,16 +179,16 @@ extension UnsafeBufferPointer<HLType_CCompat> {
     /// We can't look for the type in ctx, as the context might be still being initialized.
     func getCCompatType(type: any HLTypeProvider) throws -> UnsafePointer<HLType_CCompat>? {
         print("Looking for \(type) in \(self.count)")
-        guard let ix = self.firstIndex(where: {
-            print("-- comparing \(type) to \($0)")
-            let res = type.isEquivalent($0 as any HLTypeProvider)
+        
+        for ix in 0..<self.count {
+            let candidate = self.baseAddress!.advanced(by: ix)
+            print("-- comparing \(type) to \(candidate)")
+            let res = type.isEquivalent(candidate as any HLTypeProvider)
             print("   res: \(res)")
-            return res
-        }) else {
-            return nil
+            if res { return candidate }
         }
         
-        return self.baseAddress!.advanced(by: ix)
+        return nil
     }
 }
 

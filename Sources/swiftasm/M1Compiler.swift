@@ -1229,6 +1229,7 @@ class M1Compiler {
                 guard let globalTypePtr = ctx.hlcode?.pointee.globals.advanced(by: globalRef).pointee else {
                     fatalError("Can't resolve global \(globalRef)")
                 }
+                
                 let dstOffset = getRegStackOffset(regKinds, dst)
                 mem.append(
                     PseudoOp.mov(.x0, UnsafeRawPointer(globalTypePtr)),

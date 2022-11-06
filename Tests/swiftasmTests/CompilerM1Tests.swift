@@ -2278,12 +2278,13 @@ final class CompilerM1Tests: XCTestCase {
         args: HLTypeKinds,
         ops: [HLOpCode]
     ) -> any Compilable2 {
-        let funType = HLTypeFun(argsProvider: args, retProvider: retType)
+        let funType = Test_HLTypeFun(argsProvider: args, retProvider: retType)
         return PointerCompilable(
             findex: findex,
             ops: ops,
-            address: RefAddressHolder(),
+            address: TestDummyLinkableAddress(),    // dummy address, won't be used as CCompatJitContext replaces these
             regs: regs,
+            args: args,
             ret: retType,
             type: funType)
     }
@@ -2321,14 +2322,26 @@ final class CompilerM1Tests: XCTestCase {
         
         //
         let mapper = BufferMapper(ctx: ctx, buffer: mem)
-        _ = try mapper.getMemory()
+        let mappedMem = try mapper.getMemory()
+        
+        try mem.hexPrint()
+        
+        let callable = try ctx.getCallable(findex: 0)!.address.value
+        print("Calling \(callable)")
         
 //
-//        let entrypoint: (@convention(c) (Int8, Int8) -> Int8) = try mem.buildEntrypoint(0)
-//        XCTAssertEqual(4, entrypoint(1, 4))
-//        XCTAssertEqual(4, entrypoint(2, 2))
-//        XCTAssertEqual(36, entrypoint(4, 9))
-//        XCTAssertEqual(0, entrypoint(1, 0))
-//        XCTAssertEqual(-10, entrypoint(-5, 2))
+        let entrypoint = unsafeBitCast(callable, to: (@convention(c) (Int8, Int8) -> Int8).self)
+        XCTAssertEqual(4, entrypoint(1, 4))
+        XCTAssertEqual(4, entrypoint(2, 2))
+        XCTAssertEqual(36, entrypoint(4, 9))
+        XCTAssertEqual(0, entrypoint(1, 0))
+        XCTAssertEqual(-10, entrypoint(-5, 2))
+    }
+    
+    struct TestDummyLinkableAddress : LinkableAddress {
+        func setOffset(_ offset: swiftasm.ByteCount) { fatalError("Don't use the test dummy") }
+        var hasOffset: Bool { fatalError("Don't use the test dummy") }
+        var value: UnsafeMutableRawPointer { fatalError("Don't use the test dummy") }
+        func isEqual(_ to: any swiftasm.MemoryAddress) -> Bool { fatalError("Don't use the test dummy") }
     }
 }

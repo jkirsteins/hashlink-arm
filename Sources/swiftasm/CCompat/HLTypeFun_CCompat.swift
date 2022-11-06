@@ -43,6 +43,21 @@ struct HLTypeFun_CCompat : Equatable, Hashable {
 	var args: [HLType_CCompat] { self.argsPtr.getArray(count: Int32(nargs)) }
 }
 
+extension HLTypeFun_CCompat : HLTypeFunProvider {
+    var argsProvider: [any HLTypeProvider] {
+        Array(UnsafeBufferPointer(start: self.argsPtr, count: Int(nargs)))
+    }
+    
+    var retProvider: any HLTypeProvider {
+        self.retPtr
+    }
+    
+    var debugDescription: String {
+        "HLTypeFun_CCompat"
+    }
+}
+
+
 extension HLTypeFun_Depr {
     init(_ ccompat: HLTypeFun_CCompat) {
         self.args = ccompat.args.enumerated().map { ix, item in

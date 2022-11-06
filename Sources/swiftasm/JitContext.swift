@@ -9,6 +9,11 @@ class FunctionTracker {
         
         refs.insert(compilable.getFindex())
     }
+    
+    func referenced2(_ call: Callable2) {
+        refs.insert(call.findex)
+    }
+    
     func compiled(_ ix: RefFun) { comps.insert(ix) }
 }
 
@@ -17,13 +22,78 @@ protocol HLTypeFunProvider: CustomDebugStringConvertible, Equatable, Hashable  {
     var retProvider: any HLTypeProvider { get }
 }
 
-protocol HLTypeProvider: CustomDebugStringConvertible, Equatable, Hashable {
-    var kind: HLTypeKind { get }
-    var funProvider: (any HLTypeFunProvider)? { get }
+protocol StringProvider {
+    var stringValue: String { get }
 }
 
-struct HLTypeFun : HLTypeProvider, HLTypeFunProvider, Equatable, Hashable, CustomDebugStringConvertible {
-    static func == (lhs: HLTypeFun, rhs: HLTypeFun) -> Bool {
+extension UnsafePointer<CChar16> : StringProvider {
+    var stringValue: String { String._wrapUtf16(from: self) }
+}
+
+extension String : StringProvider {
+    var stringValue: String { self }
+}
+
+protocol HLObjFieldProvider {
+    var nameProvider: any StringProvider { get }
+    var typeProvider: any HLTypeProvider { get }
+}
+
+extension UnsafePointer<HLObjField_CCompat> : HLObjFieldProvider {
+    var nameProvider: any StringProvider { self.pointee.nameProvider }
+    var typeProvider: any HLTypeProvider { self.pointee.typeProvider }
+}
+
+extension HLObjField_CCompat : HLObjFieldProvider {
+    var nameProvider: any StringProvider { self.namePtr }
+    var typeProvider: any HLTypeProvider { self.tPtr }
+}
+
+protocol HLTypeObjProvider: CustomDebugStringConvertible, Equatable, Hashable  {
+    var fieldsProvider: [any HLObjFieldProvider] { get }
+}
+
+extension UnsafePointer<HLTypeObj_CCompat> : HLTypeObjProvider {
+    var fieldsProvider: [HLObjFieldProvider] {
+        Array(UnsafeBufferPointer(start: self.pointee.fieldsPtr, count: Int(self.pointee.nfields)))
+    }
+}
+
+extension HLTypeObjProvider {
+    /// Meant for use in v simple tests, doesn't need to cover every case.
+    func isEquivalent(_ other: any HLTypeObjProvider) -> Bool {
+        
+        return true
+    }
+}
+
+protocol HLTypeKindProvider : Equatable, Hashable, CustomDebugStringConvertible {
+    var kind: HLTypeKind { get }
+    var hlRegSize: ByteCount { get }
+}
+
+extension HLTypeKindProvider {
+    var debugDescription: String {
+        self.kind.debugDescription
+    }
+}
+ 
+extension HLTypeKind : HLTypeKindProvider {
+    var kind: HLTypeKind { self }
+}
+
+protocol HLTypeProvider: HLTypeKindProvider, CustomDebugStringConvertible, Equatable, Hashable {
+    var kind: HLTypeKind { get }
+    var funProvider: (any HLTypeFunProvider)? { get }
+    var objProvider: (any HLTypeObjProvider)? { get }
+    
+    var ccompatAddress: UnsafeRawPointer { get }
+}
+
+struct Test_HLTypeFun : HLTypeProvider, HLTypeFunProvider, Equatable, Hashable, CustomDebugStringConvertible {
+    var hlRegSize: ByteCount { self.kind.hlRegSize }
+    
+    static func == (lhs: Test_HLTypeFun, rhs: Test_HLTypeFun) -> Bool {
         fatalError("wip")
     }
     
@@ -32,11 +102,12 @@ struct HLTypeFun : HLTypeProvider, HLTypeFunProvider, Equatable, Hashable, Custo
     }
     
     var kind: HLTypeKind { .fun }
-     
+    var ccompatAddress: UnsafeRawPointer { fatalError("Don't use this outside of tests.") }
     var argsProvider: [any HLTypeProvider]
     var retProvider: any HLTypeProvider
     
     var funProvider: (any HLTypeFunProvider)? { self }
+    var objProvider: (any HLTypeObjProvider)? { nil }
     
     var debugDescription: String {
         "HLTypeFun(\(argsProvider.map { $0.debugDescription }.joined(separator: ", "))) -> (\(retProvider.debugDescription))"
@@ -86,115 +157,80 @@ protocol HLTypeListProvider {
     func getType(_ ix: Int) throws -> any HLTypeProvider
 }
 
-extension HLTypeKind : HLTypeProvider {
-    var kind: HLTypeKind { self }
-    
-    var funProvider: (any HLTypeFunProvider)? {
-        switch(self) {
-        case .fun:
-            fatalError("HLTypeKind can not be used as a function type")
-        default:
-            return nil
-        }
-        
-    }
-    
-    
+protocol Callable2 {
+    var findex: RefFun { get }
+    var address: any MemoryAddress { get }
+    var retProvider: any HLTypeProvider { get }
+    var argsProvider: [any HLTypeProvider] { get }
 }
 
-extension HLTypeFun_CCompat : HLTypeFunProvider {
-    var argsProvider: [any HLTypeProvider] {
-        Array(UnsafeBufferPointer(start: self.argsPtr, count: Int(nargs)))
-    }
+struct NativeCallable2 : Callable2 {
+    let native: UnsafePointer<HLNative_CCompat>
+    let address: any MemoryAddress
     
-    var retProvider: any HLTypeProvider {
-        self.retPtr
-    }
-    
-    var debugDescription: String {
-        "HLTypeFun_CCompat"
-    }
+    var findex: RefFun { RefFun(native.pointee.findex) }
+    var retProvider: any HLTypeProvider { native.pointee.typePtr.pointee.fun.pointee.retProvider }
+    var argsProvider: [any HLTypeProvider] { native.pointee.typePtr.pointee.fun.pointee.argsProvider }
 }
 
-extension HLType_CCompat : HLTypeProvider {
-    var funProvider: (any HLTypeFunProvider)? {
-        switch(self.kind) {
-        case .fun:
-            return self.fun
-        default:
-            return nil
-        }
-    }
+struct FunctionCallable2 : Callable2 {
+    let function: UnsafePointer<HLFunction_CCompat>
+    let address: any MemoryAddress
+    
+    var findex: RefFun { RefFun(function.pointee.findex) }
+    var retProvider: any HLTypeProvider { function.pointee.typePtr!.pointee.fun.pointee.retProvider }
+    var argsProvider: [any HLTypeProvider] { function.pointee.typePtr!.pointee.fun.pointee.argsProvider }
 }
- 
+
 protocol Compilable2 {
     var findex: RefFun { get }
     var ops: [HLOpCode] { get }
-    var address: any AddressHolder { get }
+    var address: any LinkableAddress { get }
     var regs: [any HLTypeProvider] { get }
+    var args: [any HLTypeProvider] { get }
     var type: any HLTypeProvider { get }
 }
 
-protocol AddressHolder {
-    var address: UnsafeRawPointer? { get }
-    func setAddress(_ addr: UnsafeRawPointer)
+protocol LinkableAddress : MemoryAddress {
+    func setOffset(_ offset: ByteCount)
+    var hasOffset: Bool { get }
 }
 
-// Usable for tests
-class RefAddressHolder : AddressHolder {
-    var address: UnsafeRawPointer? = nil
+/// Like `FullyDeferredRelativeAddress` that also updates the address in CCompat `function_ptrs`.
+struct CCompatUpdatingLinkableAddress : LinkableAddress {
+    var hasOffset: Bool { self.wrapped.hasOffset }
     
-    func setAddress(_ addr: UnsafeRawPointer) {
-        guard address == nil else { fatalError("Can't set address twice") }
-        self.address = addr
+    var value: UnsafeMutableRawPointer { self.wrapped.value }
+    
+    func isEqual(_ to: any MemoryAddress) -> Bool {
+        self.wrapped.isEqual(to)
     }
-}
-
-class OffsetAddressHolder : AddressHolder {
-    let jitBase: JitBase
-    let ccompat: UnsafePointer<UnsafeRawPointer?>
-    var offset: ByteCount?
     
-    init(jitBase: JitBase, ccompat: UnsafePointer<UnsafeRawPointer?>) {
-        self.jitBase = jitBase
+    let wrapped: FullyDeferredRelativeAddress
+    let ccompat: UnsafeMutablePointer<UnsafeRawPointer?>
+ 
+    init(jitBase: JitBase, ccompat: UnsafeMutablePointer<UnsafeRawPointer?>) {
+        self.wrapped = FullyDeferredRelativeAddress(jitBase: jitBase)
         self.ccompat = ccompat
     }
     
-    var address: UnsafeRawPointer? {
-        guard let base = jitBase.wrappedValue, let offset = offset else { return nil }
-        return .init(base.advanced(by: Int(offset)))
+    func setOffset(_ offset: ByteCount) {
+        self.wrapped.setOffset(offset)
     }
     
-    func setAddress(_ addr: UnsafeRawPointer) {
-        fatalError("Can't set address for OffsetAddressHolder. Set it via offset, and it'll be combined with jitBase.")
-    }
     
-    func setRelativeOffset(_ offset: ByteCount) {
-        guard address == nil else { fatalError("Can't set offset twice") }
-        self.offset = offset
-    }
-}
-
-
-// Updates the address in CCompat
-extension UnsafePointer<UnsafeRawPointer?> : AddressHolder {
-    var address: UnsafeRawPointer? { self.pointee }
-    
-    func setAddress(_ addr: UnsafeRawPointer) {
-        let mutating = UnsafeMutablePointer(mutating: self)
-        mutating.pointee = addr
-    }
 }
 
 struct PointerCompilable : Compilable2 {
     
     let findex: RefFun
     let ops: [HLOpCode]
-    let address: any AddressHolder
+    let address: any LinkableAddress
     
     let regs: [any HLTypeProvider]
-    var ret: any HLTypeProvider
     
+    var args: [any HLTypeProvider]
+    var ret: any HLTypeProvider
     var type: any HLTypeProvider
     
 //
@@ -205,9 +241,26 @@ struct PointerCompilable : Compilable2 {
 //    var args: [Resolvable<HLType>]
 }
 
-extension UnsafePointer<HLType_CCompat> : HLTypeProvider {
+extension UnsafePointer<HLType_CCompat> : HLTypeProvider, HLTypeKindProvider {
+    var ccompatAddress: UnsafeRawPointer { .init(self) }
     var kind: HLTypeKind { self.pointee.kind }
-    var funProvider: (any HLTypeFunProvider)? { self.pointee.funProvider }
+    var hlRegSize: ByteCount { kind.hlRegSize }
+    var funProvider: (any HLTypeFunProvider)? {
+        switch(self.kind) {
+        case .fun:
+            return self.pointee.fun
+        default:
+            return nil
+        }
+    }
+    var objProvider: (any HLTypeObjProvider)? {
+        switch(self.kind) {
+        case .obj:
+            return self.pointee.obj
+        default:
+            return nil
+        }
+    }
 }
 
 extension UnsafePointer<HLTypeFun_CCompat> : HLTypeFunProvider {
@@ -235,21 +288,58 @@ class AnyHLTypeProvider : Equatable, Hashable, CustomDebugStringConvertible, HLT
         hasher.combine(_funProvider)
     }
     
-    let kind: HLTypeKind
-    let debugDescription: String
-    let _funProvider: AnyHLTypeFunProvider?
-    
+    var kind: HLTypeKind { _kind() }
+    var hlRegSize: ByteCount { _hlRegSize() }
+    var debugDescription: String { _debugDescription() }
+    var ccompatAddress: UnsafeRawPointer { _ccompatAddress() }
     var funProvider: (any HLTypeFunProvider)? { _funProvider }
+    var objProvider: (any HLTypeObjProvider)? { _objProvider }
+    
+    let _ccompatAddress: ()->UnsafeRawPointer
+    let _kind: ()->HLTypeKind
+    let _hlRegSize: ()->ByteCount
+    let _debugDescription: ()->String
+    let _funProvider: AnyHLTypeFunProvider?
+    let _objProvider: AnyHLTypeObjProvider?
     
     init(_ wrapped: any HLTypeProvider) {
-        self.kind = wrapped.kind
-        self.debugDescription = wrapped.debugDescription
+        self._kind = { wrapped.kind }
+        self._hlRegSize = { wrapped.hlRegSize }
+        self._debugDescription = { wrapped.debugDescription }
+        self._ccompatAddress = { wrapped.ccompatAddress }
         
         if let fp = wrapped.funProvider {
             self._funProvider = AnyHLTypeFunProvider(fp)
         } else {
             self._funProvider = nil
         }
+        
+        if let op = wrapped.objProvider {
+            self._objProvider = AnyHLTypeObjProvider(op)
+        } else {
+            self._objProvider = nil
+        }
+    }
+}
+
+class AnyHLTypeObjProvider : Equatable, Hashable, CustomDebugStringConvertible, HLTypeObjProvider {
+    var debugDescription: String { _debugDescription() }
+    var fieldsProvider: [any HLObjFieldProvider] { _fieldsProvider() }
+    
+    var _fieldsProvider: ()->[any HLObjFieldProvider]
+    let _debugDescription: ()->String
+
+    static func == (lhs: AnyHLTypeObjProvider, rhs: AnyHLTypeObjProvider) -> Bool {
+        lhs.isEquivalent(rhs)
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(1)
+    }
+    
+    init(_ wrapped: any HLTypeObjProvider) {
+        self._debugDescription = { wrapped.debugDescription }
+        self._fieldsProvider = { wrapped.fieldsProvider }
     }
 }
 
@@ -326,25 +416,40 @@ class CCompatJitContext : JitContext2 {
     let mainContext: UnsafeMutablePointer<MainContext_CCompat>
     let funcTracker = FunctionTracker()
     
+    // function index (not findex) to linkable addr
+    let linkableAddresses: Dictionary<Int, any LinkableAddress>
+    
     /// The writer is only needed if we are initializing the memory to match the CCompat layout
     /// (this is meant for tests. The aim is not to have a fully fledged, and compatible serializer)
     let _writer: CCompatWriter_MainContext?
     
     /// This will not initialize the memory. Use this with `Bootstrap.start`.
-    init() {
-        self.jitBase = JitBase(wrappedValue: nil)
+    init(_ code: UnsafePointer<HLCode_CCompat>) {
+        let jitBase = JitBase(wrappedValue: nil)
+        
+        self.jitBase = jitBase
         self.mainContext = .allocate(capacity: 1)
         self.mainContext.initialize(to: MainContext_CCompat())
         self._writer = nil
+        
+        
+        self.linkableAddresses = .init((0..<code.pointee.nfunctions).map { realIx in
+            (Int(realIx), FullyDeferredRelativeAddress(jitBase: jitBase))
+        }, uniquingKeysWith: { _, _ in fatalError("No duplicate keys allowed") })
     }
-    
+     
     /// This will initialize the memory. Use this for tests.
     init(ctx: any JitContext2) throws {
         let writer = try CCompatWriter_MainContext(ctx, file: #file)
         
-        self.jitBase = JitBase(wrappedValue: nil)
+        let jitBase = JitBase(wrappedValue: nil)
+        self.jitBase = jitBase
         self.mainContext = .allocate(capacity: 1)
         self._writer = writer
+        
+        self.linkableAddresses = .init((0..<ctx.nfunctions).map { realIx in
+            (Int(realIx), FullyDeferredRelativeAddress(jitBase: jitBase))
+        }, uniquingKeysWith: { _, _ in fatalError("No duplicate keys allowed") })
         
         try writer.initialize(target: self.mainContext)
     }
@@ -403,6 +508,72 @@ class CCompatJitContext : JitContext2 {
         }
     }
     
+    func requireInt(_ ix: Ref) throws -> Int32 {
+        guard let result = try getInt(ix) else {
+            throw GlobalError.invalidOperation("Required int (ix==\(ix)) not found.")
+        }
+        return result
+    }
+    
+    func getInt(_ ix: Ref) throws -> Int32? {
+        try withModule { m in
+            m.pointee.code.pointee.getInt(ix)
+        }
+    }
+    
+    func requireGlobal(_ globalRef: Ref) throws -> UnsafePointer<HLType_CCompat> {
+        guard let result = try getGlobal(globalRef) else {
+            throw GlobalError.invalidOperation("Required global (ix==\(globalRef)) not found.")
+        }
+        return result
+    }
+    
+    func getGlobal(_ globalRef: Ref) throws -> UnsafePointer<HLType_CCompat>? {
+        try withModule { m in
+            m.pointee.code.pointee.getGlobal(globalRef)
+        }
+    }
+    
+    func requireCallable(findex fix: RefFun) throws -> (any Callable2) {
+        guard let result = try getCallable(findex: fix) else {
+            throw GlobalError.invalidOperation("Required callable (fix==\(fix)) not found.")
+        }
+        return result
+    }
+    
+    func getCallable(findex fix: RefFun) throws -> (any Callable2)? {
+        try withModule {
+            (m)->(any Callable2)? in
+            
+            let isNative = fix >= m.pointee.code.pointee.nfunctions
+            
+            let realIx = try getFunctionTableIndex(findex: fix)
+            print("Real ix: \(realIx)")
+            
+            if isNative {
+                guard let nat = self.mainContext.pointee.code?.pointee.getNative(Int(realIx)) else {
+                    return nil
+                }
+                guard let addr = self.mainContext.pointee.m?.pointee.functions_ptrs.advanced(by: fix).pointee else {
+                    fatalError("Native (fix==\(fix)) not resolved.")
+                }
+                
+                return NativeCallable2(native: nat, address: addr)
+            } else {
+                guard let fun = self.mainContext.pointee.code?.pointee.getFunction(Int(realIx)) else {
+                    return nil
+                }
+                
+                guard let addr = self.linkableAddresses[Int(realIx)] else {
+                    fatalError("Function (fix==\(fix)) has no address.")
+                }
+                
+                return FunctionCallable2(function: fun, address: addr)
+            }
+        }
+        
+    }
+    
     func getCompilable(findex fix: RefFun) throws -> (any Compilable2)? {
         try withModule { (m)->(PointerCompilable?) in
             let addr = m.pointee.functions_ptrs.advanced(by: fix)
@@ -435,11 +606,16 @@ class CCompatJitContext : JitContext2 {
             
             let regs = UnsafeBufferPointer(start: fun.pointee.regsPtr, count: Int(fun.pointee.nregs))
             
+            guard let laddr = linkableAddresses[Int(realIx)] else {
+                fatalError("Linkable addresses not available (real index \(realIx))")
+            }
+            
             return PointerCompilable(
                 findex: fix,
                 ops: fun.pointee.ops,
-                address: addr,
+                address: laddr,
                 regs: Array(regs),
+                args: fun.pointee.cType.fun.argsProvider,
                 ret: funData.pointee.retPtr,
                 type: funTypePtr)
         }

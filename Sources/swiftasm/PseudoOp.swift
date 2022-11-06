@@ -17,6 +17,7 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
     // will be ignored when emitting
     case debugMarker(String)
     case debugPrint(CompilerUtilities, String)
+    case debugPrint2(CompilerUtilities2, String)
     
     // Generate movz+movk instructions for moving a 64-bit value
     // into a register over multiple steps
@@ -30,7 +31,7 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
             return Self._strVreg(reg, off, s).size
         case .deferred(let size, _):
             return size
-        case .debugPrint:
+        case .debugPrint, .debugPrint2:
             return ByteCount(try! self.emit().count)
         case .debugMarker:
             return 0
@@ -45,7 +46,7 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
         switch(self) {
         case .deferred(_, let c):
             return "deferred:\(try! c().debugDescription)"
-        case .debugPrint(_, let message):
+        case .debugPrint(_, let message), .debugPrint2(_, let message):
             return message
         case .debugMarker(let message):
             return message
@@ -96,6 +97,12 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
         case .debugPrint(let comp, let message):
             // hacky way to get the output
             let b = OpBuilder(ctx: JitContext(storage: ModuleStorage()))
+            comp.appendDebugPrintAligned4(message, builder: b)
+            let res = try b.ops.flatMap { try $0.emit() }
+            return res
+        case .debugPrint2(let comp, let message):
+            // hacky way to get the output
+            let b = CpuOpBuffer()
             comp.appendDebugPrintAligned4(message, builder: b)
             let res = try b.ops.flatMap { try $0.emit() }
             return res
