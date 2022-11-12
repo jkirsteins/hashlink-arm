@@ -5,6 +5,8 @@ class BufferMapper {
     let ctx: CCompatJitContext
     let buffer: CpuOpBuffer
     
+    static let logger = LoggerFactory.create(BufferMapper.self)
+    
     init(ctx: CCompatJitContext, buffer: CpuOpBuffer) {
         self.ctx = ctx
         self.buffer = buffer
@@ -21,7 +23,7 @@ class BufferMapper {
             throw GlobalError.invalidOperation("Can't free unallocated memory")
         }
         
-        free(mem)
+        munmap(mem, Int(buffer.byteSize))
     }
     
     func emitMachineCode() throws -> [UInt8] {
@@ -37,16 +39,28 @@ class BufferMapper {
             return mapped!
         }
         
-        let mc = try emitMachineCode()
-
+        let missing = self.ctx.funcTracker.refs.subtracting(self.ctx.funcTracker.comps)
+        guard missing.isEmpty else {
+            let message = "These functions are referenced but not compiled: \(missing)"
+            Self.logger.debug("\(message)")
+            throw GlobalError.invalidOperation(message)
+        }
+        
+        
+        // we need to map the memory before emitting instructions
+        // as the instructions might refer to absolute memory addresses
         self.ctx.jitBase.wrappedValue = mmap(
             nil,
-            mc.count,
+            Int(buffer.byteSize),
             PROT_WRITE | PROT_EXEC,
             MAP_ANONYMOUS | MAP_PRIVATE | MAP_JIT,
             -1,
             0
         )
+        
+        // this must happen after setting jitBase
+        let mc = try emitMachineCode()
+        assert(buffer.byteSize == Int64(mc.count))
         
         guard let mapped = mapped else {
             throw GlobalError.unexpected("mmap returned nil: \(errno)")

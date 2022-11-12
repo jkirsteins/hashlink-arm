@@ -34,6 +34,8 @@ fileprivate func compileAndLink(ctx: CCompatJitContext, _ fix: Int..., callback:
     let mappedMem = try mapper.getMemory()
     
     try callback(mappedMem)
+    
+//    try mapper.freeMemory()
 }
 
 final class CompilerM1v2Tests: CCompatTestCase {
@@ -554,7 +556,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _robj__bytes_i32(obj: any HLTypeProvider, ops: [HLOpCode], _ callback: ((UnsafeRawPointer?, Int32)->UnsafeRawPointer?)->()) throws {
+    func _robj__bytes_i32(obj: any HLTypeProvider, ops: [HLOpCode], _ callback: @escaping ((UnsafeRawPointer?, Int32)->UnsafeRawPointer?)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: obj,
@@ -573,7 +575,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ri32__i32_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .i32], _ callback: ((Int32, Int32)->Int32)->()) throws {
+    func _ri32__i32_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .i32], _ callback: @escaping ((Int32, Int32)->Int32)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -592,7 +594,30 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ri64__i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32], _ callback: ((Int32)->Int64)->()) throws {
+    func _rdyn__i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .dyn], _ callback: @escaping ((Int32)->UnsafePointer<vdynamic>)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.dyn,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i32],
+                ops: ops)
+        ])
+
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int32) -> UnsafeRawPointer)) in
+                let res = { (arg: Int32)->UnsafePointer<vdynamic> in
+                    let p = ep(arg)
+                    return .init(OpaquePointer(p))
+                }
+                callback(res)
+            }
+        }
+    }
+    
+    func _ri64__i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32], _ callback: @escaping ((Int32)->Int64)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i64,
@@ -611,7 +636,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ri32__i64(ops: [HLOpCode], regs: [HLTypeKind] = [.i32], _ callback: ((Int64)->Int32)->()) throws {
+    func _ri32__i64(ops: [HLOpCode], regs: [HLTypeKind] = [.i32], _ callback: @escaping ((Int64)->Int32)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -630,7 +655,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ru8__u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8], _ callback: ((UInt8)->UInt8)->()) throws {
+    func _ru8__u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8], _ callback: @escaping ((UInt8)->UInt8)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.u8,
@@ -649,7 +674,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ru8__u8_u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u8], _ callback: ((UInt8, UInt8)->UInt8)->()) throws {
+    func _ru8__u8_u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u8], _ callback: @escaping ((UInt8, UInt8)->UInt8)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.u8,
@@ -668,7 +693,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ri8__i8_i8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u8], _ callback: ((Int8, Int8)->Int8)->()) throws {
+    func _ri8__i8_i8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u8], _ callback: @escaping ((Int8, Int8)->Int8)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.u8,
@@ -687,7 +712,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _dyn__dyn(ops: [HLOpCode], _ callback: ((UnsafeRawPointer?)->UnsafeRawPointer?)->()) throws {
+    func _dyn__dyn(ops: [HLOpCode], _ callback: @escaping ((UnsafeRawPointer?)->UnsafeRawPointer?)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.dyn,
@@ -968,6 +993,61 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
+    
+    func testCompile__OCallN__noStackArgs() throws {
+        typealias _JitFunc = (@convention(c) (UInt8, UInt8) -> UInt32)
+        let swiftFunc: _JitFunc = { (_ a: UInt8, _ b: UInt8) in
+
+            print("Got a: \(a)")
+            print("Got b: \(b)")
+
+            var hash: UInt32 = 17
+            hash = hash &* 37 &+ UInt32(a);
+            hash = hash &* 37 &+ UInt32(b);
+
+            let c = String(hash, radix: 2).leftPadding(toLength: 16, withPad: "0")
+            print("0b\(c.chunked(into: 4))")
+            return hash
+        }
+        let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
+
+        let ctx = try prepareContext(
+            compilables: [
+                prepareFunction(
+                    retType: HLTypeKind.i32,
+                    findex: 0,
+                    regs: [HLTypeKind.u8, HLTypeKind.u8, HLTypeKind.i32],
+                    args: [HLTypeKind.u8, HLTypeKind.u8],
+                    ops: [
+                        // NOTE: sending registers to diff numbered args
+                        .OCallN(dst: 2, fun: 1, args: [1, 0]),
+                        .ORet(ret: 2),
+                    ])
+            ],
+            natives: [
+                TestNative2(
+                    findex: 1,
+                    libProvider: "?",
+                    nameProvider: "swiftFunc",
+                    typeProvider: Test_HLTypeFun(
+                        argsProvider: [HLTypeKind.u8, HLTypeKind.u8],
+                        retProvider: HLTypeKind.i32),
+                    address: swiftFuncPtr
+                )
+            ]
+        )
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UInt8, UInt8) -> UInt32)) in
+                
+                XCTAssertEqual(
+                    0b0101_1011_0011_1000,
+                    entrypoint(5, 2))
+            }
+        }
+    }
 
     func testCompile__OAdd() throws {
         
@@ -1068,7 +1148,8 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 mappedMem in
                 
                 XCTAssertEqual(
-                    6, try mappedMem.calljit_u8(ctx: ctx, fix: 0, u8_0: 6),
+                    6,
+                    try mappedMem.calljit_u8(ctx: ctx, fix: 0, u8_0: 6),
                     "failed for \(sutOp.id)")
             }
         }
@@ -1149,9 +1230,9 @@ final class CompilerM1v2Tests: CCompatTestCase {
             try compileAndLink(ctx: ctx, 0) {
                 mappedMem in
                 
-                try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) () -> ())) in
-                    
+                try mappedMem.jitVoid(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) () -> ())) in
                     entrypoint()
+                    print("Got entrypoint \(entrypoint)")
                 }
             }
         }
@@ -1741,6 +1822,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(36, entrypoint(4, 9))
             XCTAssertEqual(0, entrypoint(1, 0))
             XCTAssertEqual(-10, entrypoint(-5, 2))
+        }
+    }
+    
+    func testCompile__OToDyn__i32_to_nullI32() throws {
+        try _rdyn__i32(ops: [
+            .OToDyn(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) { entrypoint in
+            
+            let dyn = entrypoint(1243)
+            XCTAssertEqual(dyn.pointee.i, 1243)
         }
     }
 }

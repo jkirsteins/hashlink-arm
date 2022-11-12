@@ -11,8 +11,11 @@ class FunctionTracker {
     }
     
     func referenced2(_ call: Callable2) {
+        guard type(of: call) == FunctionCallable2.self else { return }
         refs.insert(call.findex)
     }
     
-    func compiled(_ ix: RefFun) { comps.insert(ix) }
+    func compiled(_ ix: RefFun) {
+        comps.insert(ix)
+    }
 }

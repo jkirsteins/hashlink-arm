@@ -10,6 +10,30 @@ protocol CompilerUtilities2 {
 
 typealias Registers2 = [any HLTypeProvider]
 
+let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/UnsafeRawPointer, /*dstVal*/Int64, /*srcVal*/Int64)->(UnsafeRawPointer)) = {
+    (dstType, srcType, dst, src) in
+    
+    let dstTypeB = dstType.bindMemory(to: HLType_CCompat.self, capacity: 1)
+    let srcTypeB = srcType.bindMemory(to: HLType_CCompat.self, capacity: 1)
+    
+    let res = LibHl.hl_alloc_dynamic(dstTypeB)
+    
+    var mutatingRes: UnsafeMutableRawPointer = .init(mutating: res)
+    
+    print("Setting to source: \(src)")
+    
+    switch(srcTypeB.pointee.kind) {
+    case .i32:
+        let srcI32 = Int32(truncatingIfNeeded: src)
+        mutatingRes.advanced(by: 8).bindMemory(to: Int32.self, capacity: 1).pointee = srcI32
+        assert(res.pointee.i == srcI32)
+    default:
+        fatalError("Casting ToDyn from \(srcTypeB.pointee.kind) not implemented")
+    }
+    
+    return .init(res)
+}
+
 // x0 through x7
 private let ARG_REGISTER_COUNT = 8
 extension M1Compiler2 {
@@ -712,6 +736,7 @@ class M1Compiler2 {
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
             case .OCallN(let dst, let fun, let args):
+                
                 let callTarget = try ctx.requireCallable(findex: fun)
                 ctx.funcTracker.referenced2(callTarget)
 
@@ -785,6 +810,7 @@ class M1Compiler2 {
                     PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize),
                     PseudoOp.debugPrint2(self, "Got back and put result at offset \(dstStackOffset + Int64(additionalSize))")
                 )
+                
                 if additionalSize > 0 {
                     mem.append(
                         PseudoOp.debugPrint2(self, "Free \(additionalSize) bytes (OCallN)"),
@@ -1472,6 +1498,19 @@ class M1Compiler2 {
                 default:
                     fatalError("Don't know how to cast \(srcKind) to \(dstKind)")
                 }
+            case .OToDyn(let dst, let src):
+                let addr = unsafeBitCast(OToDyn_impl, to: UnsafeRawPointer.self)
+                let dstType = requireType(reg: dst, regs: regs)
+                let srcType = requireType(reg: src, regs: regs)
+                mem.append(
+                    PseudoOp.mov(X.x10, addr),
+                    PseudoOp.mov(X.x0, dstType.ccompatAddress),
+                    PseudoOp.mov(X.x1, srcType.ccompatAddress)
+                )
+                appendLoad(reg: .x2, from: dst, kinds: regs, mem: mem)
+                appendLoad(reg: .x3, from: src, kinds: regs, mem: mem)
+                mem.append(M1Op.blr(.x10))
+                appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }
