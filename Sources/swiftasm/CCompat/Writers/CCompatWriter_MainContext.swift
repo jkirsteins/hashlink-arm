@@ -8,6 +8,9 @@ class CCompatWriter_MainContext {
     
     let logger = LoggerFactory.create(CCompatWriter_MainContext.self)
     
+    /// Use this writer to initialize CCompat memory from an existing context.
+    ///
+    /// Use this for tests, but not for loading a proper module from disk.
     init(_ ctx: any JitContext2, file: String) throws {
         self.ctx = ctx
         self.file = file

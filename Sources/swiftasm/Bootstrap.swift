@@ -4,6 +4,42 @@ actor Bootstrap
     private(set) static var _file: ContiguousArray<CChar> = []
     private(set) static var canStart = true
     
+    static func start2(_ file: String, args: [String]) throws -> CCompatJitContext {
+        guard canStart else {
+            fatalError("Can't call start twice")
+        }
+        canStart = false
+        
+        LibHl.hl_global_init()
+        LibHl.hl_sys_init(args: args, file: file)
+        
+        let ctx = try CCompatJitContext(file)
+        LibHl.hl_register_thread(ctx: ctx.mainContext)
+        
+        return ctx
+    }
+    
+    static func stop(ctx: CCompatJitContext) {
+        guard !canStart else {
+            fatalError("Can't call stop when not started")
+        }
+        guard let mToRemove = ctx.mainContext.pointee.m else {
+            fatalError("Can't call stop when no module is allocated")
+        }
+        canStart = true
+        
+        ctx.mainContext.pointee.m = nil
+        LibHl._hl_module_free(mToRemove)
+        
+        let allocPtr: UnsafeRawPointer = UnsafeRawPointer(ctx.mainContext.pointee.code!).advanced(
+            by: 161 // offset to alloc
+        )
+        
+        // TODO: LibHl._hl_free(allocPtr)
+        LibHl.hl_unregister_thread()
+        LibHl.hl_global_free()
+    }
+    
     static func start(_ ctx: inout MainContext_CCompat, _ file: String, args: [String]) {
         guard canStart else {
             fatalError("Can't call start twice")

@@ -11,8 +11,10 @@ class CCompatJitContext : JitContext2 {
     /// (this is meant for tests. The aim is not to have a fully fledged, and compatible serializer)
     let _writer: CCompatWriter_MainContext?
     
-    /// This will not initialize the memory. Use this with `Bootstrap.start`.
-    init(_ code: UnsafePointer<HLCode_CCompat>) {
+    let filePtr: UnsafeMutableBufferPointer<CChar>?
+    let libhlAllocatedCode: UnsafePointer<HLCode_CCompat>?
+    
+    init(_ file: String) throws {
         let jitBase = JitBase(wrappedValue: nil)
         
         self.jitBase = jitBase
@@ -20,6 +22,52 @@ class CCompatJitContext : JitContext2 {
         self.mainContext.initialize(to: MainContext_CCompat())
         self._writer = nil
         
+        // file
+        let fileChars = file.utf8CString
+        self.filePtr = .allocate(capacity: fileChars.count)
+        _ = self.filePtr!.initialize(from: fileChars)
+        
+        assert(self.mainContext.pointee.file == nil)
+        self.mainContext.pointee.file = .init(filePtr!.baseAddress)
+        
+        // load code
+        let code = UnsafePointer(LibHl.load_code(file))
+        assert(code.pointee.alloc != 0)
+        assert(self.mainContext.pointee.code == nil)
+        self.mainContext.pointee.code = code
+        self.libhlAllocatedCode = code
+        
+        // set up module
+        let module = LibHl.hl_module_alloc(code)
+        self.mainContext.pointee.m = module
+        
+        // init module
+        let res = LibHl.hl_module_init(module, false)
+        guard res == 1 else {
+            throw GlobalError.unexpected("Failed to init module (status \(res))")
+        }
+        
+        self.linkableAddresses = .init((0..<code.pointee.nfunctions).map { realIx in
+            (Int(realIx), FullyDeferredRelativeAddress(jitBase: jitBase))
+        }, uniquingKeysWith: { _, _ in fatalError("No duplicate keys allowed") })
+        
+        // sanity checks
+        assert(module.pointee.code == code)
+        assert(self.mainContext.pointee.file != nil)
+        assert(self.mainContext.pointee.m != nil)
+        assert(self.mainContext.pointee.m?.pointee.code == self.mainContext.pointee.code)
+    }
+    
+    /// This will not initialize the memory. Use this with `Bootstrap.start`.
+    init(_ code: UnsafePointer<HLCode_CCompat>) {
+        let jitBase = JitBase(wrappedValue: nil)
+        
+        self.jitBase = jitBase
+        self.libhlAllocatedCode = nil
+        self.mainContext = .allocate(capacity: 1)
+        self.mainContext.initialize(to: MainContext_CCompat())
+        self._writer = nil
+        self.filePtr = nil
         
         self.linkableAddresses = .init((0..<code.pointee.nfunctions).map { realIx in
             (Int(realIx), FullyDeferredRelativeAddress(jitBase: jitBase))
@@ -30,6 +78,8 @@ class CCompatJitContext : JitContext2 {
     init(ctx: any JitContext2) throws {
         let writer = try CCompatWriter_MainContext(ctx, file: #file)
         
+        self.filePtr = nil
+        self.libhlAllocatedCode = nil
         let jitBase = JitBase(wrappedValue: nil)
         self.jitBase = jitBase
         let mainContext: UnsafeMutablePointer<MainContext_CCompat> = .allocate(capacity: 1)
@@ -54,6 +104,11 @@ class CCompatJitContext : JitContext2 {
     deinit {
         mainContext.deinitialize(count: 1)
         mainContext.deallocate()
+        filePtr?.deallocate()
+        
+        if let libhlAllocatedCode = self.libhlAllocatedCode {
+            LibHl.hl_code_free(libhlAllocatedCode)
+        }
     }
     
     private func withModule<T>(_ callback: (UnsafePointer<HLModule_CCompat>)throws->T) throws -> T {
@@ -190,10 +245,10 @@ class CCompatJitContext : JitContext2 {
         try withModule {
             (m)->(any Callable2)? in
             
-            let isNative = fix >= m.pointee.code.pointee.nfunctions
-            
             let realIx = try getFunctionTableIndex(findex: fix)
             print("Real ix: \(realIx)")
+            
+            let isNative = realIx >= m.pointee.code.pointee.nfunctions
             
             if isNative {
                 let nativeIndex = try self.getNativeIndex(findex: fix)

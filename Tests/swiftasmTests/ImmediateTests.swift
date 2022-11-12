@@ -3,6 +3,19 @@ import XCTest
 @testable import swiftasm
 
 final class ImmediateTests: XCTestCase {
+    // -520 can't fit in 7 bits even when divided by 8 (for stp 64-bit)
+    func testVariableImmediate__regression1() throws {
+        XCTAssertThrowsError(
+            try VariableImmediate(-520, bits: 7, divisor: 8)
+        )
+    }
+    
+    // 0 is border case that shouldn't ever raise an exception
+    // about fitting
+    func testVariableImmediate__regression2() throws {
+        _ = try VariableImmediate(0, bits: 19, divisor: 1)
+    }
+    
     func testImmediate19() throws {
         let x1: Immediate19 = -4
         XCTAssertEqual(x1.immediate, 0b1111111111111111100)
@@ -38,26 +51,4 @@ final class ImmediateTests: XCTestCase {
         XCTAssertFalse(x.flippedSign.isNegative) 
         XCTAssertFalse(x.isPositive) 
     }
-
-    // func testAbsoluteAddressImmediate() throws {
-    //     var test = 1
-    //     var ptr = UnsafeMutableRawPointer(mutating: &test)
-    //     let x = AbsoluteAddressImmediate(ptr)
-
-    //     XCTAssertEqual(x.immediate, Int64(Int(bitPattern: ptr)))
-    // }
-
-    // func testDeferredAbsoluteAddressImmediate() throws {
-    //     var test = 1
-    //     var ptr = UnsafeMutableRawPointer(mutating: &test)
-    //     let sut: DeferredImmediate<AbsoluteAddressImmediate> = DeferredImmediate()
-
-    //     XCTAssertThrowsError(try sut.get())
-
-    //     let x = AbsoluteAddressImmediate(ptr)
-    //     sut.finalize(x)
-
-    //     XCTAssertEqual(try sut.get(), x)
-    //     XCTAssertEqual(sut.immediate, x.immediate)
-    // }
 }

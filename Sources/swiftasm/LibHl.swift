@@ -108,6 +108,9 @@ struct LibHl {
             Self._hl_register_thread(ctxPtr)
         }
     }
+    static func hl_register_thread(ctx ctxPtr: UnsafePointer<MainContext_CCompat>) {
+        Self._hl_register_thread(ctxPtr)
+    }
     
     // hl_module *hl_module_alloc( hl_code *code );
     static let _hl_module_alloc: (@convention(c) (UnsafeRawPointer) -> UnsafeRawPointer) = { load("hl_module_alloc", from: .bin) }()
@@ -150,4 +153,13 @@ struct LibHl {
     
     // HL_PRIM int hl_hash_gen( const uchar *name, bool cache_name ) {
     static let hl_hash_gen: (@convention(c) (UnsafeRawPointer, Bool) -> Int32) = { load("hl_hash_gen") }()
+    
+    // hl_module_free( hl_module *m );
+    static let _hl_module_free: (@convention(c) (UnsafeRawPointer) -> ()) = { load("hl_module_free", from: .bin) }()
+    
+    // void hl_free( hl_alloc *a ) {
+    static let _hl_free: (@convention(c) (UnsafeRawPointer) -> ()) = { load("hl_free") }()
+    
+    // HL_API void hl_unregister_thread() {
+    static let hl_unregister_thread: (@convention(c) () -> ()) = { load("hl_unregister_thread") }()
 }

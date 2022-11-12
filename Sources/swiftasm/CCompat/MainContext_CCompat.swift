@@ -13,4 +13,7 @@ struct MainContext_CCompat : Equatable, Hashable {
     var ret: UnsafeMutableRawPointer? = nil
     var file: UnsafePointer<CChar>? = nil
     var file_time: Int32 = 0
+    
+    // to align with the same size as the C struct
+    var __padding: Int32 = 0
 }

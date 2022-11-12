@@ -647,7 +647,7 @@ final class EmitterM1Tests: XCTestCase {
         ) { error in
             XCTAssertEqual(
                 error as! EmitterM1Error,
-                EmitterM1Error.invalidOffset("Offset immediate -520 must fit in 7 bits")
+                EmitterM1Error.invalidValue("Immediate -520 must fit in 7 bits")
             )
         }
         

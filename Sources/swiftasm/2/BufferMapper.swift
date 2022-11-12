@@ -16,7 +16,15 @@ class BufferMapper {
         try ensureMemory()
     }
     
-    fileprivate func emitMachineCode() throws -> [UInt8] {
+    func freeMemory() throws {
+        guard let mem = mapped else {
+            throw GlobalError.invalidOperation("Can't free unallocated memory")
+        }
+        
+        free(mem)
+    }
+    
+    func emitMachineCode() throws -> [UInt8] {
         return try buffer.ops.flatMap { try $0.emit() }
     }
     

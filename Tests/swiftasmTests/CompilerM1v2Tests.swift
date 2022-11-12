@@ -38,6 +38,8 @@ fileprivate func compileAndLink(ctx: CCompatJitContext, _ fix: Int..., callback:
 
 final class CompilerM1v2Tests: CCompatTestCase {
     
+    func sut(ctx: CCompatJitContext, strip: Bool = true) -> M1Compiler2 { M1Compiler2(ctx: ctx, stripDebugMessages: strip) }
+    
     func testCompile_OGetThis() throws {
         
         let structType = Test_HLTypeObj(fieldsProvider: [
@@ -1156,7 +1158,8 @@ final class CompilerM1v2Tests: CCompatTestCase {
     }
 
     func testGetRegStackOffset() throws {
-        let c = sut()
+        let ctx = try prepareContext(compilables: [])
+        let c = try sut(ctx: ctx)
         let regs: [HLTypeKind] = [
             .u8, .u8, .i32, .u8, .u8, .u8, .i32, .u8, .u8]
 
@@ -1422,91 +1425,116 @@ final class CompilerM1v2Tests: CCompatTestCase {
     }
 
     func testCalcStackArgReq() throws {
-        let sut = sut()
+        let ctx = try prepareContext(compilables: [])
+        let sut = sut(ctx: ctx)
 
         // test different size combinations (ensure aligned to 16 bytes)
-        var (size, _) = sut.calcStackArgReq(regs: [.array, .array], args: [])
+        var (size, _) = sut.calcStackArgReq(regs: [HLTypeKind.array, HLTypeKind.array], args: [])
         XCTAssertEqual(16, size)
 
-        (size, _) = sut.calcStackArgReq(regs: [.array, .array, .i32], args: [])
+        (size, _) = sut.calcStackArgReq(regs: [HLTypeKind.array, HLTypeKind.array, HLTypeKind.i32], args: [])
         XCTAssertEqual(32, size)
 
         (size, _) = sut.calcStackArgReq(
-            regs: [.array, .array, .i32, .dyn, .dynobj],
+            regs: [HLTypeKind.array, HLTypeKind.array, HLTypeKind.i32, HLTypeKind.dyn, HLTypeKind.dynobj],
             args: []
         )
         XCTAssertEqual(48, size)
 
         (size, _) = sut.calcStackArgReq(
-            regs: [.array, .array, .i32, .dyn, .dynobj],
-            args: [.array, .array, .i32, .dyn, .dynobj]
+            regs: [HLTypeKind.array, HLTypeKind.array, HLTypeKind.i32, HLTypeKind.dyn, HLTypeKind.dynobj],
+            args: [HLTypeKind.array, HLTypeKind.array, HLTypeKind.i32, HLTypeKind.dyn, HLTypeKind.dynobj]
         )
         XCTAssertEqual(48, size)
 
         // args exceeding first 8 should not allocate extra space (as it
         // should already be allocated due to calling convention)
         (size, _) = sut.calcStackArgReq(
-            regs: Array(repeating: .dyn, count: 16),
-            args: Array(repeating: .dyn, count: 16)
+            regs: Array(repeating: HLTypeKind.dyn, count: 16),
+            args: Array(repeating: HLTypeKind.dyn, count: 16)
         )
         XCTAssertEqual(64, size)
 
         // non args should take space
-        (size, _) = sut.calcStackArgReq(regs: [.i32], args: [])
+        (size, _) = sut.calcStackArgReq(regs: [HLTypeKind.i32], args: [])
         XCTAssertEqual(16, size)
 
         // 4 regs (all except 1st) and 1 arg should contribute to size here
         (size, _) = sut.calcStackArgReq(
-            regs: [.array] + Array(repeating: .i32, count: 4),
-            args: [.array]
+            regs: [HLTypeKind.array] + Array(repeating: HLTypeKind.i32, count: 4),
+            args: [HLTypeKind.array]
         )
         XCTAssertEqual(32, size)
 
         // first 8 args should take space
         (size, _) = sut.calcStackArgReq(
-            regs: Array(repeating: .i32, count: 8),
-            args: Array(repeating: .i32, count: 8)
+            regs: Array(repeating: HLTypeKind.i32, count: 8),
+            args: Array(repeating: HLTypeKind.i32, count: 8)
         )
         XCTAssertEqual(32, size)
 
         // void should be ignored
         (size, _) = sut.calcStackArgReq(
-            regs: Array(repeating: .void, count: 8) + Array(repeating: .i32, count: 8),
-            args: Array(repeating: .void, count: 8) + Array(repeating: .i32, count: 8)
+            regs: Array(repeating: HLTypeKind.void, count: 8) + Array(repeating: HLTypeKind.i32, count: 8),
+            args: Array(repeating: HLTypeKind.void, count: 8) + Array(repeating: HLTypeKind.i32, count: 8)
         )
         XCTAssertEqual(32, size)
     }
 
     func testAppendPrologue() throws {
-        let mem = builder()
-        _ = sut().appendPrologue(builder: mem)
-
+        let buff = CpuOpBuffer()
+        let ctx = try prepareContext(compilables: [])
+        let sut = sut(ctx: ctx)
+        _ = sut.appendPrologue(builder: buff)
+        
+        let mapper = BufferMapper(ctx: ctx, buffer: buff)
+        let mem = try mapper.emitMachineCode()
+        
         XCTAssertEqual(
-            mem.lockAddressesAndBuild(),
+            mem,
             [0xfd, 0x7b, 0xbf, 0xa9, 0xfd, 0x03, 0x00, 0x91]
         )
     }
 
     func testAppendEpilogue() throws {
-        let mem = builder()
-        sut().appendEpilogue(builder: mem)
-
-        XCTAssertEqual(mem.lockAddressesAndBuild(), [0xfd, 0x7b, 0xc1, 0xa8])
+        let buff = CpuOpBuffer()
+        let ctx = try prepareContext(compilables: [])
+        let sut = sut(ctx: ctx)
+        sut.appendEpilogue(builder: buff)
+        
+        let mapper = BufferMapper(ctx: ctx, buffer: buff)
+        let mem = try mapper.emitMachineCode()
+        
+        XCTAssertEqual(
+            mem,
+            [0xfd, 0x7b, 0xc1, 0xa8]
+        )
     }
 
     func testAppendStackInit_skipVoid() throws {
-        let mem = builder()
-        try sut().appendStackInit([.void], args: [.void], builder: mem, prologueSize: 0)
-        XCTAssertEqual([], mem.lockAddressesAndBuild())
+        let buff = CpuOpBuffer()
+        let ctx = try prepareContext(compilables: [])
+        let sut = sut(ctx: ctx)
+        try sut.appendStackInit([HLTypeKind.void], args: [HLTypeKind.void], builder: buff, prologueSize: 0)
+        
+        let mapper = BufferMapper(ctx: ctx, buffer: buff)
+        let mem = try mapper.emitMachineCode()
+        
+        XCTAssertEqual(
+            mem,
+            []
+        )
     }
 
     func testAppendStackInit_min16() throws {
         let _1_need16 = Array(repeating: HLTypeKind.i32, count: 1)
         let _4_need16 = Array(repeating: HLTypeKind.i32, count: 4)
         let _5_need32 = Array(repeating: HLTypeKind.i32, count: 5)
-        let sut = sut()
+        let ctx = try prepareContext(compilables: [])
+        let sut = sut(ctx: ctx)
+        
         // 4 byte requirement should still be aligned to 16 byte boundary
-        let mem1 = builder()
+        let mem1 = CpuOpBuffer()
         try sut.appendStackInit(_1_need16, args: _1_need16, builder: mem1, prologueSize: 0)
         //mem1.hexPrint()
         XCTAssertEqual(
@@ -1514,11 +1542,11 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
                 0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
             ],
-            mem1.lockAddressesAndBuild()
+            try BufferMapper(ctx: ctx, buffer: mem1).emitMachineCode()
         )
 
         // 16 byte requirement should not round to 32
-        let mem2 = builder()
+        let mem2 = CpuOpBuffer()
         try sut.appendStackInit(_4_need16, args: _4_need16, builder: mem2, prologueSize: 0)
         //mem2.hexPrint()
         XCTAssertEqual(
@@ -1529,12 +1557,12 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 0xe2, 0x83, 0x00, 0xb8,  // str w2, [sp, #8]
                 0xe3, 0xc3, 0x00, 0xb8,  // str w3, [sp, #12]
             ],
-            mem2.lockAddressesAndBuild()
+            try BufferMapper(ctx: ctx, buffer: mem2).emitMachineCode()
         )
         // 20 byte requirement should round to 32
-        let mem3 = builder()
+        let mem3 = CpuOpBuffer()
         try sut.appendStackInit(_5_need32, args: _5_need32, builder: mem3, prologueSize: 0)
-        //mem3.hexPrint()
+        
         XCTAssertEqual(
             [
                 0xff, 0x83, 0x00, 0xd1,  // sub sp, sp, #32
@@ -1544,33 +1572,36 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 0xe3, 0xc3, 0x00, 0xb8,  // str w3, [sp, #12]
                 0xe4, 0x03, 0x01, 0xb8,  // str w4, [sp, #16]
             ],
-            mem3.lockAddressesAndBuild()
+            try BufferMapper(ctx: ctx, buffer: mem3).emitMachineCode()
         )
     }
 
     func testAppendStackInit_multiple() throws {
-        let mem = builder()
-        let sut = sut()
+        let ctx = try prepareContext(compilables: [])
+        let mem = CpuOpBuffer()
+        let sut = sut(ctx: ctx)
         try sut.appendStackInit(
-            [.void, .i32, .i64],
-            args: [.void, .i32, .i64],
+            [HLTypeKind.void, HLTypeKind.i32, HLTypeKind.i64],
+            args: [HLTypeKind.void, HLTypeKind.i32, HLTypeKind.i64],
             builder: mem,
             prologueSize: 0
         )
-        //mem.hexPrint()
+        
         XCTAssertEqual(
             [
                 0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
                 0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
                 0xe1, 0x43, 0x00, 0xf8,  // str x1, [sp, #4]
             ],
-            mem.lockAddressesAndBuild()
+            try BufferMapper(ctx: ctx, buffer: mem).emitMachineCode()
         )
     }
 
     func testAppendStackInit_moreThan8Args() throws {
-        let mem = builder()
-        try sut().appendStackInit(
+        let ctx = try prepareContext(compilables: [])
+        let sut = sut(ctx: ctx)
+        let mem = CpuOpBuffer()
+        try sut.appendStackInit(
             Array(repeating: HLTypeKind.i32, count: 12),
             args: Array(repeating: HLTypeKind.i32, count: 12),
             builder: mem,
@@ -1598,34 +1629,42 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 0xe1, 0xc3, 0x43, 0xb8, // ldr w1, [sp, #60]
                 0xe1, 0xc3, 0x02, 0xb8, // str w1, [sp, #44]
             ],
-            mem.lockAddressesAndBuild()
+            try BufferMapper(ctx: ctx, buffer: mem).emitMachineCode()
         )
     }
 
     func testAppendStackInit_mismatchedRegs() throws {
-        let mem = builder()
-
+        let ctx = try prepareContext(compilables: [])
+        let sut = sut(ctx: ctx)
+        let mem = CpuOpBuffer()
+        
         XCTAssertThrowsError(
-            try sut().appendStackInit([.i32], args: [.void], builder: mem, prologueSize: 0)
+            try sut.appendStackInit([HLTypeKind.i32], args: [HLTypeKind.void], builder: mem, prologueSize: 0)
         )
     }
 
     func testAppendDebugPrintAligned4() throws {
-        let memWith = builder()
-        let memWithout = builder()
-        M1Compiler(stripDebugMessages: false).appendDebugPrintAligned4(
+        let ctx = try prepareContext(compilables: [])
+        let sutWith = sut(ctx: ctx, strip: false)
+        let sutWithout = sut(ctx: ctx, strip: true)
+        let memWith = CpuOpBuffer()
+        let memWithout = CpuOpBuffer()
+        
+        sutWith.appendDebugPrintAligned4(
             "Hello World",
             builder: memWith
         )
-        M1Compiler(stripDebugMessages: true).appendDebugPrintAligned4(
+        sutWithout.appendDebugPrintAligned4(
             "Hello World",
             builder: memWithout
         )
 
-        XCTAssertEqual(memWithout.lockAddressesAndBuild(), [])
+        XCTAssertEqual(
+            [],
+            try BufferMapper(ctx: ctx, buffer: memWithout).emitMachineCode()
+        )
 
         XCTAssertEqual(
-            memWith.lockAddressesAndBuild(),
             [
                 // Printing debug message: Hello World
                 0xe0, 0x0f, 0x1e, 0xf8,  // str x0, [sp, #-32]!
@@ -1649,7 +1688,8 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 0x20, 0x57, 0x6f, 0x72,  // .Wor
                 0x6c, 0x64, 0x0a,  // ld\n
                 0x00,  // .zero
-            ]
+            ],
+            try BufferMapper(ctx: ctx, buffer: memWith).emitMachineCode()
         )
     }
 

@@ -334,41 +334,6 @@ public class EmitterM1 {
         -> Int64
     {
         try truncateOffsetGlobal(val, divisor: divisor, bits: bits)
-//        if val % divisor != 0 {
-//            throw EmitterM1Error.invalidOffset(
-//                "truncateOffset: offset immediate must be a multiple of \(divisor) but was \(val)"
-//            )
-//        }
-//
-//        var divided = val / divisor
-//        let mask: Int64 = ((1 << bits) - 1)
-//        let msb: Int64 = (1 << (bits - 1))
-//        // Check if we fit in required number of bits
-//        let compare: Int64
-////        if divided >= 0 {
-//
-////        }
-//        // unset sign extended leading bits
-//        for bix in 0..<64-bits {
-//            divided = divided & ~(1 << 63 - bix);
-//        }
-////        0b0000000010101010
-////        0b1111111110101010
-//        compare = divided & mask
-//
-////        else {
-////            let rmask: Int64 = (~mask | 0b1000000)
-////            compare = (divided & mask) | rmask
-////        }
-//        guard compare == divided else {
-//            throw EmitterM1Error.invalidOffset(
-//                "Offset immediate \(val) must fit in \(bits) bits"
-//            )
-//        }
-//
-//        // apply mask otherwise a negative value will contain leading 1s,
-//        // which can mess up when shifting left later
-//        return (mask & divided)
     }
 
     // 0b0b10101010000000100000001111100000

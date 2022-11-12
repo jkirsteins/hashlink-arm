@@ -40,15 +40,17 @@ func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throws
     }
     
     let compare: UInt64 = UInt64(bitPattern: divided) & mask
-    guard (leadingBitsMask | compare) == UInt64(bitPattern: divided) else {
+    guard
+            (leadingBitsMask | compare) == UInt64(bitPattern: divided),
+            // if value is negative, most significant bit must be 1 (we
+            // can't rely on bits set outside of our range)
+            divided >= 0 || (divided & (1 << (bits - 1)) != 0)
+    else {
         throw EmitterM1Error.invalidValue(
             "Immediate \(val) must fit in \(bits) bits"
         )
     }
     
-    
-    // apply mask otherwise a negative value will contain leading 1s,
-    // which can mess up when shifting left later
     return Int64(bitPattern: mask) & divided
 }
 
@@ -58,10 +60,14 @@ struct VariableImmediate: Immediate {
 
     var immediate: Int64 { value }
 
-    init(_ val: Int64, bits: Int64) throws {
-        // ensure 
-        self.value = try truncateOffset(val, divisor: 1, bits: bits)
+    init(_ val: Int64, bits: Int64, divisor: Int64) throws {
+        // ensure
+        self.value = try truncateOffset(val, divisor: divisor, bits: bits)
         self.bits = bits
+    }
+    
+    init(_ val: Int64, bits: Int64) throws {
+        try self.init(val, bits: bits, divisor: 1)
     }
 }
 
