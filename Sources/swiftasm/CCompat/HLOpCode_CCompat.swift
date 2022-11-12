@@ -18,7 +18,7 @@ struct HLOpCode_CCompat : Equatable, Hashable {
     }
     
     /// Useful in tests
-    init(_ opc: HLOpCode) {
+    init(_ opc: HLOpCode, _ extra: inout UnsafeMutableBufferPointer<Int32>?) {
         switch(opc) {
         case .OMov(dst: let dst, src: let src):
             self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: src)
@@ -74,12 +74,20 @@ struct HLOpCode_CCompat : Equatable, Hashable {
             self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(fun), p3: arg0)
         case .OCall2(dst: let dst, fun: let fun, arg0: let arg0, arg1: let arg1):
             self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(fun), p3: arg0, extra: .init(bitPattern: Int(arg1)))
-        case .OCall3:
-            fatalError("wip")
-        case .OCall4:
-            fatalError("wip")
-        case .OCallN:
-            fatalError("wip")
+        case .OCall3(dst: let dst, fun: let fun, arg0: let arg0, arg1: let arg1, arg2: let arg2):
+            let args = [arg1, arg2]
+            extra = .allocate(capacity: args.count)
+            _ = extra!.initialize(from: args)
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(fun), p3: arg0, extra: extra!.baseAddress!)
+        case .OCall4(dst: let dst, fun: let fun, arg0: let arg0, arg1: let arg1, arg2: let arg2, arg3: let arg3):
+            let args = [arg1, arg2, arg3]
+            extra = .allocate(capacity: args.count)
+            _ = extra!.initialize(from: args)
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(fun), p3: arg0, extra: extra!.baseAddress!)
+        case .OCallN(let dst, let fun, let args):
+            extra = .allocate(capacity: args.count)
+            _ = extra!.initialize(from: args)
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(fun), p3: Int32(args.count), extra: extra!.baseAddress!)
         case .OCallMethod:
             fatalError("wip")
         case .OCallThis:

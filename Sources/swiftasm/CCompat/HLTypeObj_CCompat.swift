@@ -31,11 +31,11 @@ extension HLTypeObj {
         }
         
         let fields = ccompat.fields.enumerated().map { ix, item in
-            let ptr = ccompat.fieldsPtr.advanced(by: ix)
+            let ptr = ccompat.fieldsPtr!.advanced(by: ix)
             return Resolvable.objField(fromUnsafe: ptr)
         }
         let proto = ccompat.proto.enumerated().map { ix, item in
-            let ptr = ccompat.protoPtr.advanced(by: ix)
+            let ptr = ccompat.protoPtr!.advanced(by: ix)
             return Resolvable.objProto(fromUnsafe: ptr)
         }
         
@@ -58,18 +58,18 @@ struct HLTypeObj_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
     let superPtr: UnsafePointer<HLType_CCompat>?
     
     // hl_obj_field *fields;
-    let fieldsPtr: UnsafePointer<HLObjField_CCompat>
+    let fieldsPtr: UnsafePointer<HLObjField_CCompat>?
     // hl_obj_proto *proto;
-    let protoPtr: UnsafePointer<HLObjProto_CCompat>
+    let protoPtr: UnsafePointer<HLObjProto_CCompat>?
     
     // int *bindings;
-    let bindingsPtr: UnsafePointer<Int32>
+    let bindingsPtr: UnsafePointer<Int32>?
     
     // void **global_value;
     let globalValue: Int32
     
     // hl_module_context *m;
-    let moduleContext: UnsafeMutableRawPointer
+    let moduleContext: UnsafeMutableRawPointer?
     
     // hl_runtime_obj *rt;
     // NOTE: you should never access this directly, as it might not be initialized

@@ -2282,11 +2282,9 @@ final class CompilerM1Tests: XCTestCase {
         return PointerCompilable(
             findex: findex,
             ops: ops,
-            address: TestDummyLinkableAddress(),    // dummy address, won't be used as CCompatJitContext replaces these
-            regs: regs,
-            args: args,
-            ret: retType,
-            type: funType)
+            linkableAddress: TestDummyLinkableAddress(),    // dummy address, won't be used as CCompatJitContext replaces these
+            regsProvider: regs,
+            typeProvider: funType)
     }
     
     func prepareContext(compilables: [any Compilable2]) throws -> CCompatJitContext {
@@ -2337,11 +2335,11 @@ final class CompilerM1Tests: XCTestCase {
         XCTAssertEqual(0, entrypoint(1, 0))
         XCTAssertEqual(-10, entrypoint(-5, 2))
     }
-    
-    struct TestDummyLinkableAddress : LinkableAddress {
-        func setOffset(_ offset: swiftasm.ByteCount) { fatalError("Don't use the test dummy") }
-        var hasOffset: Bool { fatalError("Don't use the test dummy") }
-        var value: UnsafeMutableRawPointer { fatalError("Don't use the test dummy") }
-        func isEqual(_ to: any swiftasm.MemoryAddress) -> Bool { fatalError("Don't use the test dummy") }
-    }
+}
+
+struct TestDummyLinkableAddress : LinkableAddress {
+    func setOffset(_ offset: swiftasm.ByteCount) { fatalError("Don't use the test dummy") }
+    var hasOffset: Bool { fatalError("Don't use the test dummy") }
+    var value: UnsafeMutableRawPointer { fatalError("Don't use the test dummy") }
+    func isEqual(_ to: any swiftasm.MemoryAddress) -> Bool { fatalError("Don't use the test dummy") }
 }

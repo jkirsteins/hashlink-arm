@@ -147,4 +147,7 @@ struct LibHl {
     static func hl_code_free(_ hlcode: UnsafePointer<HLCode_CCompat>) -> () {
         _hl_code_free(UnsafeRawPointer(hlcode))
     }
+    
+    // HL_PRIM int hl_hash_gen( const uchar *name, bool cache_name ) {
+    static let hl_hash_gen: (@convention(c) (UnsafeRawPointer, Bool) -> Int32) = { load("hl_hash_gen") }()
 }

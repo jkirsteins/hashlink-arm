@@ -138,7 +138,6 @@ struct HLFunction_CCompat__WithMemory : Compilable {
         self.ptr.pointee.getFindex()
     }
     var ops: [HLOpCode] {
-        print("CCompatWMem", self.ptr.pointee.opsPtr)
         return self.ptr.pointee.ops
     }
     var regs: [Resolvable<HLType>] {

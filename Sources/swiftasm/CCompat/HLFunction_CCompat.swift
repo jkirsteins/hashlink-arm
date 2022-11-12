@@ -39,16 +39,6 @@ struct HLFunction_CCompat : Equatable, Hashable {
     } 
 
     var cType: HLType_CCompat { typePtr!.pointee }
-    
-    // union
-    var field__name: String? {
-        guard let unionPtr = unionPtr else { return nil }
-        return .wrapUtf16(from: unionPtr)
-    }
-    var field__ref: HLFunction_CCompat? {
-        guard let unionPtr = unionPtr else { return nil }
-        return unionPtr.boundPointee()
-    }
 } 
 
 extension HLFunction_CCompat : Compilable {

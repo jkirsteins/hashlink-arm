@@ -18,7 +18,7 @@ extension HLTypeKind : HLTypeProvider {
         }
         
     }
-    
+     
     public var objProvider: (any HLTypeObjProvider)? {
         switch(self) {
         case .obj:

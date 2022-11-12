@@ -18,6 +18,22 @@ final class HLType_CCompatTests: XCTestCase {
     
     var code: UnsafePointer<HLCode_CCompat> { Self.code! }
     
+    func testHLTypeObj__Equality() throws {
+        let retType: any HLTypeProvider = Test_HLTypeObj(fieldsProvider: [
+            Test_HLObjField(nameProvider: "field1", typeProvider: HLTypeKind.u8),
+            Test_HLObjField(nameProvider: "field2", typeProvider: HLTypeKind.i32),
+            Test_HLObjField(nameProvider: "field3", typeProvider: HLTypeKind.u16)
+        ], nameProvider: "testObj")
+        
+        let funType = Test_HLTypeFun(argsProvider: [], retProvider: retType)
+        
+        let ctx = TestJitModule(types: [HLTypeKind.u8, HLTypeKind.i32, HLTypeKind.u16, retType, funType])
+        let ccompatCtx = try CCompatJitContext(ctx: ctx)
+        
+        
+//        XCTAssertTrue(typeA.isEquivalent(target.pointee))
+    }
+    
     func testHLTypeObj__String() throws {
         let type = code.pointee.getType(13)
         let native = HLType(type)

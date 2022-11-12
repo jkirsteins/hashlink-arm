@@ -49,7 +49,8 @@ extension HLTypeFun_CCompat : HLTypeFunProvider {
     }
     
     var retProvider: any HLTypeProvider {
-        self.retPtr
+        print("Returning ret provider \(self.retPtr) \(self.retPtr.kind)")
+        return self.retPtr
     }
     
     var debugDescription: String {

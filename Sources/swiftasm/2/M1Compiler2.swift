@@ -390,7 +390,8 @@ class M1Compiler2 {
     
     func requireTypeAddress(reg: Reg, from regs: [any HLTypeProvider]) -> UnsafeRawPointer {
         guard reg < regs.count else {
-            fatalError("requireTypeAddress(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(regs)")
+            let _debug = regs as [any OverrideCustomDebugStringConvertible]
+            fatalError("requireTypeAddress(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(_debug._overrideDebugDescription)")
         }
         
         return regs[Int(reg)].ccompatAddress
@@ -398,7 +399,8 @@ class M1Compiler2 {
     
     func requireTypeKind(reg: Reg, from resolvedRegs: [any HLTypeKindProvider]) -> HLTypeKind {
         guard reg < resolvedRegs.count else {
-            fatalError("requireType(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(resolvedRegs)")
+            let _debug = resolvedRegs as [any OverrideCustomDebugStringConvertible]
+            fatalError("requireType(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(_debug._overrideDebugDescription)")
         }
         
         return resolvedRegs[Int(reg)].kind
@@ -469,7 +471,7 @@ class M1Compiler2 {
         }
         guard target.kind == .dyn || from[Int(reg)].kind == .dyn || target.kind == from[Int(reg)].kind else {
             fatalError(
-                "Register \(reg) expected to be \(target) but is \(from[Int(reg)])"
+                "Register \(reg) expected to be \(target.kind) but is \(from[Int(reg)].kind)"
             )
         }
     }
@@ -534,8 +536,8 @@ class M1Compiler2 {
         
         // grab it before it changes from prologue
         // let memory = mem.getDeferredPosition()
-        let regs = compilable.regs
-        let args = compilable.args
+        let regs = compilable.regsProvider
+        let args = compilable.argsProvider
         
         let fix = compilable.findex
 
@@ -543,11 +545,11 @@ class M1Compiler2 {
         regs.forEach { print("reg \($0.kind) == mem \($0.ccompatAddress)") }
         args.forEach { print("arg \($0.kind) == mem \($0.ccompatAddress)") }
         
-        guard !compilable.address.hasOffset else {
+        guard !compilable.linkableAddress.hasOffset else {
             throw GlobalError.invalidOperation("Can not compile function (findex=\(fix)) because it already has been compiled and linked. \(compilable.address)")
         }
         
-        compilable.address.setOffset(mem.byteSize)
+        compilable.linkableAddress.setOffset(mem.byteSize)
 
         // if we need to return early, we jump to these
         var retTargets: [RelativeDeferredOffset] = []
@@ -560,7 +562,7 @@ class M1Compiler2 {
         let prologueSize = appendPrologue(builder: mem)
         let reservedStackBytes = try appendStackInit(
             regs,
-            args: compilable.args,
+            args: compilable.argsProvider,
             builder: mem,
             prologueSize: prologueSize
         )
@@ -1286,7 +1288,7 @@ class M1Compiler2 {
                 jumpOverDeath.stop(at: mem.byteSize)
             case .OField(let dstReg, let objReg, let fieldRef):
                 let objRegKind = requireTypeKind(reg: objReg, from: regs)
-                let dstKind = requireTypeKind(reg: dstReg, from: regs)
+                
                 /* See comments on `OSetField` for notes on accessing field indexes */
 
                 switch(objRegKind) {
@@ -1294,10 +1296,6 @@ class M1Compiler2 {
                 case .struct:
                     // offset from obj address
                     let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
-
-                    // offsets from .sp
-                    let dstOffset = getRegStackOffset(regs, dstReg)
-                    let objOffset = getRegStackOffset(regs, objReg)
 
                     // TODO: OField and OSetField need a test based on inheritance
                     mem.append(
