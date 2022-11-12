@@ -162,4 +162,10 @@ struct LibHl {
     
     // HL_API void hl_unregister_thread() {
     static let hl_unregister_thread: (@convention(c) () -> ()) = { load("hl_unregister_thread") }()
+    
+    // vdynamic *hl_alloc_dynamic( hl_type *t )
+    static let _hl_alloc_dynamic: (@convention(c) (UnsafeRawPointer) -> (UnsafeRawPointer)) = { load("hl_alloc_dynamic") }()
+    static func hl_alloc_dynamic(_ type: UnsafePointer<HLType_CCompat>) -> (UnsafePointer<vdynamic>) {
+        .init(OpaquePointer(_hl_alloc_dynamic(.init(type))))
+    }
 }
