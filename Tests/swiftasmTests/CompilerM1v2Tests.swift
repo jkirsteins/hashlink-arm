@@ -2078,4 +2078,174 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(-1,  entrypoint(123))    // no case
         }
     }
+    
+    /** Test OGetType
+     
+            static public function testGetType(something: Dynamic): Int {
+                var varType = hl.Type.getDynamic(something);
+                if (varType == hl.Type.get(5))
+                    return 1;
+                return 0;
+            }
+
+            static public function testGetType_bool(): Int {
+                return testGetType(true);
+            }
+             
+            static public function testGetType_i32(): Int {
+                return testGetType(123);
+            }
+
+            static public function testGetType_String(): Int {
+                return testGetType("asd");
+            }
+     */
+    func testCompile__OGetType() throws {
+        let ctx = try prepareContext(
+            compilables: [
+                /*  fn testGetType (dynamic) -> (i32)
+
+                    reg0  dynamic
+                    reg1  type
+                    reg2  type
+                    reg3  i32
+                 
+                    0: GetType { dst: Reg(1), src: Reg(0) }
+                    1: Type        reg2 = i32
+                    2: JNotEq      if reg1 != reg2 jump to 5
+                    3: Int         reg3 = 1
+                    4: Ret         reg3
+                    5: Int         reg3 = 0
+                    6: Ret         reg3
+                 */
+                prepareFunction(
+                    retType: HLTypeKind.i32,
+                    findex: 0,
+                    regs: [HLTypeKind.dyn, HLTypeKind.type, HLTypeKind.type, HLTypeKind.i32],
+                    args: [HLTypeKind.dyn],
+                    ops: [
+                        .OGetType(dst: 1, src: 0),
+                        .OType(dst: 2, ty: 1),  // NOTE: TestJitModule guarantees i32 is type 1
+                        .OJNotEq(a: 1, b: 2, offset: 2),
+                        .OInt(dst: 3, ptr: 0),
+                        .ORet(ret: 3),
+                        .OInt(dst: 3, ptr: 1),
+                        .ORet(ret: 3)
+                    ]),
+                /*  Same as above but it will compare against BOOL Type */
+                prepareFunction(
+                    retType: HLTypeKind.i32,
+                    findex: 1,
+                    regs: [HLTypeKind.dyn, HLTypeKind.type, HLTypeKind.type, HLTypeKind.i32],
+                    args: [HLTypeKind.dyn],
+                    ops: [
+                        .OGetType(dst: 1, src: 0),
+                        .OType(dst: 2, ty: 2),  // NOTE: TestJitModule guarantees bool is type 2
+                        .OJNotEq(a: 1, b: 2, offset: 2),
+                        .OInt(dst: 3, ptr: 0),
+                        .ORet(ret: 3),
+                        .OInt(dst: 3, ptr: 1),
+                        .ORet(ret: 3)
+                    ]),
+                /*  fn testGetType_i32 () -> (i32)
+                 
+                    Pass an i32 to testGetType that expects i32
+                    
+                    reg0  i32
+                    reg1  dynamic
+                    
+                    0: Int         reg0 = 123
+                    1: ToDyn       reg1 = cast reg0
+                    2: Call1       reg0 = testGetType(reg1)
+                    3: Ret         reg0
+                 */
+                prepareFunction(
+                    retType: HLTypeKind.i32,
+                    findex: 2,
+                    regs: [HLTypeKind.i32, HLTypeKind.dyn],
+                    args: [],
+                    ops: [
+                        .OInt(dst: 0, ptr: 2),
+                        .OToDyn(dst: 1, src: 0),
+                        .OCall1(dst: 0, fun: 0, arg0: 1),
+                        .ORet(ret: 0)
+                    ]),
+                /*  Same as above but pass an i32 to testGetType that expects bool
+                 */
+                prepareFunction(
+                    retType: HLTypeKind.i32,
+                    findex: 3,
+                    regs: [HLTypeKind.i32, HLTypeKind.dyn],
+                    args: [],
+                    ops: [
+                        .OInt(dst: 0, ptr: 2),
+                        .OToDyn(dst: 1, src: 0),
+                        .OCall1(dst: 0, fun: 1, arg0: 1),
+                        .ORet(ret: 0)
+                    ]),
+                /*  fn testGetType_bool () -> (i32) (3 regs, 4 ops)
+                 
+                    Pass a bool to testGetType that expects i32
+                 
+                    reg0  i32
+                    reg1  bool
+                    reg2  dynamic
+                    
+                    0: Bool        reg1 = true
+                    1: ToDyn       reg2 = cast reg1
+                    2: Call1       reg0 = testGetType(reg2)
+                    3: Ret         reg0
+                 */
+                prepareFunction(
+                    retType: HLTypeKind.i32,
+                    findex: 4,
+                    regs: [HLTypeKind.i32, HLTypeKind.bool, HLTypeKind.dyn],
+                    args: [],
+                    ops: [
+                        .OBool(dst: 1, value: 1),
+                        .OToDyn(dst: 2, src: 1),
+                        .OCall1(dst: 0, fun: 0, arg0: 2),
+                        .ORet(ret: 0)
+                    ]),
+                /*  Same as above but pass a bool to testGetType that expects bool
+                 */
+                prepareFunction(
+                    retType: HLTypeKind.i32,
+                    findex: 5,
+                    regs: [HLTypeKind.i32, HLTypeKind.bool, HLTypeKind.dyn],
+                    args: [],
+                    ops: [
+                        .OBool(dst: 1, value: 1),
+                        .OToDyn(dst: 2, src: 1),
+                        .OCall1(dst: 0, fun: 1, arg0: 2),
+                        .ORet(ret: 0)
+                    ]),
+            ], ints: [
+                1, 0, 123
+            ]
+        )
+        
+        try compileAndLink(ctx: ctx,
+                           /*expect i32*/0,
+                           /*expect bool*/1,
+                           /*i32->exp: i32*/2,
+                           /*i32->exp: bool*/3,
+                           /*bool->exp: i32*/4,
+                           /*bool->exp: bool*/5) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 2) { (entrypoint: (@convention(c) () -> (Int32))) in
+                XCTAssertEqual(1, entrypoint()) // send i32 expect i32
+            }
+            try mappedMem.jit(ctx: ctx, fix: 3) { (entrypoint: (@convention(c) () -> (Int32))) in
+                XCTAssertEqual(0, entrypoint()) // send i32 expect bool
+            }
+            try mappedMem.jit(ctx: ctx, fix: 4) { (entrypoint: (@convention(c) () -> (Int32))) in
+                XCTAssertEqual(0, entrypoint()) // send bool expect i32
+            }
+            try mappedMem.jit(ctx: ctx, fix: 5) { (entrypoint: (@convention(c) () -> (Int32))) in
+                XCTAssertEqual(1, entrypoint()) // send bool expect bool
+            }
+        }
+    }
 }

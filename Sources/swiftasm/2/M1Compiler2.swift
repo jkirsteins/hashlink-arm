@@ -16,7 +16,8 @@ let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/Unsafe
     let dstTypeB = dstType.bindMemory(to: HLType_CCompat.self, capacity: 1)
     let srcTypeB = srcType.bindMemory(to: HLType_CCompat.self, capacity: 1)
     
-    let res = LibHl.hl_alloc_dynamic(dstTypeB)
+    assert(dstTypeB.kind == .dyn)               // dst must be dyn
+    let res = LibHl.hl_alloc_dynamic(srcTypeB)  // use the source type
     
     var mutatingRes: UnsafeMutableRawPointer = .init(mutating: res)
     
@@ -26,10 +27,19 @@ let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/Unsafe
     case .i32:
         let srcI32 = Int32(truncatingIfNeeded: src)
         mutatingRes.advanced(by: 8).bindMemory(to: Int32.self, capacity: 1).pointee = srcI32
+        mutatingRes.advanced(by: 8).bindMemory(to: Int32.self, capacity: 1).pointee = srcI32
         assert(res.pointee.i == srcI32)
+    case .bool, .u8:
+        let srcU8 = UInt8(truncatingIfNeeded: src)
+        mutatingRes.advanced(by: 8).bindMemory(to: UInt8.self, capacity: 1).pointee = srcU8
+        assert(res.pointee.b == (srcU8 > 0))
+        assert(res.pointee.ui8 == srcU8)
     default:
         fatalError("Casting ToDyn from \(srcTypeB.pointee.kind) not implemented")
     }
+    
+    print("Checking for type. Actual: \(res.pointee.t.pointee.kind). Expected: \(srcTypeB.pointee.kind)")
+    assert(res.pointee.t.pointee.kind == srcTypeB.pointee.kind)
     
     return .init(res)
 }
@@ -369,6 +379,8 @@ class M1Compiler2 {
     let emitter = EmitterM1()
     let ctx: CCompatJitContext
     let stripDebugMessages: Bool
+    
+    static let logger = LoggerFactory.create(M1Compiler2.self)
     
     init(ctx: CCompatJitContext, stripDebugMessages: Bool = false) {
         self.stripDebugMessages = stripDebugMessages
@@ -1083,12 +1095,19 @@ class M1Compiler2 {
                 }
 
 
+                if op.id == .OJNotEq {
+                    let x = try ctx.getType(1)
+                    mem.append(
+                        PseudoOp.debugPrint2(self, "Comparing for OJNotEq. INTTYPE == \(x)")
+                    )
+                }
+                
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendDebugPrintRegisterAligned4(X.x1, builder: mem)
 
                 mem.append(M1Op.cmp(X.x0, X.x1))
 
-
+                
                 // calculate what to skip
                 let jumpOffset_partA = try Immediate19(mem.byteSize)
                 let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
@@ -1459,6 +1478,7 @@ class M1Compiler2 {
                 appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
             case .OType(let dst, let ty):
                 let typeMemory = try ctx.getType(ty)
+                print("Type IX \(ty) resulted in \(typeMemory.kind)")
                 let typeMemoryVal = Int(bitPattern: typeMemory.ccompatAddress)
                 print("Storing type mem \(typeMemoryVal)")
                 mem.append(PseudoOp.mov(.x0, typeMemoryVal))
@@ -1583,6 +1603,24 @@ class M1Compiler2 {
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
                 // M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
                 mem.append(M1Op.ldr(W.w0, .reg(X.x0, .imm(0, nil))))
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OGetType(let dst, let src):
+                let srcType = requireType(reg: src, regs: regs)
+                switch(srcType.kind) {
+                case .dyn:
+                    /* X.x0 <- first 8 bytes (which are hl_type address)
+                     */
+                    appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
+                    mem.append(
+                        M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil))
+                    )
+                default:
+                    fatal("OGetType not supported for src \(srcType.kind)", Self.logger)
+                }
+                mem.append(
+                    PseudoOp.debugPrint2(self, "INTTYPE test")
+                )
+                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
