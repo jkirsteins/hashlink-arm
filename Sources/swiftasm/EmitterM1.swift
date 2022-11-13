@@ -12,11 +12,19 @@ protocol Register: Equatable, CustomDebugStringConvertible {
     func sameSize(as: any Register) -> any Register 
 }
 
+protocol RegisterFP: Equatable, CustomDebugStringConvertible {
+    var rawValue: UInt8 { get }
+    
+    var single: Bool { get }
+    var double: Bool { get }
+}
+
 extension Register {
     var is64: Bool { !is32 }
 }
 
 typealias X = Register64
+typealias D = RegisterFP64
 typealias W = Register32
 
 extension OpBuilder
@@ -154,6 +162,48 @@ enum Register64: UInt8, Register {
             default:
                 return "x\(self.rawValue)"
         }
+    }
+}
+
+enum RegisterFP64: UInt8, RegisterFP {
+    
+    var single: Bool { false }
+    var double: Bool { true }
+    
+    case d0 = 0
+    case d1 = 1
+    case d2 = 2
+    case d3 = 3
+    case d4 = 4
+    case d5 = 5
+    case d6 = 6
+    case d7 = 7
+    case d8 = 8
+    case d9 = 9
+    case d10 = 10
+    case d11 = 11
+    case d12 = 12
+    case d13 = 13
+    case d14 = 14
+    case d15 = 15
+    case d16 = 16
+    case d17 = 17
+    case d18 = 18
+    case d19 = 19
+    case d20 = 20
+    case d21 = 21
+    case d22 = 22
+    case d23 = 23
+    case d24 = 24
+    case d25 = 25
+    case d26 = 26
+    case d27 = 27
+    case d28 = 28
+    case d29 = 29
+    case d30 = 30
+    
+    var debugDescription: String {
+        "d\(self.rawValue)"
     }
 }
 
@@ -1269,6 +1319,20 @@ public class EmitterM1 {
             let sf = sizeMask(is64: Rd.is64)
             let (imm6, sh) = getShImm6(shift)
             let encoded = mask | regs | sf | imm6 | sh
+            return returnAsArray(encoded)
+        case .fcvtzs(let Rt, let Rn) where Rn.single || Rn.double:
+            //                  S        FT              Rn    Rd
+            let mask: Int64 = 0b00011110_00_111000000000_00000_00000
+            let ftype: Int64
+            if Rn.double {
+                ftype = 1
+            } else {
+                fatalError("Not implemented")
+            }
+            
+            let s = sizeMask(is64: Rt.is64)
+            let regs = encodeRegs(Rd: Rt, Rn: Register64(rawValue: Rn.rawValue))
+            let encoded = mask | s | (ftype << 22) | regs
             return returnAsArray(encoded)
         default:
             print("Can't compile \(op)")

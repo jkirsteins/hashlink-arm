@@ -52,6 +52,19 @@ extension XCTestCase {
 
 final class EmitterM1Tests: XCTestCase {
     
+    func testFcvtzs() throws {
+        XCTAssertM1Op(
+            M1Op.fcvtzs(W.w8, D.d0),
+            "fcvtzs w8, d0",
+            0x08, 0x00, 0x78, 0x1e
+        )
+        XCTAssertM1Op(
+            M1Op.fcvtzs(X.x8, D.d0),
+            "fcvtzs x8, d0",
+            0x08, 0x00, 0x78, 0x9e
+        )
+    }
+    
     func testOrr() throws {
         XCTAssertM1Op(
             M1Op.orr(X.x0, X.x1, X.x2, nil),

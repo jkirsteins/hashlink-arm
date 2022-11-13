@@ -1541,6 +1541,13 @@ class M1Compiler2 {
                 case (.u8, .i32), (.u16, .i32), (.i64, .i32):
                     mem.append(PseudoOp.debugPrint2(self, "TODO: .ToInt i64->i32: investigate if size check needed"))
                     appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                case (.f64, .i32):
+//                    let offset = getRegStackOffset(regs, src)
+//                    mem.append(
+//                        M1Op.ldr(W.w0, .reg64offset(.sp, offset + 4, nil))
+//                    )
+                    mem.append(M1Op.fcvtzs(W.w0, D.d0))
+                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 default:
                     fatalError("Don't know how to cast \(srcKind) to \(dstKind)")
                 }

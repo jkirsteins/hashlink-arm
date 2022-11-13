@@ -575,6 +575,25 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _ri32__f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64, .i32], _ callback: @escaping ((Float64)->Int32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f64, HLTypeKind.i32],
+                ops: ops)
+        ])
+
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float64) -> Int32)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _ri32__i32_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .i32], _ callback: @escaping ((Int32, Int32)->Int32)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -1937,6 +1956,24 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(
                 Int32(bitPattern: 0b10000000_10000000_10000000_10000000),
                 entrypoint_64t32(0b10000000_10000000_10000000_10000000_10000000)
+            )
+        }
+    }
+    
+    func testCompile__OToInt__f64_to_i32() throws {
+        try _ri32__f64(ops: [
+            .OToInt(dst: 1, src: 0),
+            .ORet(ret: 1),
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqual(
+                2147483647,
+                UInt32(bitPattern: entrypoint(21474839999))
+            )
+            XCTAssertEqual(
+                2147483647,
+                entrypoint(2147483648)
             )
         }
     }

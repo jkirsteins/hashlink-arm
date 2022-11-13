@@ -65,8 +65,11 @@ class TestJitModule : JitContext2 {
         let allExpanded = allTypes.flatMap({ t in Self.expand(t) })
         
         self.types = Set(allExpanded.map({ AnyHLTypeProvider($0) }) + [
-            // .void must be always present. Requirement of CCompat type writer
-            AnyHLTypeProvider(HLTypeKind.void as! (any HLTypeProvider))])
+            // Some types must be always present because we need to
+            // guarantee their ordering for tests
+            AnyHLTypeProvider(HLTypeKind.void as! (any HLTypeProvider)),
+            AnyHLTypeProvider(HLTypeKind.i32 as! (any HLTypeProvider)),
+            AnyHLTypeProvider(HLTypeKind.bool as! (any HLTypeProvider))])
         print("Serializing types", self.types)
         
         self.ints = ints
