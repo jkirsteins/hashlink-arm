@@ -1381,6 +1381,64 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
+    
+    func testCompile__OSetI8() throws {
+        let ctx = try prepareContext(
+            compilables: [
+                prepareFunction(
+                    retType: HLTypeKind.void,
+                    findex: 0,
+                    regs: [HLTypeKind.bytes, HLTypeKind.i32, HLTypeKind.i32, HLTypeKind.void],
+                    args: [HLTypeKind.bytes, HLTypeKind.i32, HLTypeKind.i32],
+                    ops: [
+                        .OSetI8(bytes: 0, index: 1, src: 2),
+                        .ORet(ret: 3)
+                    ]
+                )
+            ]
+        )
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UnsafeRawPointer, Int32, Int32) -> ())) in
+                var x: [UInt8] = [11, 22, 33, 44, 55, 66, 77, 88, 99]
+
+                entrypoint(&x, 1, 79)
+                entrypoint(&x, 3, 97)
+                XCTAssertEqual(x, [11, 79, 33, 97, 55, 66, 77, 88, 99])
+            }
+        }
+    }
+    
+    func testCompile__OSetI16() throws {
+        let ctx = try prepareContext(
+            compilables: [
+                prepareFunction(
+                    retType: HLTypeKind.void,
+                    findex: 0,
+                    regs: [HLTypeKind.bytes, HLTypeKind.i32, HLTypeKind.i32, HLTypeKind.void],
+                    args: [HLTypeKind.bytes, HLTypeKind.i32, HLTypeKind.i32],
+                    ops: [
+                        .OSetI16(bytes: 0, index: 1, src: 2),
+                        .ORet(ret: 3)
+                    ]
+                )
+            ]
+        )
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UnsafeRawPointer, Int32, Int32) -> ())) in
+                var x: [UInt16] = [11, 22, 33, 44, 55, 66, 77, 88, 99]
+        
+                entrypoint(&x, 1, 79)
+                entrypoint(&x, 3, 97)
+                XCTAssertEqual(x, [11, 79, 33, 97, 55, 66, 77, 88, 99])
+            }
+        }
+    }
 
     func testCompile__OShl() throws {
         

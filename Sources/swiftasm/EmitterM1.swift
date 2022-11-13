@@ -1092,6 +1092,67 @@ public class EmitterM1 {
             let s = sizeMask(is64: Rt.is64)
             let encoded = mask | imm | encodedRn | encodedRt | s
             return returnAsArray(encoded)
+        case .strh(let Wt, .reg(let Xn, let mod)):
+            //                              Rm    opt S    Rn    Rt
+            let mask: Int64 = 0b01111000001_00000_000_0_10_00000_00000
+            let option: Int64
+            let Rm: any Register
+            let S: Int64
+            switch(mod) {
+            case .r64shift(let _Rm, .lsl(let lslAmount)):
+                Rm = _Rm
+                guard lslAmount == 0 || lslAmount == 1 else {
+                    fatalError("Expected .lsl #0 or #1")
+                }
+                S = Int64(lslAmount)
+                option = 0b011
+            case .r64ext(let _Rm, let mod):
+                Rm = _Rm
+                switch(mod) {
+                case .sxtx(0):
+                    S = 0
+                    option = 0b111
+                case .sxtx(1):
+                    S = 1
+                    option = 0b111
+                case .sxtx:
+                    fatalError("Expected .sxtx #0 or #1")
+                }
+            case .r32ext(let _Rm, let mod):
+                Rm = _Rm
+                switch(mod) {
+                case .uxtw(0):
+                    S = 0
+                    option = 0b010
+                case .uxtw(1):
+                    S = 1
+                    option = 0b010
+                case .sxtw(0):
+                    S = 0
+                    option = 0b110
+                case .sxtw(1):
+                    S = 1
+                    option = 0b110
+                case .sxtw:
+                    fatalError("Expected .sxtw #0 or #1")
+                case .uxtw:
+                    fatalError("Expected .uxtw #0 or #1")
+                }
+            case nil:
+                Rm = X.x0
+                S = 0
+                option = 0b000
+            default:
+                fatalError("not implemented")
+            }
+            let shiftedS: Int64 = S << 12
+            let shiftedOpt = option << 13
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Wt, shift: 0)
+            let encodedRm = encodeReg(Rm, shift: 16)
+            
+            let encoded = mask | encodedRn | encodedRt | encodedRm | shiftedOpt | shiftedS
+            return returnAsArray(encoded)
         case .strb(let Rt, .imm64(let Xn, let off, let ixMode)):
             let mask: Int64
             let imm: Int64
@@ -1113,6 +1174,54 @@ public class EmitterM1 {
             let encodedRt = encodeReg(Rt, shift: 0)
             let s = sizeMask(is64: Rt.is64)
             let encoded = mask | imm | encodedRn | encodedRt | s
+            return returnAsArray(encoded)
+        case .strb(let Wt, .reg(let Xn, let mod)):
+            //                              Rm    opt S    Rn    Rt
+            let mask: Int64 = 0b00111000001_00000_000_0_10_00000_00000
+            let option: Int64
+            let Rm: any Register
+            let S: Int64
+            switch(mod) {
+            case .r64ext(let _Rm, let mod):
+                Rm = _Rm
+                switch(mod) {
+                case .sxtx(0):
+                    S = 1
+                    option = 0b111
+                case .sxtx:
+                    fatalError("Expected .sxtx #0")
+                }
+            case .r32ext(let _Rm, let mod):
+                Rm = _Rm
+                S = 1
+                switch(mod) {
+                case .uxtw(0):
+                    option = 0b010
+                case .sxtw(0):
+                    option = 0b110
+                case .sxtw:
+                    fatalError("Expected .sxtw #0")
+                case .uxtw:
+                    fatalError("Expected .uxtw #0")
+                }
+            case .r64shift(let _Rm, .lsl(0)):
+                Rm = _Rm
+                option = 0b011
+                S = 0
+            case nil:
+                Rm = X.x0
+                S = 0
+                option = 0b000
+            default:
+                fatalError("not implemented")
+            }
+            let shiftedS: Int64 = S << 12
+            let shiftedOpt = option << 13
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Wt, shift: 0)
+            let encodedRm = encodeReg(Rm, shift: 16)
+            
+            let encoded = mask | encodedRn | encodedRt | encodedRm | shiftedOpt | shiftedS
             return returnAsArray(encoded)
         case .asrv(let Rd, let Rn, let Rm):
             let s = sizeMask(is64: Rd.is64)

@@ -128,7 +128,8 @@ def lookup_loads_store_register__register_offset(val)
     elsif match("00 0 00 xxx", valStr) and !match("xx x xx 011", valStr)
         abort("STRB (register) — extended register")
     elsif match("00 0 00 011", valStr)
-        abort("STRB (register) — shifted register")
+        puts("STRB (register) — shifted register")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STRB--register---Store-Register-Byte--register--?lang=en")
     elsif match("00 0 01 xxx", valStr) and !match("xx x xx 011", valStr)
         puts("LDRB (register) — extended register")
         puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LDRB--register---Load-Register-Byte--register--")
@@ -156,7 +157,8 @@ def lookup_loads_store_register__register_offset(val)
     elsif match("00 1 11 xxx", valStr)
         abort("LDR (register, SIMD&FP)")
     elsif match("01 0 00 xxx", valStr)
-        abort("STRH (register)")
+        puts("STRH (register)")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STRH--register---Store-Register-Halfword--register--?lang=en")
     elsif match("01 0 01 xxx", valStr)
         puts("LDRH (register)")
         puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LDRH--register---Load-Register-Halfword--register--?lang=en")
@@ -435,7 +437,7 @@ def lookup_data_processing__register__logical_shifted_register(val)
         ["0	xx	x	1xxxxx"] => "UNALLOCATED",
         ["0	00	0	xxxxxx"] => "AND (shifted register) — 32-bit",
         ["0	00	1	xxxxxx"] => "BIC (shifted register) — 32-bit",
-        ["0	01	0	xxxxxx"] => "ORR (shifted register) — 32-bit",
+        ["0	01	0	xxxxxx"] => ["ORR (shifted register) — 32-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ORR--shifted-register---Bitwise-OR--shifted-register--?lang=en"],
         ["0	01	1	xxxxxx"] => "ORN (shifted register) — 32-bit",
         ["0	10	0	xxxxxx"] => ["EOR (shifted register) — 32-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/EOR--shifted-register---Bitwise-Exclusive-OR--shifted-register--?lang=en"],
         ["0	10	1	xxxxxx"] => "EON (shifted register) — 32-bit",
@@ -443,7 +445,7 @@ def lookup_data_processing__register__logical_shifted_register(val)
         ["0	11	1	xxxxxx"] => "BICS (shifted register) — 32-bit",
         ["1	00	0	xxxxxx"] => "AND (shifted register) — 64-bit",
         ["1	00	1	xxxxxx"] => "BIC (shifted register) — 64-bit",
-        ["1	01	0	xxxxxx"] => "ORR (shifted register) — 64-bit",
+        ["1	01	0	xxxxxx"] => ["ORR (shifted register) — 64-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ORR--shifted-register---Bitwise-OR--shifted-register--?lang=en"],
         ["1	01	1	xxxxxx"] => "ORN (shifted register) — 64-bit",
         ["1	10	0	xxxxxx"] => ["EOR (shifted register) — 64-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/EOR--shifted-register---Bitwise-Exclusive-OR--shifted-register--?lang=en"],
         ["1	10	1	xxxxxx"] => "EON (shifted register) — 64-bit",
@@ -698,4 +700,9 @@ def lookup(val)
     end
 end
 
-puts lookup(0x1b037c41)
+# E.g. "02 78 21 78" (output from 'objdump -d ')
+def from_objd(str)
+    ("0x" + str.split(" ").reverse.join("")).to_i(16)
+end
+
+puts lookup(from_objd("02 78 21 38"))

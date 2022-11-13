@@ -140,6 +140,11 @@ final class EmitterM1Tests: XCTestCase {
             "strb w0, [sp], #4",
             0xe0, 0x47, 0x00, 0x38
         )
+        XCTAssertM1Op(
+            M1Op.strb(.w2, .reg(X.x0, .r64shift(X.x1, .lsl(0)))),
+            "strb w2, [x0, x1]",
+            0x02, 0x68, 0x21, 0x38
+        )
     }
     
     func testStr_regression() throws {
@@ -196,6 +201,11 @@ final class EmitterM1Tests: XCTestCase {
             M1Op.strh(.w0, .imm64(.sp, 4, .post)),
             "strh w0, [sp], #4",
             0xe0, 0x47, 0x00, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.strh(.w2, .reg(X.x0, .r64shift(X.x1, .lsl(1)))),
+            "strh w2, [x0, x1, lsl #1]",
+            0x02, 0x78, 0x21, 0x78
         )
     }
     

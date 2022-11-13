@@ -1236,6 +1236,32 @@ class M1Compiler2 {
                 appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
                 mem.append(M1Op.lsl_r(X.x2, X.x0, X.x1))
                 appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
+            case .OSetI8(let bytes, let index, let src):
+                fallthrough
+            case .OSetI16(let bytes, let index, let src):
+                assert(reg: bytes, from: regs, is: HLTypeKind.bytes)
+                assert(reg: index, from: regs, is: HLTypeKind.i32)
+                
+                if op.id == .OSetI16 {
+                    assert(reg: src, from: regs, in: [HLTypeKind.u16, HLTypeKind.i32])
+                } else if op.id == .OSetI8 {
+                    assert(reg: src, from: regs, in: [HLTypeKind.u8, HLTypeKind.u16, HLTypeKind.i32])
+                }
+                
+                appendLoad(reg: X.x0, from: bytes, kinds: regs, mem: mem)
+                appendLoad(reg: X.x1, from: index, kinds: regs, mem: mem)
+                appendLoad(reg: X.x2, from: src, kinds: regs, mem: mem)
+                if op.id == .OSetI8 {
+                    mem.append(
+                        M1Op.strb(W.w2, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
+                    )
+                } else if op.id == .OSetI16 {
+                    mem.append(
+                        M1Op.strh(W.w2, .reg(X.x0, .r64shift(X.x1, .lsl(1))))
+                    )
+                } else {
+                    fatalError("Unexpected op \(op.id)")
+                }
             case .OGetI8(let dst, let bytes, let index):
                 fallthrough
             case .OGetI16(let dst, let bytes, let index):
