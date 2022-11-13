@@ -17,6 +17,7 @@ struct Test_HLTypeFun : HLTypeProvider, HLTypeFunProvider, Equatable, Hashable, 
     
     var funProvider: (any HLTypeFunProvider)? { self }
     var objProvider: (any HLTypeObjProvider)? { nil }
+    var tparamProvider: (any HLTypeProvider)? { nil }
     
     var debugDescription: String {
         "Test_HLTypeFun(\(argsProvider.map { $0.debugDescription }.joined(separator: ", "))) -> (\(retProvider.debugDescription))"

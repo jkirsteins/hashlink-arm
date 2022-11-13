@@ -3,6 +3,7 @@ protocol HLTypeProvider: HLTypeKindProvider, OverrideCustomDebugStringConvertibl
     var kind: HLTypeKind { get }
     var funProvider: (any HLTypeFunProvider)? { get }
     var objProvider: (any HLTypeObjProvider)? { get }
+    var tparamProvider: (any HLTypeProvider)? { get }
     
     var ccompatAddress: UnsafeRawPointer { get }
 }

@@ -18,4 +18,13 @@ extension UnsafePointer<HLType_CCompat> : HLTypeProvider, HLTypeKindProvider {
             return nil
         }
     }
+    
+    var tparamProvider: (any HLTypeProvider)? {
+        switch(self.kind) {
+        case .ref:
+            return self.pointee.tparam
+        default:
+            return nil
+        }
+    }
 }

@@ -26,7 +26,15 @@ extension HLTypeKind : HLTypeProvider {
         default:
             return nil
         }
-        
+    }
+    
+    public var tparamProvider: (any HLTypeProvider)? {
+        switch(self) {
+        case .ref:
+            fatalError("HLTypeKind can not be used as a ref type")
+        default:
+            return nil
+        }
     }
 }
 

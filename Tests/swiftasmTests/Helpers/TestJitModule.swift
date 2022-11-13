@@ -95,6 +95,10 @@ class TestJitModule : JitContext2 {
                 res += expand(superType) + [superType]
             }
         }
+        
+        if let fp = t.tparamProvider {
+            res += [fp]
+        }
                 
         return res + [t]
     }

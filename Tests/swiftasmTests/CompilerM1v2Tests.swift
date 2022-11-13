@@ -2380,4 +2380,63 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
+    
+    func testCompile__ORef() throws {
+        let ref = Test_HLTypeRef(tparamProvider: HLTypeKind.i32)
+        
+        let ctx = try prepareContext(compilables: [
+            /*
+             fn testRef () -> (i32)
+
+             reg0  i32
+             reg1  void
+             reg2  ref<i32>
+             
+             0: Int         reg0 = 10
+             1: Ref         reg2 = &reg0
+             2: Call1       reg1 = testRefSet(reg2)
+             3: Ret         reg0
+             */
+            prepareFunction(
+                retType: HLTypeKind.u8,
+                findex: 0,
+                regs: [HLTypeKind.i32, HLTypeKind.void, ref],
+                args: [],
+                ops: [
+                    .OInt(dst: 0, ptr: 0),
+                    .ORef(dst: 2, src: 0),
+                    .OCall1(dst: 1, fun: 1, arg0: 2),
+                    .ORet(ret: 0)
+                ]),
+            /*
+            fn testRefSet (ref<i32>) -> (void)
+                reg0  ref<i32>
+                reg1  i32
+                reg2  void
+             
+                0: Int         reg1 = 2
+                1: Setref { dst: Reg(0), value: Reg(1) }
+                2: Ret         reg2
+             */
+            prepareFunction(
+                retType: HLTypeKind.void,
+                findex: 1,
+                regs: [ref, HLTypeKind.i32, HLTypeKind.void],
+                args: [ref],
+                ops: [
+                    .OInt(dst: 1, ptr: 1),
+                    .OSetref(dst: 0, value: 1),
+                    .ORet(ret: 2)
+                ]),
+        ], ints: [10, 2])
+        
+        try compileAndLink(ctx: ctx, 0, 1) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) () -> (Int32))) in
+                let res = entrypoint()
+                XCTAssertEqual(2, res)
+            }
+        }
+    }
 }

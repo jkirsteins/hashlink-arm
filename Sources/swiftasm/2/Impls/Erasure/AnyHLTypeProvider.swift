@@ -15,6 +15,7 @@ class AnyHLTypeProvider : Equatable, Hashable, CustomDebugStringConvertible, HLT
     var ccompatAddress: UnsafeRawPointer { _ccompatAddress() }
     var funProvider: (any HLTypeFunProvider)? { _funProvider }
     var objProvider: (any HLTypeObjProvider)? { _objProvider }
+    var tparamProvider: (any HLTypeProvider)? { _tparamProvider }
     
     let _ccompatAddress: ()->UnsafeRawPointer
     let _kind: ()->HLTypeKind
@@ -22,6 +23,7 @@ class AnyHLTypeProvider : Equatable, Hashable, CustomDebugStringConvertible, HLT
     let _debugDescription: ()->String
     let _funProvider: AnyHLTypeFunProvider?
     let _objProvider: AnyHLTypeObjProvider?
+    let _tparamProvider: AnyHLTypeProvider?
     
     init(_ wrapped: any HLTypeProvider) {
         self._kind = { wrapped.kind }
@@ -39,6 +41,12 @@ class AnyHLTypeProvider : Equatable, Hashable, CustomDebugStringConvertible, HLT
             self._objProvider = AnyHLTypeObjProvider(op)
         } else {
             self._objProvider = nil
+        }
+        
+        if let tparam = wrapped.tparamProvider {
+            self._tparamProvider = AnyHLTypeProvider(tparam)
+        } else {
+            self._tparamProvider = nil
         }
     }
 }
