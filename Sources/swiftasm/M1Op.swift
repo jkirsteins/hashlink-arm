@@ -125,8 +125,12 @@ enum M1Op : CpuOp {
             return "movz \(rt), #\(v), \(String(describing: shift)))"
         case .movr64(let rt, let rn):
             return "movr \(rt), \(rn)"
-        case .orr64:
-            fatalError("orr debugdesc not implemente4d")
+        case .orr(let rd, let rn, let rm, let shift):
+            if let shift = shift {
+                return "orr \(rd), \(rn), \(rm), \(shift)"
+            } else {
+                return "orr \(rd), \(rn), \(rm)"
+            }
         case .movk64(let rt, let val, nil):
             return "movk \(rt), #\(val)"
         case .movk64(let rt, let val, let shift) where shift != nil:
@@ -460,7 +464,7 @@ enum M1Op : CpuOp {
     case movr64(Register64, Register64)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ORR--shifted-register---Bitwise-OR--shifted-register--?lang=en
-    case orr64(Register64, Register64, Register64, Register64.Shift?)
+    case orr(any Register, any Register, any Register, Shift64_Real?)
     
     // Shifted register
     //     https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/AND--shifted-register---Bitwise-AND--shifted-register--?lang=en

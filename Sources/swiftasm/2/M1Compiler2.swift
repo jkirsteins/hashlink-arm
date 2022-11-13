@@ -1511,6 +1511,11 @@ class M1Compiler2 {
                 appendLoad(reg: .x3, from: src, kinds: regs, mem: mem)
                 mem.append(M1Op.blr(.x10))
                 appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
+            case .OOr(let dst, let a, let b):
+                appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
+                appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
+                mem.append(M1Op.orr(X.x0, X.x0, X.x1, nil))
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

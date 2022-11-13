@@ -1835,4 +1835,20 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(dyn.pointee.i, 1243)
         }
     }
+    
+    func testCompile__OOr() throws {
+        try _ri32__i32_i32(ops: [
+            .OOr(dst: 0, a: 0, b: 1),
+            .ORet(ret: 0)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqual(0b111, entrypoint(0b000, 0b111))
+            XCTAssertEqual(0b111, entrypoint(0b010, 0b101))
+            XCTAssertEqual(0b101, entrypoint(0b100, 0b001))
+            
+            let res = entrypoint(Int32(bitPattern: 0b01010101010101010101010101010101), Int32(bitPattern: 0b10101010101010101010101010101010))
+            XCTAssertEqual(res, Int32(bitPattern: 0b11111111111111111111111111111111))
+        }
+    }
 }

@@ -52,6 +52,19 @@ extension XCTestCase {
 
 final class EmitterM1Tests: XCTestCase {
     
+    func testOrr() throws {
+        XCTAssertM1Op(
+            M1Op.orr(X.x0, X.x1, X.x2, nil),
+            "orr x0, x1, x2",
+            0x20, 0x00, 0x02, 0xaa
+        )
+        XCTAssertM1Op(
+            M1Op.orr(W.w1, W.w2, W.w3, nil),
+            "orr w1, w2, w3",
+            0x41, 0x00, 0x03, 0x2a
+        )
+    }
+    
     func testLsr() throws {
         XCTAssertM1Op(
             M1Op.lsr(X.x1, X.x2, .immediate6(3)),

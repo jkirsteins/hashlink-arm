@@ -527,7 +527,7 @@ public class EmitterM1 {
             let mask: Int64 = 1 << 28
             let encoded = mask | encodedRd | immlo | immhi 
             return returnAsArray(encoded)
-        case .orr64(let Rd, let WZr, let Rn, let shift) where WZr == .sp && shift == nil:
+        case .orr(let Rd as Register64, let xZR, let Rn as Register64, nil) where Rd.is64 && Rn.is64 && xZR.to64 == X.xZR:
             fallthrough
         case .movr64(let Rd, let Rn) where Rd == .sp || Rn == .sp: 
             let mask: Int64 = 0b10010001_00000000_00000000_00000000
@@ -1152,6 +1152,14 @@ public class EmitterM1 {
             let sf = sizeMask(is64: Rd.is64)
             let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm, Ra: Ra)
             let encoded = mask | sf | regs
+            return returnAsArray(encoded)
+        case .orr(let Rd, let Rn, let Rm, let shift):
+            //                           SH   Rm    imm6   Rn    Rd
+            let mask: Int64 = 0b00101010_00_0_00000_000000_00000_00000
+            let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
+            let sf = sizeMask(is64: Rd.is64)
+            let (imm6, sh) = getShImm6(shift)
+            let encoded = mask | regs | sf | imm6 | sh
             return returnAsArray(encoded)
         default:
             print("Can't compile \(op)")
