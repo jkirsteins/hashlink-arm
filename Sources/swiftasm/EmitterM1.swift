@@ -1334,6 +1334,20 @@ public class EmitterM1 {
             let regs = encodeRegs(Rd: Rt, Rn: Register64(rawValue: Rn.rawValue))
             let encoded = mask | s | (ftype << 22) | regs
             return returnAsArray(encoded)
+        case .scvtf(let Rt, let Rn) where Rt.single || Rt.double:
+            //                  S        FT              Rn    Rd
+            let mask: Int64 = 0b00011110_00_100010000000_00000_00000
+            let ftype: Int64
+            if Rt.double {
+                ftype = 1
+            } else {
+                fatalError("Not implemented")
+            }
+            
+            let s = sizeMask(is64: Rn.is64)
+            let regs = encodeRegs(Rd: Register64(rawValue: Rt.rawValue), Rn: Rn)
+            let encoded = mask | s | (ftype << 22) | regs
+            return returnAsArray(encoded)
         default:
             print("Can't compile \(op)")
             throw EmitterM1Error.unsupportedOp

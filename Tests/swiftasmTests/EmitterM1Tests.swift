@@ -65,6 +65,19 @@ final class EmitterM1Tests: XCTestCase {
         )
     }
     
+    func testScvtf() throws {
+        XCTAssertM1Op(
+            M1Op.scvtf(D.d0, X.x8),
+            "scvtf d0, x8",
+            0x00, 0x01, 0x62, 0x9e
+        )
+        XCTAssertM1Op(
+            M1Op.scvtf(D.d0, W.w8),
+            "scvtf d0, w8",
+            0x00, 0x01, 0x62, 0x1e
+        )
+    }
+    
     func testOrr() throws {
         XCTAssertM1Op(
             M1Op.orr(X.x0, X.x1, X.x2, nil),

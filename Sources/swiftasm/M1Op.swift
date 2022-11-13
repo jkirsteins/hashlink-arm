@@ -340,6 +340,8 @@ enum M1Op : CpuOp {
             return "madd \(Rd), \(Rn), \(Rm), \(Ra)"
         case .fcvtzs(let Rt, let Rn):
             return "fcvtzs \(Rt), \(Rn)"
+        case .scvtf(let Rt, let Rn):
+            return "scvtf \(Rt), \(Rn)"
         }
     }
     
@@ -517,6 +519,7 @@ enum M1Op : CpuOp {
     // Floating-point Convert to Signed integer
     // https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FCVTZS--vector--integer---Floating-point-Convert-to-Signed-integer--rounding-toward-Zero--vector--?lang=en
     case fcvtzs(any Register, any RegisterFP)
+    case scvtf(any RegisterFP, any Register)
 }
 
 
