@@ -423,7 +423,14 @@ extension HLOpCode {
         case .ORethrow:
             return .ORethrow(exc: cop.p1)
         case .OSwitch:
-            fatalError("wip")
+            let offsetCount = cop.p2
+            guard let extra = cop.extra else {
+                fatalError("OSwitch missing extra")
+            }
+            let offsets = (0..<offsetCount).map {
+                Reg(extra.advanced(by: Int($0)).pointee)
+            }
+            return .OSwitch(reg: cop.p1, offsets: offsets, end: cop.p3)
         case .OGetMem:
             return .OGetMem(dst: cop.p1, bytes: cop.p2, index: cop.p3)
         case .OSetMem:
