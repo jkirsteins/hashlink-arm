@@ -1542,8 +1542,37 @@ class M1Compiler2 {
                 appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
                 mem.append(M1Op.orr(X.x0, X.x0, X.x1, nil))
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
-            case .OSwitch(let reg, let offsets, let end):
-                fatalError("Compiling switch in \(compilable.findex)")
+            case .OSwitch(let reg, let offsets, _ /*end*/):
+                
+                appendLoad(reg: X.x0, from: reg, kinds: regs, mem: mem)
+                
+                for (expectedValue, jmpOffset) in offsets.enumerated() {
+                    mem.append(
+                        PseudoOp.debugPrint2(self, "Comparing reg \(reg) against \(expectedValue)"),
+                        PseudoOp.mov(X.x1, expectedValue),
+                        M1Op.cmp(X.x0, X.x1)
+                    )
+                    
+                    // calculate what to skip
+                    let wordsToSkip = Int(jmpOffset) + 1
+                    let targetInstructionIx = currentInstruction + wordsToSkip
+                    
+                    let jumpOffset_partA = try Immediate19(mem.byteSize)
+                    let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
+                    let jumpOffset = try DeferredImmediateSum(
+                        jumpOffset_partB,
+                        jumpOffset_partA,
+                        -1,
+                        -Int(0))
+                    //
+                    
+                    mem.append(
+                        PseudoOp.deferred(4) {
+                            M1Op.b_eq(try Immediate19(jumpOffset.immediate))
+                        },
+                        PseudoOp.debugPrint2(self, "Didn't jump from case \(expectedValue)")
+                    )
+                }
             case .OGetTID(let dst, let src):
                 let srcType = requireType(reg: src, regs: regs)
                 Swift.assert(srcType.kind == .type)

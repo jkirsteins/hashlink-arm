@@ -168,8 +168,10 @@ struct HLOpCode_CCompat : Equatable, Hashable {
             self = HLOpCode_CCompat(op: opc.id, p1: exc)
         case .ORethrow(exc: let exc):
             self = HLOpCode_CCompat(op: opc.id, p1: exc)
-        case .OSwitch:
-            fatalError("wip")
+        case .OSwitch(let reg, let offsets, let end):
+            extra = .allocate(capacity: offsets.count)
+            _ = extra!.initialize(from: offsets)
+            self = HLOpCode_CCompat(op: opc.id, p1: reg, p2: Int32(offsets.count), p3: end, extra: extra!.baseAddress!)
         case .ONullCheck(reg: let reg):
             self = HLOpCode_CCompat(op: opc.id, p1: reg)
         case .OTrap(exc: let exc, offset: let offset):

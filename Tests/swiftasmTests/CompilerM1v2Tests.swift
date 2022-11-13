@@ -594,6 +594,25 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _ri32__i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32], ints: [Int32] = [], _ callback: @escaping ((Int32)->Int32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i32],
+                ops: ops)
+        ], ints: ints)
+
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int32) -> Int32)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _rdyn__i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .dyn], _ callback: @escaping ((Int32)->UnsafePointer<vdynamic>)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -1960,6 +1979,103 @@ final class CompilerM1v2Tests: CCompatTestCase {
             
             let res = entrypoint(Int32(bitPattern: 0b01010101010101010101010101010101), Int32(bitPattern: 0b10101010101010101010101010101010))
             XCTAssertEqual(res, Int32(bitPattern: 0b11111111111111111111111111111111))
+        }
+    }
+    
+    /** Test a switch statement with a default case.
+     
+            static public function testSwitch(v: Int): Int {
+                    var v2 = v + 1;
+                    switch(v2) {
+                        case 0: return v*5;
+                        case 2: return v*0;
+                        case 4: return v*1;
+                        case 6: return v*2;
+                        case 7: return v*3;
+                        default: return v*4;
+                    };
+                }
+     */
+    func testCompile__OSwitch__withDefault() throws {
+        try _ri32__i32(ops: [
+            .OInt(dst: 2, ptr: 0),          // 0: Int         reg2 = 1
+            .OAdd(dst: 1, a: 0, b: 2),      // 1: Add         reg1 = reg0 + reg2
+            .OSwitch(reg: 1,                // 2: Switch { reg: Reg(1), offsets: [3, 0, 6, 0, 9, 0, 10, 13], end: 16 }
+                     offsets: [
+                        3, 0, 6, 0, 9,
+                        0, 10, 13], end: 16),
+            .OInt(dst: 3, ptr: 1),          // 3: Int         reg3 = 4
+            .OMul(dst: 2, a: 0, b: 3),      // 4: Mul         reg2 = reg0 * reg3
+            .ORet(ret: 2),                  // 5: Ret         reg2
+            .OInt(dst: 3, ptr: 2),          // 6: Int         reg3 = 5
+            .OMul(dst: 2, a: 0, b: 3),      // 7: Mul         reg2 = reg0 * reg3
+            .ORet(ret: 2),                  // 8: Ret         reg2
+            .OInt(dst: 3, ptr: 3),          // 9: Int         reg3 = 0
+            .OMul(dst: 2, a: 0, b: 3),      // 10: Mul         reg2 = reg0 * reg3
+            .ORet(ret: 2),                  // 11: Ret         reg2
+            .ORet(ret: 0),                  // 12: Ret         reg0
+            .OInt(dst: 3, ptr: 4),          // 13: Int         reg3 = 2
+            .OMul(dst: 2, a: 0, b: 3),      // 14: Mul         reg2 = reg0 * reg3
+            .ORet(ret: 2),                  // 15: Ret         reg2
+            .OInt(dst: 3, ptr: 5),          // 16: Int         reg3 = 3
+            .OMul(dst: 2, a: 0, b: 3),      // 17: Mul         reg2 = reg0 * reg3
+            .ORet(ret: 2)                   // 18: Ret         reg2
+        ], regs: [.i32, .i32, .i32, .i32], ints: [1, 4, 5, 0, 2, 3]) {
+            entrypoint in
+            
+            XCTAssertEqual(-5,      entrypoint(-1))     // case 0
+            XCTAssertEqual(0,       entrypoint(1))      // case 2
+            XCTAssertEqual(3,       entrypoint(3))      // case 4
+            XCTAssertEqual(10,      entrypoint(5))      // case 6
+            XCTAssertEqual(18,      entrypoint(6))      // case 7
+            XCTAssertEqual(2048,    entrypoint(512))    // default
+        }
+    }
+    
+    /** Test a switch statement without a default case.
+     
+            static public function testSwitch(v: Int): Int {
+                switch(v) {
+                    case 0: return v*0;
+                    case 2: return v*1;
+                    case 4: return v*2;
+                    case 6: return v*3;
+                    case 7: return v*4;
+                };
+                return -1;
+            }
+     */
+    func testCompile__OSwitch__withoutDefault() throws {
+        try _ri32__i32(ops: [
+            .OSwitch(                       // 0: Switch { reg: Reg(0), offsets: [1, 0, 4, 0, 5, 0, 8, 11], end: 14 }
+                reg: 0,
+                offsets: [1, 0, 4, 0, 5, 0, 8, 11],
+                end: 14),
+            .OJAlways(offset: 13),          // 1: JAlways     jump to 15 (== offset 13)
+            .OInt(dst: 2, ptr: 0),          // 2: Int         reg2 = 0
+            .OMul(dst: 1, a: 0, b: 2),      // 3: Mul         reg1 = reg0 * reg2
+            .ORet(ret: 1),                  // 4: Ret         reg1
+            .ORet(ret: 0),                  // 5: Ret         reg0
+            .OInt(dst: 2, ptr: 1),          // 6: Int         reg2 = 2
+            .OMul(dst: 1, a: 0, b: 2),      // 7: Mul         reg1 = reg0 * reg2
+            .ORet(ret: 1),                  // 8: Ret         reg1
+            .OInt(dst: 2, ptr: 2),          // 9: Int         reg2 = 3
+            .OMul(dst: 1, a: 0, b: 2),      // 10: Mul         reg1 = reg0 * reg2
+            .ORet(ret: 1),                  // 11: Ret         reg1
+            .OInt(dst: 2, ptr: 3),          // 12: Int         reg2 = 4
+            .OMul(dst: 1, a: 0, b: 2),      // 13: Mul         reg1 = reg0 * reg2
+            .ORet(ret: 1),                  // 14: Ret         reg1
+            .OInt(dst: 1, ptr: 4),          // 15: Int         reg1 = -1
+            .ORet(ret: 1)                   // 16: Ret         reg1
+        ], regs: [.i32, .i32, .i32], ints: [0, 2, 3, 4, -1]) {
+            entrypoint in
+            
+            XCTAssertEqual(0,   entrypoint(0))      // case 0
+            XCTAssertEqual(2,   entrypoint(2))      // case 2
+            XCTAssertEqual(8,   entrypoint(4))      // case 4
+            XCTAssertEqual(18,  entrypoint(6))      // case 6
+            XCTAssertEqual(28,  entrypoint(7))      // case 7
+            XCTAssertEqual(-1,  entrypoint(123))    // no case
         }
     }
 }
