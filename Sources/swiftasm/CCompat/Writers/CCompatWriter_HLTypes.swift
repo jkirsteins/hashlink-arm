@@ -115,42 +115,29 @@ class CCompatWriter_HLTypes {
     }
     
     func initialize(target: UnsafeMutablePointer<HLType_CCompat>) throws {
-        var failedFirstPass: [Int:CCompatWriter_HLType] = [:]
-        var failedSecondPass: [Int:CCompatWriter_HLType] = [:]
         
-        // first pass
-        for (ix, w) in self.writers.enumerated() {
-            do {
-                let dest = target.advanced(by: ix)
-                logger.info("[1st pass] Writing \(String(describing: w.typeIn._overrideDebugDescription)) at \(String(describing: dest))")
-                try w.initialize(target: dest)
-            } catch CCompatWriterError.missingDependency(let msg) {
-                logger.info("Skipping \(String(describing: w.typeIn)) in first pass: \(msg)")
-                failedFirstPass[ix] = w
+        let RETRY_PASSES = 1
+        
+        var toIterateOver: [(Int, CCompatWriter_HLType)] = self.writers.enumerated().map { ($0, $1) }
+        
+        for pass in 0..<RETRY_PASSES+1 {
+            logger.info("Starting pass #\(pass)")
+            var failedInPass: [(Int, CCompatWriter_HLType)] = []
+            for (ix, w) in toIterateOver {
+                do {
+                    let dest = target.advanced(by: ix)
+                    logger.info("[Pass #\(pass)] Writing #\(ix): \(String(describing: w.typeIn._overrideDebugDescription)) at \(String(describing: dest))")
+                    try w.initialize(target: dest)
+                } catch CCompatWriterError.missingDependency(let msg) {
+                    guard pass < RETRY_PASSES else {
+                        logger.critical("[Pass #\(pass)] Failed to serialize type \(String(describing: w.typeIn)): \(msg))")
+                        throw CCompatWriterError.missingDependency(msg)
+                    }
+                    logger.info("[Pass #\(pass)] Skipping \(String(describing: w.typeIn)) in pass #\(pass): \(msg)")
+                    failedInPass.append((ix, w))
+                }
             }
-        }
-        
-        logger.info("Starting second pass of HLTypes")
-        
-        // second pass (in case dependencies were missed on first pass)
-        for (ix, w) in failedFirstPass {
-            do {
-                let dest = target.advanced(by: ix)
-                logger.info("[2nd pass] Writing \(String(describing: w.typeIn._overrideDebugDescription)) at \(String(describing: dest))")
-                try w.initialize(target: dest)
-            } catch CCompatWriterError.missingDependency(let msg) {
-                logger.info("Skipping \(String(describing: w.typeIn)) in second pass: \(msg)")
-                failedSecondPass[ix] = w
-            }
-        }
-        
-        logger.info("Starting third pass of HLTypes")
-        
-        // final pass
-        for (ix, w) in failedSecondPass {
-            let dest = target.advanced(by: ix)
-            logger.info("[1st pass] Writing \(String(describing: w.typeIn._overrideDebugDescription)) at \(String(describing: dest))")
-            try w.initialize(target: dest)
+            toIterateOver = failedInPass
         }
     }
 }

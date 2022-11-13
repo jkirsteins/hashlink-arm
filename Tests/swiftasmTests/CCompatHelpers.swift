@@ -22,7 +22,7 @@ extension HLTypeKind : HLTypeProvider {
     public var objProvider: (any HLTypeObjProvider)? {
         switch(self) {
         case .obj:
-            fatalError("HLTypeKind can not be used as a function type")
+            fatalError("HLTypeKind can not be used as an obj type")
         default:
             return nil
         }

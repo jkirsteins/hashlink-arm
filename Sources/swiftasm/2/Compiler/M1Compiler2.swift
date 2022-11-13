@@ -908,77 +908,20 @@ class M1Compiler2 {
                     M1Op.str(X.x0, .reg64offset(X.sp, dstOffset, nil))
                 )
 
-                // let g = ctx.storage.globalResolver.get(Int(global!))
-                // fatalError("No ONew yet. Allocating: \(typeToAllocate) -> global \(global) \(g)")
-            case .OSetThis(field: let fieldRef, src: let srcReg):
-                guard regs.count > 0 && srcReg < regs.count else {
-                    fatalError("Not enough registers. Expected register 0 and \(srcReg) to be available. Got: \(regs)")
-                }
-                let sourceObjectType = regs[0]
-                assertKind(op, sourceObjectType.kind, .obj)
-
-                guard let objData = sourceObjectType.objProvider else {
-                    fatalError("source object should be .obj but was \(sourceObjectType)")
-                }
-
-                guard fieldRef < objData.fieldsProvider.count else {
-                    fatalError("OGetThis: expected field \(fieldRef) to exist but got \(objData.fieldsProvider)")
-                }
-                let sourceObjectFieldType = objData.fieldsProvider[fieldRef]
-
-                assert(reg: srcReg, from: regs, is: sourceObjectFieldType.typeProvider)
-
-                let objOffset = getRegStackOffset(regs, 0)
-                let srcOffset = getRegStackOffset(regs, srcReg)
-                let fieldOffset = getFieldOffset(objData, fieldRef)
-
-                /* We should:
-                 - load x0 from reg0 -- x0 is the base address of the type
-                 - load x1 from the source register
-                 - store x1 in x0 + field offset
-                 */
-
-                mem.append(
-                    M1Op.ldr(X.x0, .reg64offset(X.sp, objOffset, nil)),
-                    M1Op.ldr(X.x1, .reg64offset(X.sp, srcOffset, nil)),
-                    M1Op.str(X.x1, .reg64offset(X.x0, fieldOffset, nil))
-                )
-            case .OGetThis(let regDst, let fieldRef):
-                guard regs.count > 0 && regDst < regs.count else {
-                    fatalError("Not enough registers. Expected register 0 and \(regDst) to be available. Got: \(regs)")
-                }
-                let sourceObjectType = regs[0]
-                assertKind(op, sourceObjectType.kind, .obj)
-
-                guard let objData = sourceObjectType.objProvider else {
-                    fatalError("source object should be .obj but was \(sourceObjectType)")
-                }
-
-                guard fieldRef < objData.fieldsProvider.count else {
-                    fatalError("OGetThis: expected field \(fieldRef) to exist but got \(objData.fieldsProvider)")
-                }
-                let sourceObjectFieldType = objData.fieldsProvider[fieldRef]
-
-                assert(reg: regDst, from: regs, is: sourceObjectFieldType.typeProvider)
-
-                let objOffset = getRegStackOffset(regs, 0)
-                let dstOffset = getRegStackOffset(regs, regDst)
-                let fieldOffset = getFieldOffset(objData, fieldRef)
-
-                /* We should:
-                 - load x0 from reg0
-                 - access (x0 + fieldoffset)
-                 - move to regN
-                 */
-
-                mem.append(
-                    PseudoOp.debugMarker("Loading x0 from SP + \(objOffset) (offset for reg0)"),
-                    M1Op.ldr(X.x0, .reg64offset(X.sp, objOffset, nil)),     // point x0 to reg0 (i.e. obj)
-                    PseudoOp.debugMarker("Moving x0 by \(fieldOffset) (offset for field \(fieldRef))"),
-                    M1Op.ldr(X.x0, .reg64offset(X.x0, fieldOffset, nil)),   // move field (via offset) into x0
-                    PseudoOp.debugMarker("Storing x0 at SP + \(dstOffset) (offset for reg\(regDst))"),
-                    M1Op.str(X.x0, .reg64offset(X.sp, dstOffset, nil))      // store x0 back in sp
-                )
+            case .OGetThis(let dstReg, let fieldRef):
+                try __ogetthis_ofield(
+                    dstReg: dstReg,
+                    objReg: 0,
+                    fieldRef: fieldRef,
+                    regs: regs,
+                    mem: mem)
+            case .OField(let dstReg, let objReg, let fieldRef):
+                try __ogetthis_ofield(
+                    dstReg: dstReg,
+                    objReg: objReg,
+                    fieldRef: fieldRef,
+                    regs: regs,
+                    mem: mem)
             case .OInt(let dst, let iRef):
                 assert(reg: dst, from: regs, is: HLTypeKind.i32)
                 let c = try ctx.requireInt(iRef)
@@ -991,50 +934,10 @@ class M1Compiler2 {
                     PseudoOp.mov(X.x0, c),
                     M1Op.str(W.w0, .reg64offset(X.sp, regStackOffset, nil))
                 )
+            case .OSetThis(field: let fieldRef, src: let srcReg):
+                try __osetthis_osetfield(objReg: 0, fieldRef: fieldRef, srcReg: srcReg, regs: regs, mem: mem)
             case .OSetField(let objReg, let fieldRef, let srcReg):
-                let objRegKind = requireTypeKind(reg: objReg, from: regs)
-
-                /**
-                 field indexes are fetched from runtime_object,
-                 and match what you might expect. E.g. for String:
-
-                 Example offsets for 0) bytes, 1) i32
-
-                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.pointee
-                 (Int32?) $R0 = 8   // <----- first is 8 offset, on account of hl_type* at the top
-                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 1).pointee
-                 (Int32?) $R1 = 16 // <----- second is 8 more offset, cause bytes is a pointer
-                 (lldb)
-
-                 NOTE: keep alignment in mind. E.g. 0) int32 and 1) f64 will have 8 and 16 offsets respectively.
-                 But 0) int32, 1) u8, 2) u8, 3) u16, 4) f64 will have 8, 12, 13, 14, 16 offsets respectively.
-
-                 See below:
-
-                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 0).pointee
-                 (Int32?) $R0 = 8
-                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 1).pointee
-                 (Int32?) $R1 = 12
-                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 2).pointee
-                 (Int32?) $R2 = 13
-                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 3).pointee
-                 (Int32?) $R3 = 14
-                 (lldb) p typePtr.pointee.obj.pointee.rt?.pointee.fields_indexes.advanced(by: 4).pointee
-                 (Int32?) $R4 = 16
-                 */
-
-                switch(objRegKind.kind) {
-                case .obj: fallthrough
-                case .struct:
-                    // offset from obj address
-                    let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
-
-                    appendLoad(reg: X.x0, from: srcReg, kinds: regs, mem: mem)
-                    appendLoad(reg: X.x1, from: objReg, kinds: regs, mem: mem)
-                    mem.append(M1Op.str(X.x0, .reg64offset(.x1, fieldOffset, nil)))
-                default:
-                    fatalError("OSetField not implemented for \(objRegKind)")
-                }
+                try __osetthis_osetfield(objReg: objReg, fieldRef: fieldRef, srcReg: srcReg, regs: regs, mem: mem)
             case .OJNotEq(let a, let b, let offset):
                 fallthrough
             case .OJEq(let a, let b, let offset):
@@ -1357,33 +1260,6 @@ class M1Compiler2 {
                 appendDebugPrintAligned4("Null access exception", builder: mem)
                 appendSystemExit(1, builder: mem)
                 jumpOverDeath.stop(at: mem.byteSize)
-            case .OField(let dstReg, let objReg, let fieldRef):
-                let objRegKind = requireTypeKind(reg: objReg, from: regs)
-                
-                /* See comments on `OSetField` for notes on accessing field indexes */
-
-                switch(objRegKind) {
-                case .obj: fallthrough
-                case .struct:
-                    // offset from obj address
-                    let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
-
-                    // TODO: OField and OSetField need a test based on inheritance
-                    mem.append(
-                        PseudoOp.debugPrint2(
-                            self,
-                            "TODO: OField and OSetField need a test based on inheritance"))
-
-//                    mem.append(
-//                        M1Op.ldr(X.x0, .reg64offset(.sp, objOffset, nil)),
-//                        )
-//                    )
-                    appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
-                    mem.append(M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil)))
-                    appendStore(reg: X.x1, into: dstReg, kinds: regs, mem: mem)
-                default:
-                    fatalError("OField not implemented for \(objRegKind)")
-                }
             case .OAnd(let dst, let a, let b):
                 let dstOffset = getRegStackOffset(regs, dst)
                 let aOffset = getRegStackOffset(regs, a)

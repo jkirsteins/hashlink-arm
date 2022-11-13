@@ -13,8 +13,8 @@ extension UnsafePointer<HLType_CCompat>: OverrideCustomDebugStringConvertible {
             let argsAsDebugArr: [any OverrideCustomDebugStringConvertible] = funProvider.argsProvider
             return "UnsafePointer<HLType_CCompat>(.fun; args: \(argsAsDebugArr._overrideDebugDescription); ret: \(funProvider.retProvider._overrideDebugDescription))"
         }
-        if let _ = self.funProvider {
-            return "UnsafePointer<HLType_CCompat>(.obj)"
+        if let objProvider = self.objProvider {
+            return "UnsafePointer<HLType_CCompat>(.obj; \(objProvider.nameProvider.stringValue))"
         }
         return "UnsafePointer<HLType_CCompat>(\(self.kind.debugDescription))"
     }

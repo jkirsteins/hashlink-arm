@@ -1,6 +1,7 @@
 
 protocol HLTypeObjProvider: CustomDebugStringConvertible, Equatable, Hashable  {
     var nameProvider: any StringProvider { get }
+    var superTypeProvider: (any HLTypeProvider)? { get }
     var fieldsProvider: [any HLObjFieldProvider] { get }
 }
 
@@ -12,6 +13,10 @@ extension UnsafePointer<HLTypeObj_CCompat> : HLTypeObjProvider {
     var nameProvider: any StringProvider {
         self.pointee.namePtr
     }
+    
+    var superTypeProvider: (any HLTypeProvider)? {
+        self.pointee.superPtr
+    }
 }
 
 extension HLTypeObjProvider {
@@ -19,16 +24,19 @@ extension HLTypeObjProvider {
     func isEquivalent(_ other: any HLTypeObjProvider) -> Bool {
         
         guard self.nameProvider.isEquivalent(other.nameProvider) else {
-            print("failed")
             return false
         }
         
-        for f in self.fieldsProvider {
-            print("lhs fields: \(f)")
+        if let lhsSuper = self.superTypeProvider, let rhsSuper = other.superTypeProvider {
+            guard lhsSuper.isEquivalent(rhsSuper) else {
+                return false
+            }
+        } else if self.superTypeProvider == nil && other.superTypeProvider == nil {
+            // both nil is cool
+        } else {
+            return false
         }
         
-        print("lhs fields \(self.fieldsProvider.count)")
-        print("rhs fields \(other.fieldsProvider.count)")
         guard self.fieldsProvider.count == other.fieldsProvider.count else {
             return false }
         guard self.fieldsProvider.enumerated().allSatisfy({ (ix, lhsI) in
@@ -37,7 +45,6 @@ extension HLTypeObjProvider {
             return false
         }
         
-        print("HLTypeObjProvider: true")
         return true
     }
 }

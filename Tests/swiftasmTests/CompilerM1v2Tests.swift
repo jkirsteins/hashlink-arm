@@ -2316,4 +2316,68 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(-5.0,  entrypoint(-5))
         }
     }
+    
+    func testCompile__OSetThis_OGetThis__inheritedFields() throws {
+        let parentType = Test_HLTypeObj(
+            fieldsProvider: [
+                Test_HLObjField(nameProvider: "parentField1", typeProvider: HLTypeKind.i32),
+                Test_HLObjField(nameProvider: "parentField2", typeProvider: HLTypeKind.u16),
+            ],
+            nameProvider: "parent")
+        let childType = Test_HLTypeObj(
+            fieldsProvider: [
+                Test_HLObjField(nameProvider: "childField1", typeProvider: HLTypeKind.u8),
+                Test_HLObjField(nameProvider: "childField2", typeProvider: HLTypeKind.i32),
+            ],
+            nameProvider: "child",
+            superTypeProvider: parentType)
+        
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.u8,
+                findex: 0,
+                regs: [childType, HLTypeKind.i32, HLTypeKind.u8],
+                args: [childType],
+                ops: [
+                    // set first child field (u8) to 123
+                    .OInt(dst: 1, ptr: 0),
+                    .OSetThis(field: 2, src: 1),
+                    .OGetThis(dst: 2, field: 2),
+                    .ORet(ret: 2)
+                ])
+        ], ints: [123])
+        
+        // find type
+        var childTypeCCompat: (any HLTypeProvider)? = nil
+        for typeIx in (0..<ctx.ntypes) {
+            let candidate = try ctx.getType(Int(typeIx))
+            if candidate.isEquivalent(childType) {
+                childTypeCCompat = candidate
+                break
+            }
+        }
+        XCTAssertNotNil(childTypeCCompat)
+        
+        // Field indexes can be padded and padding is detected
+        // at compile time (e.g. see `hl_pad_struct` in hashlink).
+        // Some hardcoded assumptions here.
+        let unsafePtr: UnsafePointer<HLType_CCompat> = .init(OpaquePointer(childTypeCCompat!.ccompatAddress))
+        let rt = unsafePtr.pointee.obj.pointee.getRt(unsafePtr)
+        XCTAssertEqual(8, rt.pointee.fields_indexes[0])
+        XCTAssertEqual(12, rt.pointee.fields_indexes[1])
+        XCTAssertEqual(14, rt.pointee.fields_indexes[2])
+        XCTAssertEqual(16, rt.pointee.fields_indexes[3])
+        
+        //
+        let dyn = LibHl.hl_alloc_dynamic(unsafePtr)
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UnsafeRawPointer) -> (UInt8))) in
+                let res = entrypoint(dyn)
+                XCTAssertEqual(123, res)
+            }
+        }
+    }
 }

@@ -91,6 +91,9 @@ class TestJitModule : JitContext2 {
         
         if let fp = t.objProvider {
             res += fp.fieldsProvider.map { $0.typeProvider }
+            if let superType = fp.superTypeProvider {
+                res += expand(superType) + [superType]
+            }
         }
                 
         return res + [t]

@@ -236,7 +236,7 @@ final class CompileMod2Tests: RealHLTestCase {
             strip: false,
             [
                 // deps
-                3, 30, 39, 36, 42, 29, 327,
+                3, 30, 39, 36, 42, 29, 327, 248, 14, 40,
                 // function under test
                 Self.TEST_GET_UI16
             ]

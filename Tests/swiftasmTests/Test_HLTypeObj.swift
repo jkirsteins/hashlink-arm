@@ -21,13 +21,19 @@ struct Test_HLTypeObj : HLTypeProvider, HLTypeObjProvider, Equatable, Hashable, 
     
     let fieldsProvider: [swiftasm.HLObjFieldProvider]
     let nameProvider: any StringProvider
+    let superTypeProvider: (any HLTypeProvider)?
     
     var debugDescription: String {
-        "HLTypeObj"
+        "HLTypeObj(\(self.nameProvider.stringValue))"
     }
     
-    init(fieldsProvider: [swiftasm.HLObjFieldProvider], nameProvider: any StringProvider = "testObject") {
+    init(
+        fieldsProvider: [swiftasm.HLObjFieldProvider],
+        nameProvider: any StringProvider = "testObject",
+        superTypeProvider: (any HLTypeProvider)? = nil
+    ) {
         self.fieldsProvider = fieldsProvider
         self.nameProvider = nameProvider
+        self.superTypeProvider = superTypeProvider
     }
 }

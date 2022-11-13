@@ -3,9 +3,11 @@ class AnyHLTypeObjProvider : Equatable, Hashable, CustomDebugStringConvertible, 
     var debugDescription: String { _debugDescription() }
     var fieldsProvider: [any HLObjFieldProvider] { _fieldsProvider() }
     var nameProvider: any StringProvider { _nameProvider() }
+    var superTypeProvider: (any HLTypeProvider)? { _superTypeProvider() }
     
     var _fieldsProvider: ()->[any HLObjFieldProvider]
     var _nameProvider: ()->any StringProvider
+    var _superTypeProvider: ()->(any HLTypeProvider)?
     let _debugDescription: ()->String
     
     static func == (lhs: AnyHLTypeObjProvider, rhs: AnyHLTypeObjProvider) -> Bool {
@@ -22,5 +24,6 @@ class AnyHLTypeObjProvider : Equatable, Hashable, CustomDebugStringConvertible, 
         self._debugDescription = { wrapped.debugDescription }
         self._fieldsProvider = { wrapped.fieldsProvider }
         self._nameProvider = { wrapped.nameProvider }
+        self._superTypeProvider = { wrapped.superTypeProvider }
     }
 }
