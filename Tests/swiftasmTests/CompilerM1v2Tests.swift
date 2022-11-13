@@ -636,6 +636,25 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _ri64__obj(ops: [HLOpCode], regs: [HLTypeKind] = [.obj, .i64], _ callback: @escaping ((UnsafeRawPointer)->Int64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.obj],
+                ops: ops)
+        ])
+
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UnsafeRawPointer) -> Int64)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _ri32__i64(ops: [HLOpCode], regs: [HLTypeKind] = [.i32], _ callback: @escaping ((Int64)->Int32)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -1436,6 +1455,40 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 entrypoint(&x, 1, 79)
                 entrypoint(&x, 3, 97)
                 XCTAssertEqual(x, [11, 79, 33, 97, 55, 66, 77, 88, 99])
+            }
+        }
+    }
+    
+    func testCompile__OGetTID() throws {
+        
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i64,
+                findex: 0,
+                regs: [HLTypeKind.type, HLTypeKind.i64],
+                args: [HLTypeKind.type],
+                ops: [
+                    .OGetTID(dst: 1, src: 0),
+                    .ORet(ret: 1)
+                ])
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            for typeIx in 0..<ctx.ntypes {
+                let typeP = try ctx.getType(Int(typeIx))
+                
+                try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UnsafeRawPointer) -> (Int64))) in
+                    let res = entrypoint(typeP.ccompatAddress)
+                    print("Expected type \(typeP.kind) => GetTID returns \(res)")
+                    
+                    XCTAssertEqual(
+                        Int64(typeP.kind.rawValue),
+                        res,
+                        "Incorrect kind returned for type \(typeP.kind))"
+                    )
+                }
             }
         }
     }

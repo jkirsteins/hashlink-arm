@@ -13,7 +13,7 @@ extension HLTypeProvider {
     func isEquivalent(_ other: any HLTypeProvider) -> Bool {
         guard self.kind == other.kind else { return false }
         switch(self.kind) {
-        case .i32, .u8, .u16, .i64, .bool, .void, .dyn, .bytes:
+        case .i32, .u8, .u16, .i64, .bool, .void, .dyn, .bytes, .type:
             break
         case .fun:
             guard let lhs = self.funProvider, let rhs = other.funProvider else {

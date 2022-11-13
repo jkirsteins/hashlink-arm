@@ -46,7 +46,7 @@ class CCompatWriter_HLType {
             self.funPtr = nil
             self.funWriter = nil
             self.union = .init(objPtr)
-        case .i32, .bool, .i64, .f32, .f64, .u8, .u16, .void, .dyn, .bytes:
+        case .i32, .bool, .i64, .f32, .f64, .u8, .u16, .void, .dyn, .bytes, .type:
             funPtr = nil
             funWriter = nil
             objPtr = nil
@@ -67,7 +67,7 @@ class CCompatWriter_HLType {
             guard let objPtr = objPtr else { fatalError("Expected objPtr to be allocated") }
             objPtr.deinitialize(count: 1)
             objPtr.deallocate()
-        case .u8, .u16, .i32, .i64, .bool, .void, .dyn, .bytes:
+        case .u8, .u16, .i32, .i64, .bool, .void, .dyn, .bytes, .type:
             break
         default:
             fatalError("Type kind \(typeIn.kind) deinit not implemented")

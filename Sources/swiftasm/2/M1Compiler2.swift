@@ -1542,6 +1542,19 @@ class M1Compiler2 {
                 appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
                 mem.append(M1Op.orr(X.x0, X.x0, X.x1, nil))
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OSwitch(let reg, let offsets, let end):
+                fatalError("Compiling switch in \(compilable.findex)")
+            case .OGetTID(let dst, let src):
+                let srcType = requireType(reg: src, regs: regs)
+                Swift.assert(srcType.kind == .type)
+                
+                /* X.x0 <- hl_type*
+                 The first 32bits of that address are the kind
+                 */
+                appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
+                // M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
+                mem.append(M1Op.ldr(W.w0, .reg(X.x0, .imm(0, nil))))
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }
