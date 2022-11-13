@@ -26,7 +26,17 @@ class TestJitModule : JitContext2 {
     func getOrderedNativesByRealIx__slow() -> [any NativeCallable2] { natives }
     
     var orderedTypes_slow: [AnyHLTypeProvider] {
-        Array(types).sorted(by: { $0.kind.rawValue > $1.kind.rawValue })
+        let res = Array(types)
+            .sorted(by: { $0.kind.rawValue > $1.kind.rawValue })
+            .sorted(by: { a, _ in a.kind == .bool ? true : false })
+            .sorted(by: { a, _ in a.kind == .i32 ? true : false })
+            .sorted(by: { a, _ in a.kind == .void ? true : false })
+            
+
+        assert(res[0].kind == .void)
+        assert(res[1].kind == .i32)
+        assert(res[2].kind == .bool)
+        return res
     }
     
     // MARK: JitContext2 properties
