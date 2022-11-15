@@ -19,6 +19,7 @@ struct Test_HLTypeObj : HLTypeProvider, HLTypeObjProvider, Equatable, Hashable, 
     var funProvider: (any HLTypeFunProvider)? { nil }
     var objProvider: (any HLTypeObjProvider)? { self }
     var tparamProvider: (any HLTypeProvider)? { nil }
+    var tenumProvider: (any HLTypeEnumProvider)? { nil }
     
     let fieldsProvider: [swiftasm.HLObjFieldProvider]
     let nameProvider: any StringProvider

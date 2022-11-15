@@ -32,6 +32,7 @@ struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
     var obj: UnsafePointer<HLTypeObj_CCompat> { getUnion() }
     var fun: UnsafePointer<HLTypeFun_CCompat> { getUnion() }
     var tparam: UnsafePointer<HLType_CCompat> { getUnion() }
+    var tenum: UnsafePointer<HLTypeEnum_CCompat> { getUnion() }
     
     // void **vobj_proto
     let vobjProto: UnsafeMutableRawPointer?

@@ -1615,6 +1615,20 @@ class M1Compiler2 {
                     M1Op.str(X.x1, .reg64offset(X.x0, 0, nil))
                 )
                 print("ignoring OSetref")
+            case .OMakeEnum(let dst, let construct, let args):
+                assert(reg: dst, from: regs, is: HLTypeKind.enum)
+                let type = requireType(reg: dst, regs: regs)
+                guard let enumP = type.tenumProvider else {
+                    fatalError("Enum provider must be set")
+                }
+                
+                let c = enumP.constructsProvider[construct]
+                print("Using construct \(c.nameProvider.stringValue)")
+                fatalError("wip")
+            case .OEnumIndex(let dst, let value):
+                break
+            case .OEnumField(let dst, let value, let construct, let field):
+                break
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

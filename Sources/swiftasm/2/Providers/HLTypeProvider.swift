@@ -4,6 +4,7 @@ protocol HLTypeProvider: HLTypeKindProvider, OverrideCustomDebugStringConvertibl
     var funProvider: (any HLTypeFunProvider)? { get }
     var objProvider: (any HLTypeObjProvider)? { get }
     var tparamProvider: (any HLTypeProvider)? { get }
+    var tenumProvider: (any HLTypeEnumProvider)? { get }
     
     var ccompatAddress: UnsafeRawPointer { get }
 }

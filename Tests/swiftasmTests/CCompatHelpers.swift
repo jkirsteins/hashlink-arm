@@ -36,6 +36,15 @@ extension HLTypeKind : HLTypeProvider {
             return nil
         }
     }
+    
+    public var tenumProvider: (any HLTypeEnumProvider)? {
+        switch(self) {
+        case .ref:
+            fatalError("HLTypeKind can not be used as an enum type")
+        default:
+            return nil
+        }
+    }
 }
 
 

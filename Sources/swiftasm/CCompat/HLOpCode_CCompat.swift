@@ -455,7 +455,14 @@ extension HLOpCode {
         case .OSetref:
             return .OSetref(dst: cop.p1, value: cop.p2)
         case .OMakeEnum:
-            fatalError("wip")
+            let c = cop.p3
+            guard let extra = cop.extra else {
+                fatalError("OCallN missing extra")
+            }
+            let args = (0..<c).map {
+                Reg(extra.advanced(by: Int($0)).pointee)
+            }
+            return .OMakeEnum(dst: cop.p1, construct: RefEnumConstruct(cop.p2), args: args)
         case .OEnumAlloc:
             return .OEnumAlloc(dst: cop.p1, construct: RefEnumConstruct(cop.p2))
         case .OEnumIndex:

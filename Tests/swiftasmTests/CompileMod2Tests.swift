@@ -401,5 +401,27 @@ final class CompileMod2Tests: RealHLTestCase {
             }
         }
     }
+    
+    func testCompile__testEnum() throws {
+        typealias _JitFunc =  (@convention(c) () -> Int32)
+        let sutFix = 256
+        try _compileAndLink(
+            strip: false,
+            [
+                // deps
+                292,
+                //
+                sutFix
+            ]
+        ) {
+            mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(2, entrypoint())
+            }
+        }
+    }
 }
 

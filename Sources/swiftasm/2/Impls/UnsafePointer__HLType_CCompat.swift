@@ -10,6 +10,7 @@ extension UnsafePointer<HLType_CCompat> : HLTypeProvider, HLTypeKindProvider {
             return nil
         }
     }
+    
     var objProvider: (any HLTypeObjProvider)? {
         switch(self.kind) {
         case .obj:
@@ -23,6 +24,15 @@ extension UnsafePointer<HLType_CCompat> : HLTypeProvider, HLTypeKindProvider {
         switch(self.kind) {
         case .ref:
             return self.pointee.tparam
+        default:
+            return nil
+        }
+    }
+    
+    var tenumProvider: (any HLTypeEnumProvider)? {
+        switch(self.kind) {
+        case .enum:
+            return self.pointee.tenum
         default:
             return nil
         }

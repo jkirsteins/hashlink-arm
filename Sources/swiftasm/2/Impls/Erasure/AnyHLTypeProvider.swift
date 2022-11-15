@@ -16,6 +16,7 @@ class AnyHLTypeProvider : Equatable, Hashable, CustomDebugStringConvertible, HLT
     var funProvider: (any HLTypeFunProvider)? { _funProvider }
     var objProvider: (any HLTypeObjProvider)? { _objProvider }
     var tparamProvider: (any HLTypeProvider)? { _tparamProvider }
+    var tenumProvider: (any HLTypeEnumProvider)? { _tenumProvider }
     
     let _ccompatAddress: ()->UnsafeRawPointer
     let _kind: ()->HLTypeKind
@@ -24,6 +25,7 @@ class AnyHLTypeProvider : Equatable, Hashable, CustomDebugStringConvertible, HLT
     let _funProvider: AnyHLTypeFunProvider?
     let _objProvider: AnyHLTypeObjProvider?
     let _tparamProvider: AnyHLTypeProvider?
+    let _tenumProvider: AnyHLTypeEnumProvider?
     
     init(_ wrapped: any HLTypeProvider) {
         self._kind = { wrapped.kind }
@@ -47,6 +49,12 @@ class AnyHLTypeProvider : Equatable, Hashable, CustomDebugStringConvertible, HLT
             self._tparamProvider = AnyHLTypeProvider(tparam)
         } else {
             self._tparamProvider = nil
+        }
+        
+        if let tenum = wrapped.tenumProvider {
+            self._tenumProvider = AnyHLTypeEnumProvider(tenum)
+        } else {
+            self._tenumProvider = nil
         }
     }
 }

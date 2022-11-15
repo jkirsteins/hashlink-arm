@@ -6,6 +6,7 @@ struct Test_HLTypeRef : HLTypeProvider, Equatable, Hashable, CustomDebugStringCo
     
     var funProvider: (any HLTypeFunProvider)? { nil }
     var objProvider: (any HLTypeObjProvider)? { nil }
+    var tenumProvider: (any HLTypeEnumProvider)? { nil }
     
     static func == (lhs: Test_HLTypeRef, rhs: Test_HLTypeRef) -> Bool {
         fatalError("")
