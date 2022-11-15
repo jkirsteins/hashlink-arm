@@ -67,10 +67,10 @@ class TestJitModule : JitContext2 {
         self.types = Set(allExpanded.map({ AnyHLTypeProvider($0) }) + [
             // Some types must be always present because we need to
             // guarantee their ordering for tests
-            AnyHLTypeProvider(HLTypeKind.void as! (any HLTypeProvider)),
-            AnyHLTypeProvider(HLTypeKind.i32 as! (any HLTypeProvider)),
-            AnyHLTypeProvider(HLTypeKind.bool as! (any HLTypeProvider))])
-        print("Serializing types", self.types)
+            AnyHLTypeProvider(HLTypeKind.void as (any HLTypeProvider)),
+            AnyHLTypeProvider(HLTypeKind.i32 as (any HLTypeProvider)),
+            AnyHLTypeProvider(HLTypeKind.bool as (any HLTypeProvider))])
+        print("Serializing types", self.types.map({ $0._overrideDebugDescription }).joined(separator: "\n --"))
         
         self.ints = ints
     }
@@ -97,6 +97,7 @@ class TestJitModule : JitContext2 {
         }
         
         if let fp = t.tparamProvider {
+            print("tparam: \(fp) from \(t)")
             res += [fp]
         }
                 

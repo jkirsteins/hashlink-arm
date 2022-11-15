@@ -29,6 +29,12 @@ extension HLTypeProvider {
             let res = lhs.isEquivalent(rhs)
             print("HLTypeProvider: true")
             return res
+        case .ref:
+            guard let lt = self.tparamProvider, let rt = other.tparamProvider else {
+                fatalError("ref type must have tparam set")
+            }
+            let res = lt.isEquivalent(rt)
+            return res
         default:
             fatalError("HLTypeProvider.isEquivalent not implemented for \(self.kind)")
         }

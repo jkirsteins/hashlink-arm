@@ -1506,6 +1506,34 @@ class M1Compiler2 {
                 )
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .ORef(let dst, let src):
+                let dstType = requireType(reg: dst, regs: regs)
+                let srcType = requireType(reg: src, regs: regs)
+                Swift.assert(dstType.kind == .ref)
+                Swift.assert(srcType.kind == dstType.tparamProvider?.kind)
+                
+                let srcOffset = getRegStackOffset(regs, src)
+                
+                mem.append(
+                    // x0 = [sp + srcOffset]
+                    M1Op.movr64(X.x0, .sp),
+                    M1Op.movz64(X.x1, UInt16(srcOffset), nil),
+                    M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0)))
+                )
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                
+            case .OSetref(let dst, let src):
+                let dstType = requireType(reg: dst, regs: regs)
+                let srcType = requireType(reg: src, regs: regs)
+                Swift.assert(dstType.kind == .ref)
+                Swift.assert(srcType.kind == dstType.tparamProvider?.kind)
+                // x0 = address of ref
+                appendLoad(reg: X.x0, from: dst, kinds: regs, mem: mem)
+                appendLoad(reg: X.x1, from: src, kinds: regs, mem: mem)
+                mem.append(
+                    M1Op.str(X.x1, .reg64offset(X.x0, 0, nil))
+                )
+                print("ignoring OSetref")
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

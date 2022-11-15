@@ -26,6 +26,15 @@ class CCompatWriter_HLType {
         
         switch(typeIn.kind)
         {
+        case .ref:
+            guard type.tparamProvider != nil else {
+                fatalError(".ref needs tparamProvider to be set")
+            }
+            self.funPtr = nil
+            self.funWriter = nil
+            self.objPtr = nil
+            self.objWriter = nil
+            self.union = nil    // we can only set this in initialize() because the dependent tparam type might not be serialized yet
         case .fun:
             guard let funData = type.funProvider else {
                 fatalError("Invalid")
@@ -47,11 +56,11 @@ class CCompatWriter_HLType {
             self.funWriter = nil
             self.union = .init(objPtr)
         case .u8, .u16, .i32, .i64, .bool, .void, .dyn, .bytes, .type, .f32, .f64:
-            funPtr = nil
-            funWriter = nil
-            objPtr = nil
-            objWriter = nil
-            union = nil
+            self.funPtr = nil
+            self.funWriter = nil
+            self.objPtr = nil
+            self.objWriter = nil
+            self.union = nil
         default:
             fatalError("Unsupported type serialization \(typeIn.kind)")
         }
@@ -59,6 +68,9 @@ class CCompatWriter_HLType {
     
     deinit {
         switch(typeIn.kind) {
+        case .ref:
+            print("Nothing to deinit for .ref")
+            break
         case .fun:
             guard let funPtr = funPtr else { fatalError("Expected funPtr to be allocated") }
             funPtr.deinitialize(count: 1)
@@ -85,6 +97,14 @@ class CCompatWriter_HLType {
         if let objPtr = self.objPtr, let objWriter = objWriter {
             try objWriter.initialize(target: objPtr)
         }
+        
+        if self.typeIn.kind == .ref {
+            guard let resolvedTparamType = try typeLookup.getCCompatType(type: self.typeIn.tparamProvider!) else {
+                throw CCompatWriterError.missingDependency(".ref dependency \(self.typeIn.tparamProvider!) not serialized yet.")
+            }
+            union = .init(mutating: resolvedTparamType)
+        }
+        
         
         target.initialize(to: HLType_CCompat(
             kind: typeIn.kind,
@@ -116,7 +136,7 @@ class CCompatWriter_HLTypes {
     
     func initialize(target: UnsafeMutablePointer<HLType_CCompat>) throws {
         
-        let RETRY_PASSES = 1
+        let RETRY_PASSES = 2
         
         var toIterateOver: [(Int, CCompatWriter_HLType)] = self.writers.enumerated().map { ($0, $1) }
         

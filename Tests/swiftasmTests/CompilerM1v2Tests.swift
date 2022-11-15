@@ -2388,25 +2388,27 @@ final class CompilerM1v2Tests: CCompatTestCase {
             /*
              fn testRef () -> (i32)
 
-             reg0  i32
-             reg1  void
-             reg2  ref<i32>
+             reg0  u8       // to force non-0 offset for test coverage
+             reg1  i32
+             reg2  void
+             reg3  ref<i32>
              
-             0: Int         reg0 = 10
-             1: Ref         reg2 = &reg0
-             2: Call1       reg1 = testRefSet(reg2)
-             3: Ret         reg0
+             0: Int         reg1 = 10
+             1: Ref         reg3 = &reg0
+             2: Call1       reg2 = testRefSet(reg2)
+             3: Ret         reg1
              */
             prepareFunction(
                 retType: HLTypeKind.u8,
                 findex: 0,
-                regs: [HLTypeKind.i32, HLTypeKind.void, ref],
-                args: [],
+                regs: [HLTypeKind.u8,
+                       HLTypeKind.i32, HLTypeKind.void, ref],
+                args: [HLTypeKind.u8],
                 ops: [
-                    .OInt(dst: 0, ptr: 0),
-                    .ORef(dst: 2, src: 0),
-                    .OCall1(dst: 1, fun: 1, arg0: 2),
-                    .ORet(ret: 0)
+                    .OInt(dst: 1, ptr: 0),
+                    .ORef(dst: 3, src: 1),
+                    .OCall1(dst: 2, fun: 1, arg0: 3),
+                    .ORet(ret: 1)
                 ]),
             /*
             fn testRefSet (ref<i32>) -> (void)
@@ -2433,8 +2435,8 @@ final class CompilerM1v2Tests: CCompatTestCase {
         try compileAndLink(ctx: ctx, 0, 1) {
             mappedMem in
             
-            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) () -> (Int32))) in
-                let res = entrypoint()
+            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UInt8) -> (Int32))) in
+                let res = entrypoint(0 /*doesn't matter. Only here for padding*/ )
                 XCTAssertEqual(2, res)
             }
         }
