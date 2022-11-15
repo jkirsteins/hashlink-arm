@@ -168,4 +168,6 @@ struct LibHl {
     static func hl_alloc_dynamic(_ type: UnsafePointer<HLType_CCompat>) -> (UnsafePointer<vdynamic>) {
         .init(OpaquePointer(_hl_alloc_dynamic(.init(type))))
     }
+    
+    static let hl_null_access: (@convention(c) () -> ()) = { load("hl_null_access") }()
 }

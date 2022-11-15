@@ -58,9 +58,6 @@ final class CompileMod2Tests: RealHLTestCase {
     static let TEST_GET_ARRAY_INT64HAXE_IX = 47
     static let TEST_GET_ARRAY_INT64HL_IX = 50
     
-    static let TEST_GET_UI8 = 28
-    static let TEST_GET_UI16 = 31
-    
     static let TEST_FIELD_ACCESS = 43
     
     func _compileDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), _ ixs: [RefFun]) throws -> CpuOpBuffer {
@@ -232,24 +229,25 @@ final class CompileMod2Tests: RealHLTestCase {
     ///
     func testCompile_testGetUI16() throws {
         typealias _JitFunc = (@convention(c) (Int32) -> Int32)
+        let sutFix = 31
         try _compileAndLink(
             strip: false,
             [
                 // deps
-                3, 30, 39, 36, 42, 29, 327, 248, 14, 40,
+                29, 3, 39, 30, 42, 327, 36, 40, 248, 14, 329, 5,
                 // function under test
-                Self.TEST_GET_UI16
+                sutFix
             ]
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: Self.TEST_GET_UI16) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
-                XCTAssertEqual(0x1211, entrypoint(0))
-                XCTAssertEqual(0x1312, entrypoint(1))
-                XCTAssertEqual(0x1413, entrypoint(2))
-                XCTAssertEqual(0x0014, entrypoint(3))
+                XCTAssertEqual(entrypoint(0), 0x1211)
+                XCTAssertEqual(entrypoint(1), 0x1312)
+                XCTAssertEqual(entrypoint(2), 0x1413)
+                XCTAssertEqual(entrypoint(3), 0x0014)
             }
         }
     }
@@ -257,24 +255,127 @@ final class CompileMod2Tests: RealHLTestCase {
     /// This tests proper GetI8 behaviour in the wild.
     func testCompile__testGetUI8() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> Int32)
+        let sutFix = 28
         try _compileAndLink(
             strip: false,
             [
                 // deps
-                29,
+                29, 30, 3, 39, 42, 328, 36, 40, 14, 249, 330, 5, 
                 // function under test
-                Self.TEST_GET_UI8
+                sutFix
             ]
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: Self.TEST_GET_UI8) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
-                XCTAssertEqual(0x11, entrypoint(0))
-                XCTAssertEqual(0x12, entrypoint(1))
-                XCTAssertEqual(0x13, entrypoint(2))
-                XCTAssertEqual(0x14, entrypoint(3))
+                XCTAssertEqual(entrypoint(0), 0x11)
+                XCTAssertEqual(entrypoint(1), 0x12)
+                XCTAssertEqual(entrypoint(2), 0x13)
+                XCTAssertEqual(entrypoint(3), 0x14)
+            }
+        }
+    }
+    
+    func testCompile__testGetUI8_2() throws {
+        typealias _JitFunc =  (@convention(c) () -> Int32)
+        let sutFix = 32
+        try _compileAndLink(
+            strip: false,
+            [
+                // deps
+                29, 30, 3, 39, 42, 328, 36, 40, 14, 249, 330, 5,
+                // function under test
+                sutFix
+            ]
+        ) {
+            mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(entrypoint(), 336794129)
+            }
+        }
+    }
+    
+    func testCompile__testTrace() throws {
+        typealias _JitFunc =  (@convention(c) () -> ())
+        let sutFix = 55
+        try _compileAndLink(
+            strip: false,
+            [
+                // deps
+                
+                // function under test
+                sutFix
+            ]
+        ) {
+            mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                entrypoint()
+            }
+        }
+    }
+    
+    func testCompile__testFieldClosure() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
+        let sutFix = 255
+        try _compileAndLink(
+            strip: false,
+            [
+                // deps
+                28,
+                // function under test
+                sutFix
+            ]
+        ) {
+            mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(28, entrypoint(14))
+            }
+        }
+    }
+    
+    /// This tests proper GetI8 behaviour in the wild.
+    func testCompile__testGlobal() throws {
+        let fix = 52
+        
+        typealias _JitFunc =  (@convention(c) () -> UnsafeRawPointer)
+        try _compileAndLink(
+            strip: false,
+            [
+                // deps
+                // ...
+                // entrypoint
+                fix
+            ]
+        ) {
+            mem in
+            
+            struct _String {
+                let t: UnsafePointer<HLType_CCompat>
+                let b: UnsafeRawPointer
+                let length: Int32
+            }
+            
+            try mem.jit(ctx: ctx, fix: fix) {
+                (entrypoint: _JitFunc) in
+                
+                let x = entrypoint()
+                let expected = "Hello Globals"
+                let inst = x.bindMemory(to: _String.self, capacity: 1)
+                
+                XCTAssertEqual(Int(inst.pointee.length), expected.lengthOfBytes(using: .utf8))
+                let s = String._wrapUtf16(from: .init(OpaquePointer(inst.pointee.b)))
+                XCTAssertEqual(expected, s)
             }
         }
     }

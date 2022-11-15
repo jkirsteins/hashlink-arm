@@ -395,7 +395,14 @@ extension HLOpCode {
         case .OCallThis:
             fatalError("wip")
         case .OCallClosure:
-            fatalError("wip")
+            let c = cop.p3
+            guard let extra = cop.extra else {
+                fatalError("OCallClosure missing extra")
+            }
+            let args = (0..<c).map {
+                Reg(extra.advanced(by: Int($0)).pointee)
+            }
+            return .OCallClosure(dst: cop.p1, fun: RefFun(cop.p2), args: args)
         case .OStaticClosure:
             return .OStaticClosure(dst: cop.p1, fun: RefFun(cop.p2))
         case .OInstanceClosure:

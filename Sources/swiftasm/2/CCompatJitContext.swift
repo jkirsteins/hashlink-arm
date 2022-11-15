@@ -234,6 +234,28 @@ class CCompatJitContext : JitContext2 {
         }
     }
     
+    func requireGlobalData(_ globalRef: Ref) throws -> UnsafePointer<UnsafePointer<vdynamic>?> {
+        guard let result = try getGlobalData(globalRef) else {
+            throw GlobalError.invalidOperation("Required global data (ix==\(globalRef)) not found.")
+        }
+        return result
+    }
+    
+    func getGlobalData(_ globalRef: Ref) throws -> UnsafePointer<UnsafePointer<vdynamic>?>? {
+        // globals will only be obj and struct
+//        void *addr = m->globals_data + m->globals_indexes[o->p2];
+        
+        try withModule { m in
+            guard let globals_indexes = m.pointee.globals_indexes else { return .none }
+            guard let globals_data = m.pointee.globals_data else { return .none }
+            
+            let globalIndex = globals_indexes.advanced(by: globalRef).pointee
+            let globalDataPtr = globals_data.advanced(by: Int(globalIndex)).bindMemory(to: Optional<UnsafePointer<vdynamic>>.self, capacity: 1)
+            
+            return globalDataPtr
+        }
+    }
+    
     func requireCallable(findex fix: RefFun) throws -> (any Callable2) {
         guard let result = try getCallable(findex: fix) else {
             throw GlobalError.invalidOperation("Required callable (fix==\(fix)) not found.")

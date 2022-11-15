@@ -85,17 +85,22 @@ class Main {
 		return res.test;
 	}
 
+	// To test fetching globals
+	static private function testGlobal():String {
+		return "Hello Globals";
+	}
+
 	static public function main():Void {
 		// var path = new Path(3);
 		// trace('${path.test}');
 		// path = null;
 		// trace('${path.test}');
 
-		// var a = testGetUI8(0);
-		// var b = testGetUI8(1);
-		// var c = testGetUI8(2);
-		// var d = testGetUI8(3);
-		// trace('getUI8 $a $b $c $d');
+		var a = testGetUI8(0);
+		var b = testGetUI8(1);
+		var c = testGetUI8(2);
+		var d = testGetUI8(3);
+		trace('getUI8 $a $b $c $d');
 
 		// var e = testGetUI16(0);
 		// var f = testGetUI16(1);

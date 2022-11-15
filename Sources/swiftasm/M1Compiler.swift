@@ -11,7 +11,7 @@ extension M1Compiler : CompilerUtilities {
 }
 
 // x0 through x7
-private let ARG_REGISTER_COUNT = 8
+//private let ARG_REGISTER_COUNT = 8
 extension M1Compiler {
     /* SP movements must be aligned to 16-bytes */
     func roundUpStackReservation(

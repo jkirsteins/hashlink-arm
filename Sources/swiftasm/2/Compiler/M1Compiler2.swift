@@ -16,7 +16,12 @@ let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/Unsafe
     let dstTypeB = dstType.bindMemory(to: HLType_CCompat.self, capacity: 1)
     let srcTypeB = srcType.bindMemory(to: HLType_CCompat.self, capacity: 1)
     
-    assert(dstTypeB.kind == .dyn)               // dst must be dyn
+    /*
+     dst must be:
+     - dyn
+     - null (see mod2 fn@3)
+     */
+    assert(dstTypeB.kind == .dyn || dstTypeB.kind == .null)
     let res = LibHl.hl_alloc_dynamic(srcTypeB)  // use the source type
     
     var mutatingRes: UnsafeMutableRawPointer = .init(mutating: res)
@@ -45,7 +50,7 @@ let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/Unsafe
 }
 
 // x0 through x7
-private let ARG_REGISTER_COUNT = 8
+let ARG_REGISTER_COUNT = 8
 extension M1Compiler2 {
     /* SP movements must be aligned to 16-bytes */
     func roundUpStackReservation(
@@ -469,16 +474,20 @@ class M1Compiler2 {
     }
     
     func assert(reg: Reg, from: [any HLTypeKindProvider], matchesCallArg argReg: Reg, inFun callable: any Callable2) {
+        assert(reg: reg, from: from, matchesCallArg: argReg, inFunArgs: callable.argsProvider)
+    }
+    
+    func assert(reg: Reg, from: [any HLTypeKindProvider], matchesCallArg argReg: Reg, inFunArgs argsProvider: [any HLTypeProvider]) {
         guard from.count > reg else {
             fatalError(
                 "Register with index \(reg) does not exist. Available registers: \(from)."
             )
         }
-        guard callable.argsProvider.count > argReg else {
-            fatalError("Expected args to have index \(argReg) but got \(callable.argsProvider)")
+        guard argsProvider.count > argReg else {
+            fatalError("Expected args to have index \(argReg) but got \(argsProvider)")
         }
         let regKind = from[Int(reg)]
-        let argKind = callable.argsProvider[Int(argReg)].kind
+        let argKind = argsProvider[Int(argReg)].kind
         guard argKind == .dyn || regKind.kind == .dyn || regKind.kind == argKind.kind else {
             fatalError(
                 "Register \(reg) kind \(regKind) expected to match arg \(argReg) but arg was \(argKind) "
@@ -621,7 +630,7 @@ class M1Compiler2 {
                 PseudoOp.debugMarker("Marking position for \(currentInstruction) at \(mem.byteSize)")
             )
 
-            print("#\(currentInstruction): \(op.debugDescription)")
+            print("f\(compilable.findex): #\(currentInstruction): \(op.debugDescription)")
             mem.append(
                 PseudoOp.debugPrint2(self, "#\(currentInstruction): \(op.debugDescription)")
             )
@@ -747,88 +756,106 @@ class M1Compiler2 {
                     M1Op.blr(.x10),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
+            case .OCallClosure(let dst, let fun, let args):
+                print("OCallClosure \(dst) \(fun) \(args)")
+                assert(reg: Reg(fun), from: regs, matches: HLTypeKind.fun)
+                
+                try __ocallclosure(
+                    dst: dst,
+                    fun: Reg(fun),
+                    regs: regs,
+                    args: args,
+                    reservedStackBytes: ByteCount(reservedStackBytes),
+                    mem: mem)
+                
             case .OCallN(let dst, let fun, let args):
-                
-                let callTarget = try ctx.requireCallable(findex: fun)
-                ctx.funcTracker.referenced2(callTarget)
-
-                assert(reg: dst, from: regs, matches: callTarget.retProvider)
-                let dstStackOffset = getRegStackOffset(regs, dst)
-                let dstKind = requireTypeKind(reg: dst, from: regs)
-
-                let regWkindToPass = args.enumerated().map {
-                    (reg, argReg) in
-                    assert(reg: argReg, from: regs, matchesCallArg: Reg(reg), inFun: callTarget)
-                    return (reg, requireTypeKind(reg: argReg, from: regs))
-                }
-
-                let additionalSizeUnrounded = regWkindToPass.dropFirst(ARG_REGISTER_COUNT).reduce(0) {
-                    print("Adding size for \($1.1)")
-                    return $0 + Int($1.1.hlRegSize)
-                }
-                let additionalSize = roundUpStackReservation(Int16(additionalSizeUnrounded))
-
-                if additionalSize > 0 {
-                    mem.append(
-                        PseudoOp.debugPrint2(self, "Reserving \(additionalSize) bytes for stack (OCallN)"),
-                        M1Op.subImm12(X.sp, X.sp, try .i(additionalSize))
-                    )
-                }
-
-                var argOffset: Int64 = 0
-                for (regIx, regKind) in regWkindToPass.dropFirst(ARG_REGISTER_COUNT) {
-                    guard args.count > regIx else { break }
-                    let argReg = args[regIx]
-                    let offset = getRegStackOffset(regs, argReg) + Int64(additionalSize)
-
-                    mem.append(
-                        PseudoOp.ldrVreg(X.x0, offset, regKind.hlRegSize),
-                        PseudoOp.strVreg(X.x0, argOffset, regKind.hlRegSize)
-                    )
-                    mem.append(PseudoOp.debugPrint2(self,
-                                                   "Loaded \(offset) -> \(argOffset) -> \(regKind.hlRegSize)"))
-
-                    argOffset += regKind.hlRegSize
-                }
-
-                mem.append(PseudoOp.debugPrint2(self, "CallN fn@\(fun)(\(args)) -> \(dst)"))
-
-                for regIx in 0..<ARG_REGISTER_COUNT {
-                    guard args.count > regIx else { break }
-                    let argReg = args[regIx]
-
-                    puts("Putting varg \(argReg) in nreg \(regIx)")
-                    let offset = getRegStackOffset(regs, argReg) + Int64(additionalSize)
+                try __ocalln(
+                    dst: dst,
+                    funIndex: fun,
+                    regs: regs,
+                    args: args,
+                    reservedStackBytes: ByteCount(reservedStackBytes),
+                    mem: mem)
+//                let callTarget = try ctx.requireCallable(findex: fun)
+//                ctx.funcTracker.referenced2(callTarget)
 //
-                    appendLoad(reg: Register64(
-                        rawValue: UInt8(regIx))!,
-                               from: argReg,
-                               kinds: regs, // careful, pass all kinds, not just the arg ones
-                               offset: offset,
-                               mem: mem)
-                    appendDebugPrintRegisterAligned4(Register64(rawValue: UInt8(regIx))!, builder: mem)
-                }
-
-                // TODOFIX
-                let fnAddr = callTarget.address
-                print("Target entrypoint is \(fun) \(fnAddr)")
-
-                mem.append(
-                    PseudoOp.mov(.x19, fnAddr),
-                    M1Op.blr(.x19)
-                    )
-
-                mem.append(
-                    PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize),
-                    PseudoOp.debugPrint2(self, "Got back and put result at offset \(dstStackOffset + Int64(additionalSize))")
-                )
-                
-                if additionalSize > 0 {
-                    mem.append(
-                        PseudoOp.debugPrint2(self, "Free \(additionalSize) bytes (OCallN)"),
-                        (try M1Op._add(X.sp, X.sp, ByteCount(reservedStackBytes)))
-                    )
-                }
+//                assert(reg: dst, from: regs, matches: callTarget.retProvider)
+//                let dstStackOffset = getRegStackOffset(regs, dst)
+//                let dstKind = requireTypeKind(reg: dst, from: regs)
+//
+//                let regWkindToPass = args.enumerated().map {
+//                    (reg, argReg) in
+//                    assert(reg: argReg, from: regs, matchesCallArg: Reg(reg), inFun: callTarget)
+//                    return (reg, requireTypeKind(reg: argReg, from: regs))
+//                }
+//
+//                let additionalSizeUnrounded = regWkindToPass.dropFirst(ARG_REGISTER_COUNT).reduce(0) {
+//                    print("Adding size for \($1.1)")
+//                    return $0 + Int($1.1.hlRegSize)
+//                }
+//                let additionalSize = roundUpStackReservation(Int16(additionalSizeUnrounded))
+//
+//                if additionalSize > 0 {
+//                    mem.append(
+//                        PseudoOp.debugPrint2(self, "Reserving \(additionalSize) bytes for stack (OCallN)"),
+//                        M1Op.subImm12(X.sp, X.sp, try .i(additionalSize))
+//                    )
+//                }
+//
+//                var argOffset: Int64 = 0
+//                for (regIx, regKind) in regWkindToPass.dropFirst(ARG_REGISTER_COUNT) {
+//                    guard args.count > regIx else { break }
+//                    let argReg = args[regIx]
+//                    let offset = getRegStackOffset(regs, argReg) + Int64(additionalSize)
+//
+//                    mem.append(
+//                        PseudoOp.ldrVreg(X.x0, offset, regKind.hlRegSize),
+//                        PseudoOp.strVreg(X.x0, argOffset, regKind.hlRegSize)
+//                    )
+//                    mem.append(PseudoOp.debugPrint2(self,
+//                                                   "Loaded \(offset) -> \(argOffset) -> \(regKind.hlRegSize)"))
+//
+//                    argOffset += regKind.hlRegSize
+//                }
+//
+//                mem.append(PseudoOp.debugPrint2(self, "CallN fn@\(fun)(\(args)) -> \(dst)"))
+//
+//                for regIx in 0..<ARG_REGISTER_COUNT {
+//                    guard args.count > regIx else { break }
+//                    let argReg = args[regIx]
+//
+//                    puts("Putting varg \(argReg) in nreg \(regIx)")
+//                    let offset = getRegStackOffset(regs, argReg) + Int64(additionalSize)
+////
+//                    appendLoad(reg: Register64(
+//                        rawValue: UInt8(regIx))!,
+//                               from: argReg,
+//                               kinds: regs, // careful, pass all kinds, not just the arg ones
+//                               offset: offset,
+//                               mem: mem)
+//                    appendDebugPrintRegisterAligned4(Register64(rawValue: UInt8(regIx))!, builder: mem)
+//                }
+//
+//                // TODOFIX
+//                let fnAddr = callTarget.address
+//                print("Target entrypoint is \(fun) \(fnAddr)")
+//
+//                mem.append(
+//                    PseudoOp.mov(.x19, fnAddr),
+//                    M1Op.blr(.x19)
+//                    )
+//
+//                mem.append(
+//                    PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize),
+//                    PseudoOp.debugPrint2(self, "Got back and put result at offset \(dstStackOffset + Int64(additionalSize))")
+//                )
+//
+//                if additionalSize > 0 {
+//                    mem.append(
+//                        PseudoOp.debugPrint2(self, "Free \(additionalSize) bytes (OCallN)"),
+//                        (try M1Op._add(X.sp, X.sp, ByteCount(reservedStackBytes)))
+//                    )
+//                }
 
             case .OCall2(let dst, let fun, let arg0, let arg1):
                 let callTarget = try ctx.requireCallable(findex: fun)
@@ -1110,8 +1137,6 @@ class M1Compiler2 {
                         case .OJFalse:
                             fallthrough
                         case .OJNull:
-                            print("reg \(reg)")
-                            print("reg kind \(regs[Int(reg)])")
                             return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
                         case .OJNotNull:
                             return M1Op.b_ne(try Immediate19(jumpOffset.immediate))
@@ -1146,13 +1171,11 @@ class M1Compiler2 {
                         return M1Op.b(jumpOffset.immediate)
                     })
             case .OGetGlobal(let dst, let globalRef):
-                
-                let globalTypePtr = try ctx.requireGlobal(globalRef)
-                let dstOffset = getRegStackOffset(regs, dst)
-                mem.append(
-                    PseudoOp.mov(.x0, UnsafeRawPointer(globalTypePtr)),
-                    M1Op.str(X.x0, .reg64offset(.sp, dstOffset, nil))
-                )
+                let globalInstanceAddress = try ctx.requireGlobalData(globalRef)
+                assert(reg: dst, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct])
+                mem.append(PseudoOp.mov(.x0, UnsafeRawPointer(globalInstanceAddress)))
+                mem.append(M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil)))
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OShl(let dst, let a, let b):
                 appendLoad(reg: .x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
@@ -1184,9 +1207,12 @@ class M1Compiler2 {
                 } else {
                     fatalError("Unexpected op \(op.id)")
                 }
+            case .OGetMem(let dst, let bytes, let index):
+                fallthrough
             case .OGetI8(let dst, let bytes, let index):
                 fallthrough
             case .OGetI16(let dst, let bytes, let index):
+                
                 assert(reg: bytes, from: regs, is: HLTypeKind.bytes)
                 assert(reg: index, from: regs, is: HLTypeKind.i32)
                 if op.id == .OGetI16 {
@@ -1205,11 +1231,15 @@ class M1Compiler2 {
                     // Load index into X.x1. It is 4 bytes
                     M1Op.ldr(W.w1, .reg64offset(.sp, indexOffset, nil))
                 )
-
+                
                 if op.id == .OGetI8 {
+                    mem.append(PseudoOp.debugPrint2(self, "about to load from bytes (off: \(byteOffset))"))
+                    appendDebugPrintRegisterAligned4(X.x0, builder: mem)
+                    
                     mem.append(
                         M1Op.ldrb(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
                     )
+                    mem.append(PseudoOp.debugPrint2(self, "loaded"))
                 } else if op.id == .OGetI16 {
                     mem.append(
                         // lsl1 the index register b/c index is
@@ -1217,7 +1247,15 @@ class M1Compiler2 {
                         //    M1-side: expected in bytes not half-words
                         M1Op.ldrh(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(1))))
                     )
+                } else if op.id == .OGetMem {
+                    // TODO: add test
+                    assert(reg: dst, from: regs, is: HLTypeKind.i32)
+                    mem.append(
+                        M1Op.ldr(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(1))))
+                    )
                 }
+                
+                mem.append(PseudoOp.debugPrint2(self, "got 3"))
 
                 let size = requireTypeKind(reg: dst, from: regs).hlRegSize
                 if size == 4 {
@@ -1231,6 +1269,9 @@ class M1Compiler2 {
                 } else {
                     fatalError("Invalid register size")
                 }
+                
+                mem.append(PseudoOp.debugPrint2(self, "got 4"))
+                
             case .ONullCheck(let dst):
                 let dstOffset = getRegStackOffset(regs, dst)
                 let size = requireTypeKind(reg: dst, from: regs).hlRegSize
@@ -1254,10 +1295,50 @@ class M1Compiler2 {
                 jumpOverDeath.start(at: mem.byteSize)
                 mem.append(
                     PseudoOp.deferred(4) {
-                        M1Op.b_ne(try Immediate19(jumpOverDeath.value))
+//                        guard compilable.findex != 28 else {
+//                            // TODO: remove after testing
+//                            return M1Op.nop
+//                        }
+                        return M1Op.b_ne(try Immediate19(jumpOverDeath.value))
                     }
                 )
                 appendDebugPrintAligned4("Null access exception", builder: mem)
+                
+                // MARK: ------ tmp
+                struct _ByteStruct {
+                    let t: UnsafeRawPointer
+                    let length: Int32
+                    let bytes: UnsafeRawPointer
+                }
+                let testFunc: (@convention(c) (UnsafeRawPointer)->()) = {
+                    rawPtr in
+                    
+                    let byteStructIn = rawPtr.bindMemory(to: _ByteStruct.self, capacity: 1)
+                    
+                    print("Got byte struct")
+                    fatalError()
+                }
+                let testFuncTarget = unsafeBitCast(testFunc, to: UnsafeRawPointer.self)
+                
+                mem.append(
+                    PseudoOp.mov(.x1, testFuncTarget),
+                    M1Op.blr(.x1)
+                )
+                // MARK: ------
+                
+                /*
+                 // ideally we jump to hl_null_access() here, BUT
+                 // we need hl_throw() to work before that, which means
+                 // we need the handlers set up.
+                let allocFunc_jumpTarget = unsafeBitCast(LibHl.hl_null_access, to: UnsafeRawPointer.self)
+                
+                mem.append(
+                    PseudoOp.mov(.x1, allocFunc_jumpTarget),
+                    M1Op.blr(.x1)
+                )
+                */
+                
+                // tmp crash on null access
                 appendSystemExit(1, builder: mem)
                 jumpOverDeath.stop(at: mem.byteSize)
             case .OAnd(let dst, let a, let b):

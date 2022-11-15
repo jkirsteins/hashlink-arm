@@ -490,7 +490,6 @@ public class EmitterM1 {
             }
             
             let (imm6, sh) = getShImm6(shift)
-            print(Rd, Rn, Rm)
             let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
             
             let encoded = mask | s | imm6 | sh | regs
@@ -656,7 +655,6 @@ public class EmitterM1 {
                 encodedRt1 | encodedRt2 | encodedRn | (opc << opcOffset) | mask | imm
             return returnAsArray(encoded)
         case .b(let imm26):
-            print("b \(imm26)")
             let imm = try truncateOffset(Int64(imm26.value), divisor: 4, bits: 26)
             //                         imm26
             let mask: Int64 = 0b000101_00000000000000000000000000

@@ -18,8 +18,12 @@ struct HLModule_CCompat : Equatable, Hashable {
     let code: UnsafePointer<HLCode_CCompat>
     let codesize: Int32
     let globals_size: Int32
-    let globals_indexes: UnsafePointer<Int32>
-    let globals_data: UnsafePointer<UInt8>
+    let globals_indexes: UnsafePointer<Int32>?
+    
+    /// In reality this is `UnsafePointer<UnsafePointer<vdynamic>?>?` but
+    /// the `globals_indexes` contains a byte-count offset not vdynamic-sized offsets.
+    let globals_data: UnsafeRawPointer?
+    
     let functions_ptrs: UnsafePointer<UnsafeRawPointer?>
     let functions_indexes: UnsafePointer<Int32>
     let _jit_code: UnsafeRawPointer

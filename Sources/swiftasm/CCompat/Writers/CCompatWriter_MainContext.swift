@@ -33,6 +33,10 @@ class CCompatWriter_MainContext {
         try codeWriter.initialize(target: self.code)
         mPtr.pointee = .init(mutating: LibHl.hl_module_alloc(.init(self.code)))
         
+        // TODO: can this be nil?
+//        assert(mPtr.pointee.pointee.globals_indexes == nil)
+//        assert(mPtr.pointee.pointee.globals_data == nil)
+        
         file.withCString { fileCstr in
             target.initialize(to: MainContext_CCompat(
                 code: self.code,
@@ -47,6 +51,9 @@ class CCompatWriter_MainContext {
         guard LibHl.hl_module_init(mPtr.pointee, false) == 1 else {
             throw GlobalError.unexpected("Failed to initialize the hl_module* after writing hl_code*")
         }
+        
+        assert(mPtr.pointee.pointee.globals_indexes != nil)
+        assert(mPtr.pointee.pointee.globals_data != nil)
         
         // If we want to "mock" hl_natives, we have to pass them in with known address and lib "?". In this case
         // the memory pointer is uninitialized after LibHl.hl_module_init, so we need to overwrite those
