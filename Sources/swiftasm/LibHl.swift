@@ -170,4 +170,10 @@ struct LibHl {
     }
     
     static let hl_null_access: (@convention(c) () -> ()) = { load("hl_null_access") }()
+    
+    // HL_PRIM venum *hl_alloc_enum( hl_type *t, int index ) {
+    static let _hl_alloc_enum: (@convention(c) (UnsafeRawPointer, Int32) -> (UnsafeRawPointer)) = { load("hl_alloc_enum") }()
+    static func hl_alloc_enum(_ type: UnsafePointer<HLType_CCompat>, _ index: Int32) -> (UnsafePointer<venum>) {
+        .init(OpaquePointer(_hl_alloc_enum(.init(type), index)))
+    }
 }

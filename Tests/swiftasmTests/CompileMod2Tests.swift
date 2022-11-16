@@ -419,7 +419,7 @@ final class CompileMod2Tests: RealHLTestCase {
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
-                XCTAssertEqual(2, entrypoint())
+                XCTAssertEqual(42, entrypoint())
             }
         }
     }

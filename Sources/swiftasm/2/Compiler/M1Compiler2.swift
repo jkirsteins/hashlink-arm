@@ -10,6 +10,56 @@ protocol CompilerUtilities2 {
 
 typealias Registers2 = [any HLTypeProvider]
 
+let OEnumIndex_impl: (@convention(c)(OpaquePointer)->(Int32)) = {
+    _enum in
+    
+    let enumPtr: UnsafePointer<venum> = .init(_enum)
+    return enumPtr.pointee.index
+}
+
+let OEnumField_impl: (@convention(c)(OpaquePointer, Int32, Int32)->(OpaquePointer)) = {
+    _enum, constructIndex, fieldIndex in
+    
+    let enumPtr: UnsafePointer<venum> = .init(_enum)
+    let constructPtr = enumPtr.pointee.t.pointee.tenum.pointee.constructs.advanced(by: Int(constructIndex))
+    let result = constructPtr.pointee.offsets.advanced(by: Int(fieldIndex))
+    return .init(result)
+}
+
+let OMakeEnum_impl: (@convention(c) (
+    OpaquePointer,  // type
+    Int32,          // construct index
+    Int32,          // arg count
+    OpaquePointer,  // args (reg)
+    OpaquePointer   // args (values in int64)
+)->(OpaquePointer)) = {
+    _type, index, argCount, _argRegs, _argValues in
+    
+    let argRegs: UnsafeMutableBufferPointer<Reg> =  .init(start: .init(_argRegs), count: Int(argCount))
+    let argValues: UnsafeMutableBufferPointer<Int64> = .init(start: .init(_argValues), count: Int(argCount))
+    let type: UnsafePointer<HLType_CCompat> = .init(_type)
+    defer {
+        argRegs.deallocate()
+        argValues.deallocate()
+        print("Deallocated")
+    }
+    
+    let result = LibHl.hl_alloc_enum(.init(type), index)
+    
+    let cPtr = type.pointee.tenum.pointee.constructs.advanced(by: Int(index))
+    assert(cPtr.pointee.nparams == argCount)
+    
+    let mutatingConstruct: UnsafeMutablePointer<HLEnumConstruct_CCompat> = .init(mutating: cPtr)
+    for paramIx in (0..<Int(cPtr.pointee.nparams)) {
+        let argValueInt32 = Int32(argValues[paramIx])
+        let offsetPtr = cPtr.pointee.offsets.advanced(by: paramIx)
+        let mutatingOffsetPtr: UnsafeMutablePointer<Int32> = .init(mutating: offsetPtr)
+        mutatingOffsetPtr.pointee = argValueInt32
+    }
+    
+    return .init(result)
+}
+
 let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/UnsafeRawPointer, /*dstVal*/Int64, /*srcVal*/Int64)->(UnsafeRawPointer)) = {
     (dstType, srcType, dst, src) in
     
@@ -1614,21 +1664,68 @@ class M1Compiler2 {
                 mem.append(
                     M1Op.str(X.x1, .reg64offset(X.x0, 0, nil))
                 )
-                print("ignoring OSetref")
             case .OMakeEnum(let dst, let construct, let args):
                 assert(reg: dst, from: regs, is: HLTypeKind.enum)
                 let type = requireType(reg: dst, regs: regs)
-                guard let enumP = type.tenumProvider else {
+                guard let _ = type.tenumProvider else {
                     fatalError("Enum provider must be set")
                 }
                 
-                let c = enumP.constructsProvider[construct]
-                print("Using construct \(c.nameProvider.stringValue)")
-                fatalError("wip")
+                // these need to be deallocated in the callee
+                let argBuff: UnsafeMutableBufferPointer<Reg> = .allocate(capacity: args.count)
+                _ = argBuff.initialize(from: args)
+                
+                let argValBuff: UnsafeMutableBufferPointer<Int64> = .allocate(capacity: args.count)
+                
+                for (ix, arg) in args.enumerated() {
+                    appendLoad(reg: X.x0, from: arg, kinds: regs, mem: mem)
+                    mem.append(
+                        PseudoOp.mov(X.x1, UnsafeRawPointer(argValBuff.baseAddress!.advanced(by: ix))),
+                        M1Op.str(X.x0, .reg64offset(X.x1, 0, nil))
+                    )
+                }
+                
+                let _implTarget = unsafeBitCast(OMakeEnum_impl, to: UnsafeRawPointer.self)
+                
+                mem.append(
+                    PseudoOp.mov(X.x0, type.ccompatAddress),
+                    PseudoOp.mov(X.x1, construct),
+                    M1Op.movz64(X.x2, UInt16(args.count), nil),
+                    PseudoOp.mov(X.x3, UnsafeRawPointer(argBuff.baseAddress!)),
+                    PseudoOp.mov(X.x4, UnsafeRawPointer(argValBuff.baseAddress!)),
+                    
+                    PseudoOp.mov(.x19, _implTarget),
+                    M1Op.blr(.x19)
+                )
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OEnumIndex(let dst, let value):
-                break
+                let _implTarget = unsafeBitCast(OEnumIndex_impl, to: UnsafeRawPointer.self)
+                
+                appendLoad(reg: X.x0, from: value, kinds: regs, mem: mem)
+                mem.append(
+                    PseudoOp.mov(.x19, _implTarget),
+                    M1Op.blr(.x19)
+                )
+                assert(reg: dst, from: regs, is: HLTypeKind.i32)
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OEnumField(let dst, let value, let construct, let field):
-                break
+                let _implTarget = unsafeBitCast(OEnumField_impl, to: UnsafeRawPointer.self)
+                
+                // TODO: can enums have other types of assoc data? Need a test
+                assert(reg: dst, from: regs, is: HLTypeKind.i32)
+                
+                appendLoad(reg: X.x0, from: value, kinds: regs, mem: mem)
+                
+                mem.append(
+                    M1Op.movz64(X.x1, UInt16(construct), nil),
+                    M1Op.movz64(X.x2, UInt16(field), nil),
+                    
+                    PseudoOp.mov(.x19, _implTarget),
+                    M1Op.blr(.x19),
+                    M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil))
+                )
+//                assert(reg: dst, from: regs, is: HLTypeKind.i32)
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }
