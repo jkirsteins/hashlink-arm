@@ -15,6 +15,14 @@ extension UnsafeRawPointer: MemoryAddress, DeferredMemoryAddress {
     }
 }
 
+extension OpaquePointer: MemoryAddress, DeferredMemoryAddress {
+    var value: UnsafeMutableRawPointer { UnsafeMutableRawPointer(mutating: .init(self)) }
+    
+    func isEqual(_ to: any MemoryAddress) -> Bool {
+        self.value == to.value
+    }
+}
+
 extension UnsafeMutableRawPointer: MemoryAddress, DeferredMemoryAddress {
     var value: UnsafeMutableRawPointer { self }
     

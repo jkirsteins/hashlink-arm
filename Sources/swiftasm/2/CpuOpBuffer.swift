@@ -26,7 +26,7 @@ class CpuOpBuffer {
     @discardableResult func append(_ instructions: any CpuOp...) -> CpuOpBuffer {
         try! _internalAppend(instructions)
     }
-
+    
     @discardableResult func append(_ instructions: [any CpuOp]) -> CpuOpBuffer {
         try! _internalAppend(instructions)
     }

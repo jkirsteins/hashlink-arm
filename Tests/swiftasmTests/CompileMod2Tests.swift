@@ -50,15 +50,12 @@ final class CompileMod2Tests: RealHLTestCase {
         self.ctx = ctx
     }
     
-    static let TEST_ARRAY_LENGTH_IX = 44
     static let TEST_TRAP_IX = 32
     static let TEST_GET_SET_FIELD_IX = 51
     
     static let TEST_GET_ARRAY_INT32_IX = 46
     static let TEST_GET_ARRAY_INT64HAXE_IX = 47
     static let TEST_GET_ARRAY_INT64HL_IX = 50
-    
-    static let TEST_FIELD_ACCESS = 43
     
     func _compileDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), _ ixs: [RefFun]) throws -> CpuOpBuffer {
         let compiler = try sut(strip: strip)
@@ -179,16 +176,17 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testArrayLength() throws {
         typealias _JitFunc = (@convention(c) (Int32) -> Int32)
+        let sutFix = 49
         try _compileAndLink(
             strip: false,
             [
                 // function under test
-                Self.TEST_ARRAY_LENGTH_IX
+                sutFix
             ]
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: Self.TEST_ARRAY_LENGTH_IX) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
          
                 XCTAssertEqual(5, entrypoint(5))
@@ -220,7 +218,7 @@ final class CompileMod2Tests: RealHLTestCase {
     
     /// Test parsing a type that refers to itself in a field (See `__previousException`)
     func testParseRecursiveType() throws {
-        let excT = try ctx.getType(29)
+        let excT = try ctx.getType(30)
         
         XCTAssertEqual(excT.objProvider?.nameProvider.stringValue, "haxe.Exception")
         XCTAssertNotNil(excT.ccompatAddress)
@@ -329,7 +327,7 @@ final class CompileMod2Tests: RealHLTestCase {
             strip: false,
             [
                 // deps
-                28,
+                28, 30,
                 // function under test
                 sutFix
             ]
@@ -339,6 +337,7 @@ final class CompileMod2Tests: RealHLTestCase {
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
+                let c = try! self.ctx.getCallable(findex: 30) 
                 XCTAssertEqual(28, entrypoint(14))
             }
         }
@@ -346,7 +345,7 @@ final class CompileMod2Tests: RealHLTestCase {
     
     /// This tests proper GetI8 behaviour in the wild.
     func testCompile__testGlobal() throws {
-        let fix = 52
+        let fix = 57
         
         typealias _JitFunc =  (@convention(c) () -> UnsafeRawPointer)
         try _compileAndLink(
@@ -383,18 +382,19 @@ final class CompileMod2Tests: RealHLTestCase {
     /// Test field access.
     func testCompile__testFieldAccess() throws {
         typealias _JitFunc =  (@convention(c) () -> Int32)
+        let sutFix = 48
         try _compileAndLink(
             strip: false,
             [
                 // deps
                 27,
                 // function under test
-                Self.TEST_FIELD_ACCESS
+                sutFix
             ]
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: Self.TEST_FIELD_ACCESS) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqual(2, entrypoint())

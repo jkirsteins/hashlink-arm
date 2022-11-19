@@ -9,6 +9,7 @@ typealias ValBool = Int32
 typealias RefBytes = TableIndex
 typealias RefString = TableIndex
 typealias RefFun = TableIndex
+typealias RefClosurePointer = TableIndex
 typealias RefField = TableIndex
 typealias RefGlobal = TableIndex
 typealias RefType = TableIndex

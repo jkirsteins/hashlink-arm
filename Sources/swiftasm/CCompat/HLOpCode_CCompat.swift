@@ -402,7 +402,7 @@ extension HLOpCode {
             let args = (0..<c).map {
                 Reg(extra.advanced(by: Int($0)).pointee)
             }
-            return .OCallClosure(dst: cop.p1, fun: RefFun(cop.p2), args: args)
+            return .OCallClosure(dst: cop.p1, closure: cop.p2, args: args)
         case .OStaticClosure:
             return .OStaticClosure(dst: cop.p1, fun: RefFun(cop.p2))
         case .OInstanceClosure:

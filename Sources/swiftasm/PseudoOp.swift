@@ -23,6 +23,16 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
     // into a register over multiple steps
     case mov(Register64, any Immediate)
     
+    static func withPrep(_ prep: ()->(), _ op: any CpuOp) -> any CpuOp {
+        prep()
+        return op
+    }
+    
+    static func withOffset(offset: inout RelativeDeferredOffset, mem: CpuOpBuffer, _ op: @escaping @autoclosure ()->any CpuOp) -> any CpuOp {
+        offset.start(at: mem.byteSize)
+        return PseudoOp.deferred(4) { op() }
+    }
+    
     var size: ByteCount {
         switch(self) {
         case .ldrVreg(let reg, let off, let s):

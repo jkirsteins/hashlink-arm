@@ -254,7 +254,8 @@ extension HLOpCode {
             return .OCallThis(dst: result.0, field: result.1, args: result.2)
         case 32:
             let result = try HLOpCode.read_2reg_varReg(from: reader)
-            return .OCallClosure(dst: result.0, fun: result.1, args: result.2)
+            fatalError("Need to allocate the mem, and put all args in there")
+//            return .OCallClosure(dst: result.0, fun: result.1, args: result.2)
 
         case 33:
             return .OStaticClosure(dst: try reader.readReg(), fun: try reader.readRef())
@@ -580,7 +581,7 @@ enum HLOpCode : Equatable, Hashable {
     /// Call a closure with N arguments. Here *fun* is a register.
     ///
     /// *dst* = *fun*(*arg0*, *arg1*, ...)
-    case OCallClosure(dst: Reg, fun: RefFun, args: [Reg])
+    case OCallClosure(dst: Reg, closure: Reg, args: [Reg])
     /// Create a closure from a function reference.
     ///
     /// *dst* = *fun*

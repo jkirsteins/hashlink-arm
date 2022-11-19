@@ -176,4 +176,13 @@ struct LibHl {
     static func hl_alloc_enum(_ type: UnsafePointer<HLType_CCompat>, _ index: Int32) -> (UnsafePointer<venum>) {
         .init(OpaquePointer(_hl_alloc_enum(.init(type), index)))
     }
+    
+    // HL_PRIM vclosure *hl_alloc_closure_ptr( hl_type *fullt, void *fvalue, void *v ) {
+    static let _hl_alloc_closure_ptr: (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer) -> (OpaquePointer)) = { load("hl_alloc_closure_ptr") }()
+    static func hl_alloc_closure_ptr(
+        _ type: UnsafePointer<HLType_CCompat>,
+        _ fvalue: OpaquePointer,
+        _ v: OpaquePointer) -> (UnsafePointer<vclosure>) {
+        .init(_hl_alloc_closure_ptr(.init(type), fvalue, v))
+    }
 }

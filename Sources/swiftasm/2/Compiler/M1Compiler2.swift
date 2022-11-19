@@ -17,12 +17,44 @@ let OEnumIndex_impl: (@convention(c)(OpaquePointer)->(Int32)) = {
     return enumPtr.pointee.index
 }
 
+let OInstanceClosure_impl: (@convention(c)(OpaquePointer)->(Int32)) = {
+    _enum in
+    
+    let enumPtr: UnsafePointer<venum> = .init(_enum)
+    return enumPtr.pointee.index
+}
+
 let OEnumField_impl: (@convention(c)(OpaquePointer, Int32, Int32)->(OpaquePointer)) = {
     _enum, constructIndex, fieldIndex in
     
     let enumPtr: UnsafePointer<venum> = .init(_enum)
     let constructPtr = enumPtr.pointee.t.pointee.tenum.pointee.constructs.advanced(by: Int(constructIndex))
     let result = constructPtr.pointee.offsets.advanced(by: Int(fieldIndex))
+    return .init(result)
+}
+
+let OSetEnumField_impl: (@convention(c) (
+    OpaquePointer,  // type
+    Int32,          // field index
+    Int32           // source
+)->()) = {
+    (_type, fieldIndex, source) in
+    let type: UnsafePointer<venum> = .init(_type)
+    let fieldPtr = type.pointee.t.pointee.tenum.pointee.constructs.pointee.offsets.advanced(by: Int(fieldIndex))
+    let mFieldPtr: UnsafeMutablePointer<Int32> = .init(mutating: fieldPtr)
+    mFieldPtr.pointee = source
+    print("Done")
+}
+
+let OEnumAlloc_impl: (@convention(c) (
+    OpaquePointer,  // type
+    Int32           // construct index
+)->(OpaquePointer)) = {
+    _type, index in
+    
+    let type: UnsafePointer<HLType_CCompat> = .init(_type)
+    let result = LibHl.hl_alloc_enum(.init(type), index)
+    
     return .init(result)
 }
 
@@ -806,17 +838,162 @@ class M1Compiler2 {
                     M1Op.blr(.x10),
                     M1Op.str(X.x0, .reg64offset(X.sp, regStackOffset, nil))
                 )
-            case .OCallClosure(let dst, let fun, let args):
-                print("OCallClosure \(dst) \(fun) \(args)")
-                assert(reg: Reg(fun), from: regs, matches: HLTypeKind.fun)
+            case .OCallClosure(let dst, let closureObject, let args):
+                assert(reg: closureObject, from: regs, matches: HLTypeKind.fun)
                 
-                try __ocallclosure(
-                    dst: dst,
-                    fun: Reg(fun),
-                    regs: regs,
-                    args: args,
-                    reservedStackBytes: ByteCount(reservedStackBytes),
-                    mem: mem)
+                let dstType = self.requireType(reg: dst, regs: regs)
+                let clType = self.requireType(reg: closureObject, regs: regs)
+                assert(reg: closureObject, from: regs, is: HLTypeKind.fun)
+                
+                // vclosure offsets
+                let funOffset: Int64 = 8
+                let hasValueOffset: Int64 = 16
+                let valueOffset: Int64 = 24
+                
+                if (dstType.kind == .dyn) {
+                    /*
+                     needs:
+                     // ASM for {
+                     //    vdynamic *args[] = {args};
+                     //  vdynamic *ret = hl_dyn_call(closure,args,nargs);
+                     //  dst = hl_dyncast(ret,t_dynamic,t_dst);
+                     // }
+                     */
+                    fatalError("not implemented")
+                } else {
+                    // ASM for  if( c->hasValue ) c->fun(value,args) else c->fun(args)
+                    
+                    appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: mem)
+                    
+                    var jmpTargetHasValue = RelativeDeferredOffset()
+
+                    mem.append(
+                        M1Op.ldr(X.x0, .reg64offset(X.x10, hasValueOffset, nil)),
+                        M1Op.movz64(X.x1, 0, nil),
+                        M1Op.cmp(X.x0, X.x1)
+                    )
+
+                    appendDebugPrintAligned4("CHECKING TARGET VALUE", builder: mem)
+                    mem.append(
+                        PseudoOp.withOffset(
+                            offset: &jmpTargetHasValue,
+                            mem: mem,
+                            M1Op.b_ne(try! Immediate19(jmpTargetHasValue.value))
+                        )
+                    )
+                    appendDebugPrintAligned4("TARGET HAS NO VALUE", builder: mem)
+                    // MARK: no target value
+                    try __ocall_impl(
+                        dst: dst,
+                        funType: clType,
+                        appendCall: { buff in
+                            appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: buff)
+                            buff.append(
+                                M1Op.ldr(X.x15, .reg64offset(X.x10, funOffset, nil)),
+                                M1Op.blr(X.x15)
+                            )
+                        },
+                        regs: regs,
+                        preArgs: [],
+                        args: args,
+                        reservedStackBytes: ByteCount(reservedStackBytes),
+                        mem: mem
+                    )
+
+                    jmpTargetHasValue.stop(at: mem.byteSize)
+                    appendDebugPrintAligned4("TARGET HAS VALUE", builder: mem)
+                    try __ocall_impl(
+                        dst: dst,
+                        funType: clType,
+                        appendCall: { buff in
+                            appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: buff)
+                            buff.append(
+                                M1Op.ldr(X.x15, .reg64offset(X.x10, funOffset, nil)),
+                                M1Op.blr(X.x15)
+                            )
+                        },
+                        regs: regs,
+                        preArgs: [
+                            ({
+                                buff, reg in
+                                
+                                guard reg != X.x19 else { fatalError("X.x19 can not be loaded") }
+                                
+                                self.appendLoad(reg: X.x19, from: closureObject, kinds: regs, mem: buff)
+                                buff.append(
+                                    M1Op.ldr(reg, .reg64offset(X.x19, valueOffset, nil))
+                                )
+                            },
+                             HLTypeKind.dyn
+                             )
+                        ],
+                        args: args,
+                        reservedStackBytes: ByteCount(reservedStackBytes),
+                        mem: mem
+                    )
+                }
+                    
+                    
+                    
+                    
+                    // MARK: --
+//                    // ASM for  if( c->hasValue ) c->fun(value,args) else c->fun(args)
+                    
+//                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
+//                    
+//                    
+//                    // MARK: --
+//                    let _test: (@convention(c) (OpaquePointer, OpaquePointer)->()) = {
+//                        _ptr, _val in
+//                        
+//                        let venum: UnsafePointer<vclosure> = .init(_ptr)
+//                        print("Got vclosure: \(Int(bitPattern: venum))")
+//                        print("Got vclosure: \(venum)")
+//                        print("Got vclosure value: \(Int(bitPattern: venum.pointee.value))")
+//                        print("Got vclosure value: \(venum.pointee.value)")
+//                        print("ASM vclosure value: \(Int(bitPattern: _val))")
+//                        print("ASM vclosure value: \(_val)")
+//                    }
+//                    let _testAddr = unsafeBitCast(_test, to: OpaquePointer.self)
+//                    mem.append(
+//                        M1Op.movr64(X.x0, X.x10),
+//                        M1Op.ldr(X.x1, .reg64offset(X.x10, valueOffset, nil)),
+//                        PseudoOp.mov(X.x19, _testAddr),
+//                        M1Op.blr(X.x19)
+//                    )
+//                    appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: mem)
+//                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
+//                    // MARK: --
+//                    
+//                    
+//                    
+
+//                    
+//                    // TODO: check for c->hasValue
+//                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
+//                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
+//                    mem.append(
+//                        M1Op.ldr(X.x0, .reg64offset(X.x10, valueOffset, nil)),
+//                        M1Op.ldr(X.x15, .reg64offset(X.x10, funOffset, nil))
+//                    )
+//                    appendLoad(reg: X.x1, from: args[0], kinds: regs, mem: mem)
+//                    
+//                    mem.append(
+//                        M1Op.blr(X.x15)
+//                    )
+//                    
+//                }
+//                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                // -----
+                
+                
+//                try __ocallclosure(
+//                    dst: dst,
+//                    fun: Reg(fun),
+//                    regs: regs,
+//                    args: args,
+//                    reservedStackBytes: ByteCount(reservedStackBytes),
+//                    mem: mem)
                 
             case .OCallN(let dst, let fun, let args):
                 try __ocalln(
@@ -999,6 +1176,9 @@ class M1Compiler2 {
                     fieldRef: fieldRef,
                     regs: regs,
                     mem: mem)
+                // TODO: remove
+                appendLoad(reg: X.x16, from: dstReg, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x16, builder: mem)
             case .OInt(let dst, let iRef):
                 assert(reg: dst, from: regs, is: HLTypeKind.i32)
                 let c = try ctx.requireInt(iRef)
@@ -1532,6 +1712,10 @@ class M1Compiler2 {
             case .OMul(let dst, let a, let b):
                 appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
+                
+                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
+                appendDebugPrintRegisterAligned4(X.x1, builder: mem)
+                
                 mem.append(M1Op.mul(X.x0, X.x0, X.x1))
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OToSFloat(let dst, let src):
@@ -1726,6 +1910,77 @@ class M1Compiler2 {
                 )
 //                assert(reg: dst, from: regs, is: HLTypeKind.i32)
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OEnumAlloc(let dst, let construct):
+                assert(reg: dst, from: regs, is: HLTypeKind.enum)
+                let type = requireType(reg: dst, regs: regs)
+                guard let _ = type.tenumProvider else {
+                    fatalError("Enum provider must be set")
+                }
+                
+                let _implTarget = unsafeBitCast(OEnumAlloc_impl, to: UnsafeRawPointer.self)
+                
+                mem.append(
+                    PseudoOp.mov(X.x0, type.ccompatAddress),
+                    PseudoOp.mov(X.x1, construct),
+                    PseudoOp.mov(.x19, _implTarget),
+                    M1Op.blr(.x19)
+                )
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OSetEnumField(let value, let field, let src):
+                assert(reg: src, from: regs, is: HLTypeKind.i32)
+                
+                let _implTarget = unsafeBitCast(OSetEnumField_impl, to: UnsafeRawPointer.self)
+                
+                appendLoad(reg: X.x2, from: src, kinds: regs, mem: mem)
+                appendLoad(reg: X.x0, from: value, kinds: regs, mem: mem)
+                mem.append(
+                    PseudoOp.mov(X.x1, field),
+                    PseudoOp.mov(.x19, _implTarget),
+                    M1Op.blr(.x19)
+                )
+            case .OInstanceClosure(let dst, let fun, let obj):
+                let _implTarget = unsafeBitCast(OInstanceClosure_impl, to: UnsafeRawPointer.self)
+                
+                
+                guard let funIndex = ctx.mainContext.pointee.m?.pointee.functions_indexes.advanced(by: fun).pointee else {
+                    fatalError("No real fun index")
+                }
+                print("Fun index \(funIndex)")
+                guard let funType = ctx.mainContext.pointee.code?.pointee.functions.advanced(by: Int(funIndex)).pointee.typePtr else {
+                    fatalError("No fun type")
+                }
+                
+                print("fun \(fun); funType: \(funType.kind); \(funType._overrideDebugDescription)")
+                Swift.assert(funType.kind == .fun)
+                
+                let callTarget = try ctx.requireCallable(findex: fun)
+                ctx.funcTracker.referenced2(callTarget)
+                
+                print("Got fun address: \(callTarget.address)")
+                
+//                typealias _ClosureType = (@convention(c) (OpaquePointer)->(Int32))
+//                let newInstanceClosure: _ClosureType = {
+//                    objPtr in
+//                    let x: UnsafePointer<vdynamic> = .init(objPtr)
+//                    return 1234
+//                }
+//                let newClosurePtr = unsafeBitCast(newInstanceClosure, to: UnsafeRawPointer.self)
+                
+                // hl_alloc_closure_ptr( hl_type *fullt, void *fvalue, void *v ) {
+                
+                let allocClosure_jumpTarget = unsafeBitCast(LibHl._hl_alloc_closure_ptr, to: UnsafeRawPointer.self)
+                
+                
+                appendLoad(reg: X.x2, from: obj, kinds: regs, mem: mem)
+                mem.append(
+                    PseudoOp.mov(X.x0, funType.ccompatAddress),
+                    PseudoOp.mov(X.x1, callTarget.address),
+                    
+                    PseudoOp.mov(X.x3, allocClosure_jumpTarget),
+                    M1Op.blr(X.x3)
+                )
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }
