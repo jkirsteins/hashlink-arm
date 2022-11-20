@@ -93,7 +93,8 @@ def lookup_loads_store_register__unsigned_immediate(val)
     elsif match("11 0 10", valStr)  
         abort("PRFM (immediate)")
     elsif match("11 1 00", valStr)  
-        abort("STR (immediate, SIMD&FP) — 64-bit")
+        puts("STR (immediate, SIMD&FP) — 64-bit")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/STR--immediate--SIMD-FP---Store-SIMD-FP-register--immediate-offset--?lang=en")
     elsif match("11 1 01", valStr)  
         abort("LDR (immediate, SIMD&FP) — 64-bit")
     else
@@ -936,5 +937,5 @@ def from_objd(str)
     ("0x" + str.split(" ").reverse.join("")).to_i(16)
 end
 
-# puts lookup(from_objd("08 00 78 1e"))
-puts lookup(0b1001_1110_0111_1000_0000_0000_0000_1000)
+# puts lookup(from_objd("00 01 62 9e"))
+puts lookup(0b1111_1101_0000_0000_0000_0011_1110_0000)
