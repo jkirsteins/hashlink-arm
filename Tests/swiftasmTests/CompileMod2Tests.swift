@@ -326,10 +326,12 @@ final class CompileMod2Tests: RealHLTestCase {
         try _compileAndLink(
             strip: false,
             [
+                // NOTE: function order is important for coverage
+                28, // this references OInstanceClosure before the dependency is compiled
+                
+                sutFix,
                 // deps
-                28, 30,
-                // function under test
-                sutFix
+                30
             ]
         ) {
             mem in
@@ -337,8 +339,31 @@ final class CompileMod2Tests: RealHLTestCase {
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
-                let c = try! self.ctx.getCallable(findex: 30) 
                 XCTAssertEqual(28, entrypoint(14))
+            }
+        }
+    }
+    
+    func testCompile__testStaticClosure() throws {
+        typealias _JitFunc =  (@convention(c) (Int32, Int32) -> (Int32))
+        let sutFix = 252
+        try _compileAndLink(
+            strip: false,
+            [
+                // NOTE: function order is important for coverage
+                // sutFix goes first, which contains OStaticClosure from
+                // a dependency that must not be compiled yet.
+                sutFix,
+                
+                253
+            ]
+        ) {
+            mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(33, entrypoint(11, 22))
             }
         }
     }

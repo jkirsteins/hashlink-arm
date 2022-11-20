@@ -864,8 +864,10 @@ class M1Compiler2 {
                     // ASM for  if( c->hasValue ) c->fun(value,args) else c->fun(args)
                     
                     appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: mem)
+                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
                     
                     var jmpTargetHasValue = RelativeDeferredOffset()
+                    var jmpTargetFinish = RelativeDeferredOffset()
 
                     mem.append(
                         M1Op.ldr(X.x0, .reg64offset(X.x10, hasValueOffset, nil)),
@@ -899,6 +901,14 @@ class M1Compiler2 {
                         reservedStackBytes: ByteCount(reservedStackBytes),
                         mem: mem
                     )
+                    
+                    mem.append(
+                        PseudoOp.withOffset(
+                            offset: &jmpTargetFinish,
+                            mem: mem,
+                            M1Op.b(jmpTargetFinish)
+                        )
+                    )
 
                     jmpTargetHasValue.stop(at: mem.byteSize)
                     appendDebugPrintAligned4("TARGET HAS VALUE", builder: mem)
@@ -931,70 +941,10 @@ class M1Compiler2 {
                         reservedStackBytes: ByteCount(reservedStackBytes),
                         mem: mem
                     )
+                    
+                    jmpTargetFinish.stop(at: mem.byteSize)
+                    appendDebugPrintAligned4("Exiting OCallClosure", builder: mem)
                 }
-                    
-                    
-                    
-                    
-                    // MARK: --
-//                    // ASM for  if( c->hasValue ) c->fun(value,args) else c->fun(args)
-                    
-//                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
-//                    
-//                    
-//                    // MARK: --
-//                    let _test: (@convention(c) (OpaquePointer, OpaquePointer)->()) = {
-//                        _ptr, _val in
-//                        
-//                        let venum: UnsafePointer<vclosure> = .init(_ptr)
-//                        print("Got vclosure: \(Int(bitPattern: venum))")
-//                        print("Got vclosure: \(venum)")
-//                        print("Got vclosure value: \(Int(bitPattern: venum.pointee.value))")
-//                        print("Got vclosure value: \(venum.pointee.value)")
-//                        print("ASM vclosure value: \(Int(bitPattern: _val))")
-//                        print("ASM vclosure value: \(_val)")
-//                    }
-//                    let _testAddr = unsafeBitCast(_test, to: OpaquePointer.self)
-//                    mem.append(
-//                        M1Op.movr64(X.x0, X.x10),
-//                        M1Op.ldr(X.x1, .reg64offset(X.x10, valueOffset, nil)),
-//                        PseudoOp.mov(X.x19, _testAddr),
-//                        M1Op.blr(X.x19)
-//                    )
-//                    appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: mem)
-//                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
-//                    // MARK: --
-//                    
-//                    
-//                    
-
-//                    
-//                    // TODO: check for c->hasValue
-//                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
-//                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
-//                    mem.append(
-//                        M1Op.ldr(X.x0, .reg64offset(X.x10, valueOffset, nil)),
-//                        M1Op.ldr(X.x15, .reg64offset(X.x10, funOffset, nil))
-//                    )
-//                    appendLoad(reg: X.x1, from: args[0], kinds: regs, mem: mem)
-//                    
-//                    mem.append(
-//                        M1Op.blr(X.x15)
-//                    )
-//                    
-//                }
-//                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
-                // -----
-                
-                
-//                try __ocallclosure(
-//                    dst: dst,
-//                    fun: Reg(fun),
-//                    regs: regs,
-//                    args: args,
-//                    reservedStackBytes: ByteCount(reservedStackBytes),
-//                    mem: mem)
-                
             case .OCallN(let dst, let fun, let args):
                 try __ocalln(
                     dst: dst,
@@ -1003,87 +953,6 @@ class M1Compiler2 {
                     args: args,
                     reservedStackBytes: ByteCount(reservedStackBytes),
                     mem: mem)
-//                let callTarget = try ctx.requireCallable(findex: fun)
-//                ctx.funcTracker.referenced2(callTarget)
-//
-//                assert(reg: dst, from: regs, matches: callTarget.retProvider)
-//                let dstStackOffset = getRegStackOffset(regs, dst)
-//                let dstKind = requireTypeKind(reg: dst, from: regs)
-//
-//                let regWkindToPass = args.enumerated().map {
-//                    (reg, argReg) in
-//                    assert(reg: argReg, from: regs, matchesCallArg: Reg(reg), inFun: callTarget)
-//                    return (reg, requireTypeKind(reg: argReg, from: regs))
-//                }
-//
-//                let additionalSizeUnrounded = regWkindToPass.dropFirst(ARG_REGISTER_COUNT).reduce(0) {
-//                    print("Adding size for \($1.1)")
-//                    return $0 + Int($1.1.hlRegSize)
-//                }
-//                let additionalSize = roundUpStackReservation(Int16(additionalSizeUnrounded))
-//
-//                if additionalSize > 0 {
-//                    mem.append(
-//                        PseudoOp.debugPrint2(self, "Reserving \(additionalSize) bytes for stack (OCallN)"),
-//                        M1Op.subImm12(X.sp, X.sp, try .i(additionalSize))
-//                    )
-//                }
-//
-//                var argOffset: Int64 = 0
-//                for (regIx, regKind) in regWkindToPass.dropFirst(ARG_REGISTER_COUNT) {
-//                    guard args.count > regIx else { break }
-//                    let argReg = args[regIx]
-//                    let offset = getRegStackOffset(regs, argReg) + Int64(additionalSize)
-//
-//                    mem.append(
-//                        PseudoOp.ldrVreg(X.x0, offset, regKind.hlRegSize),
-//                        PseudoOp.strVreg(X.x0, argOffset, regKind.hlRegSize)
-//                    )
-//                    mem.append(PseudoOp.debugPrint2(self,
-//                                                   "Loaded \(offset) -> \(argOffset) -> \(regKind.hlRegSize)"))
-//
-//                    argOffset += regKind.hlRegSize
-//                }
-//
-//                mem.append(PseudoOp.debugPrint2(self, "CallN fn@\(fun)(\(args)) -> \(dst)"))
-//
-//                for regIx in 0..<ARG_REGISTER_COUNT {
-//                    guard args.count > regIx else { break }
-//                    let argReg = args[regIx]
-//
-//                    puts("Putting varg \(argReg) in nreg \(regIx)")
-//                    let offset = getRegStackOffset(regs, argReg) + Int64(additionalSize)
-////
-//                    appendLoad(reg: Register64(
-//                        rawValue: UInt8(regIx))!,
-//                               from: argReg,
-//                               kinds: regs, // careful, pass all kinds, not just the arg ones
-//                               offset: offset,
-//                               mem: mem)
-//                    appendDebugPrintRegisterAligned4(Register64(rawValue: UInt8(regIx))!, builder: mem)
-//                }
-//
-//                // TODOFIX
-//                let fnAddr = callTarget.address
-//                print("Target entrypoint is \(fun) \(fnAddr)")
-//
-//                mem.append(
-//                    PseudoOp.mov(.x19, fnAddr),
-//                    M1Op.blr(.x19)
-//                    )
-//
-//                mem.append(
-//                    PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize),
-//                    PseudoOp.debugPrint2(self, "Got back and put result at offset \(dstStackOffset + Int64(additionalSize))")
-//                )
-//
-//                if additionalSize > 0 {
-//                    mem.append(
-//                        PseudoOp.debugPrint2(self, "Free \(additionalSize) bytes (OCallN)"),
-//                        (try M1Op._add(X.sp, X.sp, ByteCount(reservedStackBytes)))
-//                    )
-//                }
-
             case .OCall2(let dst, let fun, let arg0, let arg1):
                 let callTarget = try ctx.requireCallable(findex: fun)
                 ctx.funcTracker.referenced2(callTarget)
@@ -1636,6 +1505,8 @@ class M1Compiler2 {
             case .OAdd(let dst, let a, let b):
                 appendLoad(reg: .x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
+                appendDebugPrintRegisterAligned4(X.x1, builder: mem)
                 mem.append(M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))))
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OUShr(let dst, let a, let b):
@@ -1981,6 +1852,46 @@ class M1Compiler2 {
                 )
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
+            case .OStaticClosure(let dst, let fun):
+                let mutatingMod = UnsafeMutablePointer(mutating: ctx.mainContext.pointee.m!)
+                let callTarget = try ctx.requireCallable(findex: fun)
+                ctx.funcTracker.referenced2(callTarget)
+                
+                withUnsafeMutablePointer(to: &mutatingMod.pointee.ctx.alloc) {
+                    allocPtr in
+                    
+                    let c: UnsafeMutablePointer<vclosure> = .init(LibHl.hl_malloc(allocPtr, Int32(MemoryLayout<vclosure>.size)))
+                    print("OStaticClosure hl_malloc returned \(c) == \(Int(bitPattern: c))")
+                    let fidx = mutatingMod.pointee.functions_indexes.advanced(by: fun).pointee
+                    
+                    let nfuncs = mutatingMod.pointee.code.pointee.nfunctions
+                    
+                    /* The call target address is not available at compilation time, but will be available at link time.
+                     
+                     So instead of assigning c.pointee.fun directly (can't - no address), we append instructions to load the address
+                     at runtime (at which point it will be available).
+                     
+                     This is equivalent to: `c.pointee.fun = .init(callTarget.address.value)` except via assembly.
+                     */
+                    mem.append(PseudoOp.mov(X.x0, callTarget.address))
+                    mem.append(PseudoOp.mov(X.x1, OpaquePointer(c)))
+                    mem.append(M1Op.str(X.x0, .reg64offset(X.x1, 8 /* offset to `fun` in vclosure */, nil)))
+                    
+                    c.pointee.value = nil
+                    
+                    if (fidx >= nfuncs) {
+                        // native
+                        c.pointee.t = mutatingMod.pointee.code.pointee.natives.advanced(by: Int(UInt32(fidx) - nfuncs)).pointee.typePtr
+                    } else {
+                        let funcPtr = mutatingMod.pointee.code.pointee.functions.advanced(by: Int(fidx))
+                        c.pointee.t = funcPtr.pointee.typePtr!
+                    }
+                    
+                    c.pointee.hasValue = 0
+                    
+                    mem.append(PseudoOp.mov(X.x0, OpaquePointer(c)))
+                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                }
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

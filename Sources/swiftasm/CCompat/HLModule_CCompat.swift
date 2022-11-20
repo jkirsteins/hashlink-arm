@@ -30,7 +30,7 @@ struct HLModule_CCompat : Equatable, Hashable {
     let hash: UnsafeRawPointer
     let _jit_debug: UnsafeRawPointer
     let _jit_ctx: UnsafeRawPointer
-    let ctx: HLModuleContext_CCompat
+    var ctx: HLModuleContext_CCompat
     
     func getFunctionType(_ fix: RefFun) -> UnsafePointer<HLType_CCompat> {
         let ix = self.functions_indexes.advanced(by: fix).pointee

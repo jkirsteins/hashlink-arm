@@ -1,5 +1,20 @@
 @testable import swiftasm
 
+extension UnsafePointer : MemoryAddress {
+    public var value: UnsafeMutableRawPointer {
+        .init(mutating: self)
+    }
+    
+    public func isEqual(_ to: any MemoryAddress) -> Bool {
+        self.value == to.value
+    }
+    
+    public init(_ val: Int64, bits: Int64) throws {
+        assert(bits == 64)
+        self = .init(bitPattern: Int(val))!
+    }
+}
+
 extension UnsafeMutableRawPointer {
     func calljit(ctx: CCompatJitContext, fix: Int, arg0: UnsafeRawPointer?) throws -> Int32 {
         return try jit(ctx: ctx, fix: fix) { (ep: (@convention(c) (UnsafeRawPointer?) -> Int32)) in

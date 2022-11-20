@@ -8,6 +8,15 @@
 import Foundation
 
 extension M1Compiler2 {
+    /// Implementation for `OCallClosure`.
+    ///
+    /// - Parameters:
+    ///   - dst: destination register
+    ///   - fun: register that contains the address of the closure (we'll load the value in this register, and jump to the loaded value)
+    ///   - regs: call target registers
+    ///   - args: call target arguments
+    ///   - reservedStackBytes: calling function's stack usage
+    ///   - mem: buffer
     func __ocallclosure(
         dst: Reg,
         fun: Reg,
@@ -36,6 +45,18 @@ extension M1Compiler2 {
             mem: mem)
     }
     
+    
+    /// Shared implementation of various call methods (including closures).
+    ///
+    /// - Parameters:
+    ///   - dst: virtual register where to store the function result.
+    ///   - funType: type of the function being invoked (e.g. data that can provide argument and return types)
+    ///   - appendCall: a closure that appends the actual jump instruction. This is needed because the call target address can come from different sources only known by the call site
+    ///   - regs: list of register types for the function being called
+    ///   - preArgs: list of arguments to prepend, which are not part of the function signature (this is typically used for prepending a sender object when invoking a closure on an object. The function type will not include the `this` value, so we prepend it via `preArgs`).
+    ///   - args: list of argument types for the function being called
+    ///   - reservedStackBytes: number of bytes that were reserved in the calling function (not call target) stack. This is needed to properly figure out stack offsets when preparing the arguments.
+    ///   - mem: operation buffer
     func __ocall_impl(
         dst: Reg,
         funType: any HLTypeProvider,

@@ -157,6 +157,12 @@ struct LibHl {
     // hl_module_free( hl_module *m );
     static let _hl_module_free: (@convention(c) (UnsafeRawPointer) -> ()) = { load("hl_module_free", from: .bin) }()
     
+    // void *hl_malloc( hl_alloc *a, int size ) {
+    static let _hl_malloc: (@convention(c) (OpaquePointer, Int32) -> (OpaquePointer)) = { load("hl_malloc", from: .bin) }()
+    static func hl_malloc(_ hlalloc: UnsafePointer<HLAlloc_CCompat>, _ size: Int32) -> (OpaquePointer) {
+        _hl_malloc(.init(hlalloc), size)
+    }
+    
     // void hl_free( hl_alloc *a ) {
     static let _hl_free: (@convention(c) (UnsafeRawPointer) -> ()) = { load("hl_free") }()
     
