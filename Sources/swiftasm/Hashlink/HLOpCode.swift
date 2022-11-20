@@ -632,7 +632,10 @@ enum HLOpCode : Equatable, Hashable {
     case OToSFloat(dst: Reg, src: Reg)
     case OToUFloat(dst: Reg, src: Reg)
     case OToInt(dst: Reg, src: Reg)
+    
+    /// safecast [dst], [src] cast register src into register dst, throw an exception if there is no way to perform such operation
     case OSafeCast(dst: Reg, src: Reg)
+    
     case OUnsafeCast(dst: Reg, src: Reg)
     case OToVirtual(dst: Reg, src: Reg)
 

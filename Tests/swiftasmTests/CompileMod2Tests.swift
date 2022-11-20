@@ -212,14 +212,20 @@ final class CompileMod2Tests: RealHLTestCase {
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: sutFix) {
-                (entrypoint: _JitFunc) in
-                
-                XCTAssertEqual(entrypoint(0), 0x1211)
-                XCTAssertEqual(entrypoint(1), 0x1312)
-                XCTAssertEqual(entrypoint(2), 0x1413)
-                XCTAssertEqual(entrypoint(3), 0x0014)
-            }
+            let callable = try ctx.getCallable(findex: sutFix)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
+            
+            var res = entrypoint(0)
+            XCTAssertEqual(res, 0x1211)
+            
+            res = entrypoint(1)
+            XCTAssertEqual(res, 0x1312)
+            
+            res = entrypoint(2)
+            XCTAssertEqual(res, 0x1413)
+            
+            res = entrypoint(3)
+            XCTAssertEqual(res, 0x0014)
         }
     }
     
@@ -236,14 +242,20 @@ final class CompileMod2Tests: RealHLTestCase {
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: sutFix) {
-                (entrypoint: _JitFunc) in
-                
-                XCTAssertEqual(entrypoint(0), 0x11)
-                XCTAssertEqual(entrypoint(1), 0x12)
-                XCTAssertEqual(entrypoint(2), 0x13)
-                XCTAssertEqual(entrypoint(3), 0x14)
-            }
+            let callable = try ctx.getCallable(findex: sutFix)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
+            
+            var res = entrypoint(0)
+            XCTAssertEqual(res, 0x11)
+            
+            res = entrypoint(1)
+            XCTAssertEqual(res, 0x12)
+            
+            res = entrypoint(2)
+            XCTAssertEqual(res, 0x13)
+            
+            res = entrypoint(3)
+            XCTAssertEqual(res, 0x14)
         }
     }
     

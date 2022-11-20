@@ -941,12 +941,12 @@ final class CompilerM1v2Tests: CCompatTestCase {
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
-            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt8, UInt16, Int32) -> Int32)) in
-                let res: Int32 = ep(1, 2, 6)
+            let callable = try ctx.getCallable(findex: 0)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
+                    
+            let res: Int32 = entrypoint(1, 2, 6)
 
-                // HL called Swift func. Swift func returned 145. HL returned the result it received.
-                XCTAssertEqual(0b111, res)
-            }
+            XCTAssertEqual(0b111, res)
         }
     }
 
@@ -987,17 +987,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
-            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UInt8, UInt8, UInt8, UInt8) -> UInt8)) in
-                
-                XCTAssertEqual(0, entrypoint(0, 0, 0, 0))
-                XCTAssertEqual(0b0001, entrypoint(1, 0, 0, 0))
-                XCTAssertEqual(0b0010, entrypoint(0, 1, 0, 0))
-                XCTAssertEqual(0b0100, entrypoint(0, 0, 1, 0))
-                XCTAssertEqual(0b1000, entrypoint(0, 0, 0, 1))
-                XCTAssertEqual(0b1111, entrypoint(1, 1, 1, 1))
-                XCTAssertEqual(0b0000, entrypoint(0, 0, 0, 0))
-                XCTAssertEqual(0b0110, entrypoint(0, 1, 1, 0))
-            }
+            let callable = try ctx.getCallable(findex: 0)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
+                    
+            XCTAssertEqual(0, entrypoint(0, 0, 0, 0))
+            XCTAssertEqual(0b0001, entrypoint(1, 0, 0, 0))
+            XCTAssertEqual(0b0010, entrypoint(0, 1, 0, 0))
+            XCTAssertEqual(0b0100, entrypoint(0, 0, 1, 0))
+            XCTAssertEqual(0b1000, entrypoint(0, 0, 0, 1))
+            XCTAssertEqual(0b1111, entrypoint(1, 1, 1, 1))
+            XCTAssertEqual(0b0000, entrypoint(0, 0, 0, 0))
+            XCTAssertEqual(0b0110, entrypoint(0, 1, 1, 0))
         }
     }
 
@@ -1602,12 +1602,12 @@ final class CompilerM1v2Tests: CCompatTestCase {
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
-            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: _JitFunc) in
-                   let res: Int32 = entrypoint(100, 156)
+            let callable = try ctx.getCallable(findex: 0)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
+            
+            let res: Int32 = entrypoint(100, 156)
 
-                   // HL called Swift func. Swift func returned 145. HL returned the result it received.
-                   XCTAssertEqual(256, res)
-            }
+            XCTAssertEqual(256, res)
         }
     }
 
@@ -2432,13 +2432,16 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 ]),
         ], ints: [10, 2])
         
+        typealias _JitFunc = (@convention(c) (UInt8) -> (Int32))
+        
         try compileAndLink(ctx: ctx, 0, 1) {
             mappedMem in
             
-            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UInt8) -> (Int32))) in
-                let res = entrypoint(0 /*doesn't matter. Only here for padding*/ )
-                XCTAssertEqual(2, res)
-            }
+            let callable = try ctx.getCallable(findex: 0)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
+            
+            let res = entrypoint(0 /*doesn't matter. Only here for padding*/ )
+            XCTAssertEqual(2, res)
         }
     }
 }

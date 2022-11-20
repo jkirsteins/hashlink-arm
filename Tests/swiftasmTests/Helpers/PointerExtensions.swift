@@ -83,7 +83,7 @@ extension UnsafeMutableRawPointer {
         return callback(entrypoint)
     }
     
-    func jitVoid<U>(ctx: CCompatJitContext, fix: Int, _ callback: @escaping (U)->()) throws {
+    func jitVoid<U>(ctx: CCompatJitContext, fix: Int, _ callback: (U)->()) throws {
         guard let c = try ctx.getCallable(findex: fix) else {
             throw TestError.unexpected("Function (fix=\(fix)) not found")
         }

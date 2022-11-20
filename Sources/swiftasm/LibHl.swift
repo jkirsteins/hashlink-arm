@@ -191,4 +191,39 @@ struct LibHl {
         _ v: OpaquePointer) -> (UnsafePointer<vclosure>) {
         .init(_hl_alloc_closure_ptr(.init(type), fvalue, v))
     }
+    
+    // HL_PRIM float hl_dyn_castf( void *data, hl_type *t ) {
+    static let _hl_dyn_castf: (@convention(c) (OpaquePointer, OpaquePointer) -> (Float32)) = { load("hl_dyn_castf") }()
+    static func hl_dyn_castf(
+        _ data: OpaquePointer,
+        _ type: UnsafePointer<HLType_CCompat>) -> (Float32) {
+            _hl_dyn_castf(data, .init(type))
+    }
+    
+    // HL_PRIM double hl_dyn_castd( void *data, hl_type *t ) {
+    static let _hl_dyn_castd: (@convention(c) (OpaquePointer, OpaquePointer) -> (Float64)) = { load("hl_dyn_castd") }()
+    static func hl_dyn_castd(
+        _ data: OpaquePointer,
+        _ type: UnsafePointer<HLType_CCompat>) -> (Float64) {
+            _hl_dyn_castd(data, .init(type))
+    }
+    
+    // HL_PRIM int hl_dyn_casti( void *data, hl_type *t, hl_type *to ) {
+    static let _hl_dyn_casti: (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer) -> (Int32)) = { load("hl_dyn_casti") }()
+    static func hl_dyn_casti(
+        _ data: OpaquePointer,
+        _ type: UnsafePointer<HLType_CCompat>,
+        _ to: UnsafePointer<HLType_CCompat>) -> (Int32) {
+            _hl_dyn_casti(data, .init(type), .init(to))
+    }
+    
+    // HL_PRIM void *hl_dyn_castp( void *data, hl_type *t, hl_type *to ) {
+    static let _hl_dyn_castp: (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer) -> (OpaquePointer)) = { load("hl_dyn_castp") }()
+    static func hl_dyn_castp(
+        _ data: OpaquePointer,
+        _ type: UnsafePointer<HLType_CCompat>,
+        _ to: UnsafePointer<HLType_CCompat>) -> (OpaquePointer) {
+            _hl_dyn_castp(data, .init(type), .init(to))
+    }
+    
 }
