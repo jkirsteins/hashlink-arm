@@ -1,22 +1,35 @@
-import Darwin 
+import Darwin
 
 protocol Register: Equatable, CustomDebugStringConvertible {
+    var rawValue: UInt8 { get }
+    var i: (any RegisterI)? { get }
+    var fp: (any RegisterFP)? { get }
+}
+
+protocol RegisterI: Register, Equatable, CustomDebugStringConvertible {
     associatedtype Shift
 
-    var rawValue: UInt8 { get }
     var is32: Bool { get }
     
     var to64: Register64 { get }
     var to32: Register32 { get }
     
-    func sameSize(as: any Register) -> any Register 
+    func sameSize(as: any RegisterI) -> any RegisterI
 }
 
-extension Register {
+protocol RegisterFP: Register, Equatable, CustomDebugStringConvertible {
+    var rawValue: UInt8 { get }
+    
+    var single: Bool { get }
+    var double: Bool { get }
+}
+
+extension RegisterI {
     var is64: Bool { !is32 }
 }
 
 typealias X = Register64
+typealias D = RegisterFP64
 typealias W = Register32
 
 extension OpBuilder
@@ -94,7 +107,10 @@ public enum Shift32: Int, CustomDebugStringConvertible {
     }
 }
 
-enum Register64: UInt8, Register {
+enum Register64: UInt8, RegisterI {
+    var i: (any RegisterI)? { self }
+    var fp: (any RegisterFP)? { nil }
+    
     typealias Shift = Shift64
     typealias ExtendOp = ExtendOp64
 
@@ -157,25 +173,73 @@ enum Register64: UInt8, Register {
     }
 }
 
+enum RegisterFP64: UInt8, RegisterFP {
+    
+    var single: Bool { false }
+    var double: Bool { true }
+    
+    var i: (any RegisterI)? { nil }
+    var fp: (any RegisterFP)? { self }
+    
+    case d0 = 0
+    case d1 = 1
+    case d2 = 2
+    case d3 = 3
+    case d4 = 4
+    case d5 = 5
+    case d6 = 6
+    case d7 = 7
+    case d8 = 8
+    case d9 = 9
+    case d10 = 10
+    case d11 = 11
+    case d12 = 12
+    case d13 = 13
+    case d14 = 14
+    case d15 = 15
+    case d16 = 16
+    case d17 = 17
+    case d18 = 18
+    case d19 = 19
+    case d20 = 20
+    case d21 = 21
+    case d22 = 22
+    case d23 = 23
+    case d24 = 24
+    case d25 = 25
+    case d26 = 26
+    case d27 = 27
+    case d28 = 28
+    case d29 = 29
+    case d30 = 30
+    
+    var debugDescription: String {
+        "d\(self.rawValue)"
+    }
+}
+
 enum IndexingMode {
     // If specified, the offset we can use must be in the range -256 to 255
     case pre
     case post
 }
 
-extension Register {
-    func sameSize(as other: any Register) -> any Register {
+extension RegisterI {
+    func sameSize(as other: any RegisterI) -> any RegisterI {
         if other.is64 == self.is64 { return self }
         if other.is64 { return self.to64 }
         return self.to32
     }
 }
 
-enum Register32: UInt8, Register {
+enum Register32: UInt8, RegisterI {
     typealias Shift = Shift32
     typealias ExtendOp = ExtendOp32
     var is32: Bool { true }
 
+    var i: (any RegisterI)? { self }
+    var fp: (any RegisterFP)? { nil }
+    
     var debugDescription: String {
         return "w\(self.rawValue)"
     }
@@ -229,14 +293,14 @@ enum RegModifier {
     case r64ext(Register64, Register64.ExtendOp)
     case r32ext(Register32, Register32.ExtendOp)
     // TODO: rename rshift ?
-    case r64shift(any Register, Shift64_Real)
+    case r64shift(any RegisterI, Shift64_Real)
     case imm(Int64, IndexingMode?)
 }
 
 // TODO: this should be more accurately named M1Address or something like that (to signify
 // it represents where source data comes from, which is not necessarily an offset)
 
-fileprivate func getIxModeDebugDesc(_ r: any Register, _ immVal: Int64, _ ix: IndexingMode?) -> String {
+fileprivate func getIxModeDebugDesc(_ r: any RegisterI, _ immVal: Int64, _ ix: IndexingMode?) -> String {
     switch(ix) {
     case .post:
         return "[\(r)], #\(immVal)"
@@ -258,7 +322,7 @@ enum Offset : CustomDebugStringConvertible {
     case imm64(/*Xn|SP*/Register64, Int64, IndexingMode?)
     
     // Register base + register offset
-    case reg(any Register, RegModifier?)
+    case reg(any RegisterI, RegModifier?)
     
     case immediate6(Immediate6)
     
@@ -280,9 +344,9 @@ enum Offset : CustomDebugStringConvertible {
             return "[\(Rt), \(Rn), \(shift)]"
         case .reg(let Rt, nil):
             return "[\(Rt)]"
-        case .reg(let Rt, .r64ext(let Rn as any Register, let ext as CustomDebugStringConvertible)):
+        case .reg(let Rt, .r64ext(let Rn as any RegisterI, let ext as CustomDebugStringConvertible)):
             fallthrough
-        case .reg(let Rt, .r32ext(let Rn as any Register, let ext as CustomDebugStringConvertible)):
+        case .reg(let Rt, .r32ext(let Rn as any RegisterI, let ext as CustomDebugStringConvertible)):
             return "[\(Rt), \(Rn), \(ext)]"
         case .reg(let Rt, .imm(let immVal, let ixMode)):
             return getIxModeDebugDesc(Rt, immVal, ixMode)
@@ -334,41 +398,6 @@ public class EmitterM1 {
         -> Int64
     {
         try truncateOffsetGlobal(val, divisor: divisor, bits: bits)
-//        if val % divisor != 0 {
-//            throw EmitterM1Error.invalidOffset(
-//                "truncateOffset: offset immediate must be a multiple of \(divisor) but was \(val)"
-//            )
-//        }
-//
-//        var divided = val / divisor
-//        let mask: Int64 = ((1 << bits) - 1)
-//        let msb: Int64 = (1 << (bits - 1))
-//        // Check if we fit in required number of bits
-//        let compare: Int64
-////        if divided >= 0 {
-//
-////        }
-//        // unset sign extended leading bits
-//        for bix in 0..<64-bits {
-//            divided = divided & ~(1 << 63 - bix);
-//        }
-////        0b0000000010101010
-////        0b1111111110101010
-//        compare = divided & mask
-//
-////        else {
-////            let rmask: Int64 = (~mask | 0b1000000)
-////            compare = (divided & mask) | rmask
-////        }
-//        guard compare == divided else {
-//            throw EmitterM1Error.invalidOffset(
-//                "Offset immediate \(val) must fit in \(bits) bits"
-//            )
-//        }
-//
-//        // apply mask otherwise a negative value will contain leading 1s,
-//        // which can mess up when shifting left later
-//        return (mask & divided)
     }
 
     // 0b0b10101010000000100000001111100000
@@ -475,7 +504,6 @@ public class EmitterM1 {
             }
             
             let (imm6, sh) = getShImm6(shift)
-            print(Rd, Rn, Rm)
             let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
             
             let encoded = mask | s | imm6 | sh | regs
@@ -497,7 +525,7 @@ public class EmitterM1 {
             let imm: Int64 = offset.imm.shiftedLeft(10)
             let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | imm
             return returnAsArray(encoded)
-        case .stur(let Rt, let Rn, let offset ):
+        case .stur(let Rt as any RegisterI, let Rn, let offset ):
             //                    S           imm9         Rn    Rt
             let mask: Int64 = 0b1_0_111000000_000000000_00_00000_00000
             let encodedRt = encodeReg(Rt, shift: 0)
@@ -506,7 +534,22 @@ public class EmitterM1 {
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
             let encoded = mask | encodedRt | encodedRn | offs | size
             return returnAsArray(encoded)
-        case .str(let Rt, .reg(let Rn as Register64, .r64ext(let Rm, let ext))):
+        case .stur(let Rt as any RegisterFP, let Rn, let offset ):
+            //                  Si       opc    imm9         Rn    Rt
+            let mask: Int64 = 0b00111100_0___00_000000000_00_00000_00000
+            let regs = encodeRegs(Rd: Rt, Rn: Rn)
+            let offs = try Immediate12(offset)
+            let size: Int64
+            let opc: Int64
+            if Rt.double {
+                size = (0b11 << 30)
+                opc = 00
+            } else {
+                fatalError("FP register size not implemented")
+            }
+            let encoded = mask | offs.shiftedLeft(12) | opc | regs | size
+            return returnAsArray(encoded)
+        case .str(let Rt as any RegisterI, .reg(let Rn as Register64, .r64ext(let Rm, let ext))):
             //                   S          Rm    opt S    Rn    Rt
             let mask: Int64 = 0b10111000001_00000_000_0_10_00000_00000
             let regs = encodeRegs(Rd: Rt, Rn: Rn, Rm: Rm)
@@ -526,9 +569,54 @@ public class EmitterM1 {
             }
             let encoded = mask | regs | s | (shiftValUnshifted << 12) | (optUnshifted << 13)
             return returnAsArray(encoded)
-        case .str(let Rt, .reg(let Rn as Register64, .imm(let offsetCount, let ixMode))) where Rn.is64:
+        case .str(let Rt as any RegisterFP, .reg(let Rn as Register64, .imm(let offsetCount, let ixMode))) where Rn.is64:
             fallthrough
-        case .str(let Rt, .reg64offset(let Rn, let offsetCount, let ixMode)):
+        case .str(let Rt as any RegisterFP, .reg64offset(let Rn, let offsetCount, let ixMode)):
+            let mask: Int64
+            let imm: any Immediate
+            let immShift: Int
+            
+            switch(ixMode) {
+                case .post:
+                    //       Si       opc    imm9         Rn    Rt
+                    mask = 0b00111100_0___00_000000000_01_00000_00000
+                    imm = try Immediate9(offsetCount)
+                    immShift = 12
+                case .pre:
+                    //       Si       opc    imm9         Rn    Rt
+                    mask = 0b00111100_0___00_000000000_11_00000_00000
+                    imm = try Immediate9(offsetCount)
+                    immShift = 12
+                case nil:
+                    //       Si       opc   imm12        Rn    Rt
+                    mask = 0b00111101_0___0_000000000000_00000_00000
+                    if Rt.double {
+                        guard offsetCount % 8 == 0 else {
+                            fatalError("Scaled immediate must be divisible by 8")
+                        }
+                        imm = try Immediate12(offsetCount/8)
+                    } else {
+                        fatalError("FP register size not implemented")
+                    }
+                    immShift = 10
+            }
+            
+            let regs = encodeRegs(Rd: Rt, Rn: Rn)
+            let size: Int64
+            let opc: Int64
+            
+            if Rt.double {
+                size = (0b11 << 30)
+                opc = 00
+            } else {
+                // https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/STR--immediate--SIMD-FP---Store-SIMD-FP-register--immediate-offset--?lang=en
+                fatalError("FP register size not implemented")
+            }
+            let encoded = mask | imm.shiftedLeft(immShift) | opc | regs | size
+            return returnAsArray(encoded)
+        case .str(let Rt as any RegisterI, .reg(let Rn as Register64, .imm(let offsetCount, let ixMode))) where Rn.is64:
+            fallthrough
+        case .str(let Rt as any RegisterI, .reg64offset(let Rn, let offsetCount, let ixMode)):
             let mask: Int64
             switch(ixMode) {
                 case nil: 
@@ -562,7 +650,7 @@ public class EmitterM1 {
             let mask: Int64 = 1 << 28
             let encoded = mask | encodedRd | immlo | immhi 
             return returnAsArray(encoded)
-        case .orr64(let Rd, let WZr, let Rn, let shift) where WZr == .sp && shift == nil:
+        case .orr(let Rd as Register64, let xZR, let Rn as Register64, nil) where Rd.is64 && Rn.is64 && xZR.to64 == X.xZR:
             fallthrough
         case .movr64(let Rd, let Rn) where Rd == .sp || Rn == .sp: 
             let mask: Int64 = 0b10010001_00000000_00000000_00000000
@@ -641,7 +729,6 @@ public class EmitterM1 {
                 encodedRt1 | encodedRt2 | encodedRn | (opc << opcOffset) | mask | imm
             return returnAsArray(encoded)
         case .b(let imm26):
-            print("b \(imm26)")
             let imm = try truncateOffset(Int64(imm26.value), divisor: 4, bits: 26)
             //                         imm26
             let mask: Int64 = 0b000101_00000000000000000000000000
@@ -666,7 +753,7 @@ public class EmitterM1 {
             return returnAsArray(mask | encodedRn)
         case .nop: return [0x1f, 0x20, 0x03, 0xd5]
         case .ret: return [0xc0, 0x03, 0x5f, 0xd6]
-        case .ldur(let Rt, let Rn, let offset ):
+        case .ldur(let Rt as any RegisterI, let Rn, let offset ):
             //                    S           imm9         Rn    Rt
             let mask: Int64 = 0b1_0_111000010_000000000_00_00000_00000
             let encodedRt = encodeReg(Rt, shift: 0)
@@ -675,7 +762,21 @@ public class EmitterM1 {
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
             let encoded = mask | encodedRt | encodedRn | offs | size
             return returnAsArray(encoded)
-        case .ldr(let Rt, .reg(let Rn as Register64, .r64ext(let Rm, let ext))):
+        case .ldur(let Rt as any RegisterFP, let Rn, let offset ):
+            //                  Si       opc    imm9         Rn    Rt
+            let mask: Int64 = 0b00111100_0___10_000000000_00_00000_00000
+            let regs = encodeRegs(Rd: Rt, Rn: Rn)
+            let size: Int64
+            let opc: Int64
+            if Rt.double {
+                size = (0b11 << 30)
+                opc = 00
+            } else {
+                fatalError("FP register size not implemented")
+            }
+            let encoded = mask | offset.shiftedLeft(12) | opc | regs | size
+            return returnAsArray(encoded)
+        case .ldr(let Rt as any RegisterI, .reg(let Rn as Register64, .r64ext(let Rm, let ext))):
             //                   S          Rm    opt S    Rn    Rt
             let mask: Int64 = 0b10111000011_00000_000_0_10_00000_00000
             let regs = encodeRegs(Rd: Rt, Rn: Rn, Rm: Rm)
@@ -695,12 +796,60 @@ public class EmitterM1 {
             }
             let encoded = mask | regs | s | (shiftValUnshifted << 12) | (optUnshifted << 13)
             return returnAsArray(encoded)
-        case .ldr(let Rt, .reg(let Rn as Register64, .imm(let offsetCount, let ixMode))) where Rn.is64:
+        case .ldr(let Rt as any RegisterFP, .reg(let Rn as Register64, .imm(let offsetCount, let ixMode))) where Rn.is64:
             fallthrough
-        case .ldr(let Rt, .reg64offset(let Rn, let offsetCount, let ixMode)):
+        case .ldr(let Rt as any RegisterFP, .reg64offset(let Rn, let offsetCount, let ixMode)):
             // TODO: reg64offset should be removed
             fallthrough
-        case .ldr(let Rt, .imm64(let Rn, let offsetCount, let ixMode)):
+        case .ldr(let Rt as any RegisterFP, .reg64offset(let Rn, let offsetCount, let ixMode)):
+            let mask: Int64
+            let imm: any Immediate
+            let immShift: Int
+            
+            switch(ixMode) {
+                case .post:
+                    //       Si       opc    imm9         Rn    Rt
+                    mask = 0b00111100_0___10_000000000_01_00000_00000
+                    imm = try Immediate9(offsetCount)
+                    immShift = 12
+                case .pre:
+                    //       Si       opc    imm9         Rn    Rt
+                    mask = 0b00111100_0___10_000000000_11_00000_00000
+                    imm = try Immediate9(offsetCount)
+                    immShift = 12
+                case nil:
+                    //       Si       opc   imm12        Rn    Rt
+                    mask = 0b00111101_0___1_000000000000_00000_00000
+                    if Rt.double {
+                        guard offsetCount % 8 == 0 else {
+                            fatalError("Scaled immediate must be divisible by 8")
+                        }
+                        imm = try Immediate12(offsetCount/8)
+                    } else {
+                        fatalError("FP register size not implemented")
+                    }
+                    immShift = 10
+            }
+            
+            let regs = encodeRegs(Rd: Rt, Rn: Rn)
+            let size: Int64
+            let opc: Int64
+            
+            if Rt.double {
+                size = (0b11 << 30)
+                opc = 00
+            } else {
+                // https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/STR--immediate--SIMD-FP---Store-SIMD-FP-register--immediate-offset--?lang=en
+                fatalError("FP register size not implemented")
+            }
+            let encoded = mask | imm.shiftedLeft(immShift) | opc | regs | size
+            return returnAsArray(encoded)
+        case .ldr(let Rt as any RegisterI, .reg(let Rn as Register64, .imm(let offsetCount, let ixMode))) where Rn.is64:
+            fallthrough
+        case .ldr(let Rt as any RegisterI, .reg64offset(let Rn, let offsetCount, let ixMode)):
+            // TODO: reg64offset should be removed
+            fallthrough
+        case .ldr(let Rt as any RegisterI, .imm64(let Rn, let offsetCount, let ixMode)):
             let mask: Int64
             let immBits: Int64
             let immShift: Int64
@@ -883,7 +1032,7 @@ public class EmitterM1 {
             //                              Rm    opt      Rn    Rt
             let mask: Int64 = 0b00111000011_00000_000_0_10_00000_00000
             let option: Int64
-            let Rm: any Register
+            let Rm: any RegisterI
             let S: Int64
             switch(mod) {
             case .r64ext(let _Rm, let mod):
@@ -957,7 +1106,7 @@ public class EmitterM1 {
             //                              Rm    opt      Rn    Rt
             let mask: Int64 = 0b01111000011_00000_000_0_10_00000_00000
             let option: Int64
-            let Rm: any Register
+            let Rm: any RegisterI
             let S: Int64
             switch(mod) {
             case .r64shift(let _Rm, .lsl(let lslAmount)):
@@ -1127,6 +1276,67 @@ public class EmitterM1 {
             let s = sizeMask(is64: Rt.is64)
             let encoded = mask | imm | encodedRn | encodedRt | s
             return returnAsArray(encoded)
+        case .strh(let Wt, .reg(let Xn, let mod)):
+            //                              Rm    opt S    Rn    Rt
+            let mask: Int64 = 0b01111000001_00000_000_0_10_00000_00000
+            let option: Int64
+            let Rm: any RegisterI
+            let S: Int64
+            switch(mod) {
+            case .r64shift(let _Rm, .lsl(let lslAmount)):
+                Rm = _Rm
+                guard lslAmount == 0 || lslAmount == 1 else {
+                    fatalError("Expected .lsl #0 or #1")
+                }
+                S = Int64(lslAmount)
+                option = 0b011
+            case .r64ext(let _Rm, let mod):
+                Rm = _Rm
+                switch(mod) {
+                case .sxtx(0):
+                    S = 0
+                    option = 0b111
+                case .sxtx(1):
+                    S = 1
+                    option = 0b111
+                case .sxtx:
+                    fatalError("Expected .sxtx #0 or #1")
+                }
+            case .r32ext(let _Rm, let mod):
+                Rm = _Rm
+                switch(mod) {
+                case .uxtw(0):
+                    S = 0
+                    option = 0b010
+                case .uxtw(1):
+                    S = 1
+                    option = 0b010
+                case .sxtw(0):
+                    S = 0
+                    option = 0b110
+                case .sxtw(1):
+                    S = 1
+                    option = 0b110
+                case .sxtw:
+                    fatalError("Expected .sxtw #0 or #1")
+                case .uxtw:
+                    fatalError("Expected .uxtw #0 or #1")
+                }
+            case nil:
+                Rm = X.x0
+                S = 0
+                option = 0b000
+            default:
+                fatalError("not implemented")
+            }
+            let shiftedS: Int64 = S << 12
+            let shiftedOpt = option << 13
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Wt, shift: 0)
+            let encodedRm = encodeReg(Rm, shift: 16)
+            
+            let encoded = mask | encodedRn | encodedRt | encodedRm | shiftedOpt | shiftedS
+            return returnAsArray(encoded)
         case .strb(let Rt, .imm64(let Xn, let off, let ixMode)):
             let mask: Int64
             let imm: Int64
@@ -1148,6 +1358,54 @@ public class EmitterM1 {
             let encodedRt = encodeReg(Rt, shift: 0)
             let s = sizeMask(is64: Rt.is64)
             let encoded = mask | imm | encodedRn | encodedRt | s
+            return returnAsArray(encoded)
+        case .strb(let Wt, .reg(let Xn, let mod)):
+            //                              Rm    opt S    Rn    Rt
+            let mask: Int64 = 0b00111000001_00000_000_0_10_00000_00000
+            let option: Int64
+            let Rm: any RegisterI
+            let S: Int64
+            switch(mod) {
+            case .r64ext(let _Rm, let mod):
+                Rm = _Rm
+                switch(mod) {
+                case .sxtx(0):
+                    S = 1
+                    option = 0b111
+                case .sxtx:
+                    fatalError("Expected .sxtx #0")
+                }
+            case .r32ext(let _Rm, let mod):
+                Rm = _Rm
+                S = 1
+                switch(mod) {
+                case .uxtw(0):
+                    option = 0b010
+                case .sxtw(0):
+                    option = 0b110
+                case .sxtw:
+                    fatalError("Expected .sxtw #0")
+                case .uxtw:
+                    fatalError("Expected .uxtw #0")
+                }
+            case .r64shift(let _Rm, .lsl(0)):
+                Rm = _Rm
+                option = 0b011
+                S = 0
+            case nil:
+                Rm = X.x0
+                S = 0
+                option = 0b000
+            default:
+                fatalError("not implemented")
+            }
+            let shiftedS: Int64 = S << 12
+            let shiftedOpt = option << 13
+            let encodedRn = encodeReg(Xn, shift: 5)
+            let encodedRt = encodeReg(Wt, shift: 0)
+            let encodedRm = encodeReg(Rm, shift: 16)
+            
+            let encoded = mask | encodedRn | encodedRt | encodedRm | shiftedOpt | shiftedS
             return returnAsArray(encoded)
         case .asrv(let Rd, let Rn, let Rm):
             let s = sizeMask(is64: Rd.is64)
@@ -1188,13 +1446,49 @@ public class EmitterM1 {
             let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm, Ra: Ra)
             let encoded = mask | sf | regs
             return returnAsArray(encoded)
+        case .orr(let Rd, let Rn, let Rm, let shift):
+            //                           SH   Rm    imm6   Rn    Rd
+            let mask: Int64 = 0b00101010_00_0_00000_000000_00000_00000
+            let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
+            let sf = sizeMask(is64: Rd.is64)
+            let (imm6, sh) = getShImm6(shift)
+            let encoded = mask | regs | sf | imm6 | sh
+            return returnAsArray(encoded)
+        case .fcvtzs(let Rt, let Rn) where Rn.single || Rn.double:
+            //                  S        FT              Rn    Rd
+            let mask: Int64 = 0b00011110_00_111000000000_00000_00000
+            let ftype: Int64
+            if Rn.double {
+                ftype = 1
+            } else {
+                fatalError("Not implemented")
+            }
+            
+            let s = sizeMask(is64: Rt.is64)
+            let regs = encodeRegs(Rd: Rt, Rn: Register64(rawValue: Rn.rawValue))
+            let encoded = mask | s | (ftype << 22) | regs
+            return returnAsArray(encoded)
+        case .scvtf(let Rt, let Rn) where Rt.single || Rt.double:
+            //                  S        FT              Rn    Rd
+            let mask: Int64 = 0b00011110_00_100010000000_00000_00000
+            let ftype: Int64
+            if Rt.double {
+                ftype = 1
+            } else {
+                fatalError("Not implemented")
+            }
+            
+            let s = sizeMask(is64: Rn.is64)
+            let regs = encodeRegs(Rd: Register64(rawValue: Rt.rawValue), Rn: Rn)
+            let encoded = mask | s | (ftype << 22) | regs
+            return returnAsArray(encoded)
         default:
             print("Can't compile \(op)")
             throw EmitterM1Error.unsupportedOp
         }
     }
     
-    static func assertMatchingSize(_ regs: any Register...) {
+    static func assertMatchingSize(_ regs: any RegisterI...) {
         guard regs.count > 0 else { return }
         let f = regs[0]
         for reg in regs.dropFirst(1) {

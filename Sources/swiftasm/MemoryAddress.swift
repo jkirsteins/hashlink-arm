@@ -15,6 +15,14 @@ extension UnsafeRawPointer: MemoryAddress, DeferredMemoryAddress {
     }
 }
 
+extension OpaquePointer: MemoryAddress, DeferredMemoryAddress {
+    var value: UnsafeMutableRawPointer { UnsafeMutableRawPointer(mutating: .init(self)) }
+    
+    func isEqual(_ to: any MemoryAddress) -> Bool {
+        self.value == to.value
+    }
+}
+
 extension UnsafeMutableRawPointer: MemoryAddress, DeferredMemoryAddress {
     var value: UnsafeMutableRawPointer { self }
     
@@ -94,7 +102,7 @@ extension MemoryAddress {
 }
 
 // neither base nor offset known
-struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, MemoryAddress, Hashable, CustomDebugStringConvertible {
+struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, LinkableAddress, MemoryAddress, Hashable, CustomDebugStringConvertible {
     let jitBase: SharedStorage<UnsafeMutableRawPointer?>
     let offsetFromBase: SharedStorage<ByteCount?> = SharedStorage(wrappedValue: nil)
 
@@ -132,8 +140,14 @@ struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, MemoryAdd
         guard self.jitBase.isSameStorage(from.jitBase) else {
             fatalError("Can only merge addresses with same jit base")
         }
-        self.offsetFromBase.wrappedValue = from.offsetFromBase
+        self.setOffset(from.offsetFromBase)
     }
+    
+    func setOffset(_ offset: ByteCount) {
+        self.offsetFromBase.wrappedValue = offset
+    }
+    
+    
 }
 
 // base is deferred, but offset is known

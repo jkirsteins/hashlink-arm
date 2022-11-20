@@ -1,18 +1,3 @@
-typealias Reg = Int32
-// JumpOffset can be negative (backwards jump)
-typealias JumpOffset = Int32
-typealias RefInt = TableIndex
-typealias Ref = TableIndex
-typealias RefFloat = TableIndex
-typealias ValBool = Int32
-typealias RefBytes = TableIndex
-typealias RefString = TableIndex
-typealias RefFun = TableIndex
-typealias RefField = TableIndex
-typealias RefGlobal = TableIndex
-typealias RefType = TableIndex
-typealias RefEnumConstruct = TableIndex
-
 // https://github.com/Gui-Yom/hlbc/blob/master/hlbc/src/opcodes.rs
 
 // position in function (for calculating jumps)
@@ -269,7 +254,8 @@ extension HLOpCode {
             return .OCallThis(dst: result.0, field: result.1, args: result.2)
         case 32:
             let result = try HLOpCode.read_2reg_varReg(from: reader)
-            return .OCallClosure(dst: result.0, fun: result.1, args: result.2)
+            fatalError("Need to allocate the mem, and put all args in there")
+//            return .OCallClosure(dst: result.0, fun: result.1, args: result.2)
 
         case 33:
             return .OStaticClosure(dst: try reader.readReg(), fun: try reader.readRef())
@@ -595,7 +581,7 @@ enum HLOpCode : Equatable, Hashable {
     /// Call a closure with N arguments. Here *fun* is a register.
     ///
     /// *dst* = *fun*(*arg0*, *arg1*, ...)
-    case OCallClosure(dst: Reg, fun: RefFun, args: [Reg])
+    case OCallClosure(dst: Reg, closure: Reg, args: [Reg])
     /// Create a closure from a function reference.
     ///
     /// *dst* = *fun*
@@ -646,7 +632,10 @@ enum HLOpCode : Equatable, Hashable {
     case OToSFloat(dst: Reg, src: Reg)
     case OToUFloat(dst: Reg, src: Reg)
     case OToInt(dst: Reg, src: Reg)
+    
+    /// safecast [dst], [src] cast register src into register dst, throw an exception if there is no way to perform such operation
     case OSafeCast(dst: Reg, src: Reg)
+    
     case OUnsafeCast(dst: Reg, src: Reg)
     case OToVirtual(dst: Reg, src: Reg)
 
@@ -665,7 +654,14 @@ enum HLOpCode : Equatable, Hashable {
     case OGetMem(dst: Reg, bytes: Reg, index: Reg)
     case OGetArray(dst: Reg, array: Reg, index: Reg)
     case OSetI8(bytes: Reg, index: Reg, src: Reg)
+    
+    /// Stores 16 bits unsigned integer from register `src` into register `bytes`, offset by `index` bytes
+    /// - Parameters:
+    ///   - bytes: vreg containing `unsigned short*`
+    ///   - index: vreg containing the offset (offset is in bytes, and NOT multiples of `sizeof(unsigned short)`)
+    ///   - src: vreg containing `unsigned short` value to store
     case OSetI16(bytes: Reg, index: Reg, src: Reg)
+    
     case OSetMem(bytes: Reg, index: Reg, src: Reg)
     case OSetArray(array: Reg, index: Reg, src: Reg)
 

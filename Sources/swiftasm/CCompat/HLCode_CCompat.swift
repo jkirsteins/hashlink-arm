@@ -166,4 +166,8 @@ struct HLCode_CCompat {
         }
         return str
     }
+    
+    func getGlobal(_ globalRef: Ref) -> UnsafePointer<HLType_CCompat> {
+        globals.advanced(by: globalRef).pointee
+    }
 }

@@ -1,4 +1,4 @@
-struct HLTypeFun: Equatable, CustomDebugStringConvertible, Hashable {
+struct HLTypeFun_Depr: Equatable, CustomDebugStringConvertible, Hashable {
     let args: [Resolvable<HLType>]
     let ret: Resolvable<HLType>
 

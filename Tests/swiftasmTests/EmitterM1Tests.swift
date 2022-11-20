@@ -52,6 +52,45 @@ extension XCTestCase {
 
 final class EmitterM1Tests: XCTestCase {
     
+    func testFcvtzs() throws {
+        XCTAssertM1Op(
+            M1Op.fcvtzs(W.w8, D.d0),
+            "fcvtzs w8, d0",
+            0x08, 0x00, 0x78, 0x1e
+        )
+        XCTAssertM1Op(
+            M1Op.fcvtzs(X.x8, D.d0),
+            "fcvtzs x8, d0",
+            0x08, 0x00, 0x78, 0x9e
+        )
+    }
+    
+    func testScvtf() throws {
+        XCTAssertM1Op(
+            M1Op.scvtf(D.d0, X.x8),
+            "scvtf d0, x8",
+            0x00, 0x01, 0x62, 0x9e
+        )
+        XCTAssertM1Op(
+            M1Op.scvtf(D.d0, W.w8),
+            "scvtf d0, w8",
+            0x00, 0x01, 0x62, 0x1e
+        )
+    }
+    
+    func testOrr() throws {
+        XCTAssertM1Op(
+            M1Op.orr(X.x0, X.x1, X.x2, nil),
+            "orr x0, x1, x2",
+            0x20, 0x00, 0x02, 0xaa
+        )
+        XCTAssertM1Op(
+            M1Op.orr(W.w1, W.w2, W.w3, nil),
+            "orr w1, w2, w3",
+            0x41, 0x00, 0x03, 0x2a
+        )
+    }
+    
     func testLsr() throws {
         XCTAssertM1Op(
             M1Op.lsr(X.x1, X.x2, .immediate6(3)),
@@ -127,6 +166,11 @@ final class EmitterM1Tests: XCTestCase {
             "strb w0, [sp], #4",
             0xe0, 0x47, 0x00, 0x38
         )
+        XCTAssertM1Op(
+            M1Op.strb(.w2, .reg(X.x0, .r64shift(X.x1, .lsl(0)))),
+            "strb w2, [x0, x1]",
+            0x02, 0x68, 0x21, 0x38
+        )
     }
     
     func testStr_regression() throws {
@@ -183,6 +227,11 @@ final class EmitterM1Tests: XCTestCase {
             M1Op.strh(.w0, .imm64(.sp, 4, .post)),
             "strh w0, [sp], #4",
             0xe0, 0x47, 0x00, 0x78
+        )
+        XCTAssertM1Op(
+            M1Op.strh(.w2, .reg(X.x0, .r64shift(X.x1, .lsl(1)))),
+            "strh w2, [x0, x1, lsl #1]",
+            0x02, 0x78, 0x21, 0x78
         )
     }
     
@@ -537,6 +586,52 @@ final class EmitterM1Tests: XCTestCase {
         )
     }
     
+    func testLdr_fp() throws {
+        XCTAssertM1Op(
+            M1Op.ldr(D.d0, .reg64offset(.sp, 4, nil)),
+            "ldr d0, [sp, #4]",
+            0xe0, 0x43, 0x40, 0xfc
+        )
+        XCTAssertM1Op(
+            M1Op.ldr(D.d0, .reg64offset(.sp, 8, nil)),
+            "ldr d0, [sp, #8]",
+            0xe0, 0x07, 0x40, 0xfd
+        )
+        XCTAssertM1Op(
+            M1Op.ldr(D.d0, .reg64offset(.sp, 8, .pre)),
+            "ldr d0, [sp, #8]!",
+            0xe0, 0x8f, 0x40, 0xfc
+        )
+        XCTAssertM1Op(
+            M1Op.ldr(D.d0, .reg64offset(.sp, 8, .post)),
+            "ldr d0, [sp], #8",
+            0xe0, 0x87, 0x40, 0xfc
+        )
+    }
+    
+    func testStr_fp() throws {
+        XCTAssertM1Op(
+            M1Op.str(D.d0, .reg64offset(.sp, 4, nil)),
+            "str d0, [sp, #4]",
+            0xe0, 0x43, 0x00, 0xfc
+        )
+        XCTAssertM1Op(
+            M1Op.str(D.d0, .reg64offset(.sp, 8, nil)),
+            "str d0, [sp, #8]",
+            0xe0, 0x07, 0x00, 0xfd
+        )
+        XCTAssertM1Op(
+            M1Op.str(D.d0, .reg64offset(.sp, 8, .pre)),
+            "str d0, [sp, #8]!",
+            0xe0, 0x8f, 0x00, 0xfc
+        )
+        XCTAssertM1Op(
+            M1Op.str(D.d0, .reg64offset(.sp, 8, .post)),
+            "str d0, [sp], #8",
+            0xe0, 0x87, 0x00, 0xfc
+        )
+    }
+    
     func testStr() throws {
         // should match stur
         XCTAssertEqual(
@@ -647,7 +742,7 @@ final class EmitterM1Tests: XCTestCase {
         ) { error in
             XCTAssertEqual(
                 error as! EmitterM1Error,
-                EmitterM1Error.invalidOffset("Offset immediate -520 must fit in 7 bits")
+                EmitterM1Error.invalidValue("Immediate -520 must fit in 7 bits")
             )
         }
         

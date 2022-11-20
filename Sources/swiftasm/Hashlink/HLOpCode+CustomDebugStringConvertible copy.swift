@@ -50,8 +50,8 @@ extension HLOpCode: CustomDebugStringConvertible {
             return "reg\(dst) = <\(field)>(\(args))"
         case .OCallThis(let dst, let field, let args): 
             return "reg\(dst) = this.<\(field)>(\(args))"
-        case .OCallClosure(let dst, let fun, let args): 
-            return "reg\(dst) = reg\(fun)(<\(args.count)> args)"
+        case .OCallClosure(let dst, let closure, let args):
+            return "reg\(dst) = closure@\(closure)(\(args))"
         case .OStaticClosure(let dst, let fun): 
             return "staticclosure(dst \(dst) fun \(fun))"
         case .OInstanceClosure(let dst, let fun, let obj):

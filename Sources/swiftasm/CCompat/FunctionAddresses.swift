@@ -28,7 +28,31 @@ struct FunctionAddresses {
     }
 
     func get(_ ix: Int) -> Entry {
-        entries[ix]
+//        guard self.mod == nil else { return getMod(ix) }
+        return entries[ix]
+    }
+    
+    func getMod(_ ix: Int) -> Entry {
+        guard let mod = self.mod else { fatalError() }
+        
+        let realIndex = mod.pointee.functions_indexes.advanced(by: ix).pointee
+        let isNative = realIndex >= mod.pointee.code.pointee.nfunctions
+        
+        if isNative {
+            let native = mod.pointee.code.pointee.getNative(Int(realIndex))
+            let entry = mod.pointee.ctx.functions_ptrs.advanced(by: ix).pointee
+            print("findex(22) fetching functions_ptrs \(22)... \(entry)")
+            return .native(HLNative_CCompat__Resolved(ptr: native, entrypoint: entry))
+        }
+
+        let t = mod.pointee.getFunctionType(ix)
+        fatalError("Funtype: \(t)")
+    }
+    
+    var mod: UnsafePointer<HLModule_CCompat>? = nil
+    init(_ mod: UnsafePointer<HLModule_CCompat>, jitBase: JitBase) {
+        self.init(mod.pointee.code.pointee, jitBase: jitBase)
+        self.mod = mod
     }
     
     /// NOTE: This should be only used in tests, will leak memory

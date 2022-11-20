@@ -11,7 +11,7 @@ extension M1Compiler : CompilerUtilities {
 }
 
 // x0 through x7
-private let ARG_REGISTER_COUNT = 8
+//private let ARG_REGISTER_COUNT = 8
 extension M1Compiler {
     /* SP movements must be aligned to 16-bytes */
     func roundUpStackReservation(
@@ -610,7 +610,7 @@ class M1Compiler {
                 PseudoOp.debugMarker("Marking position for \(currentInstruction) at \(mem.byteSize)")
             )
             
-            print("Compiling \(op)")
+            print("#\(currentInstruction): \(op.debugDescription)")
             mem.append(
                 PseudoOp.debugPrint(self, "#\(currentInstruction): \(op.debugDescription)")
             )
@@ -1190,6 +1190,8 @@ class M1Compiler {
                         case .OJFalse:
                             fallthrough
                         case .OJNull:
+                            print("reg \(reg)")
+                            print("reg kind \(regKinds[Int(reg)])")
                             return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
                         case .OJNotNull:
                             return M1Op.b_ne(try Immediate19(jumpOffset.immediate))
@@ -1227,6 +1229,7 @@ class M1Compiler {
                 guard let globalTypePtr = ctx.hlcode?.pointee.globals.advanced(by: globalRef).pointee else {
                     fatalError("Can't resolve global \(globalRef)")
                 }
+                
                 let dstOffset = getRegStackOffset(regKinds, dst)
                 mem.append(
                     PseudoOp.mov(.x0, UnsafeRawPointer(globalTypePtr)),

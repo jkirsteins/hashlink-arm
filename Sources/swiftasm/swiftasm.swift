@@ -53,7 +53,7 @@ struct SwiftAsm: ParsableCommand {
         var _mctx = MainContext()
 
         LibHl.hl_global_init()
-        LibHl.hl_register_thread(&_mctx)
+        LibHl._hl_register_thread(&_mctx)
 
         let file = try! Data(contentsOf: URL(fileURLWithPath: hlFileIn))
         let reader = ByteReader(file)

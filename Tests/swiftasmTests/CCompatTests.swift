@@ -19,6 +19,14 @@ final class CCompatTests: XCTestCase {
         XCTAssertEqual(MemoryLayout<HLNative_CCompat>.size, 32)
         XCTAssertEqual(MemoryLayout<vdynamic>.size, 16)
         XCTAssertEqual(MemoryLayout<varray>.size, 24)
+        XCTAssertEqual(MemoryLayout<HLConstant_CCompat>.size, 16)
+        XCTAssertEqual(MemoryLayout<MainContext_CCompat>.size, 40)
+        
+        XCTAssertEqual(MemoryLayout<HLEnumConstruct_CCompat>.size, 40)
+        XCTAssertEqual(MemoryLayout<HLTypeEnum_CCompat>.size, 32)
+        XCTAssertEqual(MemoryLayout<venum>.size, 16)
+        XCTAssertEqual(MemoryLayout<vclosure>.size, 32)
+        XCTAssertEqual(MemoryLayout<HLAlloc_CCompat>.size, 8)
     }
 }
 

@@ -143,28 +143,28 @@ struct HLTypeKind: HLRegisterSizeProvider, CustomDebugStringConvertible, Express
 
     var debugDescription: String {
         switch self {
-        case .void: return "void"
-        case .u8: return "u8"
-        case .u16: return "u16"
-        case .i32: return "i32"
-        case .i64: return "i64"
-        case .f32: return "f32"
-        case .f64: return "f64"
-        case .bool: return "bool"
-        case .bytes: return "bytes"
-        case .dyn: return "dynamic"
-        case .fun: return "fun"
-        case .obj: return "obj"
-        case .array: return "array"
-        case .type: return "type"
-        case .ref: return "ref"
-        case .virtual: return "virtual"
-        case .dynobj: return "dynobj"
-        case .abstract: return "abs"
-        case .`enum`: return "enum"
-        case .null: return "null"
-        case .method: return "method"
-        case .`struct`: return "struct"
+        case .void: return "HLTypeKind.void"
+        case .u8: return "HLTypeKind.u8"
+        case .u16: return "HLTypeKind.u16"
+        case .i32: return "HLTypeKind.i32"
+        case .i64: return "HLTypeKind.i64"
+        case .f32: return "HLTypeKind.f32"
+        case .f64: return "HLTypeKind.f64"
+        case .bool: return "HLTypeKind.bool"
+        case .bytes: return "HLTypeKind.bytes"
+        case .dyn: return "HLTypeKind.dynamic"
+        case .fun: return "HLTypeKind.fun"
+        case .obj: return "HLTypeKind.obj"
+        case .array: return "HLTypeKind.array"
+        case .type: return "HLTypeKind.type"
+        case .ref: return "HLTypeKind.ref"
+        case .virtual: return "HLTypeKind.virtual"
+        case .dynobj: return "HLTypeKind.dynobj"
+        case .abstract: return "HLTypeKind.abs"
+        case .`enum`: return "HLTypeKind.enum"
+        case .null: return "HLTypeKind.null"
+        case .method: return "HLTypeKind.method"
+        case .`struct`: return "HLTypeKind.struct"
         default:
             fatalError("unknown HLTypeKind \(rawValue)")
 }
@@ -183,7 +183,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     case bool  // 7
     case bytes  // 8
     case dyn  // 9
-    case fun(HLTypeFun)  // 10
+    case fun(HLTypeFun_Depr)  // 10
     case obj(HLTypeObj)  // 11
     case array  // 12
     case type  // 13
@@ -193,7 +193,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     case abstract(HLTypeAbstractData)  // 17
     case `enum`(HLTypeEnumData)  // 18
     case null(HLTypeNullData)  // 19
-    case method(HLTypeFun)  // 20
+    case method(HLTypeFun_Depr)  // 20
     case `struct`(HLTypeObj)  // 21
 
     // todo: find usages and move to debugDescription
@@ -206,7 +206,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
         }
     }
     
-    var funData: HLTypeFun? {
+    var funData: HLTypeFun_Depr? {
         switch(self) {
         case .fun(let data): return data
         default: return nil
@@ -348,14 +348,14 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     }
 
     static func readFunData(from reader: ByteReader, types: TableResolver<HLType>)
-        throws -> HLTypeFun
+        throws -> HLTypeFun_Depr
     {
         let nargs = try reader.readVarInt()
         let args = try Array(repeating: 0, count: Int(nargs)).map { _ in
             types.getResolvable(try reader.readIndex())
         }
         let ret = types.getResolvable(try reader.readIndex())
-        return HLTypeFun(args: args, ret: ret)
+        return HLTypeFun_Depr(args: args, ret: ret)
     }
 
     static func readAbstractData(

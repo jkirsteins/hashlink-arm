@@ -35,7 +35,7 @@ struct HLTypeFun_CCompat : Equatable, Hashable {
     let argsPtr: UnsafePointer<UnsafePointer<HLType_CCompat>>
     let retPtr: UnsafePointer<HLType_CCompat>
     let nargs: UInt32
-    let parent: UnsafePointer<HLType_CCompat>
+    let parent: UnsafePointer<HLType_CCompat>?
     let closure_type: HLType_CCompat_Fun_ClosureType
     let closure: HLType_CCompat_Fun_Closure
 
@@ -43,7 +43,23 @@ struct HLTypeFun_CCompat : Equatable, Hashable {
 	var args: [HLType_CCompat] { self.argsPtr.getArray(count: Int32(nargs)) }
 }
 
-extension HLTypeFun {
+extension HLTypeFun_CCompat : HLTypeFunProvider {
+    var argsProvider: [any HLTypeProvider] {
+        Array(UnsafeBufferPointer(start: self.argsPtr, count: Int(nargs)))
+    }
+    
+    var retProvider: any HLTypeProvider {
+        print("Returning ret provider \(self.retPtr) \(self.retPtr.kind)")
+        return self.retPtr
+    }
+    
+    var debugDescription: String {
+        "HLTypeFun_CCompat"
+    }
+}
+
+
+extension HLTypeFun_Depr {
     init(_ ccompat: HLTypeFun_CCompat) {
         self.args = ccompat.args.enumerated().map { ix, item in
             let ptr = ccompat.argsPtr.advanced(by: ix)
