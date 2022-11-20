@@ -3,60 +3,37 @@ import XCTest
 @testable import swiftasm
 
 class RealHLTestCase : XCTestCase {
-    class var HL_FILE: String { fatalError("Override HL_FILE to point to a file in TestResources") }
-    
-    class func getCtx() -> CCompatJitContext? {
-        fatalError("Override getCtx")
-    }
-    
-    class func setCtx(_ ctx: CCompatJitContext?) {
-        fatalError("Override setCtx")
-    }
-    
+    var HL_FILE: String { fatalError("Override HL_FILE to point to a file in TestResources") }
+        
     static var logger = LoggerFactory.create(RealHLTestCase.self)
     
-    var ctx: CCompatJitContext { Self.getCtx()! }
+    var ctx: CCompatJitContext! = nil
     
     var code: UnsafePointer<HLCode_CCompat> {
-        self.ctx.mainContext.pointee.code!
+        self.ctx!.mainContext.pointee.code!
     }
     
     func sut(strip: Bool) throws -> M1Compiler2 {
-        M1Compiler2(ctx: self.ctx, stripDebugMessages: strip)
+        M1Compiler2(ctx: self.ctx!, stripDebugMessages: strip)
     }
     
-    override class func setUp() {
-        logger.info("Setting up HL file for testing: \(HL_FILE)")
+    override func setUp() {
+        Self.logger.info("Setting up HL file for testing: \(self.HL_FILE)")
         let mod = Bundle.module.url(forResource: HL_FILE, withExtension: "hl")!.path
-        setCtx(try! Bootstrap.start2(mod, args: []))
+        self.ctx = try! Bootstrap.start2(mod, args: [])
     }
 
-    override class func tearDown() {
-        logger.info("Tearing down HL file after testing: \(HL_FILE)")
-        Bootstrap.stop(ctx: getCtx()!)
-        setCtx(nil)
+    override func tearDown() {
+        Self.logger.info("Tearing down HL file after testing: \(self.HL_FILE)")
+        Bootstrap.stop(ctx: ctx!)
+        ctx = nil
     }
 }
 
 final class CompileMod2Tests: RealHLTestCase {
     
-    override class var HL_FILE: String { "mod2" }
-    
-    static var ctx: CCompatJitContext?
-    override class func getCtx() -> CCompatJitContext? {
-        ctx
-    }
-    override class func setCtx(_ ctx: CCompatJitContext?) {
-        self.ctx = ctx
-    }
-    
-    static let TEST_TRAP_IX = 32
-    static let TEST_GET_SET_FIELD_IX = 51
-    
-    static let TEST_GET_ARRAY_INT32_IX = 46
-    static let TEST_GET_ARRAY_INT64HAXE_IX = 47
-    static let TEST_GET_ARRAY_INT64HL_IX = 50
-    
+    override var HL_FILE: String { "mod2" }
+        
     func _compileDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), _ ixs: [RefFun]) throws -> CpuOpBuffer {
         let compiler = try sut(strip: strip)
         for fix in ixs {
@@ -76,18 +53,17 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testGetSetField() throws {
+        let sutFix = 56
         try _compileAndLink(
             strip: false,
             [
-                // deps
-                27,
-                // function under test
-                Self.TEST_GET_SET_FIELD_IX
+                sutFix,
+                27
             ]
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: Self.TEST_GET_SET_FIELD_IX) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: (@convention(c) (Int32) -> Int32)) in
                 
                 XCTAssertEqual(46, entrypoint(23))
@@ -97,16 +73,16 @@ final class CompileMod2Tests: RealHLTestCase {
 
     func testCompile__testGetSetArray__32() throws {
         typealias _JitFunc = (@convention(c) (Int32, Int64, Int32) -> Int64)
+        let sutFix = 51
         try _compileAndLink(
             strip: false,
             [
-                // function under test
-                Self.TEST_GET_ARRAY_INT32_IX
+                sutFix
             ]
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: Self.TEST_GET_ARRAY_INT32_IX) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqual(1239, entrypoint(10, 1234, 5))
@@ -116,16 +92,16 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testGetSetArray__64hl() throws {
         typealias _JitFunc = (@convention(c) (Int32, Int64, Int32) -> Int64)
+        let sutFix = 55
         try _compileAndLink(
             strip: false,
             [
-                // function under test
-                Self.TEST_GET_ARRAY_INT64HL_IX
+                sutFix
             ]
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: Self.TEST_GET_ARRAY_INT64HL_IX) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqual(5681, entrypoint(10, 5678, 3))
@@ -149,18 +125,20 @@ final class CompileMod2Tests: RealHLTestCase {
             low: Int32(truncatingIfNeeded: int64In)
         )
         
+        let sutFix = 52
+        
         try _compileAndLink(
             strip: false,
             [
                 // deps
-                49, 48,
+                54, 27, 53,
                 // function under test
-                Self.TEST_GET_ARRAY_INT64HAXE_IX
+                sutFix
             ]
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: Self.TEST_GET_ARRAY_INT64HAXE_IX) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
         
                 withUnsafePointer(to: haxeInt64) { haxeInt64In in
@@ -180,7 +158,6 @@ final class CompileMod2Tests: RealHLTestCase {
         try _compileAndLink(
             strip: false,
             [
-                // function under test
                 sutFix
             ]
         ) {
@@ -197,18 +174,16 @@ final class CompileMod2Tests: RealHLTestCase {
     /// Test traps
     func testCompile__testTrap() throws {
         typealias _JitFunc = (@convention(c) () -> Int32)
+        let sutFix = 37
         try _compileAndLink(
             strip: false,
             [
-                // deps
-                40, 329, 5,
-                // function under test
-                Self.TEST_TRAP_IX
+                sutFix
             ]
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: Self.TEST_TRAP_IX) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
          
                 XCTAssertEqual(1, entrypoint())
@@ -227,13 +202,11 @@ final class CompileMod2Tests: RealHLTestCase {
     ///
     func testCompile_testGetUI16() throws {
         typealias _JitFunc = (@convention(c) (Int32) -> Int32)
-        let sutFix = 31
+        let sutFix = 36
         try _compileAndLink(
             strip: false,
             [
-                // deps
-                29, 3, 39, 30, 42, 327, 36, 40, 248, 14, 329, 5,
-                // function under test
+                33, 44, 34, 3, 41, 340, 47, 14, 296, 45, 342, 5,
                 sutFix
             ]
         ) {
@@ -253,13 +226,11 @@ final class CompileMod2Tests: RealHLTestCase {
     /// This tests proper GetI8 behaviour in the wild.
     func testCompile__testGetUI8() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> Int32)
-        let sutFix = 28
+        let sutFix = 31
         try _compileAndLink(
             strip: false,
             [
-                // deps
-                29, 30, 3, 39, 42, 328, 36, 40, 14, 249, 330, 5, 
-                // function under test
+                33, 34, 44, 3, 41, 47, 340, 296, 14, 45, 342, 5,
                 sutFix
             ]
         ) {
@@ -278,13 +249,11 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testGetUI8_2() throws {
         typealias _JitFunc =  (@convention(c) () -> Int32)
-        let sutFix = 32
+        let sutFix = 35
         try _compileAndLink(
             strip: false,
             [
-                // deps
-                29, 30, 3, 39, 42, 328, 36, 40, 14, 249, 330, 5,
-                // function under test
+                32, 33, 44, 34, 3, 41, 47, 340, 14, 45, 296, 342, 5,
                 sutFix
             ]
         ) {
@@ -300,7 +269,7 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testTrace() throws {
         typealias _JitFunc =  (@convention(c) () -> ())
-        let sutFix = 55
+        let sutFix = 58
         try _compileAndLink(
             strip: false,
             [
@@ -368,7 +337,27 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
-    /// This tests proper GetI8 behaviour in the wild.
+    func testCompile__testInstanceMethod() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
+        let sutFix = 254
+        try _compileAndLink(
+            strip: false,
+            [
+                29, 28, 30,
+                sutFix
+            ]
+        ) {
+            mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(44, entrypoint(22))
+            }
+        }
+    }
+    
+    /// This tests fetching global values
     func testCompile__testGlobal() throws {
         let fix = 57
         
@@ -411,9 +400,7 @@ final class CompileMod2Tests: RealHLTestCase {
         try _compileAndLink(
             strip: false,
             [
-                // deps
                 27,
-                // function under test
                 sutFix
             ]
         ) {
@@ -433,9 +420,7 @@ final class CompileMod2Tests: RealHLTestCase {
         try _compileAndLink(
             strip: false,
             [
-                // deps
                 292,
-                //
                 sutFix
             ]
         ) {

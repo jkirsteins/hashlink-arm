@@ -3,15 +3,15 @@ import XCTest
 @testable import swiftasm
 
 final class CompileMod1Tests: RealHLTestCase {
-    static var ctx: CCompatJitContext?
-    override class func getCtx() -> CCompatJitContext? {
-        ctx
-    }
-    override class func setCtx(_ ctx: CCompatJitContext?) {
-        self.ctx = ctx
-    }
-    
-    override class var HL_FILE: String { "mod1" }
+//    static var ctx: CCompatJitContext?
+//    override class func getCtx() -> CCompatJitContext? {
+//        ctx
+//    }
+//    override class func setCtx(_ ctx: CCompatJitContext?) {
+//        self.ctx = ctx
+//    }
+//
+    override var HL_FILE: String { "mod1" }
     
     private func compileAndLink(_ fix: [Int]) throws -> UnsafeMutableRawPointer {
         let mem = try compileNoLink(fix)
