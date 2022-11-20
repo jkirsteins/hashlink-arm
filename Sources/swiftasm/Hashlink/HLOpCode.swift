@@ -654,7 +654,14 @@ enum HLOpCode : Equatable, Hashable {
     case OGetMem(dst: Reg, bytes: Reg, index: Reg)
     case OGetArray(dst: Reg, array: Reg, index: Reg)
     case OSetI8(bytes: Reg, index: Reg, src: Reg)
+    
+    /// Stores 16 bits unsigned integer from register `src` into register `bytes`, offset by `index` bytes
+    /// - Parameters:
+    ///   - bytes: vreg containing `unsigned short*`
+    ///   - index: vreg containing the offset (offset is in bytes, and NOT multiples of `sizeof(unsigned short)`)
+    ///   - src: vreg containing `unsigned short` value to store
     case OSetI16(bytes: Reg, index: Reg, src: Reg)
+    
     case OSetMem(bytes: Reg, index: Reg, src: Reg)
     case OSetArray(array: Reg, index: Reg, src: Reg)
 

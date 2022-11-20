@@ -586,6 +586,52 @@ final class EmitterM1Tests: XCTestCase {
         )
     }
     
+    func testLdr_fp() throws {
+        XCTAssertM1Op(
+            M1Op.ldr(D.d0, .reg64offset(.sp, 4, nil)),
+            "ldr d0, [sp, #4]",
+            0xe0, 0x43, 0x40, 0xfc
+        )
+        XCTAssertM1Op(
+            M1Op.ldr(D.d0, .reg64offset(.sp, 8, nil)),
+            "ldr d0, [sp, #8]",
+            0xe0, 0x07, 0x40, 0xfd
+        )
+        XCTAssertM1Op(
+            M1Op.ldr(D.d0, .reg64offset(.sp, 8, .pre)),
+            "ldr d0, [sp, #8]!",
+            0xe0, 0x8f, 0x40, 0xfc
+        )
+        XCTAssertM1Op(
+            M1Op.ldr(D.d0, .reg64offset(.sp, 8, .post)),
+            "ldr d0, [sp], #8",
+            0xe0, 0x87, 0x40, 0xfc
+        )
+    }
+    
+    func testStr_fp() throws {
+        XCTAssertM1Op(
+            M1Op.str(D.d0, .reg64offset(.sp, 4, nil)),
+            "str d0, [sp, #4]",
+            0xe0, 0x43, 0x00, 0xfc
+        )
+        XCTAssertM1Op(
+            M1Op.str(D.d0, .reg64offset(.sp, 8, nil)),
+            "str d0, [sp, #8]",
+            0xe0, 0x07, 0x00, 0xfd
+        )
+        XCTAssertM1Op(
+            M1Op.str(D.d0, .reg64offset(.sp, 8, .pre)),
+            "str d0, [sp, #8]!",
+            0xe0, 0x8f, 0x00, 0xfc
+        )
+        XCTAssertM1Op(
+            M1Op.str(D.d0, .reg64offset(.sp, 8, .post)),
+            "str d0, [sp], #8",
+            0xe0, 0x87, 0x00, 0xfc
+        )
+    }
+    
     func testStr() throws {
         // should match stur
         XCTAssertEqual(

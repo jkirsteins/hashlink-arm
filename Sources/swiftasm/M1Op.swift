@@ -7,6 +7,8 @@ protocol CpuOp : CustomDebugStringConvertible {
 extension M1Op {
     func resolveFinalForm() -> M1Op {
         switch(self) {
+        case .str(let Rt_double as any RegisterFP, .reg64offset(let Rn, let offsetCount, nil)) where Rt_double.double && (offsetCount % 8) != 0:
+            return .stur(Rt_double, Rn, Int16(offsetCount))
         case .mul(let Rd, let Rn, let Rm):
             return .madd(Rd, Rn, Rm, X.xZR.sameSize(as: Rd))
         case .asr(let Rd, let Rn, .reg(let Rm, nil)):
@@ -23,13 +25,13 @@ extension M1Op {
             return .ubfm(Rd, Rn, shift, 63)
         case .strh(let Wt, .imm64(let Rn, let off, nil)) where off % 2 != 0:
             return .sturh(Wt, .imm64(Rn, off, nil))
-        case .strh(let Wt, .reg64offset(let Rn as any Register, let off, let ixMode)):
+        case .strh(let Wt, .reg64offset(let Rn as any RegisterI, let off, let ixMode)):
             fallthrough
         case .strh(let Wt, .reg(let Rn, .imm(let off, let ixMode))):
             return .strh(Wt, .imm64(Rn.to64, off, ixMode))
         case .strh(let Wt, .reg(let Rn, nil)):
             return .strh(Wt, .imm64(Rn.to64, 0, nil))
-        case .strb(let Wt, .reg64offset(let Rn as any Register, let off, let ixMode)):
+        case .strb(let Wt, .reg64offset(let Rn as any RegisterI, let off, let ixMode)):
             fallthrough
         case .strb(let Wt, .reg(let Rn, .imm(let off, let ixMode))):
             return .strb(Wt, .imm64(Rn.to64, off, ixMode))
@@ -82,6 +84,8 @@ extension M1Op {
 enum M1Op : CpuOp {
     var size: ByteCount { 4 }
     
+    /// Should NOT use the final form, because
+    /// the final form is worse at conveying intent.
     var debugDescription: String {
         switch(self) {
         case .nop: return "nop"
@@ -104,9 +108,9 @@ enum M1Op : CpuOp {
         case .str(let rt, .reg64offset(let rn, let offsetC, .post)):
             return "str \(rt), [\(rn)], #\(offsetC)"
         case .stur(let rt, let rn, let offset):
-            return "stur \(rt), \(rn), #\(offset)"
+            return "stur \(rt), [\(rn), #\(offset)]"
         case .ldur(let rt, let rn, let offset):
-            return "ldur \(rt), \(rn), #\(offset)"
+            return "ldur \(rt), [\(rn), #\(offset.immediate)]"
         case .adr64(let rt, let offset):
             return "adr \(rt), #\(offset)"
         case .blr(let r):
@@ -345,7 +349,7 @@ enum M1Op : CpuOp {
         }
     }
     
-    static func _add(_ r1: any Register, _ r2: any Register, _ offs: ByteCount) throws -> M1Op {
+    static func _add(_ r1: any RegisterI, _ r2: any RegisterI, _ offs: ByteCount) throws -> M1Op {
         .addImm12(r1, r2, try Imm12Lsl12(Immediate12(offs), lsl: ._0))
     }
     
@@ -390,19 +394,19 @@ enum M1Op : CpuOp {
     case adr64(Register64, RelativeOffset)
     
     // deprecated
-    case subImm12(any Register, any Register, Imm12Lsl12) // negative -> alias for add
-    case sub(any Register, any Register, RegModifier?)
+    case subImm12(any RegisterI, any RegisterI, Imm12Lsl12) // negative -> alias for add
+    case sub(any RegisterI, any RegisterI, RegModifier?)
     
     // deprecated
-    case addImm12(any Register, any Register, Imm12Lsl12) // negative -> alias for sub
-    case add(any Register, any Register, RegModifier?)
+    case addImm12(any RegisterI, any RegisterI, Imm12Lsl12) // negative -> alias for sub
+    case add(any RegisterI, any RegisterI, RegModifier?)
     
     case b(RelativeOffset) // 26 bits max
     case blr(Register64)
     case bl(Immediate26)  // 26 bits max
     
-    case cmp(any Register, any Register)
-    case subs(any Register, any Register, Offset)
+    case cmp(any RegisterI, any RegisterI)
+    case subs(any RegisterI, any RegisterI, Offset)
     
     case b_lt(Immediate19)
     case b_gt(Immediate19)
@@ -424,11 +428,11 @@ enum M1Op : CpuOp {
     case uxtb(Register32, Register32)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SBFM--Signed-Bitfield-Move-?lang=en#sa_immr
-    case sbfm(any Register, any Register, Immediate6, Immediate6)
+    case sbfm(any RegisterI, any RegisterI, Immediate6, Immediate6)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/UBFM--Unsigned-Bitfield-Move-?lang=en
-    case ubfm(  /*Rd*/any Register,
-                      /*Rn*/any Register,
+    case ubfm(  /*Rd*/any RegisterI,
+                      /*Rn*/any RegisterI,
                       /*immr*/Immediate6,
                       /*imms*/Immediate6)
     
@@ -437,23 +441,23 @@ enum M1Op : CpuOp {
      LSL (immediate)    32-bit    imms != '011111' && imms + 1 == immr
      LSL (immediate)    64-bit    imms != '111111' && imms + 1 == immr
      */
-    case lsl_i(/*Rd*/any Register, /*Rn*/any Register, /*immr*/Immediate6)
+    case lsl_i(/*Rd*/any RegisterI, /*Rn*/any RegisterI, /*immr*/Immediate6)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LSL--register---Logical-Shift-Left--register---an-alias-of-LSLV-
-    case lsl_r(/*Rd*/any Register, /*Rn*/any Register, /*Rm*/any Register)
+    case lsl_r(/*Rd*/any RegisterI, /*Rn*/any RegisterI, /*Rm*/any RegisterI)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LSLV--Logical-Shift-Left-Variable-?lang=en#LSLV_32_dp_2src
-    case lslv(/*Rd*/any Register, /*Rn*/any Register, /*Rm*/any Register)
+    case lslv(/*Rd*/any RegisterI, /*Rn*/any RegisterI, /*Rm*/any RegisterI)
     
     /* can be alias of ubfm or lsrv
      */
-    case lsr(any Register, any Register, Offset)
+    case lsr(any RegisterI, any RegisterI, Offset)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LSRV--Logical-Shift-Right-Variable-?lang=en
-    case lsrv(any Register, any Register, any Register)
+    case lsrv(any RegisterI, any RegisterI, any RegisterI)
     
-    case asr(any Register, any Register, Offset)
-    case asrv(any Register, any Register, any Register)
+    case asr(any RegisterI, any RegisterI, Offset)
+    case asrv(any RegisterI, any RegisterI, any RegisterI)
     
     // https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/MOVZ
     case movz32(Register32, UInt16, Register32.Shift?)
@@ -468,13 +472,13 @@ enum M1Op : CpuOp {
     case movr64(Register64, Register64)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ORR--shifted-register---Bitwise-OR--shifted-register--?lang=en
-    case orr(any Register, any Register, any Register, Shift64_Real?)
+    case orr(any RegisterI, any RegisterI, any RegisterI, Shift64_Real?)
     
     // Shifted register
     //     https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/AND--shifted-register---Bitwise-AND--shifted-register--?lang=en
     // Immediate
     //    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/AND--immediate---Bitwise-AND--immediate--?lang=en
-    case and(any Register, any Register, RegModifier)
+    case and(any RegisterI, any RegisterI, RegModifier)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOVK--Move-wide-with-keep-
     case movk64(Register64, UInt16, Register64.Shift?)
@@ -511,15 +515,15 @@ enum M1Op : CpuOp {
     
     // EOR shifted register
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/EOR--shifted-register---Bitwise-Exclusive-OR--shifted-register--?lang=en
-    case eor_r(any Register, any Register, any Register, Shift64_Real?)
+    case eor_r(any RegisterI, any RegisterI, any RegisterI, Shift64_Real?)
     
-    case mul(any Register, any Register, any Register)
-    case madd(any Register, any Register, any Register, any Register)
+    case mul(any RegisterI, any RegisterI, any RegisterI)
+    case madd(any RegisterI, any RegisterI, any RegisterI, any RegisterI)
     
     // Floating-point Convert to Signed integer
     // https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FCVTZS--vector--integer---Floating-point-Convert-to-Signed-integer--rounding-toward-Zero--vector--?lang=en
-    case fcvtzs(any Register, any RegisterFP)
-    case scvtf(any RegisterFP, any Register)
+    case fcvtzs(any RegisterI, any RegisterFP)
+    case scvtf(any RegisterFP, any RegisterI)
 }
 
 

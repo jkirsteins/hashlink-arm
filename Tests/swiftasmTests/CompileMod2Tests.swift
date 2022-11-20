@@ -245,17 +245,94 @@ final class CompileMod2Tests: RealHLTestCase {
             let callable = try ctx.getCallable(findex: sutFix)
             let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
             
-            var res = entrypoint(0)
-            XCTAssertEqual(res, 0x11)
+//            var res = entrypoint(0)
+//            XCTAssertEqual(res, 0x11)
+//
+//            res = entrypoint(1)
+//            XCTAssertEqual(res, 0x12)
+//
+//            res = entrypoint(2)
+//            XCTAssertEqual(res, 0x13)
             
-            res = entrypoint(1)
-            XCTAssertEqual(res, 0x12)
-            
-            res = entrypoint(2)
-            XCTAssertEqual(res, 0x13)
-            
-            res = entrypoint(3)
+            var res = entrypoint(3)
             XCTAssertEqual(res, 0x14)
+        }
+    }
+    
+    func testCompile__charCodeAt() throws {
+        // fn charCodeAt@3 (String, i32) -> (null<i32>)@178 (6 regs, 10 ops)
+
+        struct _String {
+            let t: UnsafePointer<HLType_CCompat>
+            let bytes: UnsafePointer<CChar16>
+            let length: Int32
+        }
+        
+        typealias _JitFunc =  (@convention(c) (OpaquePointer, Int32) -> OpaquePointer)
+        let sutFix = 3
+        try _compileAndLink(
+            strip: false,
+            [
+                sutFix
+            ]
+        ) {
+            mem in
+            
+            let strType = try ctx.getType(13)   // string type
+            
+            let str = "11121314"
+            let data = str.data(using: .utf16LittleEndian)!
+            let dataPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: data.count)
+            dataPtr.initialize(from: data)
+            defer { dataPtr.deallocate() }
+            
+            print("---")
+            print(UnsafePointer<UInt16>(OpaquePointer(dataPtr.baseAddress!.advanced(by: 0))).pointee)
+            print(UnsafePointer<UInt16>(OpaquePointer(dataPtr.baseAddress!.advanced(by: 1))).pointee)
+            print(UnsafePointer<UInt16>(OpaquePointer(dataPtr.baseAddress!.advanced(by: 2))).pointee)
+            print(UnsafePointer<UInt16>(OpaquePointer(dataPtr.baseAddress!.advanced(by: 3))).pointee)
+            print(UnsafePointer<UInt16>(OpaquePointer(dataPtr.baseAddress!.advanced(by: 4))).pointee)
+            print(UnsafePointer<UInt16>(OpaquePointer(dataPtr.baseAddress!.advanced(by: 5))).pointee)
+            print(UnsafePointer<UInt16>(OpaquePointer(dataPtr.baseAddress!.advanced(by: 6))).pointee)
+            print(UnsafePointer<UInt16>(OpaquePointer(dataPtr.baseAddress!.advanced(by: 7))).pointee)
+            
+            XCTAssertEqual(dataPtr.count, 16)
+            
+            let strObj = _String(
+                t: .init(OpaquePointer(strType.ccompatAddress)),
+                bytes: .init(OpaquePointer(dataPtr.baseAddress!)),
+                length: Int32(str.count)
+            )
+            
+            let callable = try ctx.getCallable(findex: sutFix)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
+            
+            withUnsafePointer(to: strObj) { strObjPtr in
+                
+                var res: UnsafePointer<vdynamic> = .init(entrypoint(.init(strObjPtr), 0))
+                XCTAssertEqual(Character(UnicodeScalar(Int(res.pointee.i))!), "1")
+                
+                res = .init(entrypoint(.init(strObjPtr), 1))
+                XCTAssertEqual(Character(UnicodeScalar(Int(res.pointee.i))!), "1")
+                
+                res = .init(entrypoint(.init(strObjPtr), 2))
+                XCTAssertEqual(Character(UnicodeScalar(Int(res.pointee.i))!), "1")
+                
+                res = .init(entrypoint(.init(strObjPtr), 3))
+                XCTAssertEqual(Character(UnicodeScalar(Int(res.pointee.i))!), "2")
+                
+                res = .init(entrypoint(.init(strObjPtr), 4))
+                XCTAssertEqual(Character(UnicodeScalar(Int(res.pointee.i))!), "1")
+                
+                res = .init(entrypoint(.init(strObjPtr), 5))
+                XCTAssertEqual(Character(UnicodeScalar(Int(res.pointee.i))!), "3")
+                
+                res = .init(entrypoint(.init(strObjPtr), 6))
+                XCTAssertEqual(Character(UnicodeScalar(Int(res.pointee.i))!), "1")
+                
+                res = .init(entrypoint(.init(strObjPtr), 7))
+                XCTAssertEqual(Character(UnicodeScalar(Int(res.pointee.i))!), "4")
+            }
         }
     }
     

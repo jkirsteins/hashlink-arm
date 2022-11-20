@@ -185,6 +185,11 @@ extension M1Compiler2 {
         appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
     }
     
+    func appendLoad(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let offset = getRegStackOffset(kinds, vreg)
+        appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
+    }
+    
     func appendSignMode(_ signed: Bool, reg: Register64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         switch(vregKind.hlRegSize, signed) {
@@ -233,6 +238,35 @@ extension M1Compiler2 {
         }
     }
     
+    func appendLoad(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        print("Loading \(reg) from vreg \(vreg) at offset \(offset) size \(vregKind.hlRegSize)")
+        if vregKind.hlRegSize == 8 {
+            mem.append(
+                M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
+            )
+        } else if vregKind.hlRegSize == 4 {
+            fatalError("32-bit load not implemented for fp registers")
+//            mem.append(
+//                M1Op.ldr(reg.to32, .reg64offset(.sp, offset, nil))
+//            )
+        } else if vregKind.hlRegSize == 2 {
+            fatalError("16-bit load not implemented for fp registers")
+//            mem.append(
+//                M1Op.ldrh(reg.to32, .imm64(.sp, offset, nil))
+//            )
+        } else if vregKind.hlRegSize == 1 {
+            fatalError("8-bit load not implemented for fp registers")
+//            mem.append(
+//                M1Op.ldrb(reg.to32, .imm64(.sp, offset, nil))
+//            )
+        } else if vregKind.hlRegSize == 0 {
+            // nop
+        } else {
+            fatalError("Size must be 8, 4, 2, 1, or 0")
+        }
+    }
+    
     func appendStore(reg: Register64, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         let offset = getRegStackOffset(kinds, vreg)
@@ -257,6 +291,40 @@ extension M1Compiler2 {
                 PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
                 M1Op.strb(reg.to32, .imm64(.sp, offset, nil))
             )
+        } else if vregKind.hlRegSize == 0 {
+            // nop
+        } else {
+            fatalError("Size must be 8, 4, 2, 1, or 0")
+        }
+    }
+    
+    func appendStore(reg: RegisterFP64, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        let offset = getRegStackOffset(kinds, vreg)
+        
+        if vregKind.hlRegSize == 8 {
+            mem.append(
+                PseudoOp.debugMarker("Storing 8 bytes in vreg \(vreg)"),
+                M1Op.str(reg, .reg64offset(.sp, offset, nil))
+            )
+        } else if vregKind.hlRegSize == 4 {
+            fatalError("32-bit str not implemented for fp registers")
+//            mem.append(
+//                PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
+//                M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
+//            )
+        } else if vregKind.hlRegSize == 2 {
+            fatalError("16-bit str not implemented for fp registers")
+//            mem.append(
+//                PseudoOp.debugMarker("Storing 2 bytes in vreg \(vreg)"),
+//                M1Op.strh(reg.to32, .imm64(.sp, offset, nil))
+//            )
+        } else if vregKind.hlRegSize == 1 {
+            fatalError("8-bit str not implemented for fp registers")
+//            mem.append(
+//                PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
+//                M1Op.strb(reg.to32, .imm64(.sp, offset, nil))
+//            )
         } else if vregKind.hlRegSize == 0 {
             // nop
         } else {
@@ -736,25 +804,22 @@ class M1Compiler2 {
                 PseudoOp.debugPrint2(self, "#\(currentInstruction): \(op.debugDescription)")
             )
             
-            // MARK: --
-            if compilable.findex == 33 {
-                appendLoad(reg: X.x15, from: 14, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x15, prepend: "[#\(currentInstruction)] OSafeCast test reg14", builder: mem)
-            }
-            // MARK: --
-
             switch op {
             case .ORet(let dst):
                 // store
                 let dstStackOffset = getRegStackOffset(regs, dst)
                 let dstKind = requireTypeKind(reg: dst, from: regs)
+                
                 if dstKind.hlRegSize > 0 {
-                    appendDebugPrintAligned4("Returning stack offset \(dstStackOffset)", builder: mem)
-                    mem.append(
-                        PseudoOp.ldrVreg(X.x0, dstStackOffset, dstKind.hlRegSize)
-                    )
+                    if dstKind.kind == .f64 || dstKind.kind == .f32 {
+                        appendDebugPrintAligned4("Returning FP stack offset \(dstStackOffset)", builder: mem)
+                        appendLoad(reg: D.d0, from: dst, kinds: regs, mem: mem)
+                    } else {
+                        appendDebugPrintAligned4("Returning I stack offset \(dstStackOffset)", builder: mem)
+                        appendLoad(reg: X.x0, from: dst, kinds: regs, mem: mem)
+                        appendDebugPrintRegisterAligned4(X.x0, prepend: "ORet", builder: mem)
+                    }
                 }
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "ORet", builder: mem)
 
                 // jmp to end (NOTE: DO NOT ADD ANYTHING BETWEEN .start() and mem.append()
                 var retTarget = RelativeDeferredOffset()
@@ -931,6 +996,20 @@ class M1Compiler2 {
                     args: [arg0, arg1],
                     reservedStackBytes: ByteCount(reservedStackBytes),
                     mem: mem)
+                
+                // MARK: --
+                if compilable.findex == 33 {
+                    let _c: (@convention(c)(OpaquePointer)->()) = {
+                        _ptr in
+                        
+                        let ptr: UnsafePointer<vdynamic> = .init(_ptr)
+                        print("# OSafeCast result OCall2: ", ptr.pointee.i)
+                    }
+                    let _cAddr = unsafeBitCast(_c, to: OpaquePointer.self)
+                    mem.append(PseudoOp.mov(X.x15, _cAddr), M1Op.blr(X.x15))
+                }
+                // MARK: --
+                
             case .ONew(let dst):
                 appendDebugPrintAligned4("Entering ONew", builder: mem)
                 // LOOK AT: https://github.com/HaxeFoundation/hashlink/blob/284301f11ea23d635271a6ecc604fa5cd902553c/src/jit.c#L3263
@@ -1237,6 +1316,16 @@ class M1Compiler2 {
                 appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
                 mem.append(M1Op.lsl_r(X.x2, X.x0, X.x1))
                 appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
+                
+                appendLoad(reg: X.x15, from: a, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x15, prepend: "db_OShl a", builder: mem)
+                
+                appendLoad(reg: X.x15, from: b, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x15, prepend: "db_OShl b", builder: mem)
+                
+                appendLoad(reg: X.x15, from: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x15, prepend: "db_OShl out", builder: mem)
+                
             case .OSetI8(let bytes, let index, let src):
                 fallthrough
             case .OSetI16(let bytes, let index, let src):
@@ -1259,7 +1348,7 @@ class M1Compiler2 {
                     )
                 } else if op.id == .OSetI16 {
                     mem.append(
-                        M1Op.strh(W.w2, .reg(X.x0, .r64shift(X.x1, .lsl(1))))
+                        M1Op.strh(W.w2, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
                     )
                 } else {
                     fatalError("Unexpected op \(op.id)")
@@ -1285,6 +1374,9 @@ class M1Compiler2 {
             case .OGetI8(let dst, let bytes, let index):
                 fallthrough
             case .OGetI16(let dst, let bytes, let index):
+                
+                appendLoad(reg: X.x15, from: index, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x15, prepend: "db_OGetI*", builder: mem)
                 
                 assert(reg: bytes, from: regs, is: HLTypeKind.bytes)
                 assert(reg: index, from: regs, is: HLTypeKind.i32)
@@ -1315,16 +1407,13 @@ class M1Compiler2 {
                     mem.append(PseudoOp.debugPrint2(self, "loaded"))
                 } else if op.id == .OGetI16 {
                     mem.append(
-                        // lsl1 the index register b/c index is
-                        //    HL-side: ??? TODO: verify in a test that we need the .lsl(1) here
-                        //    M1-side: expected in bytes not half-words
-                        M1Op.ldrh(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(1))))
+                        M1Op.ldrh(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
                     )
                 } else if op.id == .OGetMem {
                     // TODO: add test
                     assert(reg: dst, from: regs, is: HLTypeKind.i32)
                     mem.append(
-                        M1Op.ldr(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(1))))
+                        M1Op.ldr(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
                     )
                 }
                 
@@ -1540,8 +1629,9 @@ class M1Compiler2 {
                 // TODO: check for failed cast result
                 appendDebugPrintAligned4("TODO: OSafeCast should check for failed cast result", builder: mem)
                 
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "OSafeCast result", builder: mem)
-                appendDebugPrintAligned4("OSafeCast putting result in \(dstType._overrideDebugDescription)", builder: mem)
+                if compilable.findex == 33 {
+                    appendDebugPrintRegisterAligned4(X.x0, prepend: "#\(currentInstruction) OSafeCast result \(dst)", builder: mem)
+                }
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 
                 // MARK: --
@@ -1674,8 +1764,9 @@ class M1Compiler2 {
                     mem.append(M1Op.fcvtzs(W.w0, D.d0))
                     appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 case (.i32, .f64):
+                    appendDebugPrintRegisterAligned4(X.x0, prepend: "OToSFloat", builder: mem)
                     mem.append(M1Op.scvtf(D.d0, W.w0))
-                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                    appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
                 default:
                     fatalError("Don't know how to cast \(srcKind) to \(dstKind)")
                 }
@@ -1692,6 +1783,21 @@ class M1Compiler2 {
                 appendLoad(reg: .x3, from: src, kinds: regs, mem: mem)
                 mem.append(M1Op.blr(.x10))
                 appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
+                
+                // MARK: --
+                if compilable.findex == 33 {
+                    let _c: (@convention(c)(OpaquePointer)->()) = {
+                        _ptr in
+                        
+                        let ptr: UnsafePointer<vdynamic> = .init(_ptr)
+                        print("# OSafeCast result OToDyn: ", ptr.pointee.i)
+                    }
+                    let _cAddr = unsafeBitCast(_c, to: OpaquePointer.self)
+                    mem.append(PseudoOp.mov(X.x15, _cAddr), M1Op.blr(X.x15))
+                    appendDebugPrintRegisterAligned4(X.x0, prepend: "#\(currentInstruction) OSafeCast result OToDyn \(dst)", builder: mem)
+                }
+                // MARK: --
+                
             case .OOr(let dst, let a, let b):
                 appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
