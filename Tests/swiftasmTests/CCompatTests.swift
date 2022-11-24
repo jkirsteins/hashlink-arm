@@ -27,6 +27,11 @@ final class CCompatTests: XCTestCase {
         XCTAssertEqual(MemoryLayout<venum>.size, 16)
         XCTAssertEqual(MemoryLayout<vclosure>.size, 32)
         XCTAssertEqual(MemoryLayout<HLAlloc_CCompat>.size, 8)
+        
+        XCTAssertEqual(MemoryLayout<HLThreadInfo_CCompat>.size, 2824)
+        XCTAssertEqual(MemoryLayout<HLTrapCtx_CCompat>.size, 208)
+        
+        
     }
 }
 

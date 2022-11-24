@@ -178,7 +178,9 @@ final class CompileMod2Tests: RealHLTestCase {
         try _compileAndLink(
             strip: false,
             [
-                sutFix
+                sutFix,
+                
+                45, 342, 5
             ]
         ) {
             mem in
@@ -244,6 +246,7 @@ final class CompileMod2Tests: RealHLTestCase {
             
             let callable = try ctx.getCallable(findex: sutFix)
             let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
+            
             
 //            var res = entrypoint(0)
 //            XCTAssertEqual(res, 0x11)
