@@ -1553,6 +1553,8 @@ class M1Compiler2 {
                     M1Op.movz64(X.x0, UInt16(value), nil),
                     M1Op.strb(W.w0, .imm64(.sp, dstOffset, nil))
                 )
+            case .OUnsafeCast(let dst, let src):
+                fallthrough
             case .OMov(let dst, let src):
                 let srcType = requireTypeKind(reg: src, from: regs)
                 let dstType = requireTypeKind(reg: dst, from: regs)
