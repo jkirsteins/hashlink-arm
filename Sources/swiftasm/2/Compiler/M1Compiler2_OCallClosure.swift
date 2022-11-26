@@ -79,11 +79,11 @@ extension M1Compiler2 {
             print("Adding size for \($1)")
             return $0 + Int($1.hlRegSize)
         }
-        let additionalSize = roundUpStackReservation(Int16(additionalSizeUnrounded))
+        let additionalSize = StackInfo.roundUpStackReservation(Int16(additionalSizeUnrounded))
         
         if additionalSize > 0 {
+            appendDebugPrintAligned4("Reserving \(additionalSize) bytes for stack (OCallN)", builder: mem)
             mem.append(
-                PseudoOp.debugPrint2(self, "Reserving \(additionalSize) bytes for stack (OCallN)"),
                 M1Op.subImm12(X.sp, X.sp, try .i(additionalSize))
             )
         }
@@ -99,6 +99,7 @@ extension M1Compiler2 {
                 load = {
                     let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
                     
+                    print("[__ocall_impl] loading vreg \($1) from offset \(offset)")
                     $0.append(
                         PseudoOp.ldrVreg($1, offset, argTypeKind.hlRegSize)
                     )
@@ -107,6 +108,7 @@ extension M1Compiler2 {
                 load = {
                     let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
                     
+                    print("[__ocall_impl] append load \($1) from offset \(offset)")
                     self.appendLoad(reg: $1,
                                from: argReg,
                                kinds: regs, // careful, pass all kinds, not just the arg ones
@@ -139,19 +141,18 @@ extension M1Compiler2 {
         }
         
         // PERFORM BLR
-        mem.append(PseudoOp.debugPrint2(self, "append call"))
         appendCall(mem)
-        mem.append(PseudoOp.debugPrint2(self, "appended call"))
         
         mem.append(
-            PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize),
-            PseudoOp.debugPrint2(self, "Got back and put result at offset \(dstStackOffset + Int64(additionalSize))")
+            PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
         )
+        appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
+            
         
         if additionalSize > 0 {
+            appendDebugPrintAligned4("Free \(additionalSize) bytes (OCallN)", builder: mem)
             mem.append(
-                PseudoOp.debugPrint2(self, "Free \(additionalSize) bytes (OCallN)"),
-                (try M1Op._add(X.sp, X.sp, ByteCount(reservedStackBytes)))
+                (try M1Op._add(X.sp, X.sp, ByteCount(additionalSize)))
             )
         }
     }
@@ -169,7 +170,7 @@ extension M1Compiler2 {
         let callTarget = try ctx.requireCallable(findex: funIndex)
         ctx.funcTracker.referenced2(callTarget)
         
-        mem.append(PseudoOp.debugPrint2(self, "CallN fn@\(funIndex)(\(args)) -> \(dst)"))
+        appendDebugPrintAligned4("CallN fn@\(funIndex)(\(args)) -> \(dst)", builder: mem)
         
         try __ocall_impl(
             dst: dst,

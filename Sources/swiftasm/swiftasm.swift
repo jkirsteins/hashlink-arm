@@ -67,11 +67,11 @@ struct SwiftAsm: ParsableCommand {
 
         let ctx = JitContext(module: mod, hlcode: hlcode)
         let jit = OpBuilder(ctx: ctx)
-        let compiler = M1Compiler() 
-
-        for fn in mod.storage.functionResolver.table {
-            try compiler.compile(findex: fn.findex, into: jit)
-        }
+//        let compiler = M1Compiler2() 
+//
+//        for fn in mod.storage.functionResolver.table {
+//            try compiler.compile(findex: fn.findex, into: jit)
+//        }
  
     //     // entrypoint initializes types, memory, and all that good stuff
     //     let funcs = [

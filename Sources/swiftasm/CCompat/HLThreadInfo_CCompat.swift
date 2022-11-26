@@ -33,7 +33,7 @@ struct HLThreadInfo_CCompat {
     let stack_top: OpaquePointer
     let stack_cur: OpaquePointer
     // exception handling
-    let trap_current: UnsafePointer<HLTrapCtx_CCompat>?
+    var trap_current: UnsafePointer<HLTrapCtx_CCompat>?
     let trap_uncaught: UnsafePointer<HLTrapCtx_CCompat>?
     let exc_handler: UnsafePointer<vclosure>?
     let exc_value: UnsafePointer<vdynamic>?

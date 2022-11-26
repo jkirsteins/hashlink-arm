@@ -324,6 +324,7 @@ enum Offset : CustomDebugStringConvertible {
     // Register base + register offset
     case reg(any RegisterI, RegModifier?)
     
+    case uimmediate6(UImmediate6)
     case immediate6(Immediate6)
     
     // DEPRECATED
@@ -352,7 +353,9 @@ enum Offset : CustomDebugStringConvertible {
             return getIxModeDebugDesc(Rt, immVal, ixMode)
         case .immediate6(let imm6):
             return imm6.immediate.debugDescription
-            
+        case .uimmediate6(let imm6):
+            return imm6.immediate.debugDescription
+        
         // DEPRECATED
         case .immediate_depr(_):
             return "imm DEPRECATED"
@@ -458,7 +461,7 @@ public class EmitterM1 {
     }
 
     static func emit(for op: M1Op) throws -> [UInt8] {
-        switch op.resolveFinalForm() {  // resolve potential aliases
+        switch try op.resolveFinalForm() {  // resolve potential aliases
         case .subImm12(let Rd, let Rn, let offset):
             guard Rd.is32 == Rn.is32 else {
                 throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
@@ -530,9 +533,9 @@ public class EmitterM1 {
             let mask: Int64 = 0b1_0_111000000_000000000_00_00000_00000
             let encodedRt = encodeReg(Rt, shift: 0)
             let encodedRn = encodeReg(Rn, shift: 5)
-            let offs = (try truncateOffset(Int64(offset), divisor: 1, bits: 9)) << 12
+            let offs = try Immediate9(offset)
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
-            let encoded = mask | encodedRt | encodedRn | offs | size
+            let encoded = mask | encodedRt | encodedRn | offs.shiftedLeft(12) | size
             return returnAsArray(encoded)
         case .stur(let Rt as any RegisterFP, let Rn, let offset ):
             //                  Si       opc    imm9         Rn    Rt
@@ -618,22 +621,37 @@ public class EmitterM1 {
             fallthrough
         case .str(let Rt as any RegisterI, .reg64offset(let Rn, let offsetCount, let ixMode)):
             let mask: Int64
+            let immBits: Int64
+            let immShift: Int64
+            let divider: Int64
             switch(ixMode) {
-                case nil: 
-                    return try Self.emit(for: .stur(Rt, Rn, Int16(offsetCount)))
-                    // TODO: stur should only be used when not divisible by 9 ^^^
+                case nil:
+                    divider = Rt.is32 ? 4 : 8 // pimm
+                    guard offsetCount % divider == 0 else {
+                        return try Self.emit(for: .stur(Rt, Rn, Int16(offsetCount)))
+                    }
+                    //         S          imm12        Rn    Rt
+                    mask = 0b1_0_11100100_000000000000_00000_00000
+                    immBits = 12
+                    immShift = 10
                 case .pre: 
                     //         S           imm9         Rn    Rt
                     mask = 0b1_0_111000000_000000000_11_00000_00000
+                    immBits = 9
+                    immShift = 12
+                    divider = 1 // simm
                 case .post: 
                     //         S           imm9         Rn    Rt
                     mask = 0b1_0_111000000_000000000_01_00000_00000
+                    immBits = 9
+                    immShift = 12
+                    divider = 1 // simm
             }
             let encodedRt = encodeReg(Rt, shift: 0)
             let encodedRn = encodeReg(Rn, shift: 5)
-            let offs = (try truncateOffset(Int64(offsetCount), divisor: 1, bits: 9)) << 12
+            let imm = (try truncateOffset(Int64(offsetCount), divisor: divider, bits: immBits)) << immShift
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
-            let encoded = mask | encodedRt | encodedRn | offs | size
+            let encoded = mask | encodedRt | encodedRn | imm | size
             return returnAsArray(encoded)
         case .svc(let imm16):
             //                              imm16
@@ -728,6 +746,12 @@ public class EmitterM1 {
             let encoded =
                 encodedRt1 | encodedRt2 | encodedRn | (opc << opcOffset) | mask | imm
             return returnAsArray(encoded)
+        case .b_v2(let imm26):
+            //                         imm26
+            let mask: Int64 = 0b000101_00000000000000000000000000
+            let encoded = mask | imm26.shiftedRight(2) // divisor 4
+            
+            return returnAsArray(encoded)
         case .b(let imm26):
             let imm = try truncateOffset(Int64(imm26.value), divisor: 4, bits: 26)
             //                         imm26
@@ -747,6 +771,11 @@ public class EmitterM1 {
             }
             let mask: Int64 = 0b1001_0100_0000_0000_0000_0000_0000_0000
             return returnAsArray(mask | Int64(imm26.immediate / 4))
+        case .br(let Rn):
+            //                                         Rn
+            let mask: Int64 = 0b1101011000011111000000_00000_00000
+            let encodedRn = encodeReg(Rn, shift: 5)
+            return returnAsArray(mask | encodedRn)
         case .blr(let Rn):
             let mask: Int64 = 0b1101_0110_0011_1111_0000_0000_0000_0000
             let encodedRn = encodeReg(Rn, shift: 5)

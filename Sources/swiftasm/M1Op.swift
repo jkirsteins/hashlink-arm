@@ -5,23 +5,25 @@ protocol CpuOp : CustomDebugStringConvertible {
 }
 
 extension M1Op {
-    func resolveFinalForm() -> M1Op {
+    func resolveFinalForm() throws -> M1Op {
         switch(self) {
         case .str(let Rt_double as any RegisterFP, .reg64offset(let Rn, let offsetCount, nil)) where Rt_double.double && (offsetCount % 8) != 0:
             return .stur(Rt_double, Rn, Int16(offsetCount))
+        case .str(let Rti as any RegisterI, .reg64offset(let Rn, let offsetCount, nil)) where offsetCount >= -256 && offsetCount < 256:
+            return .stur(Rti, Rn, Int16(offsetCount))
         case .mul(let Rd, let Rn, let Rm):
             return .madd(Rd, Rn, Rm, X.xZR.sameSize(as: Rd))
         case .asr(let Rd, let Rn, .reg(let Rm, nil)):
             return .asrv(Rd, Rn, Rm)
-        case .asr(let Rd, let Rn, .immediate6(let shift)) where Rd.is32 && Rn.is32:
+        case .asr(let Rd, let Rn, .uimmediate6(let shift)) where Rd.is32 && Rn.is32:
             return .sbfm(Rd, Rn, shift, 31)
-        case .asr(let Rd, let Rn, .immediate6(let shift)) where Rd.is64 && Rn.is64:
+        case .asr(let Rd, let Rn, .uimmediate6(let shift)) where Rd.is64 && Rn.is64:
             return .sbfm(Rd, Rn, shift, 63)
         case .lsr(let Rd, let Rn, .reg(let Rm, nil)):
             return .lsrv(Rd, Rn, Rm)
-        case .lsr(let Rd, let Rn, .immediate6(let shift)) where Rd.is32 && Rn.is32:
+        case .lsr(let Rd, let Rn, .uimmediate6(let shift)) where Rd.is32 && Rn.is32:
             return .ubfm(Rd, Rn, shift, 31)
-        case .lsr(let Rd, let Rn, .immediate6(let shift)) where Rd.is64 && Rn.is64:
+        case .lsr(let Rd, let Rn, .uimmediate6(let shift)) where Rd.is64 && Rn.is64:
             return .ubfm(Rd, Rn, shift, 63)
         case .strh(let Wt, .imm64(let Rn, let off, nil)) where off % 2 != 0:
             return .sturh(Wt, .imm64(Rn, off, nil))
@@ -46,24 +48,22 @@ extension M1Op {
         case .lsl_r(let Rd, let Rn, let Rm):
             return .lslv(Rd, Rn, Rm)
         case .lsl_i(let Rd, let Rn, let immr) where Rd.is32 && Rn.is32:
-            let newImmr = try! Immediate6(immr.flippedSign.immediate % 32)
-            let imms: Immediate6 = try! Immediate6(31 - immr.immediate)
+            let newImmr = try UImmediate6(immr.flippedSign.immediate % 32)
+            let imms: UImmediate6 = try UImmediate6(31 - immr.immediate)
             return .ubfm(Rd, Rn, newImmr, imms)
         case .lsl_i(let Rd, let Rn, let immr) where Rd.is64 && Rn.is64:
-            let newImmr = try! Immediate6(immr.flippedSign.immediate % 64)
-            let imms: Immediate6 = try! Immediate6(63 - immr.immediate)
+            let newImmr = try UImmediate6(immr.flippedSign.immediate % 64)
+            let imms: UImmediate6 = try UImmediate6(63 - immr.immediate)
             return .ubfm(Rd, Rn, newImmr, imms)
         case .cmp(let Rn, let Rm) where Rn.is32 && Rm.is32:
             return .subs(W.wZR, Rn, .reg32shift(Rm as! Register32, nil))
         case .cmp(let Rn, let Rm) where !Rn.is32 && !Rm.is32:
             return .subs(X.sp, Rn, .reg64shift(Rm as! Register64, nil))
-        case .ldr(let Rt, .reg64offset(let Rn, let offsetCount, nil)) where (offsetCount % 8) != 0:
-            let imm9: Immediate9
-            do {
-                imm9 = try Immediate9(offsetCount)
-            } catch {
-                fatalError("offsetCount must fit in 9 bits for .ldur")
-            }
+        case .ldr(let Rt as any RegisterFP, .reg64offset(let Rn, let offsetCount, nil)) where (offsetCount % 8) != 0:
+            let imm9 = try Immediate9(offsetCount)
+            return .ldur(Rt, Rn, imm9)
+        case .ldr(let Rt as any RegisterI, .reg64offset(let Rn, let offsetCount, nil)) where offsetCount >= -256 && offsetCount < 256 && ((Rt.is32 && offsetCount % 4 != 0) || (Rt.is64 && offsetCount % 8 != 0)):
+            let imm9 = try Immediate9(offsetCount)
             return .ldur(Rt, Rn, imm9)
         case .sxtw(let Rd, let Rn):
             return .sbfm(Rd, Rn.to64, 0, 31)
@@ -115,10 +115,14 @@ enum M1Op : CpuOp {
             return "adr \(rt), #\(offset)"
         case .blr(let r):
             return "blr \(r)"
+        case .br(let r):
+            return "br \(r)"
         case .bl(let r):
             return "bl #\(r)"
         case .b(let r):
             return "b #\(r)"
+        case .b_v2(let r):
+            return "b #\(r.signedImmediate)"
         case .movz32(let rt, let v, nil):
             return "movz \(rt), #\(v)"
         case .movz32(let rt, let v, let shift) where shift != nil:
@@ -301,7 +305,7 @@ enum M1Op : CpuOp {
             fallthrough
         case .add(_, _, .some(.r32ext(_, _))):
             return "add <not impl>"
-        case .lsr(let Rd, let Rn, .immediate6(let imm)):
+        case .lsr(let Rd, let Rn, .uimmediate6(let imm)):
             return "lsr \(Rd), \(Rn), #\(imm.immediate)"
         case .lsr(let Rd, let Rn, .reg(let Rm, nil)):
             return "lsr \(Rd), \(Rn), \(Rm)"
@@ -321,7 +325,7 @@ enum M1Op : CpuOp {
             fallthrough
         case .asr(_, _, .reg32(_, _, _)):
             return "asr <not impl>"
-        case .asr(let Rd, let Rn, .immediate6(let imm)):
+        case .asr(let Rd, let Rn, .uimmediate6(let imm)):
             return "asr \(Rd), \(Rn), #\(imm.immediate)"
         case .asr(let Rd, let Rn, .reg(let Rm, nil)):
             return "asr \(Rd), \(Rn), \(Rm)"
@@ -346,6 +350,8 @@ enum M1Op : CpuOp {
             return "fcvtzs \(Rt), \(Rn)"
         case .scvtf(let Rt, let Rn):
             return "scvtf \(Rt), \(Rn)"
+        case .asr(_, _, .immediate6(_)):
+            fatalError("asr can't have signed immediate6")
         }
     }
     
@@ -354,7 +360,7 @@ enum M1Op : CpuOp {
     }
     
     func emit() throws -> [UInt8] {
-        try EmitterM1.emit(for: self)
+        return try EmitterM1.emit(for: self)
     }
     
     case nop
@@ -402,7 +408,9 @@ enum M1Op : CpuOp {
     case add(any RegisterI, any RegisterI, RegModifier?)
     
     case b(RelativeOffset) // 26 bits max
+    case b_v2(Immediate26) // 26 bits max
     case blr(Register64)
+    case br(Register64)
     case bl(Immediate26)  // 26 bits max
     
     case cmp(any RegisterI, any RegisterI)
@@ -428,20 +436,20 @@ enum M1Op : CpuOp {
     case uxtb(Register32, Register32)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SBFM--Signed-Bitfield-Move-?lang=en#sa_immr
-    case sbfm(any RegisterI, any RegisterI, Immediate6, Immediate6)
+    case sbfm(any RegisterI, any RegisterI, UImmediate6, UImmediate6)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/UBFM--Unsigned-Bitfield-Move-?lang=en
     case ubfm(  /*Rd*/any RegisterI,
                       /*Rn*/any RegisterI,
-                      /*immr*/Immediate6,
-                      /*imms*/Immediate6)
+                      /*immr*/UImmediate6,
+                      /*imms*/UImmediate6)
     
     /* alias of ubfm
      
      LSL (immediate)    32-bit    imms != '011111' && imms + 1 == immr
      LSL (immediate)    64-bit    imms != '111111' && imms + 1 == immr
      */
-    case lsl_i(/*Rd*/any RegisterI, /*Rn*/any RegisterI, /*immr*/Immediate6)
+    case lsl_i(/*Rd*/any RegisterI, /*Rn*/any RegisterI, /*immr*/UImmediate6)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LSL--register---Logical-Shift-Left--register---an-alias-of-LSLV-
     case lsl_r(/*Rd*/any RegisterI, /*Rn*/any RegisterI, /*Rm*/any RegisterI)

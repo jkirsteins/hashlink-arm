@@ -21,6 +21,9 @@ class RealHLTestCase : XCTestCase {
         Self.logger.info("Setting up HL file for testing: \(self.HL_FILE)")
         let mod = Bundle.module.url(forResource: HL_FILE, withExtension: "hl")!.path
         self.ctx = try! Bootstrap.start2(mod, args: [])
+        
+        // guard against infinite loops
+        self.executionTimeAllowance = 2
     }
 
     override func tearDown() {
@@ -171,6 +174,62 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    func testCompile__indexOf() throws {
+        struct _String {
+            let t: UnsafePointer<HLType_CCompat>
+            let bytes: UnsafePointer<CChar16>
+            let length: Int32
+        }
+        
+        typealias _JitFunc = (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer) -> Int32)
+        let sutFix = 5
+        try _compileAndLink(
+            strip: false,
+            [
+                sutFix
+            ]
+        ) {
+            mem in
+            
+            let f = "First String"
+            let s = "not_found"
+            let fstr = (f + "\0").data(using: .utf16LittleEndian)!
+            let sstr = (s + "\0").data(using: .utf16LittleEndian)!
+            let fstrPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: fstr.count)
+            let sstrPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: sstr.count)
+            defer { fstrPtr.deallocate() }
+            defer { sstrPtr.deallocate() }
+            _ = fstrPtr.initialize(from: fstr)
+            _ = sstrPtr.initialize(from: sstr)
+            
+            let indexOfType = try ctx.getType(181)
+            let nullType = indexOfType.funProvider!.argsProvider[2] as! UnsafePointer<HLType_CCompat>
+            
+            
+            let t = try ctx.getType(13) // string
+            var strA = _String(
+                t: .init(OpaquePointer(t.ccompatAddress)),
+                bytes: .init(OpaquePointer(fstrPtr.baseAddress!)),
+                length: Int32(f.count))
+            var strB = _String(
+                t: .init(OpaquePointer(t.ccompatAddress)),
+                bytes: .init(OpaquePointer(sstrPtr.baseAddress!)),
+                length: Int32(s.count))
+            var nullD = vdynamic(t: nullType, union: nil)
+//
+            let c = try ctx.getCallable(findex: sutFix)
+            let entrypoint = unsafeBitCast(c!.address.value, to: _JitFunc.self)
+            withUnsafeMutablePointer(to: &strA) { strAPtr in
+                withUnsafeMutablePointer(to: &strB) { strBPtr in
+                    withUnsafeMutablePointer(to: &nullD) { nullDPtr in
+                        let res = entrypoint(.init(strAPtr), .init(strBPtr), .init(nullDPtr))
+                        XCTAssertEqual(-1, res)
+                    }
+                }
+            }
+        }
+    }
+    
     /// Test traps
     func testCompile__testTrap() throws {
         typealias _JitFunc = (@convention(c) () -> Int32)
@@ -185,11 +244,10 @@ final class CompileMod2Tests: RealHLTestCase {
         ) {
             mem in
             
-            try mem.jit(ctx: ctx, fix: sutFix) {
-                (entrypoint: _JitFunc) in
-         
-                XCTAssertEqual(1, entrypoint())
-            }
+            let c = try ctx.getCallable(findex: sutFix)
+            let entrypoint = unsafeBitCast(c!.address.value, to: _JitFunc.self)
+            let res = entrypoint()
+            XCTAssertEqual(1, res)
         }
     }
     

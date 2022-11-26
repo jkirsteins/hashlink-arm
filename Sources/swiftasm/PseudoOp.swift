@@ -16,8 +16,6 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
     // This will only show up in bytecode debug output (e.g. hexPrint()) and
     // will be ignored when emitting
     case debugMarker(String)
-    case debugPrint(CompilerUtilities, String)
-    case debugPrint2(CompilerUtilities2, String)
     
     // Generate movz+movk instructions for moving a 64-bit value
     // into a register over multiple steps
@@ -36,13 +34,11 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
     var size: ByteCount {
         switch(self) {
         case .ldrVreg(let reg, let off, let s):
-            return Self._ldrVreg(reg, off, s).size
+            return Self._ldrVreg(reg, off, s).reduce(0) { $0 + $1.size }
         case .strVreg(let reg, let off, let s):
             return Self._strVreg(reg, off, s).size
         case .deferred(let size, _):
             return size
-        case .debugPrint, .debugPrint2:
-            return ByteCount(try! self.emit().count)
         case .debugMarker:
             return 0
         case .mov: return 16
@@ -56,8 +52,6 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
         switch(self) {
         case .deferred(_, let c):
             return "deferred:\(try! c().debugDescription)"
-        case .debugPrint(_, let message), .debugPrint2(_, let message):
-            return message
         case .debugMarker(let message):
             return message
         case .mov(let Rd, let val):
@@ -72,16 +66,27 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
         }
     }
     
-    static func _ldrVreg(_ reg: Register64, _ offset: ByteCount, _ regSize: ByteCount) -> M1Op {
+    static func _ldrVreg(_ reg: Register64, _ offset: ByteCount, _ regSize: ByteCount) -> [any CpuOp] {
+        var result: [any CpuOp] = [
+            PseudoOp.mov(reg, offset)
+        ]
         switch(regSize) {
-        case 8: return M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
-        case 4: return M1Op.ldr(reg.to32, .reg64offset(.sp, offset, nil))
-        case 2: return M1Op.ldrh(reg.to32, .imm64(.sp, offset, nil))
-        case 1: return M1Op.ldrb(reg.to32, .imm64(.sp, offset, nil))
-        case 0: return M1Op.nop
+        case 8:
+            print("_ldrVreg 64 offset \(offset)")
+            result.append(M1Op.ldr(reg, .reg(X.sp, .r64ext(reg, .sxtx(0)))))
+        case 4:
+            print("_ldrVreg 32 offset \(offset)")
+            result.append(M1Op.ldr(reg.to32, .reg(X.sp, .r64ext(reg, .sxtx(0)))))
+        case 2:
+            result.append(M1Op.ldrh(reg.to32, .reg(X.sp, .r64ext(reg, .sxtx(0)))))
+        case 1:
+            result.append(M1Op.ldrb(reg.to32, .reg(X.sp, .r64ext(reg, .sxtx(0)))))
+        case 0:
+            result.append(M1Op.nop)
         default:
             fatalError("Unsupported vreg size \(regSize)")
         }
+        return result
     }
     
     static func _strVreg(_ reg: Register64, _ offset: ByteCount, _ regSize: ByteCount) -> M1Op {
@@ -101,21 +106,10 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
         case .strVreg(let reg, let offset, let regSize):
             return try Self._strVreg(reg, offset, regSize).emit()
         case .ldrVreg(let reg, let offset, let regSize):
-            return try Self._ldrVreg(reg, offset, regSize).emit()
+            let res = try Self._ldrVreg(reg, offset, regSize).reduce([]) { return $0 + (try $1.emit()) }
+            return res
         case .deferred(_, let closure):
             return try closure().emit()
-        case .debugPrint(let comp, let message):
-            // hacky way to get the output
-            let b = OpBuilder(ctx: JitContext(storage: ModuleStorage()))
-            comp.appendDebugPrintAligned4(message, builder: b)
-            let res = try b.ops.flatMap { try $0.emit() }
-            return res
-        case .debugPrint2(let comp, let message):
-            // hacky way to get the output
-            let b = CpuOpBuffer()
-            comp.appendDebugPrintAligned4(message, builder: b)
-            let res = try b.ops.flatMap { try $0.emit() }
-            return res
         case .debugMarker: return []
         case .mov(let Rd, let val):
             

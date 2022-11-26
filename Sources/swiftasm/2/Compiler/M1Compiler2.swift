@@ -147,14 +147,6 @@ let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/Unsafe
 // x0 through x7
 let ARG_REGISTER_COUNT = 8
 extension M1Compiler2 {
-    /* SP movements must be aligned to 16-bytes */
-    func roundUpStackReservation(
-        _ val: Int16
-    ) -> Int16 {
-        guard val % 16 != 0 else { return val }
-        return (val + (16 &- 1)) & (0 &- 16)
-    }
-    
     /// Stack space should be allocated for first 8 function args (will be filled from registers) and
     /// any register, which is not part of args.
     /// - Parameters:
@@ -177,7 +169,7 @@ extension M1Compiler2 {
         )
         
         let result = stackArgs.reduce(0) { $0 + Int16($1.hlRegSize) }
-        return (roundUpStackReservation(result), stackArgs)
+        return (StackInfo.roundUpStackReservation(result), stackArgs)
     }
     
     func appendLoad(reg: Register64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
@@ -332,6 +324,38 @@ extension M1Compiler2 {
         }
     }
     
+    /// Holds information about the stack reservations for a function.
+    struct StackInfo {
+        /// Unrounded space used for virtual regs
+        let reservedForVreg: ByteCount
+        
+        /// Unrounded stack space used for trap contexts
+        let reservedForTrapContexts: ByteCount
+        
+        var unroundedTotal: ByteCount {
+            reservedForVreg + reservedForTrapContexts
+        }
+        
+        /// Rounded value that can be used to move the stack pointer
+        var total: ByteCount {
+            ByteCount(Self.roundUpStackReservation(Int16(unroundedTotal)))
+        }
+        
+        var trapContextOffset: Int16 {
+            Int16(reservedForVreg)
+        }
+        
+        /// Stack pointer (SP) movements must be aligned to 16-bytes
+        /// - Parameter val: unrounded byte count needed for the stack
+        /// - Returns: value rounded up to nearest multiple of 16
+        static func roundUpStackReservation(
+            _ val: Int16
+        ) -> Int16 {
+            guard val % 16 != 0 else { return val }
+            return (val + (16 &- 1)) & (0 &- 16)
+        }
+    }
+    
     /*
      First 7 args are in registers [x0;x7]. Others are on the stack.
      Stack should be extended to account for data which is in registers.
@@ -341,8 +365,9 @@ extension M1Compiler2 {
         _ unfilteredRegs: [any HLTypeKindProvider],
         args unfilteredArgs: [any HLTypeKindProvider],
         builder: CpuOpBuffer,
-        prologueSize: ByteCount
-    ) throws -> Int16 {
+        prologueSize: ByteCount,
+        trapContextsNeeded: Int = 0
+    ) throws -> StackInfo {
         // test mismatched before filtering
         let unfilteredArgRegCount = min(unfilteredArgs.count, ARG_REGISTER_COUNT)
         guard
@@ -356,62 +381,50 @@ extension M1Compiler2 {
         
         // move ALL args in continuous space (either from regs, or on sp)
         let vregStackSize_unr = unfilteredRegs.reduce(Int16(0)) { $0 + Int16($1.hlRegSize) }
-        let vregStackSize = roundUpStackReservation(vregStackSize_unr)
         
-        guard vregStackSize > 0 else {
+        let trapCtxStackSize_unr = Int16(trapContextsNeeded) * Int16(MemoryLayout<HLTrapCtx_CCompat>.size)
+        
+        let stackInfo = StackInfo(
+            reservedForVreg: ByteCount(vregStackSize_unr),
+            reservedForTrapContexts: ByteCount(trapCtxStackSize_unr))
+        
+        guard stackInfo.total > 0 else {
             builder.append(PseudoOp.debugMarker("No extra stack space needed"))
-            return vregStackSize
+            return stackInfo
         }
         
         builder.append(
-            PseudoOp.debugMarker("Reserving \(vregStackSize) bytes for entire stack"),
-            M1Op.subImm12(X.sp, X.sp, try .i(vregStackSize))
+            PseudoOp.debugMarker("Reserving \(stackInfo.total) bytes for entire stack"),
+            M1Op.subImm12(X.sp, X.sp, try .i(stackInfo.total))
         )
         
         var offset: ByteCount = 0
-        var overflowOffset: ByteCount = Int64(vregStackSize) + prologueSize // for regs passed in via stack
+        var overflowOffset: ByteCount = stackInfo.total + prologueSize // for regs passed in via stack
         
+        // Now move all data from (stack/registers) to (stack) in the expected layout
         for (ix, reg) in unfilteredRegs.filter({ $0.hlRegSize > 0 }).enumerated() {
 
             Swift.assert(reg.hlRegSize > 0, "empty registers have to be filtered out earlier to not affect register index")
 
-//            builder.append(
-//                PseudoOp.debugPrint2(
-//                    self, "Stack init. Moving \(Register64(rawValue: UInt8(ix))!) to \(offset) (size \(reg.hlRegSize)"
-//                )
-//            )
-            // tmp
-
-//
             let needLoad = ix >= ARG_REGISTER_COUNT
             let regToUse: Register64 = needLoad ? .x1 : Register64(rawValue: UInt8(ix))!
             switch (needLoad, reg.hlRegSize) {
             case (false, _):
                 break
             case (true, let regSize):
+                print("stack init ldrVreg. overflow offset: \(overflowOffset)")
                 builder.append(PseudoOp.ldrVreg(regToUse, overflowOffset, regSize))
                 overflowOffset += regSize
             }
 
+            print("stack init strVreg. overflow offset: \(offset)")
             builder.append(PseudoOp.strVreg(regToUse, offset, reg.hlRegSize))
 
             print("Inc offset by \(reg.hlRegSize) from \(reg)")
             offset += reg.hlRegSize
         }
         
-//        builder.append(PseudoOp.mov(X.x0, 2), M1Op.strb(W.w0, .imm64(.sp, 0, nil)))
-//        builder.append(PseudoOp.mov(X.x0, 6), M1Op.strh(W.w0, .imm64(.sp, 1, nil)))
-//        builder.append(PseudoOp.mov(X.x0, 8), M1Op.str(W.w0, .reg64offset(.sp, 3, nil)))
-//
-//        builder.append(PseudoOp.ldrVreg(X.x0, 0, 1))
-//        appendDebugPrintRegisterAligned4(X.x0, builder: builder)
-//        builder.append(PseudoOp.ldrVreg(X.x1, 1, 2))
-//        appendDebugPrintRegisterAligned4(X.x1, builder: builder)
-//        builder.append(PseudoOp.ldrVreg(X.x2, 3, 4))
-//        appendDebugPrintRegisterAligned4(X.x2, builder: builder)
-        
-        
-        return vregStackSize
+        return stackInfo
     }
     
     func appendDebugPrintRegisterAligned4(_ reg: Register64, prepend: String? = nil, builder: CpuOpBuffer) {
@@ -423,9 +436,9 @@ extension M1Compiler2 {
         var jmpTarget = RelativeDeferredOffset()
         let str: String
         if let prepend = prepend {
-            str = "[jitdebug] [\(prepend)] Register \(reg): 0x%x (%llu)\n\0"
+            str = "[jitdebug] [\(prepend)] Register \(reg): %p (%llu)\n\0"
         } else {
-            str = "[jitdebug] Register \(reg): 0x%x (%llu)\n\0"
+            str = "[jitdebug] Register \(reg): %p (%llu)\n\0"
         }
         
         guard stripDebugMessages == false else {
@@ -494,11 +507,21 @@ extension M1Compiler2 {
         }
         builder.append(
             // Stash registers we'll use (so we can reset)
-            M1Op.str(Register64.x0, .reg64offset(.sp, -32, .pre)),
-            M1Op.str(Register64.x1, .reg64offset(.sp, 8, nil)),
-            M1Op.str(Register64.x2, .reg64offset(.sp, 16, nil)),
-            M1Op.str(Register64.x16, .reg64offset(.sp, 24, nil)),
-            
+            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(160)),
+            M1Op.str(Register64.x0, .reg64offset(.sp, 8, nil)),
+            M1Op.str(Register64.x19, .reg64offset(.sp, 0, nil)),
+            M1Op.stp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
+            M1Op.stp((Register64.x3, Register64.x4), .reg64offset(.sp, 32, nil)),
+            M1Op.stp((Register64.x5, Register64.x6), .reg64offset(.sp, 48, nil)),
+            M1Op.stp((Register64.x7, Register64.x8), .reg64offset(.sp, 64, nil)),
+            M1Op.stp((Register64.x9, Register64.x10), .reg64offset(.sp, 80, nil)),
+            M1Op.stp((Register64.x11, Register64.x12), .reg64offset(.sp, 96, nil)),
+            M1Op.stp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
+            M1Op.stp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
+            M1Op.stp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil))
+        )
+        
+        builder.append(
             // unix write system call
             M1Op.movz64(.x0, 1, nil)
         )
@@ -508,11 +531,20 @@ extension M1Compiler2 {
             M1Op.movz64(.x2, UInt16(str.count), nil),
             M1Op.movz64(.x16, 4, nil),
             M1Op.svc(0x80),
+            
             // restore
-            M1Op.ldr(Register64.x16, .reg64offset(.sp, 24, nil)),
-            M1Op.ldr(Register64.x2, .reg64offset(.sp, 16, nil)),
-            M1Op.ldr(Register64.x1, .reg64offset(.sp, 8, nil)),
-            M1Op.ldr(Register64.x0, .reg64offset(.sp, 32, .post))
+            M1Op.ldr(Register64.x0, .reg64offset(.sp, 8, nil)),
+            M1Op.ldr(Register64.x19, .reg64offset(.sp, 0, nil)),
+            M1Op.ldp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
+            M1Op.ldp((Register64.x3, Register64.x4), .reg64offset(.sp, 32, nil)),
+            M1Op.ldp((Register64.x5, Register64.x6), .reg64offset(.sp, 48, nil)),
+            M1Op.ldp((Register64.x7, Register64.x8), .reg64offset(.sp, 64, nil)),
+            M1Op.ldp((Register64.x9, Register64.x10), .reg64offset(.sp, 80, nil)),
+            M1Op.ldp((Register64.x11, Register64.x12), .reg64offset(.sp, 96, nil)),
+            M1Op.ldp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
+            M1Op.ldp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
+            M1Op.ldp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
+            try! M1Op._add(X.sp, X.sp, 160)
         )
         jmpTarget.start(at: builder.byteSize)
         builder.append(M1Op.b(jmpTarget))
@@ -530,10 +562,17 @@ extension M1Compiler2 {
         )
     }
     
+    func appendSystemExit_CodeInX0(builder: CpuOpBuffer) {
+        builder.append(
+            M1Op.movz64(.x16, 1, nil),
+            M1Op.svc(0x80)
+        )
+    }
+    
     /// Returns the amount of change for SP
     func appendPrologue(builder: CpuOpBuffer) -> ByteCount {
+        appendDebugPrintAligned4("Starting prologue and reserving 16", builder: builder)
         builder.append(
-            PseudoOp.debugPrint2(self, "Starting prologue and reserving 16"),
             M1Op.stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre)),
             M1Op.movr64(.x29_fp, .sp)
         )
@@ -541,11 +580,11 @@ extension M1Compiler2 {
     }
     
     func appendEpilogue(builder: CpuOpBuffer) {
+        appendDebugPrintAligned4("Starting epilogue", builder: builder)
         builder.append(
-            PseudoOp.debugPrint2(self, "Starting epilogue"),
-            M1Op.ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post)),
-            PseudoOp.debugPrint2(self, "Finished epilogue")
+            M1Op.ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))
         )
+        appendDebugPrintAligned4("Finished epilogue", builder: builder)
     }
 }
 
@@ -748,6 +787,23 @@ class M1Compiler2 {
             ctx.funcTracker.compiled(compilable.findex)
         }
         
+        /* we need to allocate trap contexts on the stack 
+         */
+        var availableTrapIx: Int64 = 0  // each OTrap will increment, and OEndTrap will decrement
+        let trapCount = compilable.ops.filter({
+            guard case .OTrap(_, _) = $0 else {
+                return false
+            }
+            return true
+        }).count
+        let endtrapCount = compilable.ops.filter({
+            guard case .OEndTrap(_) = $0 else {
+                return false
+            }
+            return true
+        }).count
+        Swift.assert(trapCount == endtrapCount)
+        
         // grab it before it changes from prologue
         // let memory = mem.getDeferredPosition()
         let regs = compilable.regsProvider
@@ -774,11 +830,12 @@ class M1Compiler2 {
 
         mem.append(PseudoOp.debugMarker("==> STARTING FUNCTION \(fix)"))
         let prologueSize = appendPrologue(builder: mem)
-        let reservedStackBytes = try appendStackInit(
+        let stackInfo = try appendStackInit(
             regs,
             args: compilable.argsProvider,
             builder: mem,
-            prologueSize: prologueSize
+            prologueSize: prologueSize,
+            trapContextsNeeded: trapCount
         )
 
         appendDebugPrintAligned4(
@@ -800,9 +857,7 @@ class M1Compiler2 {
             )
 
             print("f\(compilable.findex): #\(currentInstruction): \(op.debugDescription)")
-            mem.append(
-                PseudoOp.debugPrint2(self, "#\(currentInstruction): \(op.debugDescription)")
-            )
+            appendDebugPrintAligned4("f\(compilable.findex): #\(currentInstruction): \(op.debugDescription)", builder: mem)
             
             switch op {
             case .ORet(let dst):
@@ -855,15 +910,45 @@ class M1Compiler2 {
                     funIndex: fun,
                     regs: regs,
                     args: [arg0],
-                    reservedStackBytes: ByteCount(reservedStackBytes),
+                    reservedStackBytes: stackInfo.total,
                     mem: mem)
             case .OCall3(let dst, let fun, let arg0, let arg1, let arg2):
+                
+                if compilable.findex == 342 && currentInstruction == 27 {
+                    struct _String {
+                        let t: UnsafePointer<HLType_CCompat>
+                        let bytes: UnsafePointer<CChar16>
+                        let length: Int32
+                    }
+                    let _c: (@convention(c) (OpaquePointer, OpaquePointer, Int32)->()) = {
+                        strAPtr, strBPtr, ix in
+                        
+                        let a: UnsafePointer<_String> = .init(strAPtr)
+                        let b: UnsafePointer<_String> = .init(strBPtr)
+                        
+                        print("Ac:", a.pointee.length)
+                        print("A: ", a.pointee.bytes.stringValue)
+                        print("Bc:", b.pointee.length)
+                        print("B: ", b.pointee.bytes.stringValue)
+                        
+                        fatalError("here")
+                    }
+                    appendLoad(reg: X.x0, from: arg0, kinds: regs, mem: mem)
+                    appendLoad(reg: X.x1, from: arg1, kinds: regs, mem: mem)
+                    appendLoad(reg: X.x2, from: arg1, kinds: regs, mem: mem)
+                    mem.append(
+                        PseudoOp.mov(X.x10, unsafeBitCast(_c, to: OpaquePointer.self)),
+                        M1Op.blr(X.x10)
+                    )
+                }
+                
+                
                 try __ocalln(
                     dst: dst,
                     funIndex: fun,
                     regs: regs,
                     args: [arg0, arg1, arg2],
-                    reservedStackBytes: ByteCount(reservedStackBytes),
+                    reservedStackBytes: stackInfo.total,
                     mem: mem)
             case .OCall4(let dst, let fun, let arg0, let arg1, let arg2, let arg3):
                 try __ocalln(
@@ -871,7 +956,7 @@ class M1Compiler2 {
                     funIndex: fun,
                     regs: regs,
                     args: [arg0, arg1, arg2, arg3],
-                    reservedStackBytes: ByteCount(reservedStackBytes),
+                    reservedStackBytes: stackInfo.total,
                     mem: mem)
             case .OCallClosure(let dst, let closureObject, let args):
                 assert(reg: closureObject, from: regs, matches: HLTypeKind.fun)
@@ -933,7 +1018,7 @@ class M1Compiler2 {
                         regs: regs,
                         preArgs: [],
                         args: args,
-                        reservedStackBytes: ByteCount(reservedStackBytes),
+                        reservedStackBytes: stackInfo.total,
                         mem: mem
                     )
                     
@@ -973,7 +1058,7 @@ class M1Compiler2 {
                              )
                         ],
                         args: args,
-                        reservedStackBytes: ByteCount(reservedStackBytes),
+                        reservedStackBytes: stackInfo.total,
                         mem: mem
                     )
                     
@@ -986,7 +1071,7 @@ class M1Compiler2 {
                     funIndex: fun,
                     regs: regs,
                     args: args,
-                    reservedStackBytes: ByteCount(reservedStackBytes),
+                    reservedStackBytes: stackInfo.total,
                     mem: mem)
             case .OCall2(let dst, let fun, let arg0, let arg1):
                 try __ocalln(
@@ -994,7 +1079,7 @@ class M1Compiler2 {
                     funIndex: fun,
                     regs: regs,
                     args: [arg0, arg1],
-                    reservedStackBytes: ByteCount(reservedStackBytes),
+                    reservedStackBytes: stackInfo.total,
                     mem: mem)
                 
                 // MARK: --
@@ -1061,8 +1146,10 @@ class M1Compiler2 {
                 mem.append(
                     PseudoOp.debugMarker("Moving alloc address in x1"),
                     PseudoOp.mov(.x1, allocFunc_jumpTarget),
-                    PseudoOp.debugMarker("Jumping to the alloc func"),
-                    PseudoOp.debugPrint2(self, "Jumping to alloc func and storing result"),
+                    PseudoOp.debugMarker("Jumping to the alloc func")
+                )
+                appendDebugPrintAligned4("Jumping to alloc func and storing result", builder: mem)
+                mem.append(
                     M1Op.blr(.x1),
                     M1Op.str(X.x0, .reg64offset(X.sp, dstOffset, nil))
                 )
@@ -1085,11 +1172,25 @@ class M1Compiler2 {
                 appendLoad(reg: X.x16, from: dstReg, kinds: regs, mem: mem)
                 appendDebugPrintRegisterAligned4(X.x16, builder: mem)
             case .OInt(let dst, let iRef):
+                
+                if (currentInstruction == 8 && compilable.findex == 37) {
+//                    appendDebugPrintAligned4("ARRIVED HERE", builder: mem)
+//                    let _c: (@convention(c) ()->()) = {
+//                        print("Hello world")
+//                        fatalError("end")
+//                    }
+//                    let _cAddr = unsafeBitCast(_c, to: OpaquePointer.self)
+//                    mem.append(
+//                        PseudoOp.mov(X.x0, _cAddr),
+//                        M1Op.blr(X.x0)
+//                    )
+                }
+                
                 assert(reg: dst, from: regs, is: HLTypeKind.i32)
                 let c = try ctx.requireInt(iRef)
                 let regStackOffset = getRegStackOffset(regs, dst)
+                appendDebugPrintAligned4("--> Storing int \(iRef) (val \(c)) in \(dst)", builder: mem)
                 mem.append(
-                    PseudoOp.debugPrint2(self, "--> Storing int \(iRef) (val \(c)) in \(dst)"),
                     PseudoOp.debugMarker(
                         "Mov \(c) into \(X.x0) and store in stack for HL reg \(iRef) at offset \(regStackOffset)"
                     ),
@@ -1127,11 +1228,10 @@ class M1Compiler2 {
                 let sizeA = kindA.hlRegSize
                 let sizeB = kindB.hlRegSize
 
-                mem.append(
-                        PseudoOp.debugMarker("\(op.id) <\(a)@\(regOffsetA), \(b)@\(regOffsetB)> --> \(offset) (target instruction: \(targetInstructionIx))"),
-                        M1Op.ldr(sizeA == 4 ? W.w0 : X.x0, .reg64offset(.sp, regOffsetA, nil)),
-                        M1Op.ldr(sizeB == 4 ? W.w1 : X.x1, .reg64offset(.sp, regOffsetB, nil))
-                    )
+                appendDebugPrintAligned4("\(op.id) <\(a)@\(regOffsetA), \(b)@\(regOffsetB)> --> \(offset) (target instruction: \(targetInstructionIx))", builder: mem)
+                
+                appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
+                appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
 
                 switch(op) {
                 case .OJSGte:
@@ -1140,6 +1240,8 @@ class M1Compiler2 {
                     fallthrough
                 case .OJSLt:
                     switch(kindA) {
+                    case .i32:
+                        mem.append(M1Op.sxtw(.x0, .w0))
                     case .u16:
                         mem.append(M1Op.sxth(.x0, .w0))
                     case .u8:
@@ -1148,6 +1250,8 @@ class M1Compiler2 {
                         break
                     }
                     switch(kindB) {
+                    case .i32:
+                        mem.append(M1Op.sxtw(.x1, .w1))
                     case .u16:
                         mem.append(M1Op.sxth(.x1, .w1))
                     case .u8:
@@ -1159,14 +1263,6 @@ class M1Compiler2 {
                     break
                 }
 
-
-                if op.id == .OJNotEq {
-                    let x = try ctx.getType(1)
-                    mem.append(
-                        PseudoOp.debugPrint2(self, "Comparing for OJNotEq. INTTYPE == \(x)")
-                    )
-                }
-                
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendDebugPrintRegisterAligned4(X.x1, builder: mem)
 
@@ -1203,9 +1299,8 @@ class M1Compiler2 {
                             fatalError("Unsupported jump id \(op.id)")
                         }
                     })
-                mem.append(
-                    PseudoOp.debugPrint2(self, "NOT JUMPING")
-                )
+                
+                appendDebugPrintAligned4("NOT JUMPING", builder: mem)
 
             // TODO: somehow combine all the jumps with fallthroughs?
             case .OJNotNull(let reg, let offset):
@@ -1222,34 +1317,12 @@ class M1Compiler2 {
 
                 let regOffset = getRegStackOffset(regs, reg)
 
-                let size = requireTypeKind(reg: reg, from: regs).hlRegSize
-
                 mem.append(
                     PseudoOp.debugMarker("\(op.id) \(reg)@\(regOffset) --> \(offset) (target instruction: \(targetInstructionIx))"))
-                if size == 8 {
-                    mem.append(
-                        M1Op.movz64(X.x0, 0, nil),
-                        M1Op.ldr(X.x1, .reg64offset(.sp, regOffset, nil))
-                    )
-                } else if size == 4 {   // bool
-                    mem.append(
-                        M1Op.movz64(X.x0, 0, nil),
-                        M1Op.ldr(W.w1, .reg64offset(.sp, regOffset, nil))
-                    )
-                } else if size == 2 {   // bool
-                    mem.append(
-                        M1Op.movz64(X.x0, 0, nil),
-                        M1Op.ldrh(W.w1, .imm64(.sp, regOffset, nil))
-                    )
-                } else if size == 1 {   // bool
-                    mem.append(
-                        M1Op.movz64(X.x0, 0, nil),
-                        M1Op.ldrb(W.w1, .imm64(.sp, regOffset, nil))
-                    )
-                } else {
-                    fatalError("Reg size must be 8 or 4")
-                }
-
+                mem.append(M1Op.movz64(X.x0, 0, nil))
+                appendLoad(reg: X.x1, from: reg, kinds: regs, mem: mem)
+                
+                appendDebugPrintAligned4("Jump comparing x0 and x1", builder: mem)
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendDebugPrintRegisterAligned4(X.x1, builder: mem)
 
@@ -1279,9 +1352,8 @@ class M1Compiler2 {
                             fatalError("Unsupported jump id \(op.id)")
                         }
                     })
-                mem.append(
-                    PseudoOp.debugPrint2(self, "NOT JUMPING")
-                )
+                
+                appendDebugPrintAligned4("NOT JUMPING", builder: mem)
             // TODO: combine with above jumps
             case .OJAlways(let offset):
                 let wordsToSkip = Int(offset) + 1
@@ -1398,13 +1470,13 @@ class M1Compiler2 {
                 )
                 
                 if op.id == .OGetI8 {
-                    mem.append(PseudoOp.debugPrint2(self, "about to load from bytes (off: \(byteOffset))"))
+                    appendDebugPrintAligned4("about to load from bytes (off: \(byteOffset))", builder: mem)
                     appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                     
                     mem.append(
                         M1Op.ldrb(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
                     )
-                    mem.append(PseudoOp.debugPrint2(self, "loaded"))
+                    appendDebugPrintAligned4("loaded", builder: mem)
                 } else if op.id == .OGetI16 {
                     mem.append(
                         M1Op.ldrh(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
@@ -1417,8 +1489,6 @@ class M1Compiler2 {
                     )
                 }
                 
-                mem.append(PseudoOp.debugPrint2(self, "got 3"))
-
                 let size = requireTypeKind(reg: dst, from: regs).hlRegSize
                 if size == 4 {
                     mem.append(M1Op.str(W.w0, .reg64offset(.sp, dstOffset, nil)))
@@ -1431,9 +1501,6 @@ class M1Compiler2 {
                 } else {
                     fatalError("Invalid register size")
                 }
-                
-                mem.append(PseudoOp.debugPrint2(self, "got 4"))
-                
             case .ONullCheck(let dst):
                 let dstOffset = getRegStackOffset(regs, dst)
                 let size = requireTypeKind(reg: dst, from: regs).hlRegSize
@@ -1524,24 +1591,268 @@ class M1Compiler2 {
                 )
                 appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
             case .OThrow(let exc):
+                appendLoad(reg: X.x0, from: exc, kinds: regs, mem: mem)
                 mem.append(
-                    M1Op.movz64(X.x0, UInt16(exc), nil),
-                    PseudoOp.mov(X.x1, _throwAddress),
+                    PseudoOp.mov(X.x1, unsafeBitCast(LibHl._hl_throw, to: OpaquePointer.self)),
                     M1Op.blr(X.x1)
                 )
             case .OTrap(let exc, let offset):
-                mem.append(
-                    M1Op.movz64(X.x0, UInt16(exc), nil),
-                    M1Op.movz64(X.x1, UInt16(offset), nil),
-                    PseudoOp.mov(X.x2, _trapAddress),
-                    M1Op.blr(X.x2)
+                /*
+                 Roughly what needs to happen is:
+                     
+                        #define hl_trap(ctx,r,label) {
+                            hl_thread_info *__tinf = hl_get_thread();
+                            ctx.tcheck = NULL;
+                            ctx.prev = __tinf->trap_current;
+                            __tinf->trap_current = &ctx;
+                            if( setjmp(ctx.buf) ) {
+                                r = __tinf->exc_value;
+                                goto label;
+                            }
+                        }
+                 
+                 The trap context needs to be on the stack, and setjmp can not be called from
+                 within a child function (needs to remain in the overall function context).
+                 */
+                
+                // Offsets into `HLTrapCtx_CCompat`
+                let bufOffset: Int64 = Int64(MemoryLayout.offset(of: \HLTrapCtx_CCompat.buf)!)
+                let prevOffset: Int64 = Int64(MemoryLayout.offset(of: \HLTrapCtx_CCompat.prev)!)
+                let tcheckOffset: Int64 = Int64(MemoryLayout.offset(of: \HLTrapCtx_CCompat.tcheck)!)
+                
+                // Offsets into HLThreadInfo_CCompat
+                let tinf__trapCurrent: Int64 = Int64(MemoryLayout.offset(of: \HLThreadInfo_CCompat.trap_current)!)
+                let tinf__excValue: Int64 = Int64(MemoryLayout.offset(of: \HLThreadInfo_CCompat.exc_value)!)
+                
+                let currentTrapIx: Int64 = availableTrapIx
+                availableTrapIx += 1
+                
+                let trapOffsetInStack = stackInfo.reservedForVreg + currentTrapIx * Int64(MemoryLayout<HLTrapCtx_CCompat>.stride)
+                
+                // hl_thread_info *__tinf = hl_get_thread();
+                appendDebugPrintAligned4(
+                    "// hl_thread_info *__tinf = hl_get_thread();", builder: mem
                 )
+                mem.append(
+                    PseudoOp.mov(
+                        X.x0,
+                        unsafeBitCast(LibHl._hl_get_thread, to: OpaquePointer.self)
+                    ),
+                    M1Op.blr(X.x0),
+                    M1Op.movr64(X.x9, X.x0) // x9 = __tinf
+                )
+                
+                // ctx.tcheck = NULL;
+                appendDebugPrintAligned4(
+                    "// ctx.tcheck = NULL;", builder: mem
+                )
+                mem.append(
+                    M1Op.movz64(X.x1, 0, nil),
+                    M1Op.str(X.x1, .reg64offset(.sp, trapOffsetInStack + tcheckOffset, nil))
+                )
+                
+                // ctx.prev = __tinf->trap_current;
+                appendDebugPrintAligned4(
+                    "ctx.prev = __tinf->trap_current;", builder: mem
+                )
+                
+                appendDebugPrintAligned4("[traptest] In findex \(compilable.findex); trapoff: \(trapOffsetInStack)", builder: mem)
+
+                // fetch trap_current
+                mem.append(M1Op.ldr(X.x2, .reg64offset(X.x9, tinf__trapCurrent, nil)))
+                appendDebugPrintRegisterAligned4(X.x2, prepend: "[traptest] Loaded current", builder: mem)
+                // store ctx.prev
+                let testOff: Int64 = trapOffsetInStack + prevOffset
+                mem.append(M1Op.str(X.x2, .reg64offset(.sp, testOff, nil)))
+                appendDebugPrintAligned4("[traptest] Offset: \(testOff)", builder: mem)
+                // MARK: tmp
+                mem.append(M1Op.ldr(X.x13, .reg64offset(.sp, testOff, nil)))
+                appendDebugPrintRegisterAligned4(X.x13, prepend: "[traptest] Verify ldr", builder: mem)
+                mem.append(M1Op.movr64(X.x13, X.x2))
+                appendDebugPrintRegisterAligned4(X.x13, prepend: "[traptest] Verify mov", builder: mem)
+                // MARK: /tmp
+                
+                print("[traptest] tinf__trapCurrent: \(tinf__trapCurrent)")
+                print("[traptest] trapOffsetInStack: \(trapOffsetInStack)")
+                print("[traptest] prevOffset: \(prevOffset)")
+                //
+                
+                // MARK: --
+                let _c: (@convention(c) (OpaquePointer?, OpaquePointer?)->()) = {
+                    oPtre, optr2 in
+                    guard let ptr = oPtre else { return }
+                    
+//                    print("traptest x9 had tinf: \(optr2)")
+                    
+                    let tc: UnsafePointer<HLTrapCtx_CCompat> = .init(ptr)
+                    
+                    let x = LibHl.hl_get_thread()
+//                    print("[traptest feu] __tinf: \(x)")
+                    print("[traptest feu] __tinf.cur: \(x.pointee.trap_current)")
+//                    print("[traptest feu] cur: \(tc)")
+                    print("[traptest feu] cur.prev: \(tc.pointee.prev)")
+                    print("[traptest feu] cur.tcheck: \(tc.pointee.tcheck)")
+                    return
+                }
+                mem.append(
+                    M1Op.movr64(X.x21, X.x0),
+                    M1Op.movr64(X.x20, X.x9),
+                    M1Op.movr64(X.x0, .sp),
+                    M1Op.add(X.x0, X.x0, .imm(trapOffsetInStack, nil)),
+                    
+                    // returns nil
+//                    M1Op.ldr(X.x1, .reg64offset(X.x0, prevOffset, nil)),
+                    
+                    // so what's the val?
+                    M1Op.ldr(X.x1, .reg64offset(X.x9, tinf__trapCurrent, nil)),
+                    
+                    PseudoOp.mov(X.x11, unsafeBitCast(_c, to: OpaquePointer.self)),
+                    M1Op.blr(X.x11),
+                    M1Op.movr64(X.x0, X.x21),
+                    M1Op.movr64(X.x9, X.x20)
+                )
+                // MARK: --
+                
+                // __tinf->trap_current = &ctx;
+                appendDebugPrintAligned4(
+                    "__tinf->trap_current = &ctx;", builder: mem
+                )
+                mem.append(
+                    PseudoOp.debugMarker("x3 = &ctx"),
+                    M1Op.movr64(X.x3, .sp),
+                    M1Op.add(X.x3, X.x3, .imm(trapOffsetInStack, nil))
+                )
+                
+                appendDebugPrintAligned4("__tinf->trap_current = x3", builder: mem)
+                
+                mem.append(
+                    PseudoOp.debugMarker("__tinf->trap_current = x3"),
+                    M1Op.str(X.x3, .reg64offset(X.x9, tinf__trapCurrent, nil))
+                )
+                
+                // setjmp(ctx.buf)
+                let _setjmpAddr = unsafeBitCast(LibSystem.setjmp, to: OpaquePointer.self)
+                mem.append(
+                    PseudoOp.debugMarker("x3 = &ctx.buf"),
+                    M1Op.movr64(X.x3, .sp),
+                    M1Op.movz64(X.x4, UInt16(trapOffsetInStack) + UInt16(bufOffset), nil),
+                    M1Op.add(X.x3, X.x3, .r64shift(X.x4, .lsl(0))),
+                    
+                    PseudoOp.debugMarker("x1 = x0 (__tinf)"),
+                    M1Op.movr64(X.x1, X.x0),
+                    
+                    PseudoOp.debugMarker("x0 = x3 (&ctx.buf)"),
+                    M1Op.movr64(X.x0, X.x3),
+                    
+                    PseudoOp.debugMarker("setjmp(&ctx.buf)"),
+                    PseudoOp.mov(X.x10, _setjmpAddr),
+                    M1Op.blr(X.x10)
+                )
+                
+                // compare result
+                mem.append(
+                    M1Op.movz64(X.x1, 0, nil),
+                    M1Op.cmp(X.x0, X.x1)
+                )
+                
+                var setJmpEq0Target = RelativeDeferredOffset()
+                mem.append(
+                    PseudoOp.withOffset(
+                        offset: &setJmpEq0Target,
+                        mem: mem,
+                        M1Op.b_eq(try! Immediate19(setJmpEq0Target.value))
+                    )
+                )
+                
+                appendDebugPrintAligned4("[traptest] SETJMP RETURNED !0", builder: mem)
+                
+                assert(reg: exc, from: regs, is: HLTypeKind.dyn)
+                
+                // r = __tinf->exc_value;
+                appendDebugPrintAligned4("x0 (__tinf) = hl_get_thread()", builder: mem)
+                mem.append(
+                    PseudoOp.debugMarker("x0 (__tinf) = hl_get_thread()"),
+                    PseudoOp.mov(
+                        X.x0,
+                        unsafeBitCast(LibHl._hl_get_thread, to: OpaquePointer.self)
+                    ),
+                    M1Op.blr(X.x0)
+                )
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "__tinf", builder: mem)
+                
+                appendDebugPrintAligned4("r = __tinf->exc_value;", builder: mem)
+                appendDebugPrintAligned4("loading", builder: mem)
+                mem.append(
+                    PseudoOp.debugMarker("r = __tinf->exc_value;"),
+                    M1Op.ldr(X.x1, .reg64offset(X.x0, tinf__excValue, nil))
+                )
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "exc_value", builder: mem)
+                appendLoad(reg: X.x2, from: exc, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x2, prepend: "EXC (after)", builder: mem)
+                
+                mem.append(M1Op.movr64(X.x12, .sp))
+                appendDebugPrintRegisterAligned4(X.x12, prepend: "SP (after)", builder: mem)
+                
+                appendStore(reg: X.x2, into: exc, kinds: regs, mem: mem)
+                appendDebugPrintAligned4("Stored x2 in x1", builder: mem)
+                
+                // goto label;
+                let wordsToSkip = Int(offset) + 1
+                let targetInstructionIx = currentInstruction + wordsToSkip
+                
+                appendDebugPrintAligned4("Jumping from \(currentInstruction) to \(targetInstructionIx)", builder: mem)
+                appendDebugPrintAligned4("Preparing jump (words to skip \(wordsToSkip))...", builder: mem)
+                
+                let jumpOffset_partA = try Immediate19(mem.byteSize)
+                let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
+                let jumpOffset = try DeferredImmediateSum(
+                    jumpOffset_partB,
+                    jumpOffset_partA,
+                    -1,
+                    -Int(0))
+                mem.append(
+                    PseudoOp.deferred(4) {
+                        M1Op.b_v2(try Immediate26(jumpOffset.immediate))
+                    }
+                )
+                
+                // marker for other branch after setjmp()
+                setJmpEq0Target.stop(at: mem.byteSize)
+                appendDebugPrintAligned4("[traptest] SETJMP RETURNED 0", builder: mem)
+                
+                // call longjump
+//                mem.append(
+//                    PseudoOp.debugMarker("x0 = &ctx.buf"),
+//                    M1Op.movr64(X.x0, .sp),
+//                    M1Op.movz64(X.x1, UInt16(trapOffsetInStack) + UInt16(bufOffset), nil),
+//                    M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))),
+//
+//                    PseudoOp.debugMarker("x1 = 10"),
+//                    M1Op.movz64(X.x1, 14, nil),
+//
+//                    PseudoOp.debugMarker("longjmp"),
+//                    PseudoOp.mov(X.x10, unsafeBitCast(LibSystem.longjmp, to: OpaquePointer.self)),
+//                    M1Op.blr(X.x10)
+//                )
+//
+//                appendSystemExit(15, builder: mem)
+                
+//
+//                if( setjmp(ctx.buf) ) {
+//                    r = __tinf->exc_value;
+//                    goto label;
+//                }
+                
+                
             case .OEndTrap(let exc):
-                mem.append(
-                    M1Op.movz64(X.x0, UInt16(exc), nil),
-                    PseudoOp.mov(X.x1, _endTrapAddress),
-                    M1Op.blr(X.x1)
-                )
+                // TODO: test try/catch where nothing thrown
+                availableTrapIx -= 1
+                appendDebugPrintAligned4("[traptest OEndTrap weirdo]", builder: mem)
+//                mem.append(
+//                    M1Op.movz64(X.x0, UInt16(exc), nil),
+//                    PseudoOp.mov(X.x1, _endTrapAddress),
+//                    M1Op.blr(X.x1)
+//                )
             case .ONull(let dst):
                 mem.append(
                     M1Op.movz64(X.x0, 0, nil)
@@ -1649,7 +1960,7 @@ class M1Compiler2 {
                 }
                 // MARK: --
             case .OLabel:
-                mem.append(PseudoOp.debugPrint2(self, "OLabel"))
+                appendDebugPrintAligned4("OLabel", builder: mem)
             case .OSub(let dst, let a, let b):
                 appendLoad(reg: .x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
@@ -1718,7 +2029,7 @@ class M1Compiler2 {
                 appendLoad(reg: .x1, from: index, kinds: regs, mem: mem)
                 appendLoad(reg: .x2, from: array, kinds: regs, mem: mem)
                 mem.append(
-                    M1Op.lsl_i(X.x1, X.x1, try Immediate6(lsl)),
+                    M1Op.lsl_i(X.x1, X.x1, try UImmediate6(lsl)),
                     M1Op.str(X.x0, .reg(X.x2, .r64ext(X.x1, .sxtx(0))))
                 )
             case .OGetArray(let dst, let array, let index):
@@ -1726,7 +2037,7 @@ class M1Compiler2 {
                 appendLoad(reg: .x1, from: index, kinds: regs, mem: mem)
                 appendLoad(reg: .x2, from: array, kinds: regs, mem: mem)
                 mem.append(
-                    M1Op.lsl_i(X.x1, X.x1, try Immediate6(lsl)),
+                    M1Op.lsl_i(X.x1, X.x1, try UImmediate6(lsl)),
                     M1Op.ldr(X.x0, .reg(X.x2, .r64ext(X.x1, .sxtx(0))))
                 )
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
@@ -1760,7 +2071,7 @@ class M1Compiler2 {
                 case (.u8, .i64), (.u16, .i64), (.i32, .i64):
                     appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 case (.u8, .i32), (.u16, .i32), (.i64, .i32):
-                    mem.append(PseudoOp.debugPrint2(self, "TODO: .ToInt i64->i32: investigate if size check needed"))
+                    appendDebugPrintAligned4("TODO: .ToInt i64->i32: investigate if size check needed", builder: mem)
                     appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 case (.f64, .i32):
                     mem.append(M1Op.fcvtzs(W.w0, D.d0))
@@ -1810,8 +2121,8 @@ class M1Compiler2 {
                 appendLoad(reg: X.x0, from: reg, kinds: regs, mem: mem)
                 
                 for (expectedValue, jmpOffset) in offsets.enumerated() {
+                    appendDebugPrintAligned4("Comparing reg \(reg) against \(expectedValue)", builder: mem)
                     mem.append(
-                        PseudoOp.debugPrint2(self, "Comparing reg \(reg) against \(expectedValue)"),
                         PseudoOp.mov(X.x1, expectedValue),
                         M1Op.cmp(X.x0, X.x1)
                     )
@@ -1832,9 +2143,10 @@ class M1Compiler2 {
                     mem.append(
                         PseudoOp.deferred(4) {
                             M1Op.b_eq(try Immediate19(jumpOffset.immediate))
-                        },
-                        PseudoOp.debugPrint2(self, "Didn't jump from case \(expectedValue)")
+                        }
                     )
+                    
+                    appendDebugPrintAligned4("Didn't jump from case \(expectedValue)", builder: mem)
                 }
             case .OGetTID(let dst, let src):
                 let srcType = requireType(reg: src, regs: regs)
@@ -1860,9 +2172,7 @@ class M1Compiler2 {
                 default:
                     fatal("OGetType not supported for src \(srcType.kind)", Self.logger)
                 }
-                mem.append(
-                    PseudoOp.debugPrint2(self, "INTTYPE test")
-                )
+                appendDebugPrintAligned4("INTTYPE test", builder: mem)
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .ORef(let dst, let src):
@@ -2076,26 +2386,18 @@ class M1Compiler2 {
             retTarget.stop(at: mem.byteSize)
         }
 
-        if reservedStackBytes > 0 {
+        if stackInfo.total > 0 {
+            appendDebugPrintAligned4("Free \(stackInfo.total) bytes (pre-epilogue)", builder: mem)
             mem.append(
-                PseudoOp.debugPrint2(self, "Free \(reservedStackBytes) bytes (pre-epilogue)"),
-                (try M1Op._add(X.sp, X.sp, ByteCount(reservedStackBytes)))
+                (try M1Op._add(X.sp, X.sp, stackInfo.total))
             )
         }
         else {
-            mem.append(
-                PseudoOp.debugPrint2(self,
-                    "Skipping freeing stack because \(reservedStackBytes) bytes were needed"
-                )
-            )
+            appendDebugPrintAligned4("Skipping freeing stack because \(stackInfo.total) bytes were needed", builder: mem)
         }
 
         appendEpilogue(builder: mem)
-        mem.append(
-            PseudoOp.debugPrint2(self,
-                "Returning"
-            )
-        )
+        appendDebugPrintAligned4("Returning", builder: mem)
         mem.append(M1Op.ret)
     }
 }

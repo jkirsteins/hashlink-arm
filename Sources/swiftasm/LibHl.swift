@@ -1,5 +1,42 @@
 import Darwin
 
+struct LibSystem {
+    enum Source: String {
+        // /usr/lib/system/libsystem_platform.dylib
+        case libsystem = "libsystem_platform.dylib"
+        
+        var handle: UnsafeMutableRawPointer {
+            guard let handle = (self == .libsystem ? LibHl.dylibHandle : LibHl.dylibHandle) else {
+                fatalError("Could not load \(self.rawValue)")
+            }
+            return handle
+        }
+    }
+    static let libsystemHandle = dlopen(Source.libsystem.rawValue, RTLD_NOW)
+    
+    static func load<T>(_ name: String, from src: Source = .libsystem) -> T {
+        guard
+            let nat: UnsafeMutableRawPointer = dlsym(src.handle, name) else {
+            fatalError("Could not load \(name)")
+        }
+        
+        return unsafeBitCast(nat, to: T.self)
+    }
+    
+    // NOTE: do NOT wrap this in a calling function, as
+    // that kills the magic
+    static let setjmp: (@convention(c) (OpaquePointer) -> (Int32)) = { load("_setjmp") }()
+    
+    static let longjmp: (@convention(c) (OpaquePointer, Int32) -> ()) = { load("longjmp") }()
+    
+    
+//    // void longjmp(jmp_buf env, int val);
+//    static let _longjmp: (@convention(c) (OpaquePointer, Int32) -> (Int32)) = { load("setjmp") }()
+//    static func setjmp(_ buf: UnsafeMutablePointer<Int32>) -> Int32 {
+//        return _setjmp(.init(buf))
+//    }
+}
+
 struct LibHl {
     enum Source: String {
         case dylib = "libhl.dylib"
@@ -226,4 +263,15 @@ struct LibHl {
             _hl_dyn_castp(data, .init(type), .init(to))
     }
     
+    // HL_API hl_thread_info *hl_get_thread();
+    static let _hl_get_thread: (@convention(c) () -> (OpaquePointer)) = { load("hl_get_thread") }()
+    static func hl_get_thread() -> (UnsafePointer<HLThreadInfo_CCompat>) {
+        .init(_hl_get_thread())
+    }
+    
+    // HL_PRIM void hl_throw( vdynamic *v ) {
+    static let _hl_throw: (@convention(c) (OpaquePointer)->()) = { load("hl_throw") }()
+    static func hl_throw(_ p: UnsafePointer<vdynamic>) -> () {
+        _hl_throw(.init(p))
+    }
 }

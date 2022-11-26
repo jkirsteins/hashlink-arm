@@ -35,6 +35,16 @@ class CpuOpBuffer {
     @discardableResult func _internalAppend(_ instructions: [any CpuOp]) throws
         -> CpuOpBuffer
     {
+        for op in instructions {
+            switch(op) {
+            case M1Op.ldr, PseudoOp.ldrVreg:
+                try op.emit()
+            default:
+                break
+            }
+        }
+    
+        
         let increase: Int64 = instructions.reduce(0) {
             return $0 + $1.size
         }

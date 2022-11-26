@@ -11,7 +11,7 @@
 import Darwin
 
 struct HLTrapCtx_CCompat {
-    let buf: jmp_buf
-    let prev: UnsafePointer<HLTrapCtx_CCompat>?
-    let tcheck: UnsafePointer<vdynamic>?
+    var buf: jmp_buf
+    var prev: UnsafePointer<HLTrapCtx_CCompat>?
+    var tcheck: UnsafePointer<vdynamic>?
 }

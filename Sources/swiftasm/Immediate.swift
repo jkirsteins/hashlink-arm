@@ -20,7 +20,7 @@ func truncateOffsetGlobal(_ val: Int64, divisor: Int64, bits: Int64) throws
     try truncateOffset(val, divisor: divisor, bits: bits)
 }
 
-func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throws
+func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64, signed: Bool = true) throws
     -> Int64
 {
     if val % divisor != 0 {
@@ -31,7 +31,7 @@ func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throws
 
     let divided: Int64 = val / divisor
     let mask: UInt64 = ((1 << bits) - 1)
-
+    
     let leadingBitsMask: UInt64
     if val >= 0 {
         leadingBitsMask = 0
@@ -44,7 +44,9 @@ func truncateOffset(_ val: Int64, divisor: Int64, bits: Int64) throws
             (leadingBitsMask | compare) == UInt64(bitPattern: divided),
             // if value is negative, most significant bit must be 1 (we
             // can't rely on bits set outside of our range)
-            divided >= 0 || (divided & (1 << (bits - 1)) != 0)
+            !signed || (divided >= 0 || (compare >> (bits - 1) == 1)),
+            // if value is positive, most significant bit must be 0
+            !signed || (divided <= 0 || (compare >> (bits - 1) != 1))
     else {
         throw EmitterM1Error.invalidValue(
             "Immediate \(val) must fit in \(bits) bits"
@@ -60,14 +62,22 @@ struct VariableImmediate: Immediate {
 
     var immediate: Int64 { value }
 
-    init(_ val: Int64, bits: Int64, divisor: Int64) throws {
+    init(_ val: Int64, bits: Int64, divisor: Int64, signed: Bool) throws {
         // ensure
-        self.value = try truncateOffset(val, divisor: divisor, bits: bits)
+        self.value = try truncateOffset(val, divisor: divisor, bits: bits, signed: signed)
         self.bits = bits
     }
     
+    init(_ val: Int64, bits: Int64, divisor: Int64) throws {
+        try self.init(val, bits: bits, divisor: divisor, signed: true)
+    }
+    
+    init(_ val: Int64, bits: Int64, signed: Bool) throws {
+        try self.init(val, bits: bits, divisor: 1, signed: signed)
+    }
+    
     init(_ val: Int64, bits: Int64) throws {
-        try self.init(val, bits: bits, divisor: 1)
+        try self.init(val, bits: bits, signed: true)
     }
 }
 
@@ -270,6 +280,10 @@ struct Immediate6: Immediate, ExpressibleByIntegerLiteral {
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
     }
+    
+    init(unsigned: UInt8) {
+        self.wrapped = try! VariableImmediate(Int64(unsigned), bits: bits, signed: false)
+    }
 
     init(_ val: Int64, bits: Int64) throws {
         self.wrapped = try VariableImmediate(val, bits: bits)
@@ -278,6 +292,27 @@ struct Immediate6: Immediate, ExpressibleByIntegerLiteral {
     init(_ val: any BinaryInteger) throws {
         let i = Int(val)
         self.wrapped = try VariableImmediate(Int64(i), bits: bits)
+    }
+}
+
+struct UImmediate6: Immediate, ExpressibleByIntegerLiteral {
+    let bits: Int64 = 6
+
+    let wrapped: VariableImmediate
+
+    var immediate: Int64 { wrapped.immediate }
+
+    init(integerLiteral: Int32) {
+        self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits, signed: false)
+    }
+    
+    init(_ val: Int64, bits: Int64) throws {
+        self.wrapped = try VariableImmediate(val, bits: bits, signed: false)
+    }
+
+    init(_ val: any BinaryInteger) throws {
+        let i = Int(val)
+        self.wrapped = try VariableImmediate(Int64(i), bits: bits, signed: false)
     }
 }
 
