@@ -87,7 +87,8 @@ def lookup_loads_store_register__unsigned_immediate(val)
     elsif match("10 1 01", valStr)  
         abort("LDR (immediate, SIMD&FP) — 32-bit")
     elsif match("11 0 00", valStr)  
-        abort("STR (immediate) — 64-bit")
+        puts("STR (immediate) — 64-bit")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STR--immediate---Store-Register--immediate--?lang=en")
     elsif match("11 0 01", valStr)  
         abort("LDR (immediate) — 64-bit")
     elsif match("11 0 10", valStr)  
@@ -667,7 +668,7 @@ def lookup_branches_exception_generating_and_system_instructions(val)
         ["110 0100000xxx0100 xxxxx"] => "PSTATE",
         ["110 0100x01xxxxxxx xxxxx"] => "System instructions",
         ["110 0100x1xxxxxxxx xxxxx"] => "System register move",
-        ["110 1xxxxxxxxxxxxx xxxxx"] => "Unconditional branch (register)",
+        ["110 1xxxxxxxxxxxxx xxxxx"] => ["Unconditional branch (register)", "https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Branches--Exception-Generating-and-System-instructions?lang=en#branch_reg"],
         ["x00   xxxxxxxxxxxxxx xxxxx"] => ["Unconditional branch (immediate)", "https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Branches--Exception-Generating-and-System-instructions?lang=en#branch_imm"],
         ["x01 0xxxxxxxxxxxxx xxxxx"] => "Compare and branch (immediate)",
         ["x01 1xxxxxxxxxxxxx xxxxx"] => "Test and branch (immediate)"
@@ -937,5 +938,5 @@ def from_objd(str)
     ("0x" + str.split(" ").reverse.join("")).to_i(16)
 end
 
-# puts lookup(from_objd("00 01 62 9e"))
-puts lookup(0b1111_1101_0000_0000_0000_0011_1110_0000)
+puts lookup(from_objd("e1 6b 62 f8"))
+#puts lookup(0b11111001010000000000110100100010)
