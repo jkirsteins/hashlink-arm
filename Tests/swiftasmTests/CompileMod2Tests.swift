@@ -665,6 +665,8 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testStaticClosure() throws {
+        XCTFail("This test is flaky.")
+        
         typealias _JitFunc =  (@convention(c) (Int32, Int32) -> (Int32))
         
         try _compileAndLinkWithDeps(
