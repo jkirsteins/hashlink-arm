@@ -274,4 +274,10 @@ struct LibHl {
     static func hl_throw(_ p: UnsafePointer<vdynamic>) -> () {
         _hl_throw(.init(p))
     }
+    
+    // HL_PRIM hl_obj_field *hl_obj_field_fetch( hl_type *t, int fid ) {
+    static let _hl_obj_field_fetch: (@convention(c) (OpaquePointer, Int32)->(OpaquePointer)) = { load("hl_obj_field_fetch") }()
+    static func hl_obj_field_fetch(_ t: UnsafePointer<HLType_CCompat>, _ fid: Int32) -> (UnsafePointer<HLObjField_CCompat>) {
+        .init(_hl_obj_field_fetch(.init(t), fid))
+    }
 }

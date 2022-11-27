@@ -119,8 +119,12 @@ extension HLType {
         case .bytes: self = .bytes
         case .array: self = .array
         case .null: self = .null(HLTypeNullData(type: .type(fromUnsafe: c.pointee.tparam)))
-        case .obj: self = .obj(.fromPointer(c.pointee.obj))
-        case .struct: self = .struct(.fromPointer(c.pointee.obj))
+        case .obj:
+            //self = .obj(.fromPointer(c.pointee.obj))
+            fatalError("deprecated")
+        case .struct:
+//            self = .struct(.fromPointer(c.pointee.obj))
+            fatalError("deprecated")
         case .bool: self = .bool
         
         case .method: self = .method(HLTypeFun_Depr(c.pointee.fun.pointee))

@@ -58,7 +58,7 @@ class CCompatWriter_HLTypeObj {
             fieldsPtr: .init(fieldsPtr.baseAddress!),
             protoPtr: nil,
             bindingsPtr: nil,
-            globalValue: -1,
+            globalValue: .init(bitPattern: -1)!,
             moduleContext: nil,
             _rtDontAccess: nil))
     }

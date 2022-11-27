@@ -36,35 +36,212 @@ class RealHLTestCase : XCTestCase {
 final class CompileMod2Tests: RealHLTestCase {
     
     override var HL_FILE: String { "mod2" }
+    
+    func extractDeps(fix: RefFun, ignore: Set<RefFun> = Set(), depHints: [RefFun] = []) throws -> Set<RefFun> {
+        var result: Set<RefFun> = Set([fix] + depHints)
+        let f = try ctx.getCompilable(findex: fix)
         
-    func _compileDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), _ ixs: [RefFun]) throws -> CpuOpBuffer {
-        let compiler = try sut(strip: strip)
-        for fix in ixs {
-            try compiler.compile(findex: fix, into: mem)
+        guard !ignore.contains(fix) else {
+            // already processed
+            return []
         }
-        return mem
+        
+        guard let f = f else {
+            // not a compilable
+            return Set()
+        }
+        
+        for op in f.ops {
+            switch(op) {
+            case .OCall1(_, let depFun, _):
+                fallthrough
+            case .OCall2(_, let depFun, _, _):
+                fallthrough
+            case .OCall3(_, let depFun, _, _, _):
+                fallthrough
+            case .OCall4(_, let depFun, _, _, _, _):
+                fallthrough
+            case .OCallN(_, let depFun, _):
+                fallthrough
+            case .OCall0(_, let depFun):
+                var realIgnore = ignore.union(Set(result))
+                print("\(fix) calls \(depFun)")
+                result = result.union(try extractDeps(fix: depFun, ignore: realIgnore))
+            default:
+                break
+            }
+        }
+        return result
     }
     
-    func _compileAndLink(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), _ ixs: [RefFun], _ callback: (UnsafeMutableRawPointer) throws->()) throws {
-        let buff = try self._compileDeps(strip: strip, ixs)
+    /// Finds the function index assuming the (HLFunction)->field.name is set
+    func _findFindex(name: String) -> RefFun? {
+        for rawIndex in (0..<ctx.nfunctions) {
+            guard let f = ctx.mainContext.pointee.code?.pointee.functions.advanced(by: Int(rawIndex)) else {
+                continue
+            }
+            guard (f.pointee.fieldName?.stringValue == name) else {
+                continue
+            }
+            
+            guard let fix = ctx.mainContext.pointee.m?.pointee.functions_indexes.advanced(by: Int(rawIndex)).pointee else {
+                continue
+            }
+            
+            return RefFun(fix)
+        }
+        
+        return nil
+    }
+    
+    func _findFindex_fieldNameUnset(className: String, name: String, isStatic: Bool) throws -> RefFun? {
+        if isStatic {
+            return try _findStaticFindex_fieldNameUnset(className: className, name: name)
+        } else {
+            return try _findInstanceFindex_fieldNameUnset(className: className, name: name)
+        }
+    }
+    
+    /// Finds the static function index
+    func _findStaticFindex_fieldNameUnset(className: String, name: String) throws -> RefFun? {
+        var mainGlobalType: UnsafePointer<HLType_CCompat>? = nil
+        
+        for typeIx in (0..<ctx.ntypes) {
+            let t = try ctx.getType(Int(typeIx))
+            guard let classNameCandidate = t.objProvider?.nameProvider.stringValue, classNameCandidate == className else {
+                continue
+            }
+            
+            let hlType: UnsafePointer<HLType_CCompat> = .init(OpaquePointer(t.ccompatAddress))
+            let gPtr = hlType.pointee.obj.pointee.globalValue
+            
+            for gix in (0..<ctx.nglobals) {
+                guard let gResolvedIndex = ctx.mainContext.pointee.m?.pointee.globals_indexes?.advanced(by: Int(gix)).pointee else {
+                    continue
+                }
+            
+                guard let cand = ctx.mainContext.pointee.m?.pointee.globals_data?.advanced(by: Int(gResolvedIndex)) else {
+                    continue
+                }
+                if (Int(bitPattern: cand) == Int(bitPattern: gPtr)) {
+                    print("[main got it at \(gResolvedIndex) @ \(gix)")
+                    
+                    guard let mainGlobalTypeCandidate = ctx.mainContext.pointee.code?.pointee.globals.advanced(by: Int(gix)).pointee else {
+                        continue
+                    }
+                    
+                    mainGlobalType = mainGlobalTypeCandidate
+                    break
+                }
+            }
+            guard mainGlobalType == nil else {
+                break
+            }
+        }
+        
+        guard let mainGlobalType = mainGlobalType else {
+            fatalError("Could not locate main global type")
+        }
+        
+        for bindingIx in 0..<mainGlobalType.pointee.obj.pointee.nbindings {
+            guard let bindingBase = mainGlobalType.pointee.obj.pointee.bindingsPtr?.advanced(by: Int(bindingIx*2)) else {
+                continue
+            }
+            
+            let fid = bindingBase.pointee
+            let mid = bindingBase.advanced(by: 1).pointee
+            
+            let objField = LibHl.hl_obj_field_fetch(mainGlobalType, fid)
+            print("Field", objField.pointee.nameProvider.stringValue)
+            guard objField.pointee.nameProvider.stringValue == name else {
+                continue
+            }
+            
+            return RefFun(mid)
+        }
+        
+        return nil
+    }
+    
+    /// Finds the instance function index
+    func _findInstanceFindex_fieldNameUnset(className: String, name: String) throws -> RefFun? {
+        var mainGlobalType: UnsafePointer<HLType_CCompat>? = nil
+        
+        for typeIx in (0..<ctx.ntypes) {
+            let t = try ctx.getType(Int(typeIx))
+            guard let classNameCandidate = t.objProvider?.nameProvider.stringValue, classNameCandidate == className else {
+                continue
+            }
+            
+            mainGlobalType = .init(OpaquePointer(t.ccompatAddress))
+        }
+        
+        guard let mainGlobalType = mainGlobalType else {
+            fatalError("Could not locate main global type")
+        }
+        
+        for protoIx in 0..<mainGlobalType.pointee.obj.pointee.nproto {
+            guard let proto = mainGlobalType.pointee.obj.pointee.protoPtr?.advanced(by: Int(protoIx)) else {
+                continue
+            }
+            guard proto.pointee.namePtr.stringValue == name else {
+                continue
+            }
+            
+            return RefFun(proto.pointee.findex)
+        }
+        
+        return nil
+    }
+    
+    func _compileDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), fqname: String, depHints: [RefFun] = []) throws -> (RefFun, CpuOpBuffer) {
+        
+        var components = fqname.components(separatedBy: "#")
+        let isStatic: Bool
+        if components.count == 2 {
+            isStatic = false
+        } else {
+            components = fqname.components(separatedBy: ".")
+            guard components.count == 2 else {
+                throw TestError.unexpected("Invalid fully qualified name \(fqname) (must be separated by # or .)")
+            }
+            isStatic = true
+        }
+        
+        let className = components[0]
+        let funcName = components[1]
+        
+        
+        guard let fix = try _findFindex_fieldNameUnset(className: className, name: funcName, isStatic: isStatic) else {
+            throw TestError.unexpected("Function \(fqname) not found")
+        }
+        
+        let compiler = try sut(strip: strip)
+        let deps = try extractDeps(fix: fix, depHints: depHints)
+        
+        print("Function \(fqname)@\(fix) has these dependencies: \(deps)")
+        for depFix in deps {
+            try compiler.compile(findex: depFix, into: mem)
+        }
+        return (fix, mem)
+    }
+    
+    func _compileAndLinkWithDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), name: String, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
+        let (fix, buff) = try self._compileDeps(strip: strip, fqname: name, depHints: depHints)
         let mapper = BufferMapper(ctx: self.ctx, buffer: buff)
         let mem = try mapper.getMemory()
         
-        try callback(mem)
+        try callback(fix, mem)
         
         try mapper.freeMemory()
     }
     
     func testCompile__testGetSetField() throws {
-        let sutFix = 56
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                sutFix,
-                27
-            ]
+            name: "Main.testGetSetField"
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: (@convention(c) (Int32) -> Int32)) in
@@ -74,16 +251,13 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
 
-    func testCompile__testGetSetArray__32() throws {
+    func testCompile__testGetArrayInt32() throws {
         typealias _JitFunc = (@convention(c) (Int32, Int64, Int32) -> Int64)
-        let sutFix = 51
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                sutFix
-            ]
+            name: "Main.testGetArrayInt32"
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -95,14 +269,11 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testGetSetArray__64hl() throws {
         typealias _JitFunc = (@convention(c) (Int32, Int64, Int32) -> Int64)
-        let sutFix = 55
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                sutFix
-            ]
+            name: "Main.testGetArrayInt64__hl"
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -127,19 +298,12 @@ final class CompileMod2Tests: RealHLTestCase {
             high: Int32(truncatingIfNeeded: (int64In >> 32)),
             low: Int32(truncatingIfNeeded: int64In)
         )
-        
-        let sutFix = 52
-        
-        try _compileAndLink(
+                
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                // deps
-                54, 27, 53,
-                // function under test
-                sutFix
-            ]
+            name: "Main.testGetArrayInt64__haxe"
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -157,14 +321,11 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testArrayLength() throws {
         typealias _JitFunc = (@convention(c) (Int32) -> Int32)
-        let sutFix = 49
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                sutFix
-            ]
+            name: "Main.testArrayLength"
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -182,14 +343,11 @@ final class CompileMod2Tests: RealHLTestCase {
         }
         
         typealias _JitFunc = (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer) -> Int32)
-        let sutFix = 5
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                sutFix
-            ]
+            name: "String#indexOf"
         ) {
-            mem in
+            sutFix, mem in
             
             let f = "First String"
             let s = "not_found"
@@ -202,7 +360,13 @@ final class CompileMod2Tests: RealHLTestCase {
             _ = fstrPtr.initialize(from: fstr)
             _ = sstrPtr.initialize(from: sstr)
             
-            let indexOfType = try ctx.getType(181)
+            guard let funIndex = ctx.mainContext.pointee.m?.pointee.functions_indexes.advanced(by: sutFix).pointee else {
+                fatalError("No real funIndex for \(sutFix)")
+            }
+            guard let indexOfType = ctx.mainContext.pointee.code?.pointee.functions.advanced(by: Int(funIndex)).pointee.typePtr else {
+                fatalError("Can't lookup function type")
+            }
+            
             let nullType = indexOfType.funProvider!.argsProvider[2] as! UnsafePointer<HLType_CCompat>
             
             
@@ -233,16 +397,11 @@ final class CompileMod2Tests: RealHLTestCase {
     // MARK: Test traps
     func testCompile__testTrap() throws {
         typealias _JitFunc = (@convention(c) () -> Int32)
-        let sutFix = 232
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                sutFix,
-                
-                240, 346, 5
-            ]
+            name: "Main.testTrap"
         ) {
-            mem in
+            sutFix, mem in
             
             let c = try ctx.getCallable(findex: sutFix)
             let entrypoint = unsafeBitCast(c!.address.value, to: _JitFunc.self)
@@ -256,16 +415,11 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testTrapConditional() throws {
         typealias _JitFunc = (@convention(c) (Bool) -> Int32)
-        let sutFix = 241
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                sutFix,
-                
-                240, 346, 5
-            ]
+            name: "Main.testTrapConditional"
         ) {
-            mem in
+            sutFix, mem in
             
             let c = try ctx.getCallable(findex: sutFix)
             let entrypoint = unsafeBitCast(c!.address.value, to: _JitFunc.self)
@@ -289,16 +443,11 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testTrapContextEnding() throws {
         typealias _JitFunc = (@convention(c) (Bool) -> Int32)
-        let sutFix = 242
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                sutFix,
-                
-                240, 346, 5
-            ]
+            name: "Main.testTrapContextEnding"
         ) {
-            mem in
+            sutFix, mem in
             
             let c = try ctx.getCallable(findex: sutFix)
             let entrypoint = unsafeBitCast(c!.address.value, to: _JitFunc.self)
@@ -314,26 +463,15 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
-    /// Test parsing a type that refers to itself in a field (See `__previousException`)
-    func testParseRecursiveType() throws {
-        let excT = try ctx.getType(30)
-        
-        XCTAssertEqual(excT.objProvider?.nameProvider.stringValue, "haxe.Exception")
-        XCTAssertNotNil(excT.ccompatAddress)
-    }
-    
     ///
     func testCompile_testGetUI16() throws {
         typealias _JitFunc = (@convention(c) (Int32) -> Int32)
-        let sutFix = 36
-        try _compileAndLink(
+        
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                33, 44, 34, 3, 41, 340, 47, 14, 296, 45, 342, 5,
-                sutFix
-            ]
+            name: "Main.testGetUI16"
         ) {
-            mem in
+            sutFix, mem in
             
             let callable = try ctx.getCallable(findex: sutFix)
             let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
@@ -355,30 +493,26 @@ final class CompileMod2Tests: RealHLTestCase {
     /// This tests proper GetI8 behaviour in the wild.
     func testCompile__testGetUI8() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> Int32)
-        let sutFix = 31
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                33, 34, 44, 3, 41, 47, 340, 296, 14, 45, 342, 5,
-                sutFix
-            ]
+            name: "Main.testGetUI8"
         ) {
-            mem in
+            sutFix, mem in
             
             let callable = try ctx.getCallable(findex: sutFix)
             let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
             
             
-//            var res = entrypoint(0)
-//            XCTAssertEqual(res, 0x11)
-//
-//            res = entrypoint(1)
-//            XCTAssertEqual(res, 0x12)
-//
-//            res = entrypoint(2)
-//            XCTAssertEqual(res, 0x13)
+            var res = entrypoint(0)
+            XCTAssertEqual(res, 0x11)
+
+            res = entrypoint(1)
+            XCTAssertEqual(res, 0x12)
+
+            res = entrypoint(2)
+            XCTAssertEqual(res, 0x13)
             
-            var res = entrypoint(3)
+            res = entrypoint(3)
             XCTAssertEqual(res, 0x14)
         }
     }
@@ -393,21 +527,19 @@ final class CompileMod2Tests: RealHLTestCase {
         }
         
         typealias _JitFunc =  (@convention(c) (OpaquePointer, Int32) -> OpaquePointer)
-        let sutFix = 3
-        try _compileAndLink(
+        
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                sutFix
-            ]
+            name: "String#charCodeAt"
         ) {
-            mem in
+            sutFix, mem in
             
             let strType = try ctx.getType(13)   // string type
             
             let str = "11121314"
             let data = str.data(using: .utf16LittleEndian)!
             let dataPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: data.count)
-            dataPtr.initialize(from: data)
+            _ = dataPtr.initialize(from: data)
             defer { dataPtr.deallocate() }
             
             print("---")
@@ -462,15 +594,12 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testGetUI8_2() throws {
         typealias _JitFunc =  (@convention(c) () -> Int32)
-        let sutFix = 35
-        try _compileAndLink(
+        
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                32, 33, 44, 34, 3, 41, 47, 340, 14, 45, 296, 342, 5,
-                sutFix
-            ]
+            name: "Main.testGetUI8_2"
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -482,17 +611,12 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testTrace() throws {
         typealias _JitFunc =  (@convention(c) () -> ())
-        let sutFix = 58
-        try _compileAndLink(
+        
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                // deps
-                
-                // function under test
-                sutFix
-            ]
+            name: "Main.testTrace"
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -504,19 +628,13 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testFieldClosure() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
-        let sutFix = 255
-        try _compileAndLink(
+        
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                // NOTE: function order is important for coverage
-                28, // this references OInstanceClosure before the dependency is compiled
-                
-                sutFix,
-                // deps
-                30
-            ]
+            name: "Main.testFieldClosure",
+            depHints: [30]
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -528,19 +646,13 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testStaticClosure() throws {
         typealias _JitFunc =  (@convention(c) (Int32, Int32) -> (Int32))
-        let sutFix = 252
-        try _compileAndLink(
+        
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                // NOTE: function order is important for coverage
-                // sutFix goes first, which contains OStaticClosure from
-                // a dependency that must not be compiled yet.
-                sutFix,
-                
-                253
-            ]
+            name: "Main.testStaticClosure",
+            depHints: [259]
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -552,15 +664,13 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testInstanceMethod() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
-        let sutFix = 254
-        try _compileAndLink(
+        
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                29, 28, 30,
-                sutFix
-            ]
+            name: "Main.testInstanceMethod",
+            depHints: [30]
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -572,19 +682,13 @@ final class CompileMod2Tests: RealHLTestCase {
     
     /// This tests fetching global values
     func testCompile__testGlobal() throws {
-        let fix = 57
         
         typealias _JitFunc =  (@convention(c) () -> UnsafeRawPointer)
-        try _compileAndLink(
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                // deps
-                // ...
-                // entrypoint
-                fix
-            ]
+            name: "Main.testGlobal"
         ) {
-            mem in
+            sutFix, mem in
             
             struct _String {
                 let t: UnsafePointer<HLType_CCompat>
@@ -592,7 +696,7 @@ final class CompileMod2Tests: RealHLTestCase {
                 let length: Int32
             }
             
-            try mem.jit(ctx: ctx, fix: fix) {
+            try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
                 let x = entrypoint()
@@ -609,15 +713,12 @@ final class CompileMod2Tests: RealHLTestCase {
     /// Test field access.
     func testCompile__testFieldAccess() throws {
         typealias _JitFunc =  (@convention(c) () -> Int32)
-        let sutFix = 48
-        try _compileAndLink(
+        
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                27,
-                sutFix
-            ]
+            name: "Main.testFieldAccess"
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
@@ -629,15 +730,12 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testEnum() throws {
         typealias _JitFunc =  (@convention(c) () -> Int32)
-        let sutFix = 256
-        try _compileAndLink(
+        
+        try _compileAndLinkWithDeps(
             strip: false,
-            [
-                292,
-                sutFix
-            ]
+            name: "Main.testEnum"
         ) {
-            mem in
+            sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in

@@ -124,6 +124,12 @@ class CCompatJitContext : JitContext2 {
         }
     }
     
+    var nglobals: UInt32  {
+        try! withModule {
+            $0.pointee.code.pointee.nglobals
+        }
+    }
+    
     var nfunctions: UInt32  {
         try! withModule {
             $0.pointee.code.pointee.nfunctions

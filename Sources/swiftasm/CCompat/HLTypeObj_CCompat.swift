@@ -1,52 +1,49 @@
 fileprivate var cache: [Int:HLTypeObj] = [:]
 
 extension HLTypeObj {
-    static func fromPointer(_ ccompat: UnsafePointer<HLTypeObj_CCompat>) -> HLTypeObj {
-        let addr = Int(bitPattern: ccompat)
-        guard let result = cache[addr] else {
-            let inst = HLTypeObj(unsafe: ccompat.pointee)
-            cache[addr] = inst
-            return inst
-        }
-        
-        return result
-    }
+//    static func fromPointer(_ ccompat: UnsafePointer<HLTypeObj_CCompat>) -> HLTypeObj {
+//        let addr = Int(bitPattern: ccompat)
+//        guard let result = cache[addr] else {
+//            let inst = HLTypeObj(unsafe: ccompat.pointee)
+//            cache[addr] = inst
+//            return inst
+//        }
+//
+//        return result
+//    }
     
-    fileprivate convenience init(unsafe ccompat: HLTypeObj_CCompat) {
-        let name = Resolvable(ccompat.name, memory: ccompat.namePtr)
-        let superType: Resolvable<HLType>?
-        let global: Int32?
-        
-        if let ptr = ccompat.superPtr {
-            superType = .type(fromUnsafe: ptr)
-            
-        } else {
-            superType = nil
-        }
-        
-        if ccompat.globalValue != 0 {
-            global = ccompat.globalValue - 1
-        } else {
-            global = nil
-        }
-        
-        let fields = ccompat.fields.enumerated().map { ix, item in
-            let ptr = ccompat.fieldsPtr!.advanced(by: ix)
-            return Resolvable.objField(fromUnsafe: ptr)
-        }
-        let proto = ccompat.proto.enumerated().map { ix, item in
-            let ptr = ccompat.protoPtr!.advanced(by: ix)
-            return Resolvable.objProto(fromUnsafe: ptr)
-        }
-        
-        let bindings = ccompat.bindings.chunked(into: 2).map {
-            guard $0.count == 2 else {
-                fatalError("Odd number of binding values")
-            }
-            return HLTypeBinding(fieldRefIx: $0[0], functionIx: $0[1])
-        }
-        self.init(name: name, superType: superType, global: global, fields: fields, proto: proto, bindings: bindings)
-    }
+//    fileprivate convenience init(unsafe ccompat: HLTypeObj_CCompat) {
+//        fatalError("unused")
+//        let name = Resolvable(ccompat.name, memory: ccompat.namePtr)
+//        let superType: Resolvable<HLType>?
+//        let global: Int32?
+//
+//        if let ptr = ccompat.superPtr {
+//            superType = .type(fromUnsafe: ptr)
+//
+//        } else {
+//            superType = nil
+//        }
+//
+//        global = .init(OpaquePointer(ccompat.globalValue))
+//
+//        let fields = ccompat.fields.enumerated().map { ix, item in
+//            let ptr = ccompat.fieldsPtr!.advanced(by: ix)
+//            return Resolvable.objField(fromUnsafe: ptr)
+//        }
+//        let proto = ccompat.proto.enumerated().map { ix, item in
+//            let ptr = ccompat.protoPtr!.advanced(by: ix)
+//            return Resolvable.objProto(fromUnsafe: ptr)
+//        }
+//
+//        let bindings = ccompat.bindings.chunked(into: 2).map {
+//            guard $0.count == 2 else {
+//                fatalError("Odd number of binding values")
+//            }
+//            return HLTypeBinding(fieldRefIx: $0[0], functionIx: $0[1])
+//        }
+//        self.init(name: name, superType: superType, global: global, fields: fields, proto: proto, bindings: bindings)
+//    }
 }
 
 struct HLTypeObj_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
@@ -65,8 +62,13 @@ struct HLTypeObj_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
     // int *bindings;
     let bindingsPtr: UnsafePointer<Int32>?
     
-    // void **global_value;
-    let globalValue: Int32
+    /// This is set to global index when loading .hl file, and then in
+    /// `hl_module_init_indexes` it is remapped to point to the area in
+    /// memory for global data (under `m->globals_data` advanced by `global index`)
+    ///
+    /// C signature:
+    ///     void **global_value;
+    let globalValue: UnsafePointer<HLType_CCompat>
     
     // hl_module_context *m;
     let moduleContext: UnsafeMutableRawPointer?

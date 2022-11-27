@@ -31,7 +31,11 @@ struct HLFunction_CCompat : Equatable, Hashable {
     let objPtr: UnsafePointer<HLType_CCompat>?
     let unionPtr: UnsafeRawPointer?
 
-    // following computed 
+    // following computed
+    
+    var fieldName: UnsafePointer<CChar16>? {
+        .init(OpaquePointer(unionPtr))
+    }
 
     var cOps: [HLOpCode_CCompat] {
         let buf = UnsafeBufferPointer(start: opsPtr, count: Int(nops))
