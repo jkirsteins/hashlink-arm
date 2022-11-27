@@ -6,6 +6,8 @@ class CpuOpBuffer {
     var position: Int { ops.count }
     var byteSize: ByteCount = 0
     
+    static let logger = LoggerFactory.create(CpuOpBuffer.self)
+    
     @discardableResult func align(_ to: Int64) -> CpuOpBuffer {
         let origSize = self.byteSize
         var targetSize = origSize
@@ -35,12 +37,27 @@ class CpuOpBuffer {
     @discardableResult func _internalAppend(_ instructions: [any CpuOp]) throws
         -> CpuOpBuffer
     {
+        // simple smoke test to help find invalid operations when they are inserted,
+        // as opposed to later (when we lose context of where they originate from)
         for op in instructions {
             switch(op) {
-            case M1Op.ldr, PseudoOp.ldrVreg:
-                try op.emit()
-            default:
+            case M1Op.blr, M1Op.b, M1Op.bl, M1Op.b_ge, M1Op.b_gt, M1Op.b_le, M1Op.b_lt, M1Op.b_v2, M1Op.br, M1Op.b_eq, M1Op.b_ne:
+                // Don't validate jumps as they might not be emittable until addresses are known
                 break
+            case PseudoOp.deferred:
+                // deferred likely contains a jump, so skip validation for now
+                break
+            case PseudoOp.mov:
+                // can contain a function address (which might be unavailable at this time)
+                break
+            default:
+                do {
+                    _ = try op.emit()
+                } catch {
+                    Self.logger.error("Error emitting \(op.debugDescription): \(String(describing: error))")
+                    throw error
+                }
+            
             }
         }
     
