@@ -43,24 +43,24 @@ extension OpBuilder
 }
 
 // TODO: wrong, fix w Shift64_Real
-public enum Shift64: Int, CustomDebugStringConvertible {
+public enum Shift64: Int, CustomAsmStringConvertible {
     case _0 = 0
     case _16 = 16
     case _32 = 32
     case _48 = 48
     
-    public var debugDescription: String {
+    public var asmDescription: String {
         "\(self.rawValue)"
     }
 }
 
 typealias ShiftAmount = UInt8
 
-enum ExtendOp32 : CustomDebugStringConvertible {
+enum ExtendOp32 : CustomAsmStringConvertible {
     case sxtw(ShiftAmount)  // ExtendSigned32To64
     case uxtw(ShiftAmount)  // ExtendUnsigned32To64
     
-    var debugDescription: String {
+    var asmDescription: String {
         switch(self) {
         case .sxtw(let shift):
             return "sxtw #\(shift)"
@@ -70,10 +70,10 @@ enum ExtendOp32 : CustomDebugStringConvertible {
     }
 }
 
-enum ExtendOp64 : CustomDebugStringConvertible {
+enum ExtendOp64 : CustomAsmStringConvertible {
     case sxtx(ShiftAmount)  // ExtendSigned64To64
     
-    var debugDescription: String {
+    var asmDescription: String {
         switch(self) {
         case .sxtx(let shift):
             return "sxtx #\(shift)"
@@ -81,13 +81,13 @@ enum ExtendOp64 : CustomDebugStringConvertible {
     }
 }
 
-public enum Shift64_Real : CustomDebugStringConvertible {
+public enum Shift64_Real : CustomAsmStringConvertible {
     case lsl(Int) 
     case lsr(Int) 
     case asr(Int) 
     case ror(Int)
     
-    public var debugDescription: String {
+    public var asmDescription: String {
         switch(self) {
         case .lsl(let v): return "lsl #\(v)"
         case .lsr(let v): return "lsr #\(v)"
@@ -98,11 +98,11 @@ public enum Shift64_Real : CustomDebugStringConvertible {
 }
 
 
-public enum Shift32: Int, CustomDebugStringConvertible {
+public enum Shift32: Int, CustomAsmStringConvertible {
     case _0 = 0
     case _16 = 16
     
-    public var debugDescription: String {
+    public var asmDescription: String {
         "\(self.rawValue)"
     }
 }
@@ -315,7 +315,7 @@ fileprivate func getIxModeDebugDesc(_ r: any RegisterI, _ immVal: Int64, _ ix: I
     }
 }
 
-enum Offset : CustomDebugStringConvertible {
+enum Offset : CustomAsmStringConvertible {
 
     // Register base + immediate offset
     // Not really an immediate, but more like an address
@@ -334,7 +334,7 @@ enum Offset : CustomDebugStringConvertible {
     case reg64shift(Register64, Register64.Shift?)
     case reg32(Register32, Register32.ExtendOp, IndexingMode?)
     
-    var debugDescription: String {
+    var asmDescription: String {
         switch(self) {
         
         case .imm64(let Rt, let immVal, let ixMode):
@@ -342,13 +342,13 @@ enum Offset : CustomDebugStringConvertible {
         case .reg(let Rt, .r64shift(let Rn, .lsl(0))):
             return "[\(Rt), \(Rn)]"
         case .reg(let Rt, .r64shift(let Rn, let shift)):
-            return "[\(Rt), \(Rn), \(shift)]"
+            return "[\(Rt), \(Rn), \(shift.asmDescription)]"
         case .reg(let Rt, nil):
             return "[\(Rt)]"
-        case .reg(let Rt, .r64ext(let Rn as any RegisterI, let ext as CustomDebugStringConvertible)):
+        case .reg(let Rt, .r64ext(let Rn as any RegisterI, let ext as CustomAsmStringConvertible)):
             fallthrough
-        case .reg(let Rt, .r32ext(let Rn as any RegisterI, let ext as CustomDebugStringConvertible)):
-            return "[\(Rt), \(Rn), \(ext)]"
+        case .reg(let Rt, .r32ext(let Rn as any RegisterI, let ext as CustomAsmStringConvertible)):
+            return "[\(Rt), \(Rn), \(ext.asmDescription)]"
         case .reg(let Rt, .imm(let immVal, let ixMode)):
             return getIxModeDebugDesc(Rt, immVal, ixMode)
         case .immediate6(let imm6):
@@ -805,9 +805,33 @@ public class EmitterM1 {
             }
             let encoded = mask | offset.shiftedLeft(12) | opc | regs | size
             return returnAsArray(encoded)
+        case .ldr(let Rt as any RegisterI, .reg(let Rn as Register64, .r64shift(let Rm, let shift))):
+            //                   S          Rm    opt S    Rn    Rt
+            let mask: Int64 = 0b10111000011_00000_000_0_10_00000_00000
+            
+            let regs = encodeRegs(Rd: Rt, Rn: Rn, Rm: Rm)
+            let s = sizeMask(is64: Rt.is64, offset: 30)
+            let optUnshifted: Int64
+            let shiftValUnshifted: Int64
+            switch(shift) {
+            case .lsl(let shiftAmount) where shiftAmount == 0 || shiftAmount == 2:
+                optUnshifted = 0b011
+                shiftValUnshifted = shiftAmount == 0 ? 0 : 2
+            case .lsl:
+                fatalError("lsl amount should be #0 or #2")
+//                010    UXTW
+//                011    LSL
+//                110    SXTW
+//                111    SXTX
+            default:
+                fatalError("Not implemented")
+            }
+            let encoded = mask | regs | s | (shiftValUnshifted << 12) | (optUnshifted << 13)
+            return returnAsArray(encoded)
         case .ldr(let Rt as any RegisterI, .reg(let Rn as Register64, .r64ext(let Rm, let ext))):
             //                   S          Rm    opt S    Rn    Rt
             let mask: Int64 = 0b10111000011_00000_000_0_10_00000_00000
+            
             let regs = encodeRegs(Rd: Rt, Rn: Rn, Rm: Rm)
             let s = sizeMask(is64: Rt.is64, offset: 30)
             let optUnshifted: Int64
@@ -818,6 +842,7 @@ public class EmitterM1 {
                 shiftValUnshifted = shiftAmount == 0 ? 0 : 1
             case .sxtx:
                 fatalError("sxtx amount should be #0 or #3")
+            
 //                010    UXTW
 //                011    LSL
 //                110    SXTW

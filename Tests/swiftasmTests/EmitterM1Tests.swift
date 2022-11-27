@@ -28,10 +28,10 @@ extension [UInt8] {
 
 extension XCTestCase {
     func XCTAssertM1OpDesc(_ op: M1Op, _ dd: String) {
-        if op.debugDescription != dd {
-            print("\(op) description: \n  expected: \(dd)\n  actual:   \(op.debugDescription)")
+        if op.asmDescription != dd {
+            print("\(op) description: \n  expected: \(dd)\n  actual:   \(op.asmDescription)")
         }
-        XCTAssertEqual(dd, op.debugDescription)
+        XCTAssertEqual(dd, op.asmDescription)
     }
     func XCTAssertM1OpBytes(_ op: M1Op, _ expected: UInt8...) throws {
         try XCTAssertM1OpBytes(op, expected)
@@ -40,13 +40,13 @@ extension XCTestCase {
         let actual = try EmitterM1.emit(for: op)
         
         if actual != expected {
-            print("\(op.debugDescription): \n  expected: \(expected.b16)\t\(expected.b2)\n  actual:   \(actual.b16)\t\(actual.b2)")
+            print("\(op.asmDescription): \n  expected: \(expected.b16)\t\(expected.b2)\n  actual:   \(actual.b16)\t\(actual.b2)")
         }
         XCTAssertEqual(actual, expected)
     }
     func XCTAssertM1Op(_ op: M1Op, _ desc: String, _ expected: UInt8...) throws {
         XCTAssertM1OpDesc(op, desc)
-        try try XCTAssertM1OpBytes(op, expected)
+        try XCTAssertM1OpBytes(op, expected)
     }
 }
 
@@ -479,14 +479,10 @@ final class EmitterM1Tests: XCTestCase {
         try XCTAssertM1OpBytes(.b_lt(0), 0x0b, 0x00, 0x00, 0x54)
     }
     func testCmp() throws {
-        XCTAssertEqual(
+        try XCTAssertM1Op(
+            M1Op.cmp(X.x0, X.x1),
             "cmp x0, x1",
-            M1Op.cmp(X.x0, X.x1).debugDescription
-        )
-        
-        XCTAssertEqual(
-            try EmitterM1.emit(for: .cmp(X.x0, X.x1)),
-            [0x1f, 0x00, 0x01, 0xeb]
+            0x1f, 0x00, 0x01, 0xeb
         )
     }
     
@@ -503,12 +499,12 @@ final class EmitterM1Tests: XCTestCase {
     }
     
     func testSubImm12() throws {
-        XCTAssertEqual("sub sp, sp, #16", M1Op.subImm12(Register64.sp, Register64.sp, 16).debugDescription)
+        XCTAssertEqual("sub sp, sp, #16", M1Op.subImm12(Register64.sp, Register64.sp, 16).asmDescription)
         XCTAssertEqual("sub sp, sp, #16",
                        M1Op.subImm12(Register64.sp, Register64.sp,
-                                Imm12Lsl12(16)).debugDescription)
-        XCTAssertEqual("sub sp, sp, #16, lsl 12", M1Op.subImm12(Register64.sp, Register64.sp, try Imm12Lsl12(16, lsl: ._12)).debugDescription)
-        XCTAssertEqual("add sp, sp, #16", M1Op.subImm12(Register64.sp, Register64.sp, -16).debugDescription)
+                                Imm12Lsl12(16)).asmDescription)
+        XCTAssertEqual("sub sp, sp, #16, lsl 12", M1Op.subImm12(Register64.sp, Register64.sp, try Imm12Lsl12(16, lsl: ._12)).asmDescription)
+        XCTAssertEqual("add sp, sp, #16", M1Op.subImm12(Register64.sp, Register64.sp, -16).asmDescription)
         XCTAssertEqual(
             try EmitterM1.emit(for: .subImm12(X.sp, X.sp, 16)),
             [0xff, 0x43, 0x00, 0xd1]
@@ -528,9 +524,9 @@ final class EmitterM1Tests: XCTestCase {
     }
     
     func testAddImm12() throws {
-        XCTAssertEqual("add sp, sp, #16", M1Op.addImm12(X.sp, X.sp, 16).debugDescription)
-        XCTAssertEqual("add sp, sp, #16, lsl 12", M1Op.addImm12(X.sp, X.sp, try Imm12Lsl12(16, lsl: ._12)).debugDescription)
-        XCTAssertEqual("sub sp, sp, #16", M1Op.addImm12(X.sp, X.sp, -16).debugDescription)
+        XCTAssertEqual("add sp, sp, #16", M1Op.addImm12(X.sp, X.sp, 16).asmDescription)
+        XCTAssertEqual("add sp, sp, #16, lsl 12", M1Op.addImm12(X.sp, X.sp, try Imm12Lsl12(16, lsl: ._12)).asmDescription)
+        XCTAssertEqual("sub sp, sp, #16", M1Op.addImm12(X.sp, X.sp, -16).asmDescription)
         XCTAssertEqual(
             try EmitterM1.emit(for: .addImm12(X.sp, X.sp, -16)),
             [0xff, 0x43, 0x00, 0xd1]
@@ -874,6 +870,10 @@ final class EmitterM1Tests: XCTestCase {
     }
     
     func testLdr() throws {
+        try XCTAssertM1Op(
+            M1Op.ldr(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0)))),
+            "ldr w0, [x0, x1]",
+            0x00, 0x68, 0x61, 0xb8)
         XCTAssertEqual(
             try EmitterM1.emit(for: .ldr(Register32.w2, .reg64offset(.x1, 0, nil))),
             [0x22, 0x00, 0x40, 0xb9]

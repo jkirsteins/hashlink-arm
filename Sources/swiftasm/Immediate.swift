@@ -405,7 +405,7 @@ extension Int16: Immediate {
 }
 
 
-struct Imm12Lsl12 : Immediate, CustomDebugStringConvertible, ExpressibleByIntegerLiteral {
+struct Imm12Lsl12 : Immediate, CustomAsmStringConvertible, ExpressibleByIntegerLiteral {
     enum Lsl12 {
         case _0 
         case _12
@@ -417,7 +417,7 @@ struct Imm12Lsl12 : Immediate, CustomDebugStringConvertible, ExpressibleByIntege
     let imm: Immediate12
     let lsl: Lsl12
 
-    var debugDescription: String {
+    var asmDescription: String {
         if lsl == ._0 {
             return "#\(imm.immediate)"
         } else {

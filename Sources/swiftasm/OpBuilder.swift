@@ -113,10 +113,10 @@ class OpBuilder {
                         .replacingOccurrences(of: " ", with: ".")
                 }
                 else if ix == 0 {
-                    debugString = op.debugDescription
+                    debugString = op.asmDescription
                 }
                 else {
-                    debugString = "... \(op.debugDescription)"
+                    debugString = "... \(op.asmDescription)"
                 }
                 print(
                     strs.joined(separator: ", ")
@@ -153,7 +153,7 @@ class OpBuilder {
                         .replacingOccurrences(of: " ", with: ".")
                 }
                 else if ix == 0 {
-                    debugString = op.debugDescription
+                    debugString = op.asmDescription
                 }
                 else {
                     debugString = ""
@@ -184,7 +184,7 @@ class OpBuilder {
                         .replacingOccurrences(of: " ", with: ".")
                 }
                 else if ix == 0 {
-                    debugString = op.debugDescription
+                    debugString = op.asmDescription
                 }
                 else {
                     debugString = nil

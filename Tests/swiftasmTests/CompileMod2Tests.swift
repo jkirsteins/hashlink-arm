@@ -238,7 +238,7 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testGetSetField() throws {
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testGetSetField"
         ) {
             sutFix, mem in
@@ -254,7 +254,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile__testGetArrayInt32() throws {
         typealias _JitFunc = (@convention(c) (Int32, Int64, Int32) -> Int64)
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testGetArrayInt32"
         ) {
             sutFix, mem in
@@ -270,7 +270,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile__testGetSetArray__64hl() throws {
         typealias _JitFunc = (@convention(c) (Int32, Int64, Int32) -> Int64)
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testGetArrayInt64__hl"
         ) {
             sutFix, mem in
@@ -300,7 +300,7 @@ final class CompileMod2Tests: RealHLTestCase {
         )
                 
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testGetArrayInt64__haxe"
         ) {
             sutFix, mem in
@@ -322,7 +322,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile__testArrayLength() throws {
         typealias _JitFunc = (@convention(c) (Int32) -> Int32)
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testArrayLength"
         ) {
             sutFix, mem in
@@ -344,7 +344,7 @@ final class CompileMod2Tests: RealHLTestCase {
         
         typealias _JitFunc = (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer) -> Int32)
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "String#indexOf"
         ) {
             sutFix, mem in
@@ -416,7 +416,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile__testTrap() throws {
         typealias _JitFunc = (@convention(c) () -> Int32)
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testTrap"
         ) {
             sutFix, mem in
@@ -434,7 +434,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile__testTrapConditional() throws {
         typealias _JitFunc = (@convention(c) (Bool) -> Int32)
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testTrapConditional"
         ) {
             sutFix, mem in
@@ -462,7 +462,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile__testTrapContextEnding() throws {
         typealias _JitFunc = (@convention(c) (Bool) -> Int32)
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testTrapContextEnding"
         ) {
             sutFix, mem in
@@ -486,7 +486,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc = (@convention(c) (Int32) -> Int32)
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testGetUI16"
         ) {
             sutFix, mem in
@@ -512,7 +512,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile__testGetUI8() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> Int32)
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testGetUI8"
         ) {
             sutFix, mem in
@@ -547,7 +547,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (OpaquePointer, Int32) -> OpaquePointer)
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "String#charCodeAt"
         ) {
             sutFix, mem in
@@ -614,7 +614,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) () -> Int32)
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testGetUI8_2"
         ) {
             sutFix, mem in
@@ -628,10 +628,12 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testTrace() throws {
+        throw XCTSkip("testTrace not implemented")
+        
         typealias _JitFunc =  (@convention(c) () -> ())
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testTrace"
         ) {
             sutFix, mem in
@@ -648,7 +650,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testFieldClosure",
             depHints: [30]
         ) {
@@ -666,7 +668,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Int32, Int32) -> (Int32))
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testStaticClosure",
             depHints: [259]
         ) {
@@ -684,7 +686,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testInstanceMethod",
             depHints: [30]
         ) {
@@ -703,7 +705,7 @@ final class CompileMod2Tests: RealHLTestCase {
         
         typealias _JitFunc =  (@convention(c) () -> UnsafeRawPointer)
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testGlobal"
         ) {
             sutFix, mem in
@@ -733,7 +735,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) () -> Int32)
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testFieldAccess"
         ) {
             sutFix, mem in
@@ -750,7 +752,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) () -> Int32)
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testEnum"
         ) {
             sutFix, mem in

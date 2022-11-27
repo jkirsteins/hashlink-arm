@@ -54,7 +54,7 @@ class CpuOpBuffer {
                 do {
                     _ = try op.emit()
                 } catch {
-                    Self.logger.error("Error emitting \(op.debugDescription): \(String(describing: error))")
+                    Self.logger.error("Error emitting \(String(describing: op)): \(String(describing: error))")
                     throw error
                 }
             
@@ -94,10 +94,10 @@ class CpuOpBuffer {
                         .replacingOccurrences(of: " ", with: ".")
                 }
                 else if ix == 0 {
-                    debugString = op.debugDescription
+                    debugString = op.asmDescription
                 }
                 else {
-                    debugString = "... \(op.debugDescription)"
+                    debugString = "... \(op.asmDescription)"
                 }
                 print(
                     strs.joined(separator: ", ")

@@ -1,5 +1,10 @@
 typealias ByteCount = Int64
-protocol CpuOp : CustomDebugStringConvertible {
+
+protocol CustomAsmStringConvertible {
+    var asmDescription: String { get }
+}
+
+protocol CpuOp : CustomAsmStringConvertible {
     func emit() throws -> [UInt8]
     var size: ByteCount { get }
 }
@@ -86,20 +91,20 @@ enum M1Op : CpuOp {
     
     /// Should NOT use the final form, because
     /// the final form is worse at conveying intent.
-    var debugDescription: String {
+    var asmDescription: String {
         switch(self) {
         case .nop: return "nop"
         case .ret: return "ret"
         case .addImm12(let rt, let rn, let off) where off.imm.isNegative:
             // We're sure this fits
-            return M1Op.subImm12(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
+            return M1Op.subImm12(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).asmDescription
         case .subImm12(let rt, let rn, let off) where off.imm.isPositive:
-            return "sub \(rt), \(rn), \(off.debugDescription)"
+            return "sub \(rt), \(rn), \(off.asmDescription)"
         case .subImm12(let rt, let rn, let off):
             // We're sure this fits
-            return M1Op.addImm12(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).debugDescription
+            return M1Op.addImm12(rt, rn, try! Imm12Lsl12(off.imm.flippedSign, lsl: off.lsl)).asmDescription
         case .addImm12(let rt, let rn, let off):
-            return "add \(rt), \(rn), \(off.debugDescription)"
+            return "add \(rt), \(rn), \(off.asmDescription)"
         case .svc(let x): return "svc 0x\(String(x, radix: 16).leftPadding(toLength: 4, withPad: "0"))"
         case .str(let rt, .reg64offset(let rn, let offsetC, nil)):
             return "str \(rt), [\(rn), #\(offsetC)]"
@@ -142,7 +147,7 @@ enum M1Op : CpuOp {
         case .movk64(let rt, let val, nil):
             return "movk \(rt), #\(val)"
         case .movk64(let rt, let val, let shift) where shift != nil:
-            return "movk \(rt), #\(val), \(shift!)"
+            return "movk \(rt), #\(val), \(shift!.asmDescription)"
         case .stp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, .pre)):
             return "stp \(rt1), \(rt2), [\(rn), #\(offset)]!"
         case .stp((let rt1, let rt2), Offset.reg64offset(let rn, let offset, .post)):
@@ -223,21 +228,21 @@ enum M1Op : CpuOp {
             return "lsl \(Rd), \(Rn), \(Rm)"
         case .lslv(let Rd, let Rn, let Rm):
             return "lslv \(Rd), \(Rn), \(Rm)"
-        case .ldrh(let Rt, let val):
-            if case .imm64(_, let offv, _) = val, offv % 2 != 0 {
-                return M1Op.ldurh(Rt, val).debugDescription
+        case .ldrh(let Rt, let off):
+            if case .imm64(_, let offv, _) = off, offv % 2 != 0 {
+                return M1Op.ldurh(Rt, off).asmDescription
             }
-            return "ldrh \(Rt), \(val)"
-        case .ldrb(let Rt, let val):
-            return "ldrb \(Rt), \(val)"
+            return "ldrh \(Rt), \(off.asmDescription)"
+        case .ldrb(let Rt, let off):
+            return "ldrb \(Rt), \(off.asmDescription)"
         case .str(let Rt, let mod):
-            return "str \(Rt), \(mod)"
+            return "str \(Rt), \(mod.asmDescription)"
         case .stp(_, let mod):
             return "stp mod \(String(describing: mod)) NOT IMPLEMENTED"
         case .ldp(_, let mod):
             return "ldp mod \(String(describing: mod)) NOT IMPLEMENTED"
         case .ldr(let Rd, let mod):
-            return "ldr \(Rd), \(mod)"
+            return "ldr \(Rd), \(mod.asmDescription)"
         case .and(let Rd, let Rn, .imm(let imm, nil)):
             return "and \(Rd), \(Rn), #\(imm)"
         case .and(let Rd, let Rn, .r64shift(let Rm, .lsl(0))):
@@ -268,7 +273,7 @@ enum M1Op : CpuOp {
             if case .lsl(0) = shift {
                 return "sub \(Rd), \(Rn), \(Rm)"
             } else {
-                return "sub \(Rd), \(Rn), \(Rm), \(shift)"
+                return "sub \(Rd), \(Rn), \(Rm), \(shift.asmDescription)"
             }
         case .sub(_, _, .none):
             fallthrough
@@ -279,21 +284,21 @@ enum M1Op : CpuOp {
         case .sub(_, _, .some(.imm(_, _))):
             return "sub NOT IMPLEMENTED"
         case .strb(let Rd, let off):
-            return "strb \(Rd), \(off)"
+            return "strb \(Rd), \(off.asmDescription)"
         case .strh(let Rd, let off):
             if case .imm64(_, let offv, _) = off, offv % 2 != 0 {
-                return M1Op.sturh(Rd, off).debugDescription
+                return M1Op.sturh(Rd, off).asmDescription
             }
-            return "strh \(Rd), \(off)"
+            return "strh \(Rd), \(off.asmDescription)"
         case .sturh(let Rd, let off):
-            return "sturh \(Rd), \(off)"
+            return "sturh \(Rd), \(off.asmDescription)"
         case .ldurh(let Rd, let off):
-            return "ldurh \(Rd), \(off)"
+            return "ldurh \(Rd), \(off.asmDescription)"
         case .add(let Rd, let Rn, .r64shift(let Rm, let shift)):
             if case .lsl(0) = shift {
                 return "add \(Rd), \(Rn), \(Rm)"
             } else {
-                return "add \(Rd), \(Rn), \(Rm), \(shift)"
+                return "add \(Rd), \(Rn), \(Rm), \(shift.asmDescription)"
             }
         case .add(let rt, let rn, .imm(let off, nil)):
             return "add \(rt), \(rn), #\(off)"
@@ -333,9 +338,9 @@ enum M1Op : CpuOp {
             return "asrv \(Rd), \(Rn), \(Rm)"
         case .lsrv(let Rd, let Rn, let Rm):
             return "lsrv \(Rd), \(Rn), \(Rm)"
-        case .eor_r(let Rd, let Rn, let Rm, let sh):
-            if let sh = sh {
-                return "eor \(Rd), \(Rn), \(Rm), \(sh)"
+        case .eor_r(let Rd, let Rn, let Rm, let shift):
+            if let shift = shift {
+                return "eor \(Rd), \(Rn), \(Rm), \(shift.asmDescription)"
             } else {
                 return "eor \(Rd), \(Rn), \(Rm)"
             }

@@ -26,7 +26,7 @@ fileprivate func prepareContext(compilables: [any Compilable2], natives: [any Na
 
 fileprivate func compileAndLink(ctx: CCompatJitContext, _ fix: Int..., callback: (UnsafeMutableRawPointer)throws->()) throws {
     let mem = CpuOpBuffer()
-    let sut = M1Compiler2(ctx: ctx, stripDebugMessages: false)
+    let sut = M1Compiler2(ctx: ctx, stripDebugMessages: true)
     
     try fix.forEach { try sut.compile(findex: $0, into: mem) }
 
@@ -71,7 +71,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         let obj = _TestMemory(field1: 0b10000001, field2: Int32.max, field3: UInt16.max)
         
         let mem = CpuOpBuffer()
-        let sut = M1Compiler2(ctx: ctx, stripDebugMessages: false)
+        let sut = M1Compiler2(ctx: ctx, stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
 
         //
@@ -111,7 +111,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         ], ints: [0, 3, 57005])
 
         let mem = CpuOpBuffer()
-        let sut = M1Compiler2(ctx: ctx, stripDebugMessages: false)
+        let sut = M1Compiler2(ctx: ctx, stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
 
         //

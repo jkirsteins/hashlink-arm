@@ -1,7 +1,7 @@
 import Foundation 
 
 // TODO: rename to PseudoM1Op, this is M1 specific
-enum PseudoOp: CpuOp, CustomDebugStringConvertible {
+enum PseudoOp: CpuOp, CustomAsmStringConvertible {
     case zero
     case ascii(String)
     
@@ -48,19 +48,19 @@ enum PseudoOp: CpuOp, CustomDebugStringConvertible {
         }
     }
     
-    var debugDescription: String {
+    var asmDescription: String {
         switch(self) {
         case .deferred(_, let c):
-            return "deferred:\(try! c().debugDescription)"
+            return "deferred:\(try! c().asmDescription)"
         case .debugMarker(let message):
             return message
         case .mov(let Rd, let val):
             return ".mov \(Rd), #\(val)"
         case .zero: return ".zero"
         case .ldrVreg(let reg, let offset, let regSize):
-            return Self._ldrVreg(reg, offset, regSize).debugDescription
+            return Self._ldrVreg(reg, offset, regSize).map { $0.asmDescription }.joined(separator: "\n")
         case .strVreg(let reg, let offset, let regSize):
-            return Self._strVreg(reg, offset, regSize).debugDescription
+            return Self._strVreg(reg, offset, regSize).asmDescription
         case .ascii(let val):
             return ".ascii(\(val))"
         }
