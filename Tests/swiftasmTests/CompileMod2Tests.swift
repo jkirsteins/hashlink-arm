@@ -230,16 +230,16 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
-    /// Test traps
+    // MARK: Test traps
     func testCompile__testTrap() throws {
         typealias _JitFunc = (@convention(c) () -> Int32)
-        let sutFix = 37
+        let sutFix = 232
         try _compileAndLink(
             strip: false,
             [
                 sutFix,
                 
-                45, 342, 5
+                240, 346, 5
             ]
         ) {
             mem in
@@ -248,6 +248,69 @@ final class CompileMod2Tests: RealHLTestCase {
             let entrypoint = unsafeBitCast(c!.address.value, to: _JitFunc.self)
             let res = entrypoint()
             XCTAssertEqual(1, res)
+            
+            let cptr = LibHl.hl_get_thread()
+            XCTAssertNil(cptr.pointee.trap_current)
+        }
+    }
+    
+    func testCompile__testTrapConditional() throws {
+        typealias _JitFunc = (@convention(c) (Bool) -> Int32)
+        let sutFix = 241
+        try _compileAndLink(
+            strip: false,
+            [
+                sutFix,
+                
+                240, 346, 5
+            ]
+        ) {
+            mem in
+            
+            let c = try ctx.getCallable(findex: sutFix)
+            let entrypoint = unsafeBitCast(c!.address.value, to: _JitFunc.self)
+            
+            var res = entrypoint(false)
+            XCTAssertEqual(0, res)
+            
+            res = entrypoint(true)
+            XCTAssertEqual(1, res)
+            
+            res = entrypoint(false)
+            XCTAssertEqual(0, res)
+            
+            res = entrypoint(true)
+            XCTAssertEqual(1, res)
+            
+            let cptr = LibHl.hl_get_thread()
+            XCTAssertNil(cptr.pointee.trap_current)
+        }
+    }
+    
+    func testCompile__testTrapContextEnding() throws {
+        typealias _JitFunc = (@convention(c) (Bool) -> Int32)
+        let sutFix = 242
+        try _compileAndLink(
+            strip: false,
+            [
+                sutFix,
+                
+                240, 346, 5
+            ]
+        ) {
+            mem in
+            
+            let c = try ctx.getCallable(findex: sutFix)
+            let entrypoint = unsafeBitCast(c!.address.value, to: _JitFunc.self)
+            
+            var res = entrypoint(false)
+            XCTAssertEqual(1, res)
+            
+            res = entrypoint(true)
+            XCTAssertEqual(2, res)
+            
+            let cptr = LibHl.hl_get_thread()
+            XCTAssertNil(cptr.pointee.trap_current)
         }
     }
     

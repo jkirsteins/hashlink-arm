@@ -787,7 +787,12 @@ class M1Compiler2 {
             ctx.funcTracker.compiled(compilable.findex)
         }
         
-        /* we need to allocate trap contexts on the stack 
+        /* we need to allocate trap contexts on the stack
+         
+         Number of OTrap ops determines how many trap contexts we'll need.
+         
+         It might not match OEndTrap (as a single OTrap might have multiple
+         corresponding OEndTrap).
          */
         var availableTrapIx: Int64 = 0  // each OTrap will increment, and OEndTrap will decrement
         let trapCount = compilable.ops.filter({
@@ -796,13 +801,6 @@ class M1Compiler2 {
             }
             return true
         }).count
-        let endtrapCount = compilable.ops.filter({
-            guard case .OEndTrap(_) = $0 else {
-                return false
-            }
-            return true
-        }).count
-        Swift.assert(trapCount == endtrapCount)
         
         // grab it before it changes from prologue
         // let memory = mem.getDeferredPosition()
@@ -1307,6 +1305,8 @@ class M1Compiler2 {
                 fallthrough
             case .OJFalse(let reg, let offset):
                 fallthrough
+            case .OJTrue(let reg, let offset):
+                fallthrough
             case .OJNull(let reg, let offset):
 
                 let wordsToSkip = Int(offset) + 1
@@ -1346,6 +1346,8 @@ class M1Compiler2 {
                             fallthrough
                         case .OJNull:
                             return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
+                        case .OJTrue:
+                            fallthrough
                         case .OJNotNull:
                             return M1Op.b_ne(try Immediate19(jumpOffset.immediate))
                         default:
@@ -1642,13 +1644,13 @@ class M1Compiler2 {
                     M1Op.movr64(X.x9, X.x0) // x9 = __tinf
                 )
                 
-                // ctx.tcheck = NULL;
                 appendDebugPrintAligned4(
                     "// ctx.tcheck = NULL;", builder: mem
                 )
                 mem.append(
                     M1Op.movz64(X.x1, 0, nil),
-                    M1Op.str(X.x1, .reg64offset(.sp, trapOffsetInStack + tcheckOffset, nil))
+                    M1Op.movz64(X.x14, UInt16(trapOffsetInStack + tcheckOffset), nil),
+                    M1Op.str(X.x1, .reg(X.sp, .r64ext(X.x14, .sxtx(0))))
                 )
                 
                 // ctx.prev = __tinf->trap_current;
@@ -1663,10 +1665,16 @@ class M1Compiler2 {
                 appendDebugPrintRegisterAligned4(X.x2, prepend: "[traptest] Loaded current", builder: mem)
                 // store ctx.prev
                 let testOff: Int64 = trapOffsetInStack + prevOffset
-                mem.append(M1Op.str(X.x2, .reg64offset(.sp, testOff, nil)))
+                mem.append(
+                    M1Op.movz64(X.x14, UInt16(testOff), nil),
+                    M1Op.str(X.x2, .reg(X.sp, .r64ext(X.x14, .sxtx(0))))
+                )
                 appendDebugPrintAligned4("[traptest] Offset: \(testOff)", builder: mem)
                 // MARK: tmp
-                mem.append(M1Op.ldr(X.x13, .reg64offset(.sp, testOff, nil)))
+                mem.append(
+                    M1Op.movz64(X.x14, UInt16(testOff), nil),
+                    M1Op.ldr(X.x13, .reg(X.sp, .r64ext(X.x14, .sxtx(0))))
+                )
                 appendDebugPrintRegisterAligned4(X.x13, prepend: "[traptest] Verify ldr", builder: mem)
                 mem.append(M1Op.movr64(X.x13, X.x2))
                 appendDebugPrintRegisterAligned4(X.x13, prepend: "[traptest] Verify mov", builder: mem)
@@ -1845,14 +1853,41 @@ class M1Compiler2 {
                 
                 
             case .OEndTrap(let exc):
-                // TODO: test try/catch where nothing thrown
                 availableTrapIx -= 1
-                appendDebugPrintAligned4("[traptest OEndTrap weirdo]", builder: mem)
-//                mem.append(
-//                    M1Op.movz64(X.x0, UInt16(exc), nil),
-//                    PseudoOp.mov(X.x1, _endTrapAddress),
-//                    M1Op.blr(X.x1)
-//                )
+                
+                let currentTrapIx: Int64 = availableTrapIx
+                let trapOffsetInStack = stackInfo.reservedForVreg + currentTrapIx * Int64(MemoryLayout<HLTrapCtx_CCompat>.stride)
+                
+                appendDebugPrintAligned4("[OEndTrap] hl_get_thread()->trap_current = ctx.prev", builder: mem)
+                
+                // Offsets into HLThreadInfo_CCompat
+                let tinf__trapCurrent: Int64 = Int64(MemoryLayout.offset(of: \HLThreadInfo_CCompat.trap_current)!)
+                
+                // Offsets into HLTrapCtx_CCompat
+                let prevOffset: Int64 = Int64(MemoryLayout.offset(of: \HLTrapCtx_CCompat.prev)!)
+                
+                mem.append(
+                    PseudoOp.debugMarker("// hl_thread_info *__tinf = hl_get_thread();"),
+                    PseudoOp.mov(
+                        X.x0,
+                        unsafeBitCast(LibHl._hl_get_thread, to: OpaquePointer.self)
+                    ),
+                    M1Op.blr(X.x0),
+                    M1Op.movr64(X.x9, X.x0) // x9 = __tinf
+                )
+                
+                mem.append(
+                    PseudoOp.debugMarker("// x2 = ctx.prev"),
+                    M1Op.movz64(X.x14, UInt16(trapOffsetInStack + prevOffset), nil),
+                    M1Op.ldr(X.x2, .reg(X.sp, .r64ext(X.x14, .sxtx(0))))
+                )
+                
+                // TODO: test 2 traps, throw second
+                
+                mem.append(
+                    PseudoOp.debugMarker("// __tinf->trap_current = x2"),
+                    M1Op.str(X.x2, .reg64offset(X.x9, tinf__trapCurrent, nil))
+                )
             case .ONull(let dst):
                 mem.append(
                     M1Op.movz64(X.x0, 0, nil)
