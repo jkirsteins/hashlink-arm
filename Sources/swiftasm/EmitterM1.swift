@@ -528,7 +528,7 @@ public class EmitterM1 {
             let imm: Int64 = offset.imm.shiftedLeft(10)
             let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | imm
             return returnAsArray(encoded)
-        case .stur(let Rt as any RegisterI, let Rn, let offset ):
+        case .stur(let Rt as any RegisterI, let Rn, let offset) where offset >= -256 && offset < 256:
             //                    S           imm9         Rn    Rt
             let mask: Int64 = 0b1_0_111000000_000000000_00_00000_00000
             let encodedRt = encodeReg(Rt, shift: 0)
@@ -537,7 +537,7 @@ public class EmitterM1 {
             let size: Int64 = (Rt.is32 ? 0 : 1) << 30
             let encoded = mask | encodedRt | encodedRn | offs.shiftedLeft(12) | size
             return returnAsArray(encoded)
-        case .stur(let Rt as any RegisterFP, let Rn, let offset ):
+        case .stur(let Rt as any RegisterFP, let Rn, let offset) where offset >= -256 && offset < 256:
             //                  Si       opc    imm9         Rn    Rt
             let mask: Int64 = 0b00111100_0___00_000000000_00_00000_00000
             let regs = encodeRegs(Rd: Rt, Rn: Rn)
