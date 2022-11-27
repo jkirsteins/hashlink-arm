@@ -19,6 +19,8 @@ extension M1Compiler2 {
             appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
             mem.append(M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil)))
             appendStore(reg: X.x1, into: dstReg, kinds: regs, mem: mem)
+        case .virtual:
+            appendDebugPrintAligned4("TODO: implement OField for virtual", builder: mem)
         default:
             fatalError("OField not implemented for \(objRegKind)")
         }
@@ -72,6 +74,15 @@ extension M1Compiler2 {
             appendLoad(reg: X.x0, from: srcReg, kinds: regs, mem: mem)
             appendLoad(reg: X.x1, from: objReg, kinds: regs, mem: mem)
             mem.append(M1Op.str(X.x0, .reg64offset(.x1, fieldOffset, nil)))
+        case .virtual:
+            /* ASM for -->
+            if( hl_vfields(o)[f] )
+                *hl_vfields(o)[f] = v;
+             else
+                hl_dyn_set(o,hash(field),vt,v);
+             */
+//            fatalError("wip")
+            appendDebugPrintAligned4("TODO: implement virtual setfield", builder: mem)
         default:
             fatalError("OSetField not implemented for \(objRegKind)")
         }

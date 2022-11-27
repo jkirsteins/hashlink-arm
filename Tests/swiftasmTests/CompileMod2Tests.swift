@@ -702,6 +702,25 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    ///
+    func testCompile__testStaticVirtual_setField() throws {
+        typealias _JitFunc =  (@convention(c) (Int32, Bool) -> (Int32))
+        
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testStaticVirtual_setField"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(0, entrypoint(123, false))
+                XCTAssertEqual(123, entrypoint(123, true))
+            }
+        }
+    }
+    
     /// This tests fetching global values
     func testCompile__testGlobal() throws {
         

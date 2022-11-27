@@ -2435,6 +2435,31 @@ class M1Compiler2 {
                     mem.append(PseudoOp.mov(X.x0, OpaquePointer(c)))
                     appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 }
+            case .OToVirtual(let dst, let src):
+                let _ensureInitialized: (@convention(c)(OpaquePointer)->()) = {
+                    oDynPtr in
+                    
+                    let dynPtr: UnsafePointer<vdynamic> = .init(oDynPtr)
+                    if dynPtr.pointee.t.kind == .obj {
+                        // ensure initialized
+                        _ = dynPtr.pointee.t.pointee.obj.pointee.getRt(dynPtr.pointee.t)
+                    }
+                }
+                let dstType = requireTypeMemory(reg: dst, regs: regs)
+                
+                appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
+                // ensure src is initialized (if obj)
+                mem.append(
+                    PseudoOp.mov(X.x1, unsafeBitCast(_ensureInitialized, to: OpaquePointer.self)),
+                    M1Op.blr(X.x1)
+                )
+                // hl_to_virtual
+                mem.append(PseudoOp.mov(X.x0, dstType))
+                appendLoad(reg: X.x1, from: src, kinds: regs, mem: mem)
+                mem.append(
+                    PseudoOp.mov(X.x2, unsafeBitCast(LibHl._hl_to_virtual, to: OpaquePointer.self)),
+                    M1Op.blr(X.x2)
+                )
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

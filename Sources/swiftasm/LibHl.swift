@@ -280,4 +280,9 @@ struct LibHl {
     static func hl_obj_field_fetch(_ t: UnsafePointer<HLType_CCompat>, _ fid: Int32) -> (UnsafePointer<HLObjField_CCompat>) {
         .init(_hl_obj_field_fetch(.init(t), fid))
     }
+    
+    // vvirtual *hl_to_virtual( hl_type *vt, vdynamic *obj ) {
+    static let _hl_to_virtual: (@convention(c) (OpaquePointer, OpaquePointer)->(OpaquePointer)) = { load("hl_to_virtual") }()
+    
+    
 }

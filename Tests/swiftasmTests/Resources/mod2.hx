@@ -216,6 +216,14 @@ class Main {
 		return -1;
 	}
 
+	static private function testStaticVirtual_setField(val: Int, set: Bool): Int {
+		var o : { test : Int } = new Path(0);
+		if (set) {
+			o.test = val;
+		}
+		return o.test;
+	}
+
 	static public function main():Void {
 		// var path = new Path(3);
 		// trace('${path.test}');
