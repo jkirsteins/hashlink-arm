@@ -436,9 +436,9 @@ extension M1Compiler2 {
         var jmpTarget = RelativeDeferredOffset()
         let str: String
         if let prepend = prepend {
-            str = "[jitdebug] [\(prepend)] Register \(reg): %p (%llu)\n\0"
+            str = "[jitdebug] [\(prepend)] Register \(reg): %p\n\0"
         } else {
-            str = "[jitdebug] Register \(reg): %p (%llu)\n\0"
+            str = "[jitdebug] Register \(reg): %p\n\0"
         }
         
         guard stripDebugMessages == false else {
@@ -453,7 +453,7 @@ extension M1Compiler2 {
         
         builder.append(
             // Stash registers we'll use (so we can reset)
-            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(160)),
+            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(176)),
             M1Op.str(Register64.x0, .reg64offset(.sp, 8, nil)),
             M1Op.str(reg, .reg64offset(.sp, 0, nil)),
             M1Op.stp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
@@ -464,16 +464,16 @@ extension M1Compiler2 {
             M1Op.stp((Register64.x11, Register64.x12), .reg64offset(.sp, 96, nil)),
             M1Op.stp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
             M1Op.stp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
-            M1Op.stp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil))
+            M1Op.stp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
+            M1Op.stp((Register64.x29_fp, Register64.x30_lr), .reg64offset(.sp, 160, nil))
         )
         adr.start(at: builder.byteSize)
         builder.append(M1Op.adr64(.x0, adr))
-        builder.append(M1Op.adr64(.x1, adr))
         
         builder.append(
             PseudoOp.mov(.x16, printfAddr),
             M1Op.blr(.x16),
-            // restore
+//            // restore
             M1Op.ldr(Register64.x0, .reg64offset(.sp, 8, nil)),
             M1Op.ldp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
             M1Op.ldp((Register64.x3, Register64.x4), .reg64offset(.sp, 32, nil)),
@@ -484,14 +484,15 @@ extension M1Compiler2 {
             M1Op.ldp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
             M1Op.ldp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
             M1Op.ldp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
-            try! M1Op._add(X.sp, X.sp, 160)
+            M1Op.ldp((Register64.x29_fp, Register64.x30_lr), .reg64offset(.sp, 160, nil)),
+            try! M1Op._add(X.sp, X.sp, 176)
         )
         
         jmpTarget.start(at: builder.byteSize)
         builder.append(M1Op.b(jmpTarget))
         adr.stop(at: builder.byteSize)
         builder.append(PseudoOp.ascii(str)).align(4)
-        
+
         Swift.assert(builder.byteSize % 4 == 0)
         jmpTarget.stop(at: builder.byteSize)
     }
@@ -571,18 +572,42 @@ extension M1Compiler2 {
     
     /// Returns the amount of change for SP
     func appendPrologue(builder: CpuOpBuffer) -> ByteCount {
-        appendDebugPrintAligned4("Starting prologue and reserving 16", builder: builder)
+        appendDebugPrintAligned4("Starting prologue", builder: builder)
+
+        let stackReservation: ByteCount = 128
+        
+        // Storing all non-corruptible registers so we don't have to keep track of them
+        // during the execution. Potential optimization here.
         builder.append(
-            M1Op.stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre)),
+            M1Op.subImm12(X.sp, X.sp, try! Imm12Lsl12(stackReservation)),
+            
+            M1Op.stp((.x15, .x16), .reg64offset(.sp, 0, nil)),
+            M1Op.stp((.x17, .x18), .reg64offset(.sp, 16, nil)),
+            M1Op.stp((.x19, .x20), .reg64offset(.sp, 32, nil)),
+            M1Op.stp((.x21, .x22), .reg64offset(.sp, 48, nil)),
+            M1Op.stp((.x23, .x24), .reg64offset(.sp, 64, nil)),
+            M1Op.stp((.x25, .x26), .reg64offset(.sp, 80, nil)),
+            M1Op.stp((.x27, .x28), .reg64offset(.sp, 96, nil)),
+            M1Op.stp((.x29_fp, .x30_lr), .reg64offset(.sp, 112, nil)),
+            
             M1Op.movr64(.x29_fp, .sp)
         )
-        return 16
+        return stackReservation
     }
     
     func appendEpilogue(builder: CpuOpBuffer) {
         appendDebugPrintAligned4("Starting epilogue", builder: builder)
         builder.append(
-            M1Op.ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))
+            M1Op.ldp((.x15, .x16), .reg64offset(.sp, 0, nil)),
+            M1Op.ldp((.x17, .x18), .reg64offset(.sp, 16, nil)),
+            M1Op.ldp((.x19, .x20), .reg64offset(.sp, 32, nil)),
+            M1Op.ldp((.x21, .x22), .reg64offset(.sp, 48, nil)),
+            M1Op.ldp((.x23, .x24), .reg64offset(.sp, 64, nil)),
+            M1Op.ldp((.x25, .x26), .reg64offset(.sp, 80, nil)),
+            M1Op.ldp((.x27, .x28), .reg64offset(.sp, 96, nil)),
+            M1Op.ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 112, nil)),
+            
+            try! M1Op._add(X.sp, X.sp, 128)
         )
         appendDebugPrintAligned4("Finished epilogue", builder: builder)
     }
@@ -2434,5 +2459,6 @@ class M1Compiler2 {
         appendEpilogue(builder: mem)
         appendDebugPrintAligned4("Returning", builder: mem)
         mem.append(M1Op.ret)
+        appendDebugPrintAligned4("Returned", builder: mem)
     }
 }

@@ -30,6 +30,10 @@ class BufferMapper {
         return try buffer.ops.flatMap { try $0.emit() }
     }
     
+    deinit {
+        try? freeMemory()
+    }
+    
     fileprivate func ensureMemory() throws -> UnsafeMutableRawPointer {
         guard mapped == nil else {
             /* We might need to call this multiple times (e.g. if we add a hexPrint() debug statement ahead of proper emitting)

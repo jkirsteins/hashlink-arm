@@ -350,15 +350,22 @@ final class CompileMod2Tests: RealHLTestCase {
             sutFix, mem in
             
             let f = "First String"
-            let s = "not_found"
+            let sNotFound = "not_found"
+            let sFound = "t S"
             let fstr = (f + "\0").data(using: .utf16LittleEndian)!
-            let sstr = (s + "\0").data(using: .utf16LittleEndian)!
+            let sNotFoundStr = (sNotFound + "\0").data(using: .utf16LittleEndian)!
+            let sFoundStr = (sFound + "\0").data(using: .utf16LittleEndian)!
             let fstrPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: fstr.count)
-            let sstrPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: sstr.count)
-            defer { fstrPtr.deallocate() }
-            defer { sstrPtr.deallocate() }
+            let sNotFoundStrPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: sNotFoundStr.count)
+            let sFoundStrPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: sFoundStr.count)
+            defer {
+                fstrPtr.deallocate()
+                sFoundStrPtr.deallocate()
+                sNotFoundStrPtr.deallocate()
+            }
             _ = fstrPtr.initialize(from: fstr)
-            _ = sstrPtr.initialize(from: sstr)
+            _ = sFoundStrPtr.initialize(from: sFoundStr)
+            _ = sNotFoundStrPtr.initialize(from: sNotFoundStr)
             
             guard let funIndex = ctx.mainContext.pointee.m?.pointee.functions_indexes.advanced(by: sutFix).pointee else {
                 fatalError("No real funIndex for \(sutFix)")
@@ -375,19 +382,30 @@ final class CompileMod2Tests: RealHLTestCase {
                 t: .init(OpaquePointer(t.ccompatAddress)),
                 bytes: .init(OpaquePointer(fstrPtr.baseAddress!)),
                 length: Int32(f.count))
-            var strB = _String(
+            var strB_found = _String(
                 t: .init(OpaquePointer(t.ccompatAddress)),
-                bytes: .init(OpaquePointer(sstrPtr.baseAddress!)),
-                length: Int32(s.count))
+                bytes: .init(OpaquePointer(sFoundStrPtr.baseAddress!)),
+                length: Int32(sFound.count))
+            var strB_notFound = _String(
+                t: .init(OpaquePointer(t.ccompatAddress)),
+                bytes: .init(OpaquePointer(sFoundStrPtr.baseAddress!)),
+                length: Int32(sNotFound.count))
             var nullD = vdynamic(t: nullType, union: nil)
-//
+
             let c = try ctx.getCallable(findex: sutFix)
             let entrypoint = unsafeBitCast(c!.address.value, to: _JitFunc.self)
             withUnsafeMutablePointer(to: &strA) { strAPtr in
-                withUnsafeMutablePointer(to: &strB) { strBPtr in
+                withUnsafeMutablePointer(to: &strB_notFound) { strBPtr in
                     withUnsafeMutablePointer(to: &nullD) { nullDPtr in
                         let res = entrypoint(.init(strAPtr), .init(strBPtr), .init(nullDPtr))
                         XCTAssertEqual(-1, res)
+                    }
+                }
+                
+                withUnsafeMutablePointer(to: &strB_found) { strBPtr in
+                    withUnsafeMutablePointer(to: &nullD) { nullDPtr in
+                        let res = entrypoint(.init(strAPtr), .init(strBPtr), .init(nullDPtr))
+                        XCTAssertEqual(4, res)
                     }
                 }
             }
