@@ -10,3 +10,4 @@ DerivedData/
 .vscode
 haxebin/*
 out*txt
+dump
