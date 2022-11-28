@@ -18,7 +18,7 @@ let OEnumIndex_impl: (@convention(c)(OpaquePointer)->(Int32)) = {
 }
 
 // MARK: Determine dyn set/get/cast
-fileprivate func get_dynset( to kind: HLTypeKind ) -> OpaquePointer {
+func get_dynset( from kind: HLTypeKind ) -> OpaquePointer {
     switch( kind ) {
     case .f32:
         return unsafeBitCast(LibHl._hl_dyn_setf, to: OpaquePointer.self)
@@ -31,7 +31,7 @@ fileprivate func get_dynset( to kind: HLTypeKind ) -> OpaquePointer {
     }
 }
 
-fileprivate func get_dynget( to kind: HLTypeKind ) -> OpaquePointer {
+func get_dynget( to kind: HLTypeKind ) -> OpaquePointer {
     switch( kind ) {
     case .f32:
         return unsafeBitCast(LibHl._hl_dyn_getf, to: OpaquePointer.self)
@@ -639,7 +639,7 @@ extension M1Compiler2 {
     }
 }
 
-// MARK: Compiler 
+// MARK: Compiler
 
 class M1Compiler2 {
     let emitter = EmitterM1()
@@ -1213,15 +1213,13 @@ class M1Compiler2 {
                     regs: regs,
                     mem: mem)
             case .OField(let dstReg, let objReg, let fieldRef):
+                appendDebugPrintAligned4("field virtual OField in \(currentInstruction) : \(compilable.findex)", builder: mem)
                 try __ogetthis_ofield(
                     dstReg: dstReg,
                     objReg: objReg,
                     fieldRef: fieldRef,
                     regs: regs,
                     mem: mem)
-                // TODO: remove
-                appendLoad(reg: X.x16, from: dstReg, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x16, builder: mem)
             case .OInt(let dst, let iRef):
                 
                 if (currentInstruction == 8 && compilable.findex == 37) {
@@ -2486,6 +2484,7 @@ class M1Compiler2 {
                     PseudoOp.mov(X.x2, unsafeBitCast(LibHl._hl_to_virtual, to: OpaquePointer.self)),
                     M1Op.blr(X.x2)
                 )
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }
