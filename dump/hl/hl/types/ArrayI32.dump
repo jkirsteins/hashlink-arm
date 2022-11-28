@@ -1,1 +1,0 @@
-typedef hl.types.ArrayI32 = hl.types.ArrayBytes_Int

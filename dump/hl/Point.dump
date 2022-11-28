@@ -1,1 +1,0 @@
-typedef Point = { y : Int, x : Int }

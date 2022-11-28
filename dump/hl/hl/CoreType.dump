@@ -1,3 +1,0 @@
-@:keep
-class hl.CoreType extends hl.Class {
-}

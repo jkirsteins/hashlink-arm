@@ -1,1 +1,0 @@
-private typedef _Std.Rand = hl.Abstract<"hl_random">

@@ -1,2 +1,0 @@
-@:used @:semantics(reference) @:coreType
-abstract hl.Ref<T> {}

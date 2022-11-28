@@ -1,1 +1,0 @@
-typedef hl.types.ObjectMapData = hl.Abstract<"hl_obj_map">

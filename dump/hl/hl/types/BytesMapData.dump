@@ -1,1 +1,0 @@
-typedef hl.types.BytesMapData = hl.Abstract<"hl_bytes_map">

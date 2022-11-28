@@ -1,1 +1,0 @@
-typedef sys.io.FileHandle = hl.Abstract<"hl_fdesc">
