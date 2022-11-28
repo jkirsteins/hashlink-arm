@@ -263,6 +263,85 @@ struct LibHl {
             _hl_dyn_castp(data, .init(type), .init(to))
     }
     
+    // MARK: hl_dyn_set
+    
+    // HL_PRIM float hl_dyn_getf( vdynamic *d, int hfield )
+    static let _hl_dyn_getf: (@convention(c) (OpaquePointer, Int32) -> (Float32)) = { load("hl_dyn_getf") }()
+    static func hl_dyn_getf(
+        _ d: UnsafePointer<vdynamic>,
+        _ hfield: Int32) -> (Float32) {
+            hl_dyn_getf(.init(d), hfield)
+    }
+    
+    // HL_PRIM double hl_dyn_getd( vdynamic *d, int hfield )
+    static let _hl_dyn_getd: (@convention(c) (OpaquePointer, Int32) -> (Float64)) = { load("hl_dyn_getd") }()
+    static func hl_dyn_getd(
+        _ d: UnsafePointer<vdynamic>,
+        _ hfield: Int32) -> (Float64) {
+            hl_dyn_getd(.init(d), hfield)
+    }
+    
+    // HL_PRIM int hl_dyn_geti( vdynamic *d, int hfield, hl_type *t ) {
+    static let _hl_dyn_geti: (@convention(c) (OpaquePointer, Int32, OpaquePointer) -> (Int32)) = { load("hl_dyn_geti") }()
+    static func hl_dyn_geti(
+        _ d: UnsafePointer<vdynamic>,
+        _ hfield: Int32,
+        _ t: UnsafePointer<HLType_CCompat>) -> (Int32) {
+            hl_dyn_geti(.init(d), hfield, .init(t))
+    }
+    
+    // HL_PRIM void *hl_dyn_getp( vdynamic *d, int hfield, hl_type *t ) {
+    static let _hl_dyn_getp: (@convention(c) (OpaquePointer, Int32, OpaquePointer) -> (OpaquePointer)) = { load("hl_dyn_getp") }()
+    static func hl_dyn_getp(
+        _ d: UnsafePointer<vdynamic>,
+        _ hfield: Int32,
+        _ t: UnsafePointer<HLType_CCompat>) -> (OpaquePointer) {
+            hl_dyn_getp(.init(d), hfield, .init(t))
+    }
+    
+    
+    // MARK: hl_dyn_get
+    
+    // HL_PRIM void hl_dyn_setf( vdynamic *d, int hfield, float value )
+    static let _hl_dyn_setf: (@convention(c) (OpaquePointer, Int32, Float32) -> ()) = { load("hl_dyn_setf") }()
+    static func hl_dyn_setf(
+        _ d: UnsafePointer<vdynamic>,
+        _ hfield: Int32,
+        _ t: UnsafePointer<HLType_CCompat>,
+        _ value: Float32) -> () {
+            hl_dyn_setf(.init(d), hfield, .init(t), value)
+    }
+    
+    // HL_PRIM void hl_dyn_setd( vdynamic *d, int hfield, double value )
+    static let _hl_dyn_setd: (@convention(c) (OpaquePointer, Int32, Float64) -> ()) = { load("hl_dyn_setd") }()
+    static func hl_dyn_setd(
+        _ d: UnsafePointer<vdynamic>,
+        _ hfield: Int32,
+        _ t: UnsafePointer<HLType_CCompat>,
+        _ value: Float64) -> () {
+            hl_dyn_setd(.init(d), hfield, .init(t), value)
+    }
+    
+    // HL_PRIM void hl_dyn_seti( vdynamic *d, int hfield, hl_type *t, int value )
+    static let _hl_dyn_seti: (@convention(c) (OpaquePointer, Int32, Int32) -> ()) = { load("hl_dyn_seti") }()
+    static func hl_dyn_seti(
+        _ d: UnsafePointer<vdynamic>,
+        _ hfield: Int32,
+        _ t: UnsafePointer<HLType_CCompat>,
+        _ value: Int32) -> () {
+            hl_dyn_seti(.init(d), hfield, .init(t), value)
+    }
+    
+    // HL_PRIM void hl_dyn_setp( vdynamic *d, int hfield, hl_type *t, void *value )
+    static let _hl_dyn_setp: (@convention(c) (OpaquePointer, Int32, OpaquePointer) -> ()) = { load("hl_dyn_setp") }()
+    static func hl_dyn_setp(
+        _ d: UnsafePointer<vdynamic>,
+        _ hfield: Int32,
+        _ t: UnsafePointer<HLType_CCompat>,
+        _ value: OpaquePointer) -> () {
+            hl_dyn_setp(.init(d), hfield, .init(t), value)
+    }
+    
     // HL_API hl_thread_info *hl_get_thread();
     static let _hl_get_thread: (@convention(c) () -> (OpaquePointer)) = { load("hl_get_thread") }()
     static func hl_get_thread() -> (UnsafePointer<HLThreadInfo_CCompat>) {

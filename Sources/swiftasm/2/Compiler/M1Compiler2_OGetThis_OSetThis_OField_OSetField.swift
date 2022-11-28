@@ -20,7 +20,7 @@ extension M1Compiler2 {
             mem.append(M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil)))
             appendStore(reg: X.x1, into: dstReg, kinds: regs, mem: mem)
         case .virtual:
-            appendDebugPrintAligned4("TODO: implement OField for virtual", builder: mem)
+            fatalError("wip")
         default:
             fatalError("OField not implemented for \(objRegKind)")
         }
@@ -75,13 +75,31 @@ extension M1Compiler2 {
             appendLoad(reg: X.x1, from: objReg, kinds: regs, mem: mem)
             mem.append(M1Op.str(X.x0, .reg64offset(.x1, fieldOffset, nil)))
         case .virtual:
+            /*
+             typedef struct _vvirtual vvirtual;
+             struct _vvirtual {
+                 hl_type *t;
+                 vdynamic *value;
+                 vvirtual *next;
+             };
+
+             #define hl_vfields(v) ((void**)(((vvirtual*)(v))+1))
+             */
             /* ASM for -->
-            if( hl_vfields(o)[f] )
+             f( hl_vfields(o)[f] )
                 *hl_vfields(o)[f] = v;
              else
                 hl_dyn_set(o,hash(field),vt,v);
              */
-//            fatalError("wip")
+            fatalError("wip")
+            
+            // x0 -> points to _vvirtual->value
+            appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
+            mem.append(M1Op.add(X.x0, X.x0, .imm(Int64(MemoryLayout<UnsafePointer<HLType_CCompat>>.size), nil)))
+            
+            // x1 ->
+            
+            appendLoad(reg: X.x1, from: objReg, kinds: regs, mem: mem)
             appendDebugPrintAligned4("TODO: implement virtual setfield", builder: mem)
         default:
             fatalError("OSetField not implemented for \(objRegKind)")

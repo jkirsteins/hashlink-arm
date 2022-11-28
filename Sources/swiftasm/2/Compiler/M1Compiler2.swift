@@ -17,6 +17,33 @@ let OEnumIndex_impl: (@convention(c)(OpaquePointer)->(Int32)) = {
     return enumPtr.pointee.index
 }
 
+// MARK: Determine dyn set/get/cast
+fileprivate func get_dynset( to kind: HLTypeKind ) -> OpaquePointer {
+    switch( kind ) {
+    case .f32:
+        return unsafeBitCast(LibHl._hl_dyn_setf, to: OpaquePointer.self)
+    case .f64:
+        return unsafeBitCast(LibHl._hl_dyn_setd, to: OpaquePointer.self)
+    case .i32, .u16, .u8, .bool:
+        return unsafeBitCast(LibHl._hl_dyn_seti, to: OpaquePointer.self)
+    default:
+        return unsafeBitCast(LibHl._hl_dyn_setp, to: OpaquePointer.self)
+    }
+}
+
+fileprivate func get_dynget( to kind: HLTypeKind ) -> OpaquePointer {
+    switch( kind ) {
+    case .f32:
+        return unsafeBitCast(LibHl._hl_dyn_getf, to: OpaquePointer.self)
+    case .f64:
+        return unsafeBitCast(LibHl._hl_dyn_getd, to: OpaquePointer.self)
+    case .i32, .u16, .u8, .bool:
+        return unsafeBitCast(LibHl._hl_dyn_geti, to: OpaquePointer.self)
+    default:
+        return unsafeBitCast(LibHl._hl_dyn_getp, to: OpaquePointer.self)
+    }
+}
+
 fileprivate func get_dyncast( to kind: HLTypeKind ) -> OpaquePointer {
     switch( kind ) {
     case .f32:
@@ -30,12 +57,7 @@ fileprivate func get_dyncast( to kind: HLTypeKind ) -> OpaquePointer {
     }
 }
 
-let OInstanceClosure_impl: (@convention(c)(OpaquePointer)->(Int32)) = {
-    _enum in
-    
-    let enumPtr: UnsafePointer<venum> = .init(_enum)
-    return enumPtr.pointee.index
-}
+// MARK: Enum impl methods
 
 let OEnumField_impl: (@convention(c)(OpaquePointer, Int32, Int32)->(OpaquePointer)) = {
     _enum, constructIndex, fieldIndex in
@@ -105,6 +127,8 @@ let OMakeEnum_impl: (@convention(c) (
     return .init(result)
 }
 
+// MARK: Dyn impl
+
 let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/UnsafeRawPointer, /*dstVal*/Int64, /*srcVal*/Int64)->(UnsafeRawPointer)) = {
     (dstType, srcType, dst, src) in
     
@@ -143,6 +167,8 @@ let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/Unsafe
     
     return .init(res)
 }
+
+// MARK: Compiler extension
 
 // x0 through x7
 let ARG_REGISTER_COUNT = 8
@@ -612,6 +638,8 @@ extension M1Compiler2 {
         appendDebugPrintAligned4("Finished epilogue", builder: builder)
     }
 }
+
+// MARK: Compiler 
 
 class M1Compiler2 {
     let emitter = EmitterM1()
@@ -2353,8 +2381,6 @@ class M1Compiler2 {
                     M1Op.blr(.x19)
                 )
             case .OInstanceClosure(let dst, let fun, let obj):
-                _ = unsafeBitCast(OInstanceClosure_impl, to: UnsafeRawPointer.self)
-                
                 
                 guard let funIndex = ctx.mainContext.pointee.m?.pointee.functions_indexes.advanced(by: fun).pointee else {
                     fatalError("No real fun index")
