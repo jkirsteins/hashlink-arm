@@ -874,6 +874,17 @@ final class EmitterM1Tests: XCTestCase {
             M1Op.ldr(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0)))),
             "ldr w0, [x0, x1]",
             0x00, 0x68, 0x61, 0xb8)
+        
+        try XCTAssertM1Op(
+            M1Op.ldr(X.x1, .reg64offset(.x0, 56, nil)),
+            "ldr x1, [x0, #56]",
+            0x01, 0x1c, 0x40, 0xf9)
+        
+        try XCTAssertM1Op(
+            M1Op.ldr(X.x1, .reg(X.x0, .imm(56, nil))),
+            "ldr x1, [x0, #56]",
+            0x01, 0x1c, 0x40, 0xf9)
+        
         XCTAssertEqual(
             try EmitterM1.emit(for: .ldr(Register32.w2, .reg64offset(.x1, 0, nil))),
             [0x22, 0x00, 0x40, 0xb9]

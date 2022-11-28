@@ -306,6 +306,11 @@ class CCompatJitContext : JitContext2 {
         
     }
     
+    var patchedOps = [RefFun:[HLOpCode]]()
+    func patch(findex: RefFun, ops: [HLOpCode]) {
+        self.patchedOps[findex] = ops
+    }
+    
     func getNative(findex fix: RefFun) throws -> (any NativeCallable2)? {
         try withModule { (m)->(NativeCallable2Impl?) in
             let addrPtr = m.pointee.functions_ptrs.advanced(by: fix)
@@ -351,9 +356,17 @@ class CCompatJitContext : JitContext2 {
                 fatalError("Linkable addresses not available (real index \(realIx))")
             }
             
+            let ops_final: [HLOpCode]
+            if let opsPatched = patchedOps[fix] {
+                ops_final = opsPatched
+                print("Using patched ops: \(ops_final)")
+            } else {
+                ops_final = fun.pointee.ops
+            }
+            
             return PointerCompilable(
                 findex: fix,
-                ops: fun.pointee.ops,
+                ops: ops_final,
                 linkableAddress: laddr,
                 regsProvider: Array(regs),
                 typeProvider: funTypePtr)

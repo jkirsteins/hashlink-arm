@@ -226,8 +226,30 @@ final class CompileMod2Tests: RealHLTestCase {
         return (fix, mem)
     }
     
+    func _compileDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), fix: RefFun, depHints: [RefFun] = []) throws -> (RefFun, CpuOpBuffer) {
+        
+        let compiler = try sut(strip: strip)
+        let deps = try extractDeps(fix: fix, depHints: depHints)
+        
+        print("Function ?@\(fix) has these dependencies: \(deps)")
+        for depFix in deps {
+            try compiler.compile(findex: depFix, into: mem)
+        }
+        return (fix, mem)
+    }
+    
     func _compileAndLinkWithDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), name: String, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
         let (fix, buff) = try self._compileDeps(strip: strip, fqname: name, depHints: depHints)
+        let mapper = BufferMapper(ctx: self.ctx, buffer: buff)
+        let mem = try mapper.getMemory()
+        
+        try callback(fix, mem)
+        
+        try mapper.freeMemory()
+    }
+    
+    func _compileAndLinkWithDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), fix: RefFun, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
+        let (fix, buff) = try self._compileDeps(strip: strip, fix: fix, depHints: depHints)
         let mapper = BufferMapper(ctx: self.ctx, buffer: buff)
         let mem = try mapper.getMemory()
         
@@ -622,7 +644,45 @@ final class CompileMod2Tests: RealHLTestCase {
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
-                XCTAssertEqual(entrypoint(), 336794129)
+                XCTAssertEqual(entrypoint(), 0x14131211)
+            }
+        }
+    }
+    
+    func testCompile__testEntrypoint() throws {
+        throw XCTSkip("testEntrypoint not finished yet")
+        
+        typealias _JitFunc =  (@convention(c) () -> ())
+        
+        guard let ep = ctx.mainContext.pointee.code?.pointee.entrypoint else {
+            return XCTFail("No entrypoint")
+        }
+        guard let testTraceFix = try _findStaticFindex_fieldNameUnset(className: "Main", name: "testTrace") else {
+            return XCTFail("No Main.testTrace")
+        }
+        
+        let compilableEntrypoint = try ctx.getCompilable(findex: RefFun(ep))
+        guard var ops = compilableEntrypoint?.ops, let secondToLast = ops.dropLast(1).last, let last = ops.last else {
+            return XCTFail("Can't fetch entrypoint ops")
+        }
+        
+        guard case .OCall0(let dst, _) = secondToLast, case .ORet(_) = last else {
+            return XCTFail("Can't patch entrypoint, op assumption not correct")
+        }
+        
+        ops = Array(ops.dropLast(2)) + [.OCall0(dst: dst, fun: testTraceFix), last]
+        ctx.patch(findex: RefFun(ep), ops: ops)
+        
+        try _compileAndLinkWithDeps(
+            strip: false,
+            fix: RefFun(ep)
+        ) {
+            sutFix, mem in
+            print("Compiling fix \(sutFix) vs \(ep)")
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                entrypoint()
             }
         }
     }
@@ -665,7 +725,7 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testStaticClosure() throws {
-        XCTFail("This test is flaky.")
+        throw XCTSkip("This test is flaky.")
         
         typealias _JitFunc =  (@convention(c) (Int32, Int32) -> (Int32))
         

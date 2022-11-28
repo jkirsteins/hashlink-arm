@@ -1213,7 +1213,6 @@ class M1Compiler2 {
                     regs: regs,
                     mem: mem)
             case .OField(let dstReg, let objReg, let fieldRef):
-                appendDebugPrintAligned4("field virtual OField in \(currentInstruction) : \(compilable.findex)", builder: mem)
                 try __ogetthis_ofield(
                     dstReg: dstReg,
                     objReg: objReg,

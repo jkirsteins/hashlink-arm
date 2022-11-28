@@ -14,11 +14,27 @@ extension M1Compiler2 {
         switch(objRegKind) {
         case .obj: fallthrough
         case .struct:
+            appendDebugPrintAligned4("OField for obj/struct", builder: mem)
             // offset from obj address
             let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
+            appendDebugPrintAligned4("field offset \(fieldOffset) for \(objReg)", builder: mem)
             appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
+            appendDebugPrintAligned4("loading...", builder: mem)
             mem.append(M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil)))
+            appendDebugPrintAligned4("storing...", builder: mem)
             appendStore(reg: X.x1, into: dstReg, kinds: regs, mem: mem)
+//
+            // --- tmp
+            let _c: (@convention(c)(OpaquePointer)->()) = {
+                oPtr in
+                
+                let p: UnsafePointer<vdynamic> = .init(oPtr)
+                print(p)
+            }
+            mem.append(PseudoOp.mov(X.x9, unsafeBitCast(_c, to: OpaquePointer.self)))
+            mem.append(M1Op.blr(X.x9))
+            // --- tmp
+            
         case .virtual:
             let dstType = requireTypeKind(reg: dstReg, from: regs)
             let castFunc = get_dynget(to: dstType.kind)
