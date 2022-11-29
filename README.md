@@ -15,6 +15,7 @@ Bytecode references:
   - HL_API hl_module *hl_module_alloc( hl_code *code );
 - hl_module_init needs to not call JIT 
 - hot reloading is ignored/commented out
+- hl_get_ustring
 
 ## Getting started
 
