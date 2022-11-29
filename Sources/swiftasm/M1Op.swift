@@ -280,9 +280,13 @@ enum M1Op : CpuOp {
         case .sub(_, _, .some(.r64ext(_, _))):
             fallthrough
         case .sub(_, _, .some(.r32ext(_, _))):
-            fallthrough
-        case .sub(_, _, .some(.imm(_, _))):
             return "sub NOT IMPLEMENTED"
+        case .sub(let Rt, let Rn, .imm(let val, let mode)):
+            if let mode = mode {
+                return "sub \(Rt), \(Rn), #\(val), \(mode)"
+            } else {
+                return "sub \(Rt), \(Rn), #\(val)"
+            }
         case .strb(let Rd, let off):
             return "strb \(Rd), \(off.asmDescription)"
         case .strh(let Rd, let off):

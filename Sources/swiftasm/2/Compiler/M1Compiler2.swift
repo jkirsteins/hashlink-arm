@@ -2133,6 +2133,10 @@ class M1Compiler2 {
                 appendLoad(reg: .x0, from: dst, kinds: regs, mem: mem)
                 mem.append(M1Op.add(X.x0, X.x0, .imm(1, nil)))
                 appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
+            case .ODecr(let dst):
+                appendLoad(reg: .x0, from: dst, kinds: regs, mem: mem)
+                mem.append(M1Op.sub(X.x0, X.x0, .imm(1, nil)))
+                appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
             case .OSetArray(let array, let index, let src):
                 let lsl = requireTypeSizeLsl(reg: src, from: regs)
                 appendLoad(reg: .x0, from: src, kinds: regs, mem: mem)

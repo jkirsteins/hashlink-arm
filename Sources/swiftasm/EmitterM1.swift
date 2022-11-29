@@ -462,6 +462,25 @@ public class EmitterM1 {
 
     static func emit(for op: M1Op) throws -> [UInt8] {
         switch try op.resolveFinalForm() {  // resolve potential aliases
+        case .sub(let Rd, let Rn, .imm(let offset, nil)):
+            // TODO: deduplicate with subImm12
+            let imm = try Imm12Lsl12(offset)
+            guard Rd.is32 == Rn.is32 else {
+                throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")
+            }
+            guard imm.isPositive else {
+                return try emit(for: .addImm12(Rd, Rn, imm.flippedSign))
+            }
+
+            //                  S          sh imm12        Rn    Rd
+            let mask: Int64 = 0b0_10100010_0__000000000000_00000_00000
+            let encodedRd: Int64 = encodeReg(Rd, shift: 0)
+            let encodedRn: Int64 = encodeReg(Rn, shift: 5)
+            let size: Int64 = (Rd.is32 ? 0 : 1) << 31
+            let sh: Int64 = (/*offset.lsl == ._0*/true ? 0 : 1) << 22
+            let immf: Int64 = imm.shiftedLeft(10)
+            let encoded: Int64 = mask | encodedRd | encodedRn | size | sh | immf
+            return returnAsArray(encoded)
         case .subImm12(let Rd, let Rn, let offset):
             guard Rd.is32 == Rn.is32 else {
                 throw EmitterM1Error.invalidRegister("Rd and Rn must have same size")

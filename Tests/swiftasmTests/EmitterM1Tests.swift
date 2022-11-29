@@ -127,6 +127,29 @@ final class EmitterM1Tests: XCTestCase {
         )
     }
     
+    func testAddSub_imm() throws {
+        try XCTAssertM1Op(
+            M1Op.add(W.w1, W.w2, .imm(1, nil)),
+            "add w1, w2, #1",
+            0x41, 0x04, 0x00, 0x11
+        )
+        try XCTAssertM1Op(
+            M1Op.add(W.w1, W.w2, .imm(-1, nil)),
+            "add w1, w2, #-1",
+            0x41, 0x04, 0x00, 0x51
+        )
+        try XCTAssertM1Op(
+            M1Op.sub(W.w1, W.w2, .imm(1, nil)),
+            "sub w1, w2, #1",
+            0x41, 0x04, 0x00, 0x51
+        )
+        try XCTAssertM1Op(
+            M1Op.sub(W.w1, W.w2, .imm(-1, nil)),
+            "sub w1, w2, #-1",
+            0x41, 0x04, 0x00, 0x11
+        )
+    }
+    
     func testAdd() throws {
         try XCTAssertM1Op(
             M1Op.add(W.w1, W.w2, .r64shift(W.w3, .lsl(0))),

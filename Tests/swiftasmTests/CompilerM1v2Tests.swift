@@ -1255,6 +1255,21 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(6, entrypoint(2, 4))
         }
     }
+    
+    func testCompile__ODecr() throws {
+        try _ru8__u8(ops: [
+            .ODecr(dst: 0),
+            .ORet(ret: 0),
+        ]) { entrypoint in
+            XCTAssertEqual(3, entrypoint(4))
+        }
+        try _ri32__i32(ops: [
+            .ODecr(dst: 0),
+            .ORet(ret: 0),
+        ]) { entrypoint in
+            XCTAssertEqual(3, entrypoint(4))
+        }
+    }
 
     func testCompile__OMov() throws {
         try _ru8__u8(ops: [
