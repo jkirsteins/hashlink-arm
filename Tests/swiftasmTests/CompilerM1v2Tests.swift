@@ -18,8 +18,8 @@ fileprivate func prepareFunction(
         typeProvider: funType)
 }
 
-fileprivate func prepareContext(compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = []) throws -> CCompatJitContext {
-    let tm = TestJitModule(compilables, natives: natives, ints: ints)
+fileprivate func prepareContext(compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = []) throws -> CCompatJitContext {
+    let tm = TestJitModule(compilables, natives: natives, ints: ints, strings: strings)
     assert(tm.ntypes > 0)
     return try CCompatJitContext(ctx: tm)
 }
@@ -608,6 +608,44 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _robj(obj: any HLTypeProvider, ops: [HLOpCode], args: [any HLTypeProvider] = [], strings: [String] = [], _ callback: @escaping (()->UnsafeRawPointer?)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: obj,
+                findex: 0,
+                regs: args + [obj],
+                args: args,
+                ops: ops)
+        ], strings: strings)
+
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) () -> UnsafeRawPointer?)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rbytes(ops: [HLOpCode], regs: [any HLTypeProvider] = [HLTypeKind.bytes], strings: [String] = [], _ callback: @escaping (()->UnsafeRawPointer?)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.bytes,
+                findex: 0,
+                regs: regs,
+                args: regs,
+                ops: ops)
+        ], strings: strings)
+
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) () -> UnsafeRawPointer?)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _rf64__i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .f64], _ callback: @escaping ((Int32)->Float64)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -928,6 +966,21 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 let len = Int(result!.advanced(by: 16).bindMemory(to: Int32.self, capacity: 1).pointee)
                 XCTAssertEqual(len, 11)
             }
+        }
+    }
+    
+    func testCompile_OString() throws {
+        
+        try _rbytes(ops: [
+            .OString(dst: 0, ptr: 1),
+            .ORet(ret: 0)
+        ], strings: ["First", "Second", "Third"]) {
+            entrypoint in
+            
+            guard let opaqueResult = entrypoint() else { return XCTFail("No result returned") }
+            let result: UnsafePointer<CChar16> = .init(OpaquePointer(opaqueResult))
+            
+            XCTAssertEqual(result.stringValue, "Second")
         }
     }
 

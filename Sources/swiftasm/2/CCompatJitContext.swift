@@ -124,6 +124,12 @@ class CCompatJitContext : JitContext2 {
         }
     }
     
+    var nstrings: UInt32  {
+        try! withModule {
+            $0.pointee.code.pointee.nstrings
+        }
+    }
+    
     var nglobals: UInt32  {
         try! withModule {
             $0.pointee.code.pointee.nglobals
@@ -158,6 +164,10 @@ class CCompatJitContext : JitContext2 {
         try withModule {
             return $0.pointee.code.pointee.getInt(ix)
         }
+    }
+    
+    func getString(_ ix: Int) throws -> any StringProvider {
+        fatalError("Not implemented")
     }
     
     /// Get index into the function pointers/addresses from a findex value. This works for both native/compilable functions.

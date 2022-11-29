@@ -363,5 +363,11 @@ struct LibHl {
     // vvirtual *hl_to_virtual( hl_type *vt, vdynamic *obj ) {
     static let _hl_to_virtual: (@convention(c) (OpaquePointer, OpaquePointer)->(OpaquePointer)) = { load("hl_to_virtual") }()
     
+    // MARK: code.c
     
+    // const uchar *hl_get_ustring( hl_code *code, int index ) {
+    static let _hl_get_ustring: (@convention(c) (OpaquePointer, Int32)->(OpaquePointer)) = { load("hl_get_ustring", from: .bin) }()
+    static func hl_get_ustring(_ code: UnsafePointer<HLCode_CCompat>, _ index: Int32) -> (UnsafePointer<CChar16>) {
+        .init(_hl_get_ustring(.init(code), index))
+    }
 }

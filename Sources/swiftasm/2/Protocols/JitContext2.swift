@@ -1,4 +1,4 @@
-protocol JitContext2 : HLTypeListProvider, HLIntListProvider, HLFunctionListProvider, HLNativeListProvider {
+protocol JitContext2 : HLTypeListProvider, HLIntListProvider, HLStringListProvider, HLFunctionListProvider, HLNativeListProvider {
     var funcTracker: FunctionTracker { get }
     
     /// Used in tests

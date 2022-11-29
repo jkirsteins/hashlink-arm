@@ -358,12 +358,6 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__indexOf() throws {
-        struct _String {
-            let t: UnsafePointer<HLType_CCompat>
-            let bytes: UnsafePointer<CChar16>
-            let length: Int32
-        }
-        
         typealias _JitFunc = (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer) -> Int32)
         try _compileAndLinkWithDeps(
             strip: true,

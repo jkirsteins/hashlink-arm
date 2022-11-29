@@ -6,13 +6,16 @@ class CCompatWriter_HLCode {
     
     let ints: UnsafeMutableBufferPointer<Int32>
     let floats: UnsafeMutablePointer<Double>
-    let strings: UnsafeMutablePointer<UnsafePointer<CChar>>
-    let string_lens: UnsafeMutablePointer<UInt32>
+    let strings: UnsafeMutableBufferPointer<UnsafePointer<CChar>>
+    let string_lens: UnsafeMutableBufferPointer<UInt32>
     let bytes: UnsafeMutablePointer<Int8>
     let bytes_pos: UnsafeMutablePointer<Int32>
     let debugfiles: UnsafeMutablePointer<UnsafePointer<CChar>>
     let debugfiles_lens: UnsafeMutablePointer<UInt32>
-    let ustrings: UnsafeMutablePointer<UnsafePointer<CChar16>>
+    
+    // should be initialized to nils and will be initialized by libhl
+    let ustrings: UnsafeMutablePointer<UnsafePointer<CChar16>?>
+    
     let types: UnsafeMutablePointer<HLType_CCompat>
     let globals: UnsafeMutablePointer<UnsafePointer<HLType_CCompat>>
     let natives: UnsafeMutablePointer<HLNative_CCompat>
@@ -57,13 +60,13 @@ class CCompatWriter_HLCode {
         
         self.ints = .allocate(capacity: Int(ctx.nints))
         self.floats = .allocate(capacity: 0)
-        self.strings = .allocate(capacity: 0)
-        self.string_lens = .allocate(capacity: 0)
+        self.strings = .allocate(capacity: Int(ctx.nstrings))
+        self.string_lens = .allocate(capacity: Int(ctx.nstrings))
         self.bytes = .allocate(capacity: 0)
         self.bytes_pos = .allocate(capacity: 0)
         self.debugfiles = .allocate(capacity: 0)
         self.debugfiles_lens = .allocate(capacity: 0)
-        self.ustrings = .allocate(capacity: 0)
+        self.ustrings = .allocate(capacity: Int(ctx.nstrings))
         self.types = types
         self.globals = .allocate(capacity: 0)
         self.natives = .allocate(capacity: Int(ctx.nnatives))
@@ -73,13 +76,11 @@ class CCompatWriter_HLCode {
     
     deinit {
         self.floats.deinitialize(count: 0)
-        self.strings.deinitialize(count: 0)
-        self.string_lens.deinitialize(count: 0)
         self.bytes.deinitialize(count: 0)
         self.bytes_pos.deinitialize(count: 0)
         self.debugfiles.deinitialize(count: 0)
         self.debugfiles_lens.deinitialize(count: 0)
-        self.ustrings.deinitialize(count: 0)
+        self.ustrings.deinitialize(count: Int(ctx.nstrings))
         self.types.deinitialize(count: Int(ctx.ntypes))
         self.globals.deinitialize(count: 0)
         self.functions.deinitialize(count: Int(ctx.nfunctions))
@@ -88,7 +89,13 @@ class CCompatWriter_HLCode {
         
         self.ints.deallocate()
         self.floats.deallocate()
+        
+        for s in self.strings {
+            // do we need to cast back to buffer pointer?
+            s.deallocate()
+        }
         self.strings.deallocate()
+            
         self.string_lens.deallocate()
         self.bytes.deallocate()
         self.bytes_pos.deallocate()
@@ -110,6 +117,37 @@ class CCompatWriter_HLCode {
         
         let intArray = try (0..<ctx.nints).map { try ctx.getInt(Int($0)) }
         _ = self.ints.initialize(from: intArray)
+        
+        let stringArray = try (0..<ctx.nstrings).map { try ctx.getString(Int($0)) }
+        let stringLengths = stringArray.map({ UInt32($0.stringValue.count) })
+        let allocatedStringPointers = stringArray.map {
+            strProvider in
+            
+            let valWZ = strProvider.stringValue + "\0"
+            let stringPtr: UnsafeMutableBufferPointer<CChar> = .allocate(capacity: valWZ.count)
+            
+            let ccharArr: [CChar] = Array(valWZ.utf8).map { CChar($0) }
+            _ = stringPtr.initialize(from: ccharArr)
+            print("[hl_get_ustring] allocated \(stringPtr)")
+            return UnsafePointer(stringPtr.baseAddress!)
+        }
+        
+        _ = self.string_lens.initialize(from: stringLengths)
+        print("[hl_get_ustring] \(allocatedStringPointers)")
+        
+        _ = self.strings.initialize(from: allocatedStringPointers)
+        
+        self.ustrings.initialize(repeating: nil, count: Int(ctx.nstrings))
+        
+        print("[hl_get_ustring] string base address: \(self.strings.baseAddress!)")
+        
+        let cast: UnsafePointer<UnsafePointer<CChar>?> = .init(OpaquePointer(self.strings.baseAddress!))
+        
+        for six in 0..<ctx.nstrings {
+            let sb = cast.advanced(by: Int(six))
+            let s = sb.pointee
+            print("[hl_get_ustring] \(six): \(sb): \(s)")
+        }
         
         // TODO: remove
         for ix in (0..<ctx.nfunctions) {
@@ -135,13 +173,13 @@ class CCompatWriter_HLCode {
             hasdebug: false,
             ints: ints.baseAddress!,
             floats: floats,
-            strings: strings,
-            string_lens: string_lens,
+            strings: .init(OpaquePointer(strings.baseAddress!)),
+            string_lens: string_lens.baseAddress!,
             bytes: bytes,
             bytes_pos: bytes_pos,
             debugfiles: debugfiles,
             debuffiles_lens: debugfiles_lens,
-            ustrings: ustrings,
+            ustrings: .init(OpaquePointer(ustrings)),
             types: types,
             globals: globals,
             natives: natives,

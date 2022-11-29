@@ -1219,6 +1219,19 @@ class M1Compiler2 {
                     fieldRef: fieldRef,
                     regs: regs,
                     mem: mem)
+            case .OString(let dst, let ptr):
+                assert(reg: dst, from: regs, is: HLTypeKind.bytes)
+                
+                guard let codePtr = ctx.mainContext.pointee.code else {
+                    fatalError("No code set")
+                }
+                mem.append(
+                    PseudoOp.mov(X.x0, OpaquePointer(codePtr)),
+                    PseudoOp.mov(X.x1, ptr),
+                    PseudoOp.mov(X.x2, unsafeBitCast(LibHl._hl_get_ustring, to: OpaquePointer.self)),
+                    M1Op.blr(X.x2)
+                )
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OInt(let dst, let iRef):
                 
                 if (currentInstruction == 8 && compilable.findex == 37) {

@@ -6,6 +6,7 @@ class TestJitModule : JitContext2 {
     var nints: UInt32 { UInt32(ints.count) }
     var nfunctions: UInt32 { UInt32(compilables.count) }
     var nnatives: UInt32 { UInt32(natives.count) }
+    var nstrings: UInt32 { UInt32(strings.count) }
     
     func getType(_ ix: Int) throws -> any HLTypeProvider {
         //        let setIx = types.index(types.startIndex, offsetBy: ix)
@@ -17,10 +18,15 @@ class TestJitModule : JitContext2 {
         ints[ix]
     }
     
+    func getString(_ ix: Int) throws -> any StringProvider {
+        strings[ix]
+    }
+    
     let compilables: [any Compilable2]
     let natives: [any NativeCallable2]
     let types: Set<AnyHLTypeProvider>
     let ints: [Int32]
+    let strings: [String]
     
     func getOrderedCompilablesByRealIx__slow() -> [any Compilable2] { compilables }
     func getOrderedNativesByRealIx__slow() -> [any NativeCallable2] { natives }
@@ -43,7 +49,7 @@ class TestJitModule : JitContext2 {
     let funcTracker = FunctionTracker()
     
     // MARK: Initializers
-    init(_ compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = []) {
+    init(_ compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = []) {
         self.compilables = compilables
         self.natives = natives
         
@@ -73,12 +79,14 @@ class TestJitModule : JitContext2 {
         print("Serializing types", self.types.map({ $0._overrideDebugDescription }).joined(separator: "\n --"))
         
         self.ints = ints
+        self.strings = strings
     }
     
     init(types: [any HLTypeProvider]) {
         self.types = Set(types.map { AnyHLTypeProvider($0) })
         self.compilables = []
         self.ints = []
+        self.strings = []
         self.natives = []
     }
     
