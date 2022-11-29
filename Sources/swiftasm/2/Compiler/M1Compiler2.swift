@@ -1255,7 +1255,7 @@ class M1Compiler2 {
 //                    )
                 }
                 
-                assert(reg: dst, from: regs, in: [HLTypeKind.i32, HLTypeKind.u8, HLTypeKind.u16])
+                assert(reg: dst, from: regs, in: [HLTypeKind.i64, HLTypeKind.i32, HLTypeKind.u8, HLTypeKind.u16])
                 let c = try ctx.requireInt(iRef)
                 let regStackOffset = getRegStackOffset(regs, dst)
                 appendDebugPrintAligned4("--> Storing int \(iRef) (val \(c)) in \(dst)", builder: mem)
@@ -2106,6 +2106,32 @@ class M1Compiler2 {
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendDebugPrintRegisterAligned4(X.x1, builder: mem)
                 mem.append(M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))))
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .ONot(let dst, let src):
+                assert(reg: dst, from: regs, is: HLTypeKind.bool)
+                let _notter: (@convention(c) (UInt8)->(UInt8)) = {
+                    inVal in
+                    
+                    return inVal ^ 1
+                }
+                appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
+                mem.append(
+                    PseudoOp.mov(X.x1, unsafeBitCast(_notter, to: OpaquePointer.self)),
+                        M1Op.blr(X.x1)
+                )
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .ONeg(let dst, let src):
+                assert(reg: dst, from: regs, in: [HLTypeKind.i32, HLTypeKind.i64, HLTypeKind.u8, HLTypeKind.u16])
+                let _negger: (@convention(c) (UInt64)->(UInt64)) = {
+                    inVal in
+                    
+                    return 0 &- inVal
+                }
+                appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
+                mem.append(
+                    PseudoOp.mov(X.x1, unsafeBitCast(_negger, to: OpaquePointer.self)),
+                        M1Op.blr(X.x1)
+                )
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OUShr(let dst, let a, let b):
                 fallthrough
