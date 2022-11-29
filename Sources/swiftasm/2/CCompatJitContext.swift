@@ -1,5 +1,6 @@
 
 class CCompatJitContext : JitContext2 {
+    
     let jitBase: JitBase
     let mainContext: UnsafeMutablePointer<MainContext_CCompat>
     let funcTracker = FunctionTracker()
@@ -13,6 +14,13 @@ class CCompatJitContext : JitContext2 {
     
     let filePtr: UnsafeMutableBufferPointer<CChar>?
     let libhlAllocatedCode: UnsafePointer<HLCode_CCompat>?
+    
+    var versionHint: Int? {
+        if let v = mainContext.pointee.code?.pointee.version {
+            return Int(v)
+        }
+        return nil
+    }
     
     init(_ file: String) throws {
         let jitBase = JitBase(wrappedValue: nil)
@@ -130,6 +138,12 @@ class CCompatJitContext : JitContext2 {
         }
     }
     
+    var nbytes: UInt32  {
+        try! withModule {
+            $0.pointee.code.pointee.nbytes
+        }
+    }
+    
     var nglobals: UInt32  {
         try! withModule {
             $0.pointee.code.pointee.nglobals
@@ -168,6 +182,28 @@ class CCompatJitContext : JitContext2 {
     
     func getString(_ ix: Int) throws -> any StringProvider {
         fatalError("Not implemented")
+    }
+    
+    func getBytes(_ ix: Int) throws -> any BytesProvider {
+        try withModule {
+            guard let version = self.versionHint else {
+                throw GlobalError.invalidOperation("Fetching bytes is version-dependent, but version is not known.")
+            }
+            guard version >= 5 else {
+                let result = $0.pointee.code.pointee.strings.advanced(by: ix)
+                print("Returning bytes for <v5: \(result.pointee)")
+                return result.pointee
+            }
+            let offset = $0.pointee.code.pointee.bytes_pos.advanced(by: ix).pointee
+            let bytes = $0.pointee.code.pointee.bytes.advanced(by: Int(offset))
+            
+            print("Returning bytes for >=v5: \(bytes)")
+            return bytes
+        }
+    }
+    
+    func getAllBytes_forWriters() throws -> ([UInt8], [Int32]) {
+        fatalError("This method is only useful for `TestJitModule`")
     }
     
     /// Get index into the function pointers/addresses from a findex value. This works for both native/compilable functions.

@@ -644,7 +644,7 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testEntrypoint() throws {
-        throw XCTSkip("testEntrypoint not finished yet")
+//        throw XCTSkip("testEntrypoint not finished yet")
         
         typealias _JitFunc =  (@convention(c) () -> ())
         

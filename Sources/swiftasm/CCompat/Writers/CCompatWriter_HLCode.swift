@@ -4,12 +4,17 @@ class CCompatWriter_HLCode {
     
     let logger = LoggerFactory.create(CCompatWriter_HLCode.self)
     
+    let version: UInt32
+    
+    let byteData: [UInt8]
+    let bytePos: [Int32]
+    
     let ints: UnsafeMutableBufferPointer<Int32>
     let floats: UnsafeMutablePointer<Double>
     let strings: UnsafeMutableBufferPointer<UnsafePointer<CChar>>
     let string_lens: UnsafeMutableBufferPointer<UInt32>
-    let bytes: UnsafeMutablePointer<Int8>
-    let bytes_pos: UnsafeMutablePointer<Int32>
+    let bytes: UnsafeMutableBufferPointer<Int8>
+    let bytes_pos: UnsafeMutableBufferPointer<Int32>
     let debugfiles: UnsafeMutablePointer<UnsafePointer<CChar>>
     let debugfiles_lens: UnsafeMutablePointer<UInt32>
     
@@ -31,6 +36,9 @@ class CCompatWriter_HLCode {
     let voidIndex: UInt32
     
     init(_ ctx: any JitContext2) throws {
+        let version = UInt32(ctx.versionHint ?? 4)
+        self.version = version
+        
         //
         let types: UnsafeMutablePointer<HLType_CCompat> = .allocate(capacity: Int(ctx.ntypes))
         // Initialize to dummies to allow lookup to not crash (as we initialize it, we might need to
@@ -52,6 +60,15 @@ class CCompatWriter_HLCode {
         self.voidIndex = voidIndex
         //
         
+        if version >= 5 {
+            let byteInfo = try ctx.getAllBytes_forWriters()
+            self.byteData = byteInfo.0
+            self.bytePos = byteInfo.1
+        } else {
+            self.byteData = []
+            self.bytePos = []
+        }
+        
         let typeLookup: TypeLookupHelper = .init(start: types, count: Int(ctx.ntypes), voidIndex: voidIndex)
         self.ctx = ctx
         self.typeWriter = try CCompatWriter_HLTypes(ctx, typeLookup: typeLookup)
@@ -62,8 +79,8 @@ class CCompatWriter_HLCode {
         self.floats = .allocate(capacity: 0)
         self.strings = .allocate(capacity: Int(ctx.nstrings))
         self.string_lens = .allocate(capacity: Int(ctx.nstrings))
-        self.bytes = .allocate(capacity: 0)
-        self.bytes_pos = .allocate(capacity: 0)
+        self.bytes = .allocate(capacity: self.byteData.count)
+        self.bytes_pos = .allocate(capacity: self.bytePos.count)
         self.debugfiles = .allocate(capacity: 0)
         self.debugfiles_lens = .allocate(capacity: 0)
         self.ustrings = .allocate(capacity: Int(ctx.nstrings))
@@ -76,8 +93,6 @@ class CCompatWriter_HLCode {
     
     deinit {
         self.floats.deinitialize(count: 0)
-        self.bytes.deinitialize(count: 0)
-        self.bytes_pos.deinitialize(count: 0)
         self.debugfiles.deinitialize(count: 0)
         self.debugfiles_lens.deinitialize(count: 0)
         self.ustrings.deinitialize(count: Int(ctx.nstrings))
@@ -139,26 +154,18 @@ class CCompatWriter_HLCode {
         
         self.ustrings.initialize(repeating: nil, count: Int(ctx.nstrings))
         
-        print("[hl_get_ustring] string base address: \(self.strings.baseAddress!)")
+        _ = self.bytes.initialize(from: self.byteData.map { Int8($0) })
+        _ = self.bytes_pos.initialize(from: self.bytePos)
         
         let cast: UnsafePointer<UnsafePointer<CChar>?> = .init(OpaquePointer(self.strings.baseAddress!))
         
         for six in 0..<ctx.nstrings {
             let sb = cast.advanced(by: Int(six))
             let s = sb.pointee
-            print("[hl_get_ustring] \(six): \(sb): \(s)")
         }
         
-        // TODO: remove
-        for ix in (0..<ctx.nfunctions) {
-            let f = functions.advanced(by: Int(ix)).pointee
-            print("Found f \(f)")
-        }
-        // TODO: remove
-        
-        print("Functions base \(functions)")
         target.initialize(to: HLCode_CCompat(
-            version: 4,
+            version: version, // <5 bytes pointed to strings
             nints: ctx.nints,
             nfloats: 0,
             nstrings: 0,
@@ -175,8 +182,8 @@ class CCompatWriter_HLCode {
             floats: floats,
             strings: .init(OpaquePointer(strings.baseAddress!)),
             string_lens: string_lens.baseAddress!,
-            bytes: bytes,
-            bytes_pos: bytes_pos,
+            bytes: bytes.baseAddress!,
+            bytes_pos: bytes_pos.baseAddress!,
             debugfiles: debugfiles,
             debuffiles_lens: debugfiles_lens,
             ustrings: .init(OpaquePointer(ustrings)),

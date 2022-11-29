@@ -1,4 +1,4 @@
-protocol JitContext2 : HLTypeListProvider, HLIntListProvider, HLStringListProvider, HLFunctionListProvider, HLNativeListProvider {
+protocol JitContext2 : HLTypeListProvider, HLIntListProvider, HLStringListProvider, HLFunctionListProvider, HLNativeListProvider, HLByteListProvider {
     var funcTracker: FunctionTracker { get }
     
     /// Used in tests
@@ -6,4 +6,6 @@ protocol JitContext2 : HLTypeListProvider, HLIntListProvider, HLStringListProvid
     func getOrderedNativesByRealIx__slow() throws -> [any NativeCallable2]
     
     func getCompilable(findex fix: RefFun) throws -> (any Compilable2)?
+    
+    var versionHint: Int? { get }
 }

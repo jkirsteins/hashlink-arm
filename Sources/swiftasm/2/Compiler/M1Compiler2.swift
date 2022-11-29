@@ -791,7 +791,7 @@ class M1Compiler2 {
         
         guard targets.contains(where: { $0.kind == from[Int(reg)].kind }) else {
             fatalError(
-                "Register \(reg) expected to be one of \(targets) but is \(from[Int(reg)])"
+                "Register \(reg) expected to be one of \(targets) but is \(from[Int(reg)].kind)"
             )
         }
     }
@@ -1219,6 +1219,10 @@ class M1Compiler2 {
                     fieldRef: fieldRef,
                     regs: regs,
                     mem: mem)
+            case .OBytes(let dst, let ptr):
+                let bytesAddress = try ctx.getBytes(ptr).ccompatAddress
+                mem.append(PseudoOp.mov(X.x0, bytesAddress))
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OString(let dst, let ptr):
                 assert(reg: dst, from: regs, is: HLTypeKind.bytes)
                 

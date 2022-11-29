@@ -2,11 +2,29 @@
 
 
 class TestJitModule : JitContext2 {
+    
+    func getBytes(_ ix: Int) throws -> BytesProvider {
+        bytes[ix]
+    }
+    
+    func getAllBytes_forWriters() throws -> ([UInt8], [Int32]) {
+        let left = self.bytes.flatMap { $0 }
+        let right = self.bytes.map({ $0.count }).reduce([Int32(0)]) { (res, curC) -> [Int32] in
+            let resLast = res.last ?? 0
+            return res + [resLast + Int32(curC)]
+        }.dropLast()
+        
+        return (left, Array(right))
+    }
+    
+    var nbytes: UInt32 { UInt32(bytes.count) }
     var ntypes: UInt32 { UInt32(types.count) }
     var nints: UInt32 { UInt32(ints.count) }
     var nfunctions: UInt32 { UInt32(compilables.count) }
     var nnatives: UInt32 { UInt32(natives.count) }
     var nstrings: UInt32 { UInt32(strings.count) }
+    
+    let versionHint: Int?
     
     func getType(_ ix: Int) throws -> any HLTypeProvider {
         //        let setIx = types.index(types.startIndex, offsetBy: ix)
@@ -27,6 +45,7 @@ class TestJitModule : JitContext2 {
     let types: Set<AnyHLTypeProvider>
     let ints: [Int32]
     let strings: [String]
+    let bytes: [[UInt8]]
     
     func getOrderedCompilablesByRealIx__slow() -> [any Compilable2] { compilables }
     func getOrderedNativesByRealIx__slow() -> [any NativeCallable2] { natives }
@@ -49,9 +68,11 @@ class TestJitModule : JitContext2 {
     let funcTracker = FunctionTracker()
     
     // MARK: Initializers
-    init(_ compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = []) {
+    init(_ compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], v versionHint: Int? = nil) {
         self.compilables = compilables
         self.natives = natives
+        self.versionHint = versionHint
+        self.bytes = bytes
         
         let allCallables: [any Callable2] = compilables + natives
         let allTypes = allCallables.flatMap {
@@ -88,6 +109,8 @@ class TestJitModule : JitContext2 {
         self.ints = []
         self.strings = []
         self.natives = []
+        self.versionHint = nil
+        self.bytes = []
     }
     
     static func expand(_ t: any HLTypeProvider) -> [any HLTypeProvider] {

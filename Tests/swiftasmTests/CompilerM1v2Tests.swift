@@ -18,8 +18,8 @@ fileprivate func prepareFunction(
         typeProvider: funType)
 }
 
-fileprivate func prepareContext(compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = []) throws -> CCompatJitContext {
-    let tm = TestJitModule(compilables, natives: natives, ints: ints, strings: strings)
+fileprivate func prepareContext(compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], v: Int? = nil) throws -> CCompatJitContext {
+    let tm = TestJitModule(compilables, natives: natives, ints: ints, strings: strings, bytes: bytes, v: v)
     assert(tm.ntypes > 0)
     return try CCompatJitContext(ctx: tm)
 }
@@ -627,7 +627,8 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _rbytes(ops: [HLOpCode], regs: [any HLTypeProvider] = [HLTypeKind.bytes], strings: [String] = [], _ callback: @escaping (()->UnsafeRawPointer?)->()) throws {
+    func _rbytes(ops: [HLOpCode], regs: [any HLTypeProvider] = [HLTypeKind.bytes], strings: [String] = [], bytes: [[UInt8]] = [], v: Int? = nil, _ callback: @escaping (()->UnsafeRawPointer?)->()) throws {
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.bytes,
@@ -635,7 +636,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 regs: regs,
                 args: regs,
                 ops: ops)
-        ], strings: strings)
+        ], strings: strings, bytes: bytes, v: v)
 
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
@@ -981,6 +982,40 @@ final class CompilerM1v2Tests: CCompatTestCase {
             let result: UnsafePointer<CChar16> = .init(OpaquePointer(opaqueResult))
             
             XCTAssertEqual(result.stringValue, "Second")
+        }
+    }
+    
+    /// Test OBytes below v5 (where it points to the utf8 string encodings)
+    func testCompile_OBytes_v4() throws {
+        
+        try _rbytes(ops: [
+            .OBytes(dst: 0, ptr: 1),
+            .ORet(ret: 0)
+        ], strings: ["First", "Second", "Third"], v: 4) {
+            entrypoint in
+            
+            guard let opaqueResult = entrypoint() else { return XCTFail("No result returned") }
+            let result: UnsafePointer<CChar> = .init(OpaquePointer(opaqueResult))
+            
+            XCTAssertEqual(String.wrapUtf8(from: result), "Second")
+        }
+    }
+    
+    /// Test OBytes from v5 onward (where it points to a dedicated bytes resource)
+    func testCompile_OBytes_v5() throws {
+        
+        let bytes = [Array("First\0".utf8), Array("Second\0".utf8), Array("Third\0".utf8)]
+        
+        try _rbytes(ops: [
+            .OBytes(dst: 0, ptr: 1),
+            .ORet(ret: 0)
+        ], bytes: bytes, v: 5) {
+            entrypoint in
+            
+            guard let opaqueResult = entrypoint() else { return XCTFail("No result returned") }
+            let result: UnsafePointer<CChar> = .init(OpaquePointer(opaqueResult))
+            
+            XCTAssertEqual(String.wrapUtf8(from: result), "Second")
         }
     }
 
