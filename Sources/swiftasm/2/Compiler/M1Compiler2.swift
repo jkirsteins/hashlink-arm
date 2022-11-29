@@ -1255,7 +1255,7 @@ class M1Compiler2 {
 //                    )
                 }
                 
-                assert(reg: dst, from: regs, is: HLTypeKind.i32)
+                assert(reg: dst, from: regs, in: [HLTypeKind.i32, HLTypeKind.u8, HLTypeKind.u16])
                 let c = try ctx.requireInt(iRef)
                 let regStackOffset = getRegStackOffset(regs, dst)
                 appendDebugPrintAligned4("--> Storing int \(iRef) (val \(c)) in \(dst)", builder: mem)
@@ -1271,6 +1271,14 @@ class M1Compiler2 {
             case .OSetField(let objReg, let fieldRef, let srcReg):
                 try __osetthis_osetfield(objReg: objReg, fieldRef: fieldRef, srcReg: srcReg, regs: regs, mem: mem)
             case .OJNotEq(let a, let b, let offset):
+                fallthrough
+            case .OJNotGte(let a, let b, let offset):
+                fallthrough
+            case .OJNotLt(let a, let b, let offset):
+                fallthrough
+            case .OJSGt(let a, let b, let offset):
+                fallthrough
+            case .OJUGte(let a, let b, let offset):
                 fallthrough
             case .OJEq(let a, let b, let offset):
                 fallthrough
@@ -1307,6 +1315,8 @@ class M1Compiler2 {
                     fallthrough
                 case .OJSLte:
                     fallthrough
+                case .OJSGt:
+                    fallthrough
                 case .OJSLt:
                     switch(kindA) {
                     case .i32:
@@ -1332,8 +1342,8 @@ class M1Compiler2 {
                     break
                 }
 
-                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
-                appendDebugPrintRegisterAligned4(X.x1, builder: mem)
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(op.id)", builder: mem)
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(op.id)", builder: mem)
 
                 mem.append(M1Op.cmp(X.x0, X.x1))
 
@@ -1352,13 +1362,21 @@ class M1Compiler2 {
                 mem.append(
                     PseudoOp.deferred(4) {
                         switch(op.id) {
+                        case .OJSGt:
+                            return M1Op.b_gt(try Immediate19(jumpOffset.immediate))
                         case .OJSLt:
                             fallthrough
                         case .OJULt:
+                            fallthrough
+                        case .OJNotGte:
                             return M1Op.b_lt(try Immediate19(jumpOffset.immediate))
                         case .OJSLte:
                             return M1Op.b_le(try Immediate19(jumpOffset.immediate))
                         case .OJSGte:
+                            fallthrough
+                        case .OJUGte:
+                            fallthrough
+                        case .OJNotLt:
                             return M1Op.b_ge(try Immediate19(jumpOffset.immediate))
                         case .OJEq:
                             return M1Op.b_eq(try Immediate19(jumpOffset.immediate))

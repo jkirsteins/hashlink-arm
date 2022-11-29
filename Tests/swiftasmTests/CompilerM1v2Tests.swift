@@ -305,6 +305,214 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(57005, entrypoint(Int32(bitPattern: 0xffffffff), 0))
         }
     }
+    
+    func testCompile_OJSGt() throws {
+        let constI_3 = 1 // constant value 3
+        let constI_57 = 2 // constant value 57
+        
+        let ops: [HLOpCode] = [
+            .OJSGt(a: 0, b: 1, offset: 2),
+            
+            // return 3
+            .OInt(dst: 1, ptr: constI_3),
+            .ORet(ret: 1),
+
+            // return 57
+            .OInt(dst: 1, ptr: constI_57),
+            .ORet(ret: 1)
+        ]
+        
+        try _ri32__i32_i32(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // gt -> jump
+            XCTAssertEqual(57, entrypoint(
+                0b00000000_00000000_00000000_00000001,
+                Int32(bitPattern: 0b10000000_00000000_00000000_00000000)))
+            
+            // don't jump
+            XCTAssertEqual(3, entrypoint(
+                Int32(bitPattern: 0b10000000_00000000_00000000_00000000),
+                0b00000000_00000000_00000000_00000001))
+            XCTAssertEqual(3, entrypoint(81, 81))
+        }
+        
+        try _ru16__u16_u16(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // gt -> jump
+            XCTAssertEqual(57, entrypoint(0b00000000_00000001, 0b10000000_00000000))
+            
+            // don't jump
+            XCTAssertEqual(3, entrypoint(0b10000000_00000000, 0b00000000_00000001))
+            XCTAssertEqual(3, entrypoint(81, 81))
+        }
+        
+        try _ru8__u8_u8(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // gt -> jump
+            XCTAssertEqual(57, entrypoint(0b00000001, 0b10000000))
+            
+            // don't jump
+            XCTAssertEqual(3, entrypoint(0b10000000, 0b00000001))
+            XCTAssertEqual(3, entrypoint(81, 81))
+        }
+    }
+    
+    func testCompile_OJUGte() throws {
+        let constI_3 = 1 // constant value 3
+        let constI_57 = 2 // constant value 57005
+        
+        let ops: [HLOpCode] = [
+            .OJUGte(a: 0, b: 1, offset: 2),
+            
+            // return 3
+            .OInt(dst: 1, ptr: constI_3),
+            .ORet(ret: 1),
+
+            // return 57005
+            .OInt(dst: 1, ptr: constI_57),
+            .ORet(ret: 1)
+        ]
+        
+        try _ri32__i32_i32(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // gte -> jump
+            XCTAssertEqual(57, entrypoint(
+                Int32(bitPattern: 0b10000000_00000000_00000000_00000000),
+                0b00000000_00000000_00000000_00000001))
+            XCTAssertEqual(57, entrypoint(81, 81))
+            
+            // don't jump
+            XCTAssertEqual(3, entrypoint(
+                0b00000000_00000000_00000000_00000001,
+                Int32(bitPattern: 0b10000000_00000000_00000000_00000000)))
+        }
+        
+        try _ru16__u16_u16(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // gte -> jump
+            XCTAssertEqual(57, entrypoint(0b10000000_00000000, 0b00000000_00000001))
+            XCTAssertEqual(57, entrypoint(81, 81))
+            
+            // don't jump
+            XCTAssertEqual(3, entrypoint(0b00000000_00000001, 0b10000000_00000000))
+        }
+        
+        try _ru8__u8_u8(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // gte -> jump
+            XCTAssertEqual(57, entrypoint(0b10000000, 0b00000001))
+            XCTAssertEqual(57, entrypoint(81, 81))
+            
+            // don't jump
+            XCTAssertEqual(3, entrypoint(0b00000001, 0b10000000))
+        }
+    }
+    
+    func testCompile_OJNotLt() throws {
+        let constI_3 = 1 // constant value 3
+        let constI_57 = 2 // constant value 57005
+        
+        let ops: [HLOpCode] = [
+            .OJNotLt(a: 0, b: 1, offset: 2),
+            
+            // return 3
+            .OInt(dst: 1, ptr: constI_3),
+            .ORet(ret: 1),
+
+            // return 57005
+            .OInt(dst: 1, ptr: constI_57),
+            .ORet(ret: 1)
+        ]
+        
+        try _ri32__i32_i32(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // lt -> dont jump
+            XCTAssertEqual(3, entrypoint(5, 100))
+            
+            // jump
+            XCTAssertEqual(57, entrypoint(81, 81))
+            XCTAssertEqual(57, entrypoint(100, 5))
+        }
+        
+        try _ru16__u16_u16(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // lt -> dont jump
+            XCTAssertEqual(3, entrypoint(5, 100))
+            
+            // jump
+            XCTAssertEqual(57, entrypoint(81, 81))
+            XCTAssertEqual(57, entrypoint(100, 5))
+        }
+        
+        try _ru8__u8_u8(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // lt -> dont jump
+            XCTAssertEqual(3, entrypoint(5, 100))
+            
+            // jump
+            XCTAssertEqual(57, entrypoint(81, 81))
+            XCTAssertEqual(57, entrypoint(100, 5))
+        }
+    }
+    
+    func testCompile_OJNotGte() throws {
+        let constI_3 = 1 // constant value 3
+        let constI_57 = 2 // constant value 57005
+        
+        let ops: [HLOpCode] = [
+            .OJNotGte(a: 0, b: 1, offset: 2),
+            
+            // return 3
+            .OInt(dst: 1, ptr: constI_3),
+            .ORet(ret: 1),
+
+            // return 57005
+            .OInt(dst: 1, ptr: constI_57),
+            .ORet(ret: 1)
+        ]
+        
+        try _ri32__i32_i32(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // gte -> dont jump
+            XCTAssertEqual(3, entrypoint(81, 81))
+            XCTAssertEqual(3, entrypoint(100, 5))
+            
+            // jump
+            XCTAssertEqual(57, entrypoint(5, 100))
+        }
+        
+        try _ru16__u16_u16(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // gte -> dont jump
+            XCTAssertEqual(3, entrypoint(81, 81))
+            XCTAssertEqual(3, entrypoint(100, 5))
+            
+            // jump
+            XCTAssertEqual(57, entrypoint(5, 100))
+        }
+        
+        try _ru8__u8_u8(ops: ops, ints: [0, 3, 57]) {
+            entrypoint in
+            
+            // gte -> dont jump
+            XCTAssertEqual(3, entrypoint(81, 81))
+            XCTAssertEqual(3, entrypoint(100, 5))
+            
+            // jump
+            XCTAssertEqual(57, entrypoint(5, 100))
+        }
+    }
         
     func testCompile_OJSLt() throws {
         // constants
@@ -699,6 +907,44 @@ final class CompilerM1v2Tests: CCompatTestCase {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int32, Int32) -> Int32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ru16__u16_u16(ops: [HLOpCode], regs: [HLTypeKind] = [.u16, .u16], ints: [Int32] = [], _ callback: @escaping ((UInt16, UInt16)->UInt16)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.u16,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.u16, HLTypeKind.u16],
+                ops: ops)
+        ], ints: ints)
+
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt16, UInt16) -> UInt16)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ru8__u8_u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u8], ints: [Int32] = [], _ callback: @escaping ((UInt8, UInt8)->UInt8)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.u8,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.u8, HLTypeKind.u8],
+                ops: ops)
+        ], ints: ints)
+
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt8, UInt8) -> UInt8)) in
                 callback(ep)
             }
         }
