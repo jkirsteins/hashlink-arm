@@ -643,8 +643,27 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    func testCompile__testTrapDifferentTypes() throws {
+        typealias _JitFunc =  (@convention(c) (Bool, Bool) -> Int32)
+        
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testTrapDifferentTypes"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(5, entrypoint(true, false))
+                XCTAssertEqual(3, entrypoint(false, true))
+                XCTAssertEqual(5, entrypoint(false, false))
+            }
+        }
+    }
+    
     func testCompile__testEntrypoint() throws {
-//        throw XCTSkip("testEntrypoint not finished yet")
+        throw XCTSkip("testEntrypoint not finished yet")
         
         typealias _JitFunc =  (@convention(c) () -> ())
         
