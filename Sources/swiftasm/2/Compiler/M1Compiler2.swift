@@ -913,6 +913,8 @@ class M1Compiler2 {
             appendDebugPrintAligned4("f\(compilable.findex): #\(currentInstruction): \(op.debugDescription)", builder: mem)
             
             switch op {
+            case .OAssert:
+                appendDebugPrintAligned4("OAssert is a no-op?", builder: mem)
             case .ORet(let dst):
                 // store
                 let dstStackOffset = getRegStackOffset(regs, dst)
