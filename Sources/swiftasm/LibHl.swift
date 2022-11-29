@@ -354,6 +354,12 @@ struct LibHl {
         _hl_throw(.init(p))
     }
     
+    // HL_PRIM void hl_rethrow( vdynamic *v ) {
+    static let _hl_rethrow: (@convention(c) (OpaquePointer)->()) = { load("hl_rethrow") }()
+    static func hl_rethrow(_ p: UnsafePointer<vdynamic>) -> () {
+        _hl_rethrow(.init(p))
+    }
+    
     // HL_PRIM hl_obj_field *hl_obj_field_fetch( hl_type *t, int fid ) {
     static let _hl_obj_field_fetch: (@convention(c) (OpaquePointer, Int32)->(OpaquePointer)) = { load("hl_obj_field_fetch") }()
     static func hl_obj_field_fetch(_ t: UnsafePointer<HLType_CCompat>, _ fid: Int32) -> (UnsafePointer<HLObjField_CCompat>) {

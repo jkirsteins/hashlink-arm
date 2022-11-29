@@ -391,7 +391,19 @@ extension HLOpCode {
         case .ODecr:
             return .ODecr(dst: cop.p1)
         case .OCallMethod:
-            fatalError("wip")
+            guard let extra = cop.extra else {
+                fatalError("OCallClosure missing extra")
+            }
+            
+            let argc = cop.p3
+            let extraValues = UnsafeMutableBufferPointer(start: .init(mutating: extra), count: Int(argc))
+            
+            let obj: Reg = extra.pointee.advanced(by: 0)
+            let proto: RefField = RefField(cop.p2)
+            let dst: Reg = cop.p1
+            let args = Array(extraValues.dropFirst())
+            
+            return .OCallMethod(dst: dst, obj: obj, proto: proto, args: args)
         case .OCallThis:
             fatalError("wip")
         case .OCallClosure:

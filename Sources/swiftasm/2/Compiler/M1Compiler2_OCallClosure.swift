@@ -157,7 +157,109 @@ extension M1Compiler2 {
         }
     }
     
-    /// Reusable implem for OGetThis and OField
+    /// OCallMethod implementation (differs from others because
+    /// we don't know function info at call time)
+    ///
+    /// Call address must be in X9 when calling this. This method is guaranteed
+    /// to not change that register.
+    func __ocallmethod_impl__addrInX9(
+        dst: Reg,
+        regs: [any HLTypeProvider],
+        preArgs: [((CpuOpBuffer, Register64)->(), HLTypeKind)],
+        args: [Reg],
+        reservedStackBytes: ByteCount,
+        mem: CpuOpBuffer
+    ) throws {
+        
+        appendDebugPrintAligned4("__omethodcall_impl", builder: mem)
+        
+        let dstStackOffset = getRegStackOffset(regs, dst)
+        let dstKind = requireTypeKind(reg: dst, from: regs)
+        
+        let totalArgKinds = preArgs.map({ $0.1 }) + args.map({ requireTypeKind(reg: $0, from: regs) })
+        
+        let additionalSizeUnrounded = totalArgKinds.dropFirst(ARG_REGISTER_COUNT).reduce(0) {
+            print("Adding size for \($1)")
+            return $0 + Int($1.hlRegSize)
+        }
+        let additionalSize = StackInfo.roundUpStackReservation(Int16(additionalSizeUnrounded))
+        
+        if additionalSize > 0 {
+            appendDebugPrintAligned4("Reserving \(additionalSize) bytes for stack (OCallN)", builder: mem)
+            mem.append(
+                M1Op.subImm12(X.sp, X.sp, try .i(additionalSize))
+            )
+        }
+
+        let regWkindToPass: [((CpuOpBuffer, Register64)->(), HLTypeKind)] = preArgs + args.enumerated().map {
+            (position, argReg) in
+            
+            let argTypeKind = requireTypeKind(reg: argReg, from: regs)
+            let load: (CpuOpBuffer, Register64)->()
+            
+            if position >= ARG_REGISTER_COUNT {
+                load = {
+                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
+                    
+                    print("[__ocallmethod_impl] loading vreg \($1) from offset \(offset)")
+                    $0.append(
+                        PseudoOp.ldrVreg($1, offset, argTypeKind.hlRegSize)
+                    )
+                }
+            } else {
+                load = {
+                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
+                    
+                    print("[__ocallmethod_impl] append load \($1) from offset \(offset)")
+                    self.appendLoad(reg: $1,
+                               from: argReg,
+                               kinds: regs, // careful, pass all kinds, not just the arg ones
+                               offset: offset,
+                               mem: $0)
+                }
+            }
+            
+            return (
+                load, argTypeKind
+            )
+        }
+        
+        var argOffset: Int64 = 0
+        for (load, regKind) in regWkindToPass.dropFirst(ARG_REGISTER_COUNT) {
+            load(mem, X.x0)
+            mem.append(
+                PseudoOp.strVreg(X.x0, argOffset, regKind.hlRegSize)
+            )
+            argOffset += regKind.hlRegSize
+        }
+        
+        for (regIx, (load, _)) in regWkindToPass.enumerated() {
+            guard regIx < ARG_REGISTER_COUNT else { break }
+            let armReg = Register64(rawValue: UInt8(regIx))!
+            
+            Swift.assert(armReg != X.x9)  // x9 must remain untouched for blr
+            
+            load(mem, armReg)
+        }
+        
+        // PERFORM BLR
+        mem.append(M1Op.blr(X.x9))
+        
+        mem.append(
+            PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
+        )
+        appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
+            
+        
+        if additionalSize > 0 {
+            appendDebugPrintAligned4("Free \(additionalSize) bytes (OCallN)", builder: mem)
+            mem.append(
+                (try M1Op._add(X.sp, X.sp, ByteCount(additionalSize)))
+            )
+        }
+    }
+    
+    /// OCallN
     func __ocalln(
         dst: Reg,
         funIndex: RefFun,

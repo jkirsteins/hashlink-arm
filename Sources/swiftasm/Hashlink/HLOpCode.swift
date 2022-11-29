@@ -247,8 +247,12 @@ extension HLOpCode {
             let result = try HLOpCode.read_2reg_varReg(from: reader)
             return .OCallN(dst: result.0, fun: result.1, args: result.2)
         case 30:
-            let result = try HLOpCode.read_2reg_varReg(from: reader)
-            return .OCallMethod(dst: result.0, field: result.1, args: result.2)
+            let p1 = try reader.readReg()
+            let p2 = try reader.readReg()
+            let p3 = try reader.readUInt8()
+            let args = try (0..<p3).map { _ in try reader.readIndex() }
+//            let result = try HLOpCode.read_2reg_varReg(from: reader)
+            fatalError("Not implemented. Allocate memory for args")
         case 31:
             let result = try HLOpCode.read_2reg_varReg(from: reader)
             return .OCallThis(dst: result.0, field: result.1, args: result.2)
@@ -573,7 +577,7 @@ enum HLOpCode : Equatable, Hashable {
     /// Call a function with N arguments, using the first argument as the receiver
     ///
     /// *dst* = *arg0*.*field*(*arg1*, *arg2*, ...)
-    case OCallMethod(dst: Reg, field: RefField, args: [Reg])
+    case OCallMethod(dst: Reg, obj: Reg, proto: RefProto, args: [Reg])
     /// Call a function with N arguments, the receiver is the first register of the parent function
     ///
     /// *dst* = *reg0*.*field*(*arg0*, *arg1*, ...)

@@ -879,6 +879,8 @@ class M1Compiler2 {
         print("REGS: \n--" + regs.map { String(reflecting: $0) }.joined(separator: "\n--"))
         //        print("OPS: \n--" + funPtr.pointee.ops.map { String(reflecting: $0) }.joined(separator: "\n--"))
 
+        appendDebugPrintAligned4("Entering fix \(fix)", builder: mem)
+        
         mem.append(PseudoOp.debugMarker("==> STARTING FUNCTION \(fix)"))
         let prologueSize = appendPrologue(builder: mem)
         let stackInfo = try appendStackInit(
@@ -1659,6 +1661,12 @@ class M1Compiler2 {
                     //M1Op.str(X.x2, .reg64offset(X.sp, dstOffset, nil))
                 )
                 appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
+            case .ORethrow(let exc):
+                appendLoad(reg: X.x0, from: exc, kinds: regs, mem: mem)
+                mem.append(
+                    PseudoOp.mov(X.x1, unsafeBitCast(LibHl._hl_rethrow, to: OpaquePointer.self)),
+                    M1Op.blr(X.x1)
+                )
             case .OThrow(let exc):
                 appendLoad(reg: X.x0, from: exc, kinds: regs, mem: mem)
                 mem.append(
@@ -2501,6 +2509,102 @@ class M1Compiler2 {
                     M1Op.blr(X.x2)
                 )
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OCallMethod(let dst, let obj, let field, let args):
+                let objType = requireType(reg: obj, regs: regs)
+                switch(objType.kind) {
+                case .obj:
+                    let _getProtoFindex: (@convention(c)(OpaquePointer, Int32)->Int32) = {
+                        (objPtr, protoIx) in
+                        
+                        let vd: UnsafePointer<vdynamic> = .init(objPtr)
+                        let protoPtr = vd.pointee.t.pointee.obj.pointee.protoPtr?.advanced(by: Int(protoIx))
+                        
+                        guard let protoFix = protoPtr?.pointee.findex else {
+                            fatalError("OCallMethod failed. Could not find proto findex")
+                        }
+                        return protoFix
+                    }
+                    let _getType: (@convention(c)(Int32, OpaquePointer)->OpaquePointer) = {
+                        (findex, mPtr) in
+                        
+                        let mod: UnsafePointer<HLModule_CCompat> = .init(mPtr)
+                        
+                        let funIndex = mod.pointee.functions_indexes.advanced(by: Int(findex)).pointee
+                        let fun = mod.pointee.code.pointee.functions.advanced(by: Int(funIndex))
+                        guard let typePtr = fun.pointee.typePtr else {
+                            fatalError("OCallMethod encountered a proto without a type")
+                        }
+                        
+                        guard typePtr.pointee.kind == .fun else {
+                            fatalError("OCallMethod fetched a proto type that is not .fun")
+                        }
+                        
+                        return .init(typePtr)
+                    }
+                    let _getCallAddress: (@convention(c)(Int32, OpaquePointer)->OpaquePointer) = {
+                        (findex, mPtr) in
+                        
+                        let mod: UnsafePointer<HLModule_CCompat> = .init(mPtr)
+                        
+                        guard let funAddr = mod.pointee.functions_ptrs.advanced(by: Int(findex)).pointee else {
+                            /* NOTE: If this happens in a test, you might need to specify depHints
+                               properly */
+                            fatalError("OCallMethod encountered a missing function address (findex: \(findex))")
+                        }
+                        return .init(funAddr)
+                    }
+                    guard let m = ctx.mainContext.pointee.m else {
+                        fatalError("OCallMethod can't access the module (for function addresses)")
+                    }
+                    
+                    // Fetch proto function index
+                    appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
+                    mem.append(PseudoOp.mov(X.x1, field))
+                    mem.append(
+                        PseudoOp.mov(X.x2, unsafeBitCast(_getProtoFindex, to: OpaquePointer.self)),
+                        M1Op.blr(X.x2),
+                        
+                        M1Op.movr64(X.x7, X.x0) // proto findex in x7
+                    )
+                    
+                    // Fetch proto function type
+//                    mem.append(M1Op.movr64(X.x0, X.x7))
+//                    mem.append(PseudoOp.mov(X.x1, OpaquePointer(m)))
+//                    mem.append(
+//                        PseudoOp.mov(X.x2, unsafeBitCast(_getType, to: OpaquePointer.self)),
+//                        M1Op.blr(X.x2),
+//
+//                        M1Op.movr64(X.x8, X.x0) // proto function type in x8
+//                    )
+                    
+                    // Fetch proto function address
+                    mem.append(M1Op.movr64(X.x0, X.x7))
+                    mem.append(PseudoOp.mov(X.x1, OpaquePointer(m)))
+                    mem.append(
+                        PseudoOp.mov(X.x2, unsafeBitCast(_getCallAddress, to: OpaquePointer.self)),
+                        M1Op.blr(X.x2),
+                        
+                        M1Op.movr64(X.x9, X.x0) // proto function address in x9
+                    )
+
+                    try __ocallmethod_impl__addrInX9(
+                        dst: dst,
+                        regs: regs,
+                        preArgs: [
+                            ({ (inmem, regForPreArg) in
+                                self.appendLoad(reg: regForPreArg, from: obj, kinds: regs, mem: inmem)
+                            }, HLTypeKind.obj)
+                        ],
+                        args: args,
+                        reservedStackBytes: stackInfo.total,
+                        mem: mem)
+                case .virtual:
+                    fatalError("Not implemented")
+                default:
+                    fatalError("Invalid target for OCallMethod")
+                }
+            case .OSetGlobal(let global, let src):
+                fatalError("next wip")
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

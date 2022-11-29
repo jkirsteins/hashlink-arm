@@ -46,8 +46,8 @@ extension HLOpCode: CustomDebugStringConvertible {
         case .OCallN(let dst, let fun, let args):
             return "reg\(dst) = fun@\(fun)(...<\(args.count) args>)"
 
-        case .OCallMethod(let dst, let field, let args):
-            return "reg\(dst) = <\(field)>(\(args))"
+        case .OCallMethod(let dst, let obj, let field, let args):
+            return "reg\(dst) = \(obj)[\(field)](\(args))"
         case .OCallThis(let dst, let field, let args): 
             return "reg\(dst) = this.<\(field)>(\(args))"
         case .OCallClosure(let dst, let closure, let args):

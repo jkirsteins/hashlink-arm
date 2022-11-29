@@ -11,6 +11,7 @@ typealias RefString = TableIndex
 typealias RefFun = TableIndex
 typealias RefClosurePointer = TableIndex
 typealias RefField = TableIndex
+typealias RefProto = TableIndex
 typealias RefGlobal = TableIndex
 typealias RefType = TableIndex
 typealias RefEnumConstruct = TableIndex
