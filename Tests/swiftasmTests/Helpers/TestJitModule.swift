@@ -23,6 +23,7 @@ class TestJitModule : JitContext2 {
     var nfunctions: UInt32 { UInt32(compilables.count) }
     var nnatives: UInt32 { UInt32(natives.count) }
     var nstrings: UInt32 { UInt32(strings.count) }
+    var nglobals: UInt32 { UInt32(globals.count) }
     
     let versionHint: Int?
     
@@ -30,6 +31,10 @@ class TestJitModule : JitContext2 {
         //        let setIx = types.index(types.startIndex, offsetBy: ix)
         //        return types[setIx]
         orderedTypes_slow[ix]
+    }
+    
+    func getGlobal(_ globalRef: Ref) throws -> (any HLTypeProvider)? {
+        globals[globalRef]
     }
     
     func getInt(_ ix: Int) throws -> Int32 {
@@ -46,6 +51,7 @@ class TestJitModule : JitContext2 {
     let ints: [Int32]
     let strings: [String]
     let bytes: [[UInt8]]
+    let globals: [any HLTypeProvider]
     
     func getOrderedCompilablesByRealIx__slow() -> [any Compilable2] { compilables }
     func getOrderedNativesByRealIx__slow() -> [any NativeCallable2] { natives }
@@ -68,9 +74,10 @@ class TestJitModule : JitContext2 {
     let funcTracker = FunctionTracker()
     
     // MARK: Initializers
-    init(_ compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], v versionHint: Int? = nil) {
+    init(_ compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], globals: [any HLTypeProvider], v versionHint: Int? = nil) {
         self.compilables = compilables
         self.natives = natives
+        self.globals = globals
         self.versionHint = versionHint
         self.bytes = bytes
         
@@ -111,6 +118,7 @@ class TestJitModule : JitContext2 {
         self.natives = []
         self.versionHint = nil
         self.bytes = []
+        self.globals = []
     }
     
     static func expand(_ t: any HLTypeProvider) -> [any HLTypeProvider] {

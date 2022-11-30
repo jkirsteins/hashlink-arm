@@ -274,7 +274,7 @@ class CCompatJitContext : JitContext2 {
     }
     
     func requireGlobal(_ globalRef: Ref) throws -> UnsafePointer<HLType_CCompat> {
-        guard let result = try getGlobal(globalRef) else {
+        guard let result: UnsafePointer<HLType_CCompat> = try getGlobal(globalRef) else {
             throw GlobalError.invalidOperation("Required global (ix==\(globalRef)) not found.")
         }
         return result
@@ -284,6 +284,11 @@ class CCompatJitContext : JitContext2 {
         try withModule { m in
             m.pointee.code.pointee.getGlobal(globalRef)
         }
+    }
+    
+    func getGlobal(_ globalRef: Ref) throws -> (any HLTypeProvider)? {
+        let x: UnsafePointer<HLType_CCompat>? = try getGlobal(globalRef)
+        return x
     }
     
     func requireGlobalData(_ globalRef: Ref) throws -> UnsafePointer<UnsafePointer<vdynamic>?> {

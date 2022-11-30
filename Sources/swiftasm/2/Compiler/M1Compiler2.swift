@@ -1470,10 +1470,16 @@ class M1Compiler2 {
                     })
             case .OGetGlobal(let dst, let globalRef):
                 let globalInstanceAddress = try ctx.requireGlobalData(globalRef)
-                assert(reg: dst, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct])
+                assert(reg: dst, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct, HLTypeKind.abstract, HLTypeKind.enum])
                 mem.append(PseudoOp.mov(.x0, UnsafeRawPointer(globalInstanceAddress)))
                 mem.append(M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil)))
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OSetGlobal(let globalRef, let src):
+                let globalInstanceAddress = try ctx.requireGlobalData(globalRef)
+                assert(reg: src, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct, HLTypeKind.abstract, HLTypeKind.enum])
+                appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
+                mem.append(PseudoOp.mov(.x1, OpaquePointer(globalInstanceAddress)))
+                mem.append(M1Op.str(X.x0, .reg64offset(X.x1, 0, nil)))
             case .OShl(let dst, let a, let b):
                 appendLoad(reg: .x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
@@ -2653,8 +2659,6 @@ class M1Compiler2 {
                 default:
                     fatalError("Invalid target for OCallMethod")
                 }
-            case .OSetGlobal(let global, let src):
-                fatalError("next wip")
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

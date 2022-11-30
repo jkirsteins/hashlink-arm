@@ -18,8 +18,8 @@ fileprivate func prepareFunction(
         typeProvider: funType)
 }
 
-fileprivate func prepareContext(compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], v: Int? = nil) throws -> CCompatJitContext {
-    let tm = TestJitModule(compilables, natives: natives, ints: ints, strings: strings, bytes: bytes, v: v)
+fileprivate func prepareContext(compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], globals: [any HLTypeProvider] = [], v: Int? = nil) throws -> CCompatJitContext {
+    let tm = TestJitModule(compilables, natives: natives, ints: ints, strings: strings, bytes: bytes, globals: globals, v: v)
     assert(tm.ntypes > 0)
     return try CCompatJitContext(ctx: tm)
 }
@@ -29,13 +29,13 @@ fileprivate func compileAndLink(ctx: CCompatJitContext, _ fix: Int..., callback:
     let sut = M1Compiler2(ctx: ctx, stripDebugMessages: true)
     
     try fix.forEach { try sut.compile(findex: $0, into: mem) }
-
+    
     let mapper = BufferMapper(ctx: ctx, buffer: mem)
     let mappedMem = try mapper.getMemory()
     
     try callback(mappedMem)
     
-//    try mapper.freeMemory()
+    //    try mapper.freeMemory()
 }
 
 final class CompilerM1v2Tests: CCompatTestCase {
@@ -73,7 +73,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         let mem = CpuOpBuffer()
         let sut = M1Compiler2(ctx: ctx, stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
+        
         //
         let mapper = BufferMapper(ctx: ctx, buffer: mem)
         let mappedMem = try mapper.getMemory()
@@ -82,14 +82,14 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(0b10000001, UInt8(try mappedMem.calljit(ctx: ctx, fix: 0, arg0: ptr)))
         }
     }
-
+    
     func testCompile_OJNotNull() throws {
         let objType = Test_HLTypeObj(fieldsProvider: [], nameProvider: "testObject")
         
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.u8,
@@ -99,37 +99,37 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 ops: [
                     // if first arg < second arg, skip 2 following ops
                     .OJNotNull(reg: 0, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 1, ptr: constI_3),
                     .ORet(ret: 1),
-
+                    
                     // return 57005
                     .OInt(dst: 1, ptr: constI_57005),
                     .ORet(ret: 1)
                 ])
         ], ints: [0, 3, 57005])
-
+        
         let mem = CpuOpBuffer()
         let sut = M1Compiler2(ctx: ctx, stripDebugMessages: true)
         try sut.compile(findex: 0, into: mem)
-
+        
         //
         let mapper = BufferMapper(ctx: ctx, buffer: mem)
         let mappedMem = try mapper.getMemory()
         
         // jump
         XCTAssertEqual(57005, try mappedMem.calljit(ctx: ctx, fix: 0, arg0: UnsafeRawPointer(bitPattern: 123)))
-
+        
         // no jump
         XCTAssertEqual(3, try mappedMem.calljit(ctx: ctx, fix: 0, arg0: nil))
     }
-
+    
     func testCompile_OJFalse() throws {
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.u8,
@@ -138,17 +138,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.bool],
                 ops: [
                     .OJFalse(cond: 0, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 1, ptr: constI_3),
                     .ORet(ret: 1),
-
+                    
                     // return 57005
                     .OInt(dst: 1, ptr: constI_57005),
                     .ORet(ret: 1)
                 ])
         ], ints: [0, 3, 57005])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -156,7 +156,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(57005, try mappedMem.calljit(ctx: ctx, fix: 0, arg0: UInt8(0)))
         }
     }
-
+    
     func testCompile_OJAlways() throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -178,7 +178,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(456, try mappedMem.calljit(ctx: ctx, fix: 0, arg0: 123, arg1: 456))
         }
     }
-
+    
     func testCompile_negativeJumps_regression() throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -216,14 +216,14 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(127, try mem.calljit(ctx: ctx, fix: 0, arg0: UInt8(125)))
         }
     }
-
+    
     func testCompile_OJNull() throws {
         let objType = Test_HLTypeObj(fieldsProvider: [])
         
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -233,17 +233,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 ops: [
                     // if first arg < second arg, skip 2 following ops
                     .OJNull(reg: 0, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 1, ptr: constI_3),
                     .ORet(ret: 1),
-
+                    
                     // return 57005
                     .OInt(dst: 1, ptr: constI_57005),
                     .ORet(ret: 1)
                 ])
         ], ints: [0, 3, 57005])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -251,12 +251,12 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(3, try mappedMem.calljit(ctx: ctx, fix: 0, arg0: UnsafeRawPointer(bitPattern: 123)))
         }
     }
-
+    
     func testCompile_OJULt() throws {
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -266,17 +266,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 ops: [
                     // if first arg < second arg, skip 2 following ops
                     .OJULt(a: 0, b: 1, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 0, ptr: constI_3),
                     .ORet(ret: 0),
-
+                    
                     // return 57005
                     .OInt(dst: 0, ptr: constI_57005),
                     .ORet(ret: 0)
                 ])
         ], ints: [0, 3, 57005])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -285,19 +285,19 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(3, try mappedMem.calljit(ctx: ctx, fix: 0, arg0: 4, arg1: 3))
         }
     }
-
+    
     func testCompile_OJSLt_u32() throws {
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         try _ri32__i32_i32(ops: [
             .OJSLt(a: 0, b: 1, offset: 2),
-
+            
             // return 3
             .OInt(dst: 1, ptr: constI_3),
             .ORet(ret: 1),
-
+            
             // return 57005
             .OInt(dst: 1, ptr: constI_57005),
             .ORet(ret: 1)
@@ -316,7 +316,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             // return 3
             .OInt(dst: 1, ptr: constI_3),
             .ORet(ret: 1),
-
+            
             // return 57
             .OInt(dst: 1, ptr: constI_57),
             .ORet(ret: 1)
@@ -370,7 +370,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             // return 3
             .OInt(dst: 1, ptr: constI_3),
             .ORet(ret: 1),
-
+            
             // return 57005
             .OInt(dst: 1, ptr: constI_57),
             .ORet(ret: 1)
@@ -424,7 +424,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             // return 3
             .OInt(dst: 1, ptr: constI_3),
             .ORet(ret: 1),
-
+            
             // return 57005
             .OInt(dst: 1, ptr: constI_57),
             .ORet(ret: 1)
@@ -474,7 +474,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             // return 3
             .OInt(dst: 1, ptr: constI_3),
             .ORet(ret: 1),
-
+            
             // return 57005
             .OInt(dst: 1, ptr: constI_57),
             .ORet(ret: 1)
@@ -527,6 +527,98 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func testCompile_OGetGlobal_OSetGlobal() throws {
+        
+        let globalString: UnsafeMutablePointer<_String> = .allocate(capacity: 1)
+        let globalStringBytes: UnsafeMutableBufferPointer<UInt8> = .init(start: .init(OpaquePointer(globalString)), count: MemoryLayout<_String>.stride)
+        globalStringBytes.initialize(repeating: 0)
+        
+        let strA = "Hello World\0"
+        let strB = "Updated String\0"
+        let bytesA = strA.data(using: .utf16LittleEndian)!
+        let bytesB = strB.data(using: .utf16LittleEndian)!
+        
+        let bytesAPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: bytesA.count)
+        let bytesBPtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: bytesB.count)
+        _ = bytesAPtr.initialize(from: bytesA)
+        _ = bytesBPtr.initialize(from: bytesB)
+        
+        defer {
+            globalString.deinitialize(count: 1)
+            globalString.deallocate()
+            bytesAPtr.deallocate()
+            bytesBPtr.deallocate()
+        }
+        
+        let globals: [any HLTypeProvider] = [_StringType, _StringType, _StringType]
+        let ctx = try prepareContext(
+            compilables: [
+                prepareFunction(
+                    retType: _StringType,
+                    findex: 0,
+                    regs: [_StringType, HLTypeKind.bool],
+                    args: [_StringType, HLTypeKind.bool],
+                    ops: [
+                        .OJFalse(cond: 1, offset: 1),
+                        .OSetGlobal(global: 1, src: 0),
+                        .OGetGlobal(dst: 0, global: 1),
+                        .ORet(ret: 0)
+                    ])
+            ],
+            // set multiple globals (so we can test fetching the right index
+            globals: globals
+        )
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            var strType: UnsafePointer<HLType_CCompat>? = nil
+            for typeIx in (0..<ctx.ntypes) {
+                let t = try ctx.getType(Int(typeIx)) as any HLTypeProvider
+                if t.isEquivalent(_StringType) {
+                    strType = .init(OpaquePointer(t.ccompatAddress))
+                    break
+                }
+            }
+            guard let strType = strType else {
+                fatalError("Could not find initialized string type")
+            }
+            
+            var strObjA = _String(t: strType, bytes: .init(OpaquePointer(bytesAPtr.baseAddress!)), length: Int32(strA.count))
+            var strObjB = _String(t: strType, bytes: .init(OpaquePointer(bytesBPtr.baseAddress!)), length: Int32(strB.count))
+            
+            // for manipulating globals data outside of hashlink context
+            let globalDataPtr: UnsafeMutablePointer<UnsafePointer<_String>?> = .init(mutating: .init(OpaquePointer(ctx.mainContext.pointee.m!.pointee.globals_data!)))
+            let globalDataBufPtr: UnsafeMutableBufferPointer = .init(start: globalDataPtr, count: globals.count)
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (OpaquePointer, Bool) -> OpaquePointer?)) in
+                let typedEntrypoint: (UnsafePointer<_String>, Bool)->UnsafePointer<_String>? = {
+                    .init(entrypoint(OpaquePointer($0), $1))
+                }
+                
+                withUnsafeMutablePointer(to: &strObjA) {
+                    strObjAPtr in
+                    
+                    withUnsafeMutablePointer(to: &strObjB) {
+                        strObjBPtr in
+                        
+                        // OGetGlobal -- global not set (we should be looking for the data in the middle)
+                        _ = globalDataBufPtr.initialize(from: [UnsafePointer(strObjAPtr), nil, UnsafePointer(strObjAPtr)])
+                        XCTAssertEqual(typedEntrypoint(strObjBPtr, false), nil)
+                        
+                        // OGetGlobal -- global returned correctly (we should be looking for the data in the middle)
+                        _ = globalDataBufPtr.initialize(from: [nil, UnsafePointer(strObjAPtr), nil])
+                        XCTAssertEqual(typedEntrypoint(strObjBPtr, false), strObjAPtr)
+                        
+                        // OSetGlobal first
+                        XCTAssertEqual(typedEntrypoint(strObjBPtr, true), strObjBPtr)
+                        XCTAssertEqual(Array(globalDataBufPtr), [nil, UnsafePointer(strObjBPtr), nil])
+                    }
+                }
+            }
+        }
+    }
+    
     func testCompile_ONeg() throws {
         try _ri32__i32(ops: [
             .ONeg(dst: 0, src: 0),
@@ -573,7 +665,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -582,11 +674,11 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u8, HLTypeKind.u8],
                 ops: [
                     .OJSLt(a: 0, b: 1, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 2, ptr: constI_3),
                     .ORet(ret: 2),
-
+                    
                     // return 57005
                     .OInt(dst: 2, ptr: constI_57005),
                     .ORet(ret: 2)
@@ -599,11 +691,11 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u16, HLTypeKind.u16],
                 ops: [
                     .OJSLt(a: 0, b: 1, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 2, ptr: constI_3),
                     .ORet(ret: 2),
-
+                    
                     // return 57005
                     .OInt(dst: 2, ptr: constI_57005),
                     .ORet(ret: 2)
@@ -638,7 +730,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
          [jitdebug] f0: #3: OInt: reg2 = i 2
          */
     }
-
+    
     func testCompile_OSShr_OUshr() throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -660,7 +752,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                     .ORet(ret: 2)
                 ])
         ])
-
+        
         try compileAndLink(ctx: ctx, 0, 1) {
             mappedMem in
             
@@ -670,12 +762,12 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(0b00010000, try mappedMem.calljit_u8(ctx: ctx, fix: 1, u8_0: 0b10000001, u8_1: 3))
         }
     }
-
+    
     func testCompile_OJSLte() throws {
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -684,11 +776,11 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u8, HLTypeKind.u8],
                 ops: [
                     .OJSLte(a: 0, b: 1, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 2, ptr: constI_3),
                     .ORet(ret: 2),
-
+                    
                     // return 57005
                     .OInt(dst: 2, ptr: constI_57005),
                     .ORet(ret: 2)
@@ -700,17 +792,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u16, HLTypeKind.u16],
                 ops: [
                     .OJSLte(a: 0, b: 1, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 2, ptr: constI_3),
                     .ORet(ret: 2),
-
+                    
                     // return 57005
                     .OInt(dst: 2, ptr: constI_57005),
                     .ORet(ret: 2)
                 ])
         ], ints: [0, 3, 57005])
-
+        
         try compileAndLink(ctx: ctx, 0, 1) {
             mappedMem in
             
@@ -725,12 +817,12 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(3, try mappedMem.calljit_i32(ctx: ctx, fix: 0, u8_0: 0b01000001, u8_1: 0b10000001))
         }
     }
-
+    
     func testCompile_OJSGte() throws {
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -739,11 +831,11 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u8, HLTypeKind.u8],
                 ops: [
                     .OJSGte(a: 0, b: 1, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 2, ptr: constI_3),
                     .ORet(ret: 2),
-
+                    
                     // return 57005
                     .OInt(dst: 2, ptr: constI_57005),
                     .ORet(ret: 2)
@@ -755,17 +847,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u16, HLTypeKind.u16],
                 ops: [
                     .OJSGte(a: 0, b: 1, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 2, ptr: constI_3),
                     .ORet(ret: 2),
-
+                    
                     // return 57005
                     .OInt(dst: 2, ptr: constI_57005),
                     .ORet(ret: 2)
                 ])
         ], ints: [0, 3, 57005])
-
+        
         try compileAndLink(ctx: ctx, 0, 1) {
             mappedMem in
             
@@ -780,12 +872,12 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(3, try mappedMem.calljit_i32(ctx: ctx, fix: 0, u8_0: 0b10000001, u8_1: 0b01000001))
         }
     }
-
+    
     func testCompile_OJEq() throws {
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -794,17 +886,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.i32, HLTypeKind.i32],
                 ops: [
                     .OJEq(a: 0, b: 1, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 0, ptr: constI_3),
                     .ORet(ret: 0),
-
+                    
                     // return 57005
                     .OInt(dst: 0, ptr: constI_57005),
                     .ORet(ret: 0)
                 ])
         ], ints: [0, 3, 57005])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -820,7 +912,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         // constants
         let constI_3 = 1 // constant value 3
         let constI_57005 = 2 // constant value 57005
-
+        
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -829,17 +921,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.i32, HLTypeKind.i32],
                 ops: [
                     .OJNotEq(a: 0, b: 1, offset: 2),
-
+                    
                     // return 3
                     .OInt(dst: 0, ptr: constI_3),
                     .ORet(ret: 0),
-
+                    
                     // return 57005
                     .OInt(dst: 0, ptr: constI_57005),
                     .ORet(ret: 0)
                 ])
         ], ints: [0, 3, 57005])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -861,7 +953,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.bytes, HLTypeKind.i32],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -871,7 +963,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _robj(obj: any HLTypeProvider, ops: [HLOpCode], args: [any HLTypeProvider] = [], strings: [String] = [], _ callback: @escaping (()->UnsafeRawPointer?)->()) throws {
+    func _robj(obj: any HLTypeProvider, ops: [HLOpCode], args: [any HLTypeProvider] = [], strings: [String] = [], globals: [OpaquePointer], _ callback: @escaping (()->UnsafeRawPointer?)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: obj,
@@ -880,7 +972,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: args,
                 ops: ops)
         ], strings: strings)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -900,7 +992,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: regs,
                 ops: ops)
         ], strings: strings, bytes: bytes, v: v)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -919,7 +1011,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.i32],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -938,7 +1030,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.f64, HLTypeKind.i32],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -957,7 +1049,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.i32, HLTypeKind.i32],
                 ops: ops)
         ], ints: ints)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -976,7 +1068,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u16, HLTypeKind.u16],
                 ops: ops)
         ], ints: ints)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -995,7 +1087,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u8, HLTypeKind.u8],
                 ops: ops)
         ], ints: ints)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1014,7 +1106,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.bool],
                 ops: ops)
         ], ints: ints)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1033,7 +1125,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.i32],
                 ops: ops)
         ], ints: ints)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1052,7 +1144,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u16],
                 ops: ops)
         ], ints: ints)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1073,7 +1165,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [reg],
                 ops: ops)
         ], ints: ints)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1094,7 +1186,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [reg],
                 ops: ops)
         ], ints: ints)
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1113,7 +1205,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.i32],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1136,7 +1228,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.i32],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1155,7 +1247,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.obj],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1174,7 +1266,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.i64],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1193,7 +1285,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u8],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1212,7 +1304,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u8],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1231,7 +1323,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.u8],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1250,7 +1342,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 args: [HLTypeKind.dyn],
                 ops: ops)
         ])
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
@@ -1259,9 +1351,9 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
-
     
-
+    
+    
     func testCompile_OAnd() throws {
         try _ri32__i32_i32(ops: [
             .OAnd(dst: 0, a: 0, b: 1),
@@ -1272,7 +1364,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(0b11111, entrypoint(0b11111, 0b11111))
         }
     }
-//
+    //
     func testCompile_OIncr() throws {
         try _ru8__u8(ops: [
             .OIncr(dst: 0),
@@ -1284,7 +1376,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(126, entrypoint(125))
         }
     }
-
+    
     func testCompile_OSub() throws {
         try _ri32__i32_i32(ops: [
             .OSub(dst: 0, a: 0, b: 1),
@@ -1296,7 +1388,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(1000, entrypoint(1252, 252))
         }
     }
-
+    
     func testCompile_ONull() throws {
         try _dyn__dyn(ops: [
             .ONull(dst: 0),
@@ -1307,7 +1399,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(nil, entrypoint(UnsafeRawPointer(bitPattern: 0x7b)!))
         }
     }
-
+    
     func testCompile_ONew_OSetField() throws {
         
         let stringType = Test_HLTypeObj(fieldsProvider: [
@@ -1330,20 +1422,20 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 let result = entrypoint(cstr.baseAddress!, Int32(strIn.count))
                 
                 XCTAssertNotNil(result)
-
+                
                 let vPtr = result!.bindMemory(to: vdynamic.self, capacity: 1)
                 let typePtr = vPtr.pointee.t
-
+                
                 // check type
                 XCTAssertEqual(typePtr.pointee.kind, .obj)
-
+                
                 // bytes/str
                 let bytes = result!.advanced(by: 8).bindMemory(to: UnsafePointer<CChar16>.self, capacity: 1)
                 XCTAssertEqual(bytes.pointee, cstr.baseAddress!)
-
+                
                 let str = String.wrapUtf16(from: bytes.pointee)
                 XCTAssertEqual(str, "Hello World")
-
+                
                 // len
                 let len = Int(result!.advanced(by: 16).bindMemory(to: Int32.self, capacity: 1).pointee)
                 XCTAssertEqual(len, 11)
@@ -1399,7 +1491,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(String.wrapUtf8(from: result), "Second")
         }
     }
-
+    
     func testCompile__OCall3() throws {
         // Prepare function we'll call from JIT
         typealias _JitFunc = (@convention(c) (UInt8, UInt16, Int32) -> Int32)
@@ -1439,19 +1531,19 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 )
             ]
         )
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
             let callable = try ctx.getCallable(findex: 0)
             let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
-                    
+            
             let res: Int32 = entrypoint(1, 2, 6)
-
+            
             XCTAssertEqual(0b111, res)
         }
     }
-
+    
     func testCompile__OCall4() throws {
         // Prepare function we'll call from JIT
         typealias _JitFunc = (@convention(c) (UInt8, UInt8, UInt8, UInt8) -> UInt8)
@@ -1485,13 +1577,13 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 )
             ]
         )
-
+        
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
             let callable = try ctx.getCallable(findex: 0)
             let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
-                    
+            
             XCTAssertEqual(0, entrypoint(0, 0, 0, 0))
             XCTAssertEqual(0b0001, entrypoint(1, 0, 0, 0))
             XCTAssertEqual(0b0010, entrypoint(0, 1, 0, 0))
@@ -1502,11 +1594,11 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(0b0110, entrypoint(0, 1, 1, 0))
         }
     }
-
+    
     func testCompile__OCallN__needStackArgs() throws {
         typealias _JitFunc = (@convention(c) (UInt8, UInt8, UInt32, UInt8, UInt8, UInt8, UInt32, UInt8, UInt8) -> UInt32)
         let swiftFunc: _JitFunc = { (_ a: UInt8, _ b: UInt8, _ c: UInt32, _ d: UInt8, _ e: UInt8, _ f: UInt8, _ g: UInt32, _ h: UInt8, _ i: UInt8) in
-
+            
             print("Got a: \(a)")
             print("Got b: \(b)")
             print("Got c: \(c)")
@@ -1516,7 +1608,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             print("Got g: \(g)")
             print("Got h: \(h)")
             print("Got i: \(i)")
-
+            
             var hash: UInt32 = 17
             hash = hash &* 37 &+ UInt32(a);
             hash = hash &* 37 &+ UInt32(b);
@@ -1527,13 +1619,13 @@ final class CompilerM1v2Tests: CCompatTestCase {
             hash = hash &* 37 &+ UInt32(g);
             hash = hash &* 37 &+ UInt32(h);
             hash = hash &* 37 &+ UInt32(i);
-
+            
             let c = String(hash, radix: 2).leftPadding(toLength: 16, withPad: "0")
             print("0b\(c.chunked(into: 4))")
             return hash
         }
         let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
-
+        
         let ctx = try prepareContext(
             compilables: [
                 prepareFunction(
@@ -1575,20 +1667,20 @@ final class CompilerM1v2Tests: CCompatTestCase {
     func testCompile__OCallN__noStackArgs() throws {
         typealias _JitFunc = (@convention(c) (UInt8, UInt8) -> UInt32)
         let swiftFunc: _JitFunc = { (_ a: UInt8, _ b: UInt8) in
-
+            
             print("Got a: \(a)")
             print("Got b: \(b)")
-
+            
             var hash: UInt32 = 17
             hash = hash &* 37 &+ UInt32(a);
             hash = hash &* 37 &+ UInt32(b);
-
+            
             let c = String(hash, radix: 2).leftPadding(toLength: 16, withPad: "0")
             print("0b\(c.chunked(into: 4))")
             return hash
         }
         let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
-
+        
         let ctx = try prepareContext(
             compilables: [
                 prepareFunction(
@@ -1626,7 +1718,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
-
+    
     func testCompile__OAdd() throws {
         
         try _ru8__u8_u8(ops: [
@@ -1651,7 +1743,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(3, entrypoint(4))
         }
     }
-
+    
     func testCompile__OMov() throws {
         try _ru8__u8(ops: [
             .OMov(dst: 1, src: 0),
@@ -1662,7 +1754,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(6, entrypoint(6))
         }
     }
-
+    
     func testCompile__OCall__regression1() throws {
         let f1: (@convention(c) (UInt8) -> UInt8) = { $0 }
         let f1p = unsafeBitCast(f1, to: UnsafeMutableRawPointer.self)
@@ -1672,7 +1764,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         let f3p = unsafeBitCast(f3, to: UnsafeMutableRawPointer.self)
         let f4: (@convention(c) (UInt8, UInt8, UInt8, UInt8) -> UInt8) = { a, _, _, _ in a }
         let f4p = unsafeBitCast(f4, to: UnsafeMutableRawPointer.self)
-
+        
         for sutOp in [
             HLOpCode.OCall1(dst: 0, fun: 1, arg0: 4),
             HLOpCode.OCall2(dst: 0, fun: 2, arg0: 4, arg1: 4),
@@ -1747,7 +1839,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
-
+    
     /// Test handling void return
     func testCompile__OCall__regression2() throws {
         let f1: (@convention(c) (UInt8) -> ()) = { _ in }
@@ -1758,7 +1850,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         let f3p = unsafeBitCast(f3, to: UnsafeMutableRawPointer.self)
         let f4: (@convention(c) (UInt8, UInt8, UInt8, UInt8) -> ()) = { a, _, _, _ in }
         let f4p = unsafeBitCast(f4, to: UnsafeMutableRawPointer.self)
-
+        
         for sutOp in [
             HLOpCode.OCall1(dst: 0, fun: 1, arg0: 4),
             HLOpCode.OCall2(dst: 0, fun: 2, arg0: 4, arg1: 4),
@@ -1830,13 +1922,13 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
-
+    
     func testGetRegStackOffset() throws {
         let ctx = try prepareContext(compilables: [])
         let c = try sut(ctx: ctx)
         let regs: [HLTypeKind] = [
             .u8, .u8, .i32, .u8, .u8, .u8, .i32, .u8, .u8]
-
+        
         XCTAssertEqual(c.getRegStackOffset(regs, 0), 0)
         XCTAssertEqual(c.getRegStackOffset(regs, 1), 1)
         XCTAssertEqual(c.getRegStackOffset(regs, 2), 2)
@@ -1844,7 +1936,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         XCTAssertEqual(c.getRegStackOffset(regs, 7), 13)
         XCTAssertEqual(c.getRegStackOffset(regs, 8), 14)
     }
-
+    
     func testCompile__OCall1() throws {
         // Prepare function we'll call from JIT
         typealias _JitFunc16 = (@convention(c) (UInt16) -> Int32)
@@ -1852,7 +1944,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             return Int32(a) * 2
         }
         let swiftFuncPtr16 = unsafeBitCast(swiftFunc16, to: UnsafeMutableRawPointer.self)
-
+        
         typealias _JitFunc8 = (@convention(c) (UInt8) -> Int32)
         let swiftFunc8: _JitFunc8 = { (_ a: UInt8) in
             return Int32(a) * 4
@@ -1916,7 +2008,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
-
+    
     func testCompile__OGetI8() throws {
         let ctx = try prepareContext(
             compilables: [
@@ -1939,7 +2031,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UnsafeRawPointer, Int32) -> (UInt8))) in
                 
                 var x: [UInt8] = [11, 22, 33, 44, 55, 66, 77, 88, 99]
-
+                
                 XCTAssertEqual(11, entrypoint(&x, 0))
                 XCTAssertEqual(66, entrypoint(&x, 5))
             }
@@ -1967,7 +2059,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UnsafeRawPointer, Int32) -> (UInt8))) in
                 var x: [UInt16] = [11, 22, 33, 44, 55, 66, 77, 88, 99]
-        
+                
                 XCTAssertEqual(11, entrypoint(&x, 0))
                 XCTAssertEqual(22, entrypoint(&x, 2))
                 XCTAssertEqual(66, entrypoint(&x, 10))
@@ -1996,7 +2088,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UnsafeRawPointer, Int32, Int32) -> ())) in
                 var x: [UInt8] = [11, 22, 33, 44, 55, 66, 77, 88, 99]
-
+                
                 entrypoint(&x, 1, 79)
                 entrypoint(&x, 3, 97)
                 XCTAssertEqual(x, [11, 79, 33, 97, 55, 66, 77, 88, 99])
@@ -2025,7 +2117,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: (@convention(c) (UnsafeRawPointer, Int32, Int32) -> ())) in
                 var x: [UInt16] = [11, 22, 33, 44, 55, 66, 77, 88, 99]
-        
+                
                 entrypoint(&x, 2, 79)
                 entrypoint(&x, 6, 97)
                 XCTAssertEqual(x, [11, 79, 33, 97, 55, 66, 77, 88, 99])
@@ -2066,7 +2158,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
-
+    
     func testCompile__OShl() throws {
         
         try _ri32__i32_i32(ops: [
@@ -2082,7 +2174,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(0, entrypoint(1, 32))
         }
     }
-
+    
     func testCompile__OCall2() throws {
         // Prepare function we'll call from JIT
         typealias _JitFunc = (@convention(c) (UInt16, Int32) -> Int32)
@@ -2090,7 +2182,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             return Int32(Int16(bitPattern: a)) + b
         }
         let swiftFuncPtr = unsafeBitCast(swiftFunc, to: UnsafeMutableRawPointer.self)
-
+        
         let ctx = try prepareContext(
             compilables: [
                 prepareFunction(
@@ -2123,11 +2215,11 @@ final class CompilerM1v2Tests: CCompatTestCase {
             let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
             
             let res: Int32 = entrypoint(100, 156)
-
+            
             XCTAssertEqual(256, res)
         }
     }
-
+    
     func testCompile_OBool() throws {
         let ctx = try prepareContext(
             compilables: [
@@ -2189,30 +2281,30 @@ final class CompilerM1v2Tests: CCompatTestCase {
             }
         }
     }
-
+    
     func testCalcStackArgReq() throws {
         let ctx = try prepareContext(compilables: [])
         let sut = sut(ctx: ctx)
-
+        
         // test different size combinations (ensure aligned to 16 bytes)
         var (size, _) = sut.calcStackArgReq(regs: [HLTypeKind.array, HLTypeKind.array], args: [])
         XCTAssertEqual(16, size)
-
+        
         (size, _) = sut.calcStackArgReq(regs: [HLTypeKind.array, HLTypeKind.array, HLTypeKind.i32], args: [])
         XCTAssertEqual(32, size)
-
+        
         (size, _) = sut.calcStackArgReq(
             regs: [HLTypeKind.array, HLTypeKind.array, HLTypeKind.i32, HLTypeKind.dyn, HLTypeKind.dynobj],
             args: []
         )
         XCTAssertEqual(48, size)
-
+        
         (size, _) = sut.calcStackArgReq(
             regs: [HLTypeKind.array, HLTypeKind.array, HLTypeKind.i32, HLTypeKind.dyn, HLTypeKind.dynobj],
             args: [HLTypeKind.array, HLTypeKind.array, HLTypeKind.i32, HLTypeKind.dyn, HLTypeKind.dynobj]
         )
         XCTAssertEqual(48, size)
-
+        
         // args exceeding first 8 should not allocate extra space (as it
         // should already be allocated due to calling convention)
         (size, _) = sut.calcStackArgReq(
@@ -2220,25 +2312,25 @@ final class CompilerM1v2Tests: CCompatTestCase {
             args: Array(repeating: HLTypeKind.dyn, count: 16)
         )
         XCTAssertEqual(64, size)
-
+        
         // non args should take space
         (size, _) = sut.calcStackArgReq(regs: [HLTypeKind.i32], args: [])
         XCTAssertEqual(16, size)
-
+        
         // 4 regs (all except 1st) and 1 arg should contribute to size here
         (size, _) = sut.calcStackArgReq(
             regs: [HLTypeKind.array] + Array(repeating: HLTypeKind.i32, count: 4),
             args: [HLTypeKind.array]
         )
         XCTAssertEqual(32, size)
-
+        
         // first 8 args should take space
         (size, _) = sut.calcStackArgReq(
             regs: Array(repeating: HLTypeKind.i32, count: 8),
             args: Array(repeating: HLTypeKind.i32, count: 8)
         )
         XCTAssertEqual(32, size)
-
+        
         // void should be ignored
         (size, _) = sut.calcStackArgReq(
             regs: Array(repeating: HLTypeKind.void, count: 8) + Array(repeating: HLTypeKind.i32, count: 8),
@@ -2246,7 +2338,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         )
         XCTAssertEqual(32, size)
     }
-
+    
     func testAppendPrologue() throws {
         let buff = CpuOpBuffer()
         let ctx = try prepareContext(compilables: [])
@@ -2272,7 +2364,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             ]
         )
     }
-
+    
     func testAppendEpilogue() throws {
         let buff = CpuOpBuffer()
         let ctx = try prepareContext(compilables: [])
@@ -2297,7 +2389,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             ]
         )
     }
-
+    
     func testAppendStackInit_skipVoid() throws {
         let buff = CpuOpBuffer()
         let ctx = try prepareContext(compilables: [])
@@ -2312,7 +2404,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             []
         )
     }
-
+    
     func testAppendStackInit_min16() throws {
         let _1_need16 = Array(repeating: HLTypeKind.i32, count: 1)
         let _4_need16 = Array(repeating: HLTypeKind.i32, count: 4)
@@ -2331,7 +2423,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             ],
             try BufferMapper(ctx: ctx, buffer: mem1).emitMachineCode()
         )
-
+        
         // 16 byte requirement should not round to 32
         let mem2 = CpuOpBuffer()
         try sut.appendStackInit(_4_need16, args: _4_need16, builder: mem2, prologueSize: 0)
@@ -2362,7 +2454,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             try BufferMapper(ctx: ctx, buffer: mem3).emitMachineCode()
         )
     }
-
+    
     func testAppendStackInit_multiple() throws {
         let ctx = try prepareContext(compilables: [])
         let mem = CpuOpBuffer()
@@ -2383,7 +2475,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             try BufferMapper(ctx: ctx, buffer: mem).emitMachineCode()
         )
     }
-
+    
     func testAppendStackInit_moreThan8Args() throws {
         let ctx = try prepareContext(compilables: [])
         let sut = sut(ctx: ctx)
@@ -2394,7 +2486,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             builder: mem,
             prologueSize: 0
         )
-                mem.hexPrint()
+        mem.hexPrint()
         XCTAssertEqual(
             [
                 // Reserving 48 bytes for entire stack
@@ -2435,7 +2527,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             try BufferMapper(ctx: ctx, buffer: mem).emitMachineCode()
         )
     }
-
+    
     func testAppendStackInit_mismatchedRegs() throws {
         let ctx = try prepareContext(compilables: [])
         let sut = sut(ctx: ctx)
@@ -2445,7 +2537,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             try sut.appendStackInit([HLTypeKind.i32], args: [HLTypeKind.void], builder: mem, prologueSize: 0)
         )
     }
-
+    
     func testAppendDebugPrintAligned4() throws {
         let ctx = try prepareContext(compilables: [])
         let sutWith = sut(ctx: ctx, strip: false)
@@ -2461,7 +2553,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             "Hello World",
             builder: memWithout
         )
-
+        
         XCTAssertEqual(
             [],
             try BufferMapper(ctx: ctx, buffer: memWithout).emitMachineCode()
@@ -2511,7 +2603,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             try BufferMapper(ctx: ctx, buffer: memWith).emitMachineCode()
         )
     }
-
+    
     func testCompile__OXor() throws {
         try _ru8__u8_u8(ops: [
             .OXor(dst: 1, a: 0, b: 1),
@@ -2522,7 +2614,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(0b10011111, entrypoint(0b11010110, 0b01001001))
         }
     }
-
+    
     func testCompile__OToInt__i32_to_i64() throws {
         try _ri64__i32(ops: [
             .OToInt(dst: 1, src: 0),
@@ -2566,7 +2658,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             )
         }
     }
-
+    
     func testCompile__OMul() throws {
         try _ri8__i8_i8(ops: [
             .OMul(dst: 1, a: 0, b: 1),
@@ -2610,17 +2702,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
     
     /** Test a switch statement with a default case.
      
-            static public function testSwitch(v: Int): Int {
-                    var v2 = v + 1;
-                    switch(v2) {
-                        case 0: return v*5;
-                        case 2: return v*0;
-                        case 4: return v*1;
-                        case 6: return v*2;
-                        case 7: return v*3;
-                        default: return v*4;
-                    };
-                }
+     static public function testSwitch(v: Int): Int {
+     var v2 = v + 1;
+     switch(v2) {
+     case 0: return v*5;
+     case 2: return v*0;
+     case 4: return v*1;
+     case 6: return v*2;
+     case 7: return v*3;
+     default: return v*4;
+     };
+     }
      */
     func testCompile__OSwitch__withDefault() throws {
         try _ri32__i32(ops: [
@@ -2660,16 +2752,16 @@ final class CompilerM1v2Tests: CCompatTestCase {
     
     /** Test a switch statement without a default case.
      
-            static public function testSwitch(v: Int): Int {
-                switch(v) {
-                    case 0: return v*0;
-                    case 2: return v*1;
-                    case 4: return v*2;
-                    case 6: return v*3;
-                    case 7: return v*4;
-                };
-                return -1;
-            }
+     static public function testSwitch(v: Int): Int {
+     switch(v) {
+     case 0: return v*0;
+     case 2: return v*1;
+     case 4: return v*2;
+     case 6: return v*3;
+     case 7: return v*4;
+     };
+     return -1;
+     }
      */
     func testCompile__OSwitch__withoutDefault() throws {
         try _ri32__i32(ops: [
@@ -2707,42 +2799,42 @@ final class CompilerM1v2Tests: CCompatTestCase {
     
     /** Test OGetType
      
-            static public function testGetType(something: Dynamic): Int {
-                var varType = hl.Type.getDynamic(something);
-                if (varType == hl.Type.get(5))
-                    return 1;
-                return 0;
-            }
-
-            static public function testGetType_bool(): Int {
-                return testGetType(true);
-            }
-             
-            static public function testGetType_i32(): Int {
-                return testGetType(123);
-            }
-
-            static public function testGetType_String(): Int {
-                return testGetType("asd");
-            }
+     static public function testGetType(something: Dynamic): Int {
+     var varType = hl.Type.getDynamic(something);
+     if (varType == hl.Type.get(5))
+     return 1;
+     return 0;
+     }
+     
+     static public function testGetType_bool(): Int {
+     return testGetType(true);
+     }
+     
+     static public function testGetType_i32(): Int {
+     return testGetType(123);
+     }
+     
+     static public function testGetType_String(): Int {
+     return testGetType("asd");
+     }
      */
     func testCompile__OGetType() throws {
         let ctx = try prepareContext(
             compilables: [
                 /*  fn testGetType (dynamic) -> (i32)
-
-                    reg0  dynamic
-                    reg1  type
-                    reg2  type
-                    reg3  i32
                  
-                    0: GetType { dst: Reg(1), src: Reg(0) }
-                    1: Type        reg2 = i32
-                    2: JNotEq      if reg1 != reg2 jump to 5
-                    3: Int         reg3 = 1
-                    4: Ret         reg3
-                    5: Int         reg3 = 0
-                    6: Ret         reg3
+                 reg0  dynamic
+                 reg1  type
+                 reg2  type
+                 reg3  i32
+                 
+                 0: GetType { dst: Reg(1), src: Reg(0) }
+                 1: Type        reg2 = i32
+                 2: JNotEq      if reg1 != reg2 jump to 5
+                 3: Int         reg3 = 1
+                 4: Ret         reg3
+                 5: Int         reg3 = 0
+                 6: Ret         reg3
                  */
                 prepareFunction(
                     retType: HLTypeKind.i32,
@@ -2775,15 +2867,15 @@ final class CompilerM1v2Tests: CCompatTestCase {
                     ]),
                 /*  fn testGetType_i32 () -> (i32)
                  
-                    Pass an i32 to testGetType that expects i32
-                    
-                    reg0  i32
-                    reg1  dynamic
-                    
-                    0: Int         reg0 = 123
-                    1: ToDyn       reg1 = cast reg0
-                    2: Call1       reg0 = testGetType(reg1)
-                    3: Ret         reg0
+                 Pass an i32 to testGetType that expects i32
+                 
+                 reg0  i32
+                 reg1  dynamic
+                 
+                 0: Int         reg0 = 123
+                 1: ToDyn       reg1 = cast reg0
+                 2: Call1       reg0 = testGetType(reg1)
+                 3: Ret         reg0
                  */
                 prepareFunction(
                     retType: HLTypeKind.i32,
@@ -2811,16 +2903,16 @@ final class CompilerM1v2Tests: CCompatTestCase {
                     ]),
                 /*  fn testGetType_bool () -> (i32) (3 regs, 4 ops)
                  
-                    Pass a bool to testGetType that expects i32
+                 Pass a bool to testGetType that expects i32
                  
-                    reg0  i32
-                    reg1  bool
-                    reg2  dynamic
-                    
-                    0: Bool        reg1 = true
-                    1: ToDyn       reg2 = cast reg1
-                    2: Call1       reg0 = testGetType(reg2)
-                    3: Ret         reg0
+                 reg0  i32
+                 reg1  bool
+                 reg2  dynamic
+                 
+                 0: Bool        reg1 = true
+                 1: ToDyn       reg2 = cast reg1
+                 2: Call1       reg0 = testGetType(reg2)
+                 3: Ret         reg0
                  */
                 prepareFunction(
                     retType: HLTypeKind.i32,
@@ -2883,8 +2975,8 @@ final class CompilerM1v2Tests: CCompatTestCase {
             entrypoint in
             
             XCTAssertEqual(5,  entrypoint(5))
-//            XCTAssertEqual(5.0,  entrypoint(5))
-//            XCTAssertEqual(-5.0,  entrypoint(-5))
+            //            XCTAssertEqual(5.0,  entrypoint(5))
+            //            XCTAssertEqual(-5.0,  entrypoint(-5))
         }
     }
     
@@ -2958,7 +3050,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         let ctx = try prepareContext(compilables: [
             /*
              fn testRef () -> (i32)
-
+             
              reg0  u8       // to force non-0 offset for test coverage
              reg1  i32
              reg2  void
@@ -2982,14 +3074,14 @@ final class CompilerM1v2Tests: CCompatTestCase {
                     .ORet(ret: 1)
                 ]),
             /*
-            fn testRefSet (ref<i32>) -> (void)
-                reg0  ref<i32>
-                reg1  i32
-                reg2  void
+             fn testRefSet (ref<i32>) -> (void)
+             reg0  ref<i32>
+             reg1  i32
+             reg2  void
              
-                0: Int         reg1 = 2
-                1: Setref { dst: Reg(0), value: Reg(1) }
-                2: Ret         reg2
+             0: Int         reg1 = 2
+             1: Setref { dst: Reg(0), value: Reg(1) }
+             2: Ret         reg2
              */
             prepareFunction(
                 retType: HLTypeKind.void,

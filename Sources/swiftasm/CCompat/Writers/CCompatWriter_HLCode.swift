@@ -22,7 +22,7 @@ class CCompatWriter_HLCode {
     let ustrings: UnsafeMutablePointer<UnsafePointer<CChar16>?>
     
     let types: UnsafeMutablePointer<HLType_CCompat>
-    let globals: UnsafeMutablePointer<UnsafePointer<HLType_CCompat>>
+    let globals: UnsafeMutableBufferPointer<UnsafePointer<HLType_CCompat>>
     let natives: UnsafeMutablePointer<HLNative_CCompat>
     let functions: UnsafeMutablePointer<HLFunction_CCompat>
     let constants: UnsafeMutablePointer<HLConstant_CCompat>
@@ -30,6 +30,8 @@ class CCompatWriter_HLCode {
     let typeWriter: CCompatWriter_HLTypes
     let funWriter: CCompatWriter_HLFunctions
     let nativesWriter: CCompatWriter_HLNatives
+    
+    let typeLookup: TypeLookupHelper
     
     // Workaround to not overwrite the void type during initialization. All types are .void initially,
     // so when doing type lookup for .void, we also need to match the expected index.
@@ -70,6 +72,7 @@ class CCompatWriter_HLCode {
         }
         
         let typeLookup: TypeLookupHelper = .init(start: types, count: Int(ctx.ntypes), voidIndex: voidIndex)
+        self.typeLookup = typeLookup
         self.ctx = ctx
         self.typeWriter = try CCompatWriter_HLTypes(ctx, typeLookup: typeLookup)
         self.funWriter = try CCompatWriter_HLFunctions(ctx, typeLookup: typeLookup)
@@ -85,7 +88,7 @@ class CCompatWriter_HLCode {
         self.debugfiles_lens = .allocate(capacity: 0)
         self.ustrings = .allocate(capacity: Int(ctx.nstrings))
         self.types = types
-        self.globals = .allocate(capacity: 0)
+        self.globals = .allocate(capacity: Int(ctx.nglobals))
         self.natives = .allocate(capacity: Int(ctx.nnatives))
         self.functions = .allocate(capacity: Int(ctx.nfunctions))
         self.constants = .allocate(capacity: 0)
@@ -97,7 +100,6 @@ class CCompatWriter_HLCode {
         self.debugfiles_lens.deinitialize(count: 0)
         self.ustrings.deinitialize(count: Int(ctx.nstrings))
         self.types.deinitialize(count: Int(ctx.ntypes))
-        self.globals.deinitialize(count: 0)
         self.functions.deinitialize(count: Int(ctx.nfunctions))
         self.constants.deinitialize(count: 0)
         self.natives.deinitialize(count: Int(ctx.nnatives))
@@ -164,6 +166,18 @@ class CCompatWriter_HLCode {
             let s = sb.pointee
         }
         
+        let globalValues: [UnsafePointer<HLType_CCompat>] = try (0..<ctx.nglobals).map {
+            guard let res = try ctx.getGlobal(Ref($0)) else {
+                throw GlobalError.invalidOperation("Global type definition providers can not contain nil")
+            }
+            guard let realType = try typeLookup.getCCompatType(type: res) else {
+                throw GlobalError.invalidOperation("Global type \(res) not serialized")
+            }
+            return realType
+        }
+        Swift.assert(globalValues.count == ctx.nglobals)
+        _ = self.globals.initialize(from: globalValues)
+        
         target.initialize(to: HLCode_CCompat(
             version: version, // <5 bytes pointed to strings
             nints: ctx.nints,
@@ -171,7 +185,7 @@ class CCompatWriter_HLCode {
             nstrings: 0,
             nbytes: 0,
             ntypes: ctx.ntypes,
-            nglobals: 0,
+            nglobals: ctx.nglobals,
             nnatives: ctx.nnatives,
             nfunctions: ctx.nfunctions,
             nconstants: 0,
@@ -188,7 +202,7 @@ class CCompatWriter_HLCode {
             debuffiles_lens: debugfiles_lens,
             ustrings: .init(OpaquePointer(ustrings)),
             types: types,
-            globals: globals,
+            globals: .init(OpaquePointer(globals.baseAddress!)),
             natives: natives,
             functions: functions,
             constants: constants,
