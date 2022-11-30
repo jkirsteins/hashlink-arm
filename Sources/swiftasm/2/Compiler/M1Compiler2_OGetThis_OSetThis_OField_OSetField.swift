@@ -43,10 +43,6 @@ extension M1Compiler2 {
             appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
             mem.append(M1Op.add(X.x0, X.x0, .imm(Int64(MemoryLayout<vvirtual>.stride), nil)))
             
-            // x0 -> [x0 + field offset into values]
-//            mem.append(PseudoOp.mov(X.x1, fieldRef * MemoryLayout<UnsafePointer<vdynamic>>.stride))
-//            mem.append(M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))))
-            
             appendDebugPrintRegisterAligned4(X.x0, prepend: "ofield virtual", builder: mem)
             
             // compare x0 to 0

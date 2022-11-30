@@ -1353,7 +1353,7 @@ class M1Compiler2 {
 
                 
                 // calculate what to skip
-                let jumpOffset_partA = try Immediate19(mem.byteSize)
+                let jumpOffset_partA = try Immediate21(mem.byteSize)
                 let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
                 let jumpOffset = try DeferredImmediateSum(
                     jumpOffset_partB,
@@ -1422,7 +1422,7 @@ class M1Compiler2 {
                 mem.append(M1Op.cmp(X.x0, X.x1))
 
                 // calculate what to skip
-                let jumpOffset_partA = try Immediate19(mem.byteSize)
+                let jumpOffset_partA = try Immediate21(mem.byteSize)
                 let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
                 let jumpOffset = try DeferredImmediateSum(
                     jumpOffset_partB,
@@ -1458,7 +1458,7 @@ class M1Compiler2 {
                 }
 
                 // calculate what to skip
-                let jumpOffset_partA = try Immediate19(mem.byteSize)
+                let jumpOffset_partA = try Immediate21(mem.byteSize)
                 let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
                 let jumpOffset = try DeferredImmediateSum(
                     jumpOffset_partB,
@@ -1478,6 +1478,7 @@ class M1Compiler2 {
                 mem.append(PseudoOp.mov(.x0, UnsafeRawPointer(globalInstanceAddress)))
                 mem.append(M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil)))
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "OGetGlobal result", builder: mem)
             case .OSetGlobal(let globalRef, let src):
                 let globalInstanceAddress = try ctx.requireGlobalData(globalRef)
                 assert(reg: src, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct, HLTypeKind.abstract, HLTypeKind.enum])
@@ -1916,7 +1917,7 @@ class M1Compiler2 {
                 appendDebugPrintAligned4("Jumping from \(currentInstruction) to \(targetInstructionIx)", builder: mem)
                 appendDebugPrintAligned4("Preparing jump (words to skip \(wordsToSkip))...", builder: mem)
                 
-                let jumpOffset_partA = try Immediate19(mem.byteSize)
+                let jumpOffset_partA = try Immediate21(mem.byteSize)
                 let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
                 let jumpOffset = try DeferredImmediateSum(
                     jumpOffset_partB,
@@ -2192,23 +2193,48 @@ class M1Compiler2 {
                 mem.append(M1Op.sub(X.x0, X.x0, .imm(1, nil)))
                 appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
             case .OSetArray(let array, let index, let src):
+                // x0 -> points to ((*_varray)(array))+1
+                appendLoad(reg: X.x0, from: array, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "OSetArray array", builder: mem)
+                
+                // x1 point to field base (right after the (varray) content at x0
+                mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<varray>.stride), nil)))
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "OSetArray before deref", builder: mem)
+                
+                // x2 load index and shift by field size multiplier
                 let lsl = requireTypeSizeLsl(reg: src, from: regs)
-                appendLoad(reg: .x0, from: src, kinds: regs, mem: mem)
-                appendLoad(reg: .x1, from: index, kinds: regs, mem: mem)
-                appendLoad(reg: .x2, from: array, kinds: regs, mem: mem)
-                mem.append(
-                    M1Op.lsl_i(X.x1, X.x1, try UImmediate6(lsl)),
-                    M1Op.str(X.x0, .reg(X.x2, .r64ext(X.x1, .sxtx(0))))
-                )
+                appendLoad(reg: X.x2, from: index, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x2, prepend: "OSetArray index before mul", builder: mem)
+                mem.append(M1Op.lsl_i(X.x2, X.x2, try UImmediate6(lsl)))
+                appendDebugPrintRegisterAligned4(X.x2, prepend: "OSetArray index after mul", builder: mem)
+                
+                // x3 load value to store
+                appendLoad(reg: X.x3, from: src, kinds: regs, mem: mem)
+                
+                // dereference [x1/*field base*/ + x2/*offset from index*/]
+                mem.append(M1Op.str(X.x3, .reg(X.x1, .r64ext(X.x2, .sxtx(0)))))
             case .OGetArray(let dst, let array, let index):
+                // x0 -> points to ((*_varray)(array))+1
+                appendLoad(reg: X.x0, from: array, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "OGetArray array", builder: mem)
+                
+                // x1 point to field base (right after the (varray) content at x0
+                mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<varray>.stride), nil)))
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "OGetArray before deref", builder: mem)
+                
+                // x2 load index and shift by field size multiplier
                 let lsl = requireTypeSizeLsl(reg: dst, from: regs)
-                appendLoad(reg: .x1, from: index, kinds: regs, mem: mem)
-                appendLoad(reg: .x2, from: array, kinds: regs, mem: mem)
-                mem.append(
-                    M1Op.lsl_i(X.x1, X.x1, try UImmediate6(lsl)),
-                    M1Op.ldr(X.x0, .reg(X.x2, .r64ext(X.x1, .sxtx(0))))
-                )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendLoad(reg: X.x2, from: index, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x2, prepend: "OGetArray index before mul", builder: mem)
+                mem.append(M1Op.lsl_i(X.x2, X.x2, try UImmediate6(lsl)))
+                appendDebugPrintRegisterAligned4(X.x2, prepend: "OGetArray index after mul", builder: mem)
+                
+                // dereference [x1/*field base*/ + x2/*offset from index*/]
+                mem.append(M1Op.ldr(X.x1, .reg(X.x1, .r64shift(X.x2, .lsl(0)))))
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "OGetArray fieldbase after deref", builder: mem)
+                
+                appendStore(reg: X.x1, into: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "OGetArray fetched item", builder: mem)
             case .ONop:
                 mem.append(M1Op.nop)
             case .OXor(let dst, let a, let b):
@@ -2299,7 +2325,7 @@ class M1Compiler2 {
                     let wordsToSkip = Int(jmpOffset) + 1
                     let targetInstructionIx = currentInstruction + wordsToSkip
                     
-                    let jumpOffset_partA = try Immediate19(mem.byteSize)
+                    let jumpOffset_partA = try Immediate21(mem.byteSize)
                     let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
                     let jumpOffset = try DeferredImmediateSum(
                         jumpOffset_partB,
