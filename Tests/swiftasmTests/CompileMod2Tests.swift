@@ -668,7 +668,7 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testEntrypoint() throws {
-        throw XCTSkip("testEntrypoint not finished yet")
+//        throw XCTSkip("testEntrypoint not finished yet")
         
         typealias _JitFunc =  (@convention(c) () -> ())
         
@@ -693,7 +693,11 @@ final class CompileMod2Tests: RealHLTestCase {
         
         try _compileAndLinkWithDeps(
             strip: false,
-            fix: RefFun(ep)
+            fix: RefFun(ep),
+            // these deps can't be determined currently automatically
+            // (if hashlink bytecode changes, these indexes
+            // might need to be updated)
+            depHints: [230, 329, 229, 41]
         ) {
             sutFix, mem in
             print("Compiling fix \(sutFix) vs \(ep)")

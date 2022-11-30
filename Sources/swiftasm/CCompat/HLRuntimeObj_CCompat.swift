@@ -33,7 +33,7 @@ struct HLRuntimeObj_CCompat {
     let hasPtr: Bool
     let methods: UnsafeMutableRawPointer
     let fields_indexes: UnsafePointer<Int32>
-    let bindings: UnsafeRawPointer
+    let bindings: UnsafePointer<HLRuntimeBinding_CCompat>
     let parent: UnsafeRawPointer
     let toStringFunc: (@convention(c) (UnsafeRawPointer) -> UnsafePointer<CChar16>)
     let compareFun: (@convention(c) (UnsafeRawPointer, UnsafeRawPointer) -> UnsafePointer<Int32>)

@@ -94,6 +94,32 @@ class BufferMapper {
             Self.logger.debug("Set function address for findex \(String(describing: funIndex)) to \(String(describing: mAddr.pointee))")
         }
         
+        for nativeRealIx in (0..<Int(ctx.nnatives)) {
+            guard
+                let nat = ctx.mainContext.pointee.code?.pointee.natives.advanced(by: nativeRealIx)
+            else {
+                fatalError("Can't get findex for native #\(nativeRealIx)")
+            }
+            let funIndex = nat.pointee.findex
+            guard let addr = ctx.mainContext.pointee.m?.pointee.functions_ptrs.advanced(by: Int(funIndex)) else {
+                fatalError("Can't get function address for findex \(funIndex)")
+            }
+            let callable = try ctx.getCallable(findex: Int(funIndex))
+            guard let realAddress = callable?.address, realAddress.hasUsableValue else {
+                #if DEBUG
+                // This is only valid for tests
+                Self.logger.warning("Not setting function address for findex \(funIndex)")
+                #else
+                fatal("Could not set final function address for findex \(funIndex)", Self.logger)
+                #endif
+                continue
+            }
+            
+            let mAddr = UnsafeMutablePointer(mutating: addr)
+            mAddr.pointee = .init(realAddress.value)
+            Self.logger.debug("Set function address for findex \(String(describing: funIndex)) to \(String(describing: mAddr.pointee))")
+        }
+        
         guard let mapped = mapped else {
             throw GlobalError.unexpected("mmap returned nil: \(errno)")
         }

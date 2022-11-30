@@ -376,4 +376,16 @@ struct LibHl {
     static func hl_get_ustring(_ code: UnsafePointer<HLCode_CCompat>, _ index: Int32) -> (UnsafePointer<CChar16>) {
         .init(_hl_get_ustring(.init(code), index))
     }
+    
+    // HL_API hl_runtime_obj *hl_get_obj_proto( hl_type *ot );
+    static let _hl_get_obj_proto: (@convention(c) (OpaquePointer)->(OpaquePointer)) = { load("hl_get_obj_proto") }()
+    static func hl_get_obj_proto(_ ot: UnsafePointer<HLType_CCompat>) -> (UnsafePointer<HLRuntimeObj_CCompat>) {
+        .init(_hl_get_obj_proto(.init(ot)))
+    }
+    
+//    HL_API void hl_flush_proto( hl_type *ot ) {
+    static let _hl_flush_proto: (@convention(c) (OpaquePointer)->()) = { load("hl_flush_proto") }()
+    static func hl_flush_proto(_ ot: UnsafePointer<HLType_CCompat>) -> () {
+        _hl_flush_proto(.init(ot))
+    }
 }

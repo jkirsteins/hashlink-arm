@@ -1043,7 +1043,7 @@ class M1Compiler2 {
                     // ASM for  if( c->hasValue ) c->fun(value,args) else c->fun(args)
                     
                     appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(X.x10, builder: mem)
+                    appendDebugPrintRegisterAligned4(X.x10, prepend: "OCallClosure obj", builder: mem)
                     
                     var jmpTargetHasValue = RelativeDeferredOffset()
                     var jmpTargetFinish = RelativeDeferredOffset()
@@ -1069,8 +1069,12 @@ class M1Compiler2 {
                         funType: clType,
                         appendCall: { buff in
                             appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: buff)
+                            appendDebugPrintAligned4("[__ocall_impl] Call", builder: buff)
                             buff.append(
-                                M1Op.ldr(X.x15, .reg64offset(X.x10, funOffset, nil)),
+                                M1Op.ldr(X.x15, .reg64offset(X.x10, funOffset, nil))
+                                )
+                            appendDebugPrintRegisterAligned4(X.x15, prepend: "__ocall_impl loaded fun", builder: buff)
+                            buff.append(
                                 M1Op.blr(X.x15)
                             )
                         },
@@ -1479,6 +1483,51 @@ class M1Compiler2 {
                 mem.append(M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil)))
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 appendDebugPrintRegisterAligned4(X.x0, prepend: "OGetGlobal result", builder: mem)
+                
+                struct _String {
+                    let t: UnsafePointer<HLType_CCompat>
+                    let bytes: UnsafePointer<CChar16>
+                    let length: Int32
+                }
+                
+                struct _haxeLog {
+                    let type: UnsafePointer<HLType_CCompat>
+                    let __type__: UnsafePointer<HLType_CCompat>
+                    let meta: UnsafePointer<vdynamic>
+                    let implementedBy: UnsafePointer<varray>
+                    let name: UnsafePointer<_String>
+                    let constructor: UnsafePointer<vdynamic>
+                    let formatOutput: UnsafePointer<vclosure>
+                    let trace: UnsafePointer<vclosure>
+                };
+                
+                let _c: (@convention(c)(OpaquePointer)->()) = {
+                    dPtr in
+                    
+                    let lptr: UnsafePointer<_haxeLog> = .init(dPtr)
+                    // fun is nil :(
+                    print("Fetched lptr", lptr)
+                    let rto = lptr.pointee.type.pointee.obj.pointee.getRt(lptr.pointee.type)
+                    print(rto.pointee.bindings.advanced(by: 0))
+                    print(rto.pointee.bindings.advanced(by: 1))
+                    
+                    print("[hl_get_obj_proto] mcontext", lptr.pointee.type.pointee.obj.pointee.moduleContext)
+                    print("[hl_get_obj_proto] type", lptr.pointee.type)
+                    print("[hl_get_obj_proto] obj", lptr.pointee.type.pointee.obj)
+                    
+                    let rto2 = LibHl.hl_get_obj_proto(.init(OpaquePointer(lptr.pointee.type)))
+                    LibHl.hl_flush_proto(lptr.pointee.type)
+                    
+                    print("rto", rto)
+                    print("rto2", rto2)
+                }
+                if compilable.findex == 257 && currentInstruction == 0 {
+                    mem.append(
+                        PseudoOp.mov(X.x10, unsafeBitCast(_c, to: OpaquePointer.self)),
+                        M1Op.blr(X.x10)
+                    )
+                }
+                
             case .OSetGlobal(let globalRef, let src):
                 let globalInstanceAddress = try ctx.requireGlobalData(globalRef)
                 assert(reg: src, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct, HLTypeKind.abstract, HLTypeKind.enum])

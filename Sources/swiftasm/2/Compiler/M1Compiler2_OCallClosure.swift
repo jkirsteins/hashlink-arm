@@ -99,7 +99,6 @@ extension M1Compiler2 {
                 load = {
                     let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
                     
-                    print("[__ocall_impl] loading vreg \($1) from offset \(offset)")
                     $0.append(
                         PseudoOp.ldrVreg($1, offset, argTypeKind.hlRegSize)
                     )
@@ -108,7 +107,6 @@ extension M1Compiler2 {
                 load = {
                     let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
                     
-                    print("[__ocall_impl] append load \($1) from offset \(offset)")
                     self.appendLoad(reg: $1,
                                from: argReg,
                                kinds: regs, // careful, pass all kinds, not just the arg ones
@@ -141,7 +139,9 @@ extension M1Compiler2 {
         }
         
         // PERFORM BLR
+        appendDebugPrintAligned4("[__ocall_impl] Appending call...", builder: mem)
         appendCall(mem)
+        appendDebugPrintAligned4("[__ocall_impl] Finished call...", builder: mem)
         
         mem.append(
             PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
