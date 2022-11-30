@@ -59,7 +59,7 @@ extension M1Compiler2 {
                 PseudoOp.withOffset(
                     offset: &jmpTarget_hlvfieldNoAddress,
                     mem: mem,
-                    M1Op.b_eq(try! Immediate19(jmpTarget_hlvfieldNoAddress.value))
+                    M1Op.b_eq(try! Immediate21(jmpTarget_hlvfieldNoAddress.value))
                 )
             )
             appendDebugPrintAligned4("ofield virtual HAS ADDRESS", builder: mem)
@@ -215,7 +215,7 @@ extension M1Compiler2 {
                 PseudoOp.withOffset(
                     offset: &jmpTarget_hlvfieldNoAddress,
                     mem: mem,
-                    M1Op.b_eq(try! Immediate19(jmpTarget_hlvfieldNoAddress.value))
+                    M1Op.b_eq(try! Immediate21(jmpTarget_hlvfieldNoAddress.value))
                 )
             )
             appendDebugPrintAligned4("osetfield virtual HAS ADDRESS", builder: mem)

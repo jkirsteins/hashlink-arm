@@ -896,14 +896,18 @@ class M1Compiler2 {
             builder: mem
         )
         
-
-        let addrBetweenOps: [DeferredImmediate<Immediate19>] = (0..<compilable.ops.count).map { _ in
+        /* Relative conditional jumps will need to fit in 19 bits and absolute jumps in 26 bits.
+         
+         But the absolute offsets can be stored with more bits (in case the relative
+         offset is smaller). */
+        let addrBetweenOps: [DeferredImmediate<Immediate26>] = (0..<compilable.ops.count).map { _ in
             return DeferredImmediate()
         }
 
         for (currentInstruction, op) in compilable.ops.enumerated() {
 
-            addrBetweenOps[currentInstruction].finalize(try Immediate19(mem.byteSize))
+            Self.logger.debug("Offset for op \(currentInstruction) is \(mem.byteSize)")
+            addrBetweenOps[currentInstruction].finalize(try Immediate26(mem.byteSize))
 
             mem.append(
                 PseudoOp.debugMarker("Marking position for \(currentInstruction) at \(mem.byteSize)")
@@ -1055,7 +1059,7 @@ class M1Compiler2 {
                         PseudoOp.withOffset(
                             offset: &jmpTargetHasValue,
                             mem: mem,
-                            M1Op.b_ne(try! Immediate19(jmpTargetHasValue.value))
+                            M1Op.b_ne(try! Immediate21(jmpTargetHasValue.value))
                         )
                     )
                     appendDebugPrintAligned4("TARGET HAS NO VALUE", builder: mem)
@@ -1363,25 +1367,25 @@ class M1Compiler2 {
                     PseudoOp.deferred(4) {
                         switch(op.id) {
                         case .OJSGt:
-                            return M1Op.b_gt(try Immediate19(jumpOffset.immediate))
+                            return M1Op.b_gt(try Immediate21(jumpOffset.immediate))
                         case .OJSLt:
                             fallthrough
                         case .OJULt:
                             fallthrough
                         case .OJNotGte:
-                            return M1Op.b_lt(try Immediate19(jumpOffset.immediate))
+                            return M1Op.b_lt(try Immediate21(jumpOffset.immediate))
                         case .OJSLte:
-                            return M1Op.b_le(try Immediate19(jumpOffset.immediate))
+                            return M1Op.b_le(try Immediate21(jumpOffset.immediate))
                         case .OJSGte:
                             fallthrough
                         case .OJUGte:
                             fallthrough
                         case .OJNotLt:
-                            return M1Op.b_ge(try Immediate19(jumpOffset.immediate))
+                            return M1Op.b_ge(try Immediate21(jumpOffset.immediate))
                         case .OJEq:
-                            return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
+                            return M1Op.b_eq(try Immediate21(jumpOffset.immediate))
                         case .OJNotEq:
-                            return M1Op.b_ne(try Immediate19(jumpOffset.immediate))
+                            return M1Op.b_ne(try Immediate21(jumpOffset.immediate))
                         default:
                             fatalError("Unsupported jump id \(op.id)")
                         }
@@ -1434,11 +1438,11 @@ class M1Compiler2 {
                         case .OJFalse:
                             fallthrough
                         case .OJNull:
-                            return M1Op.b_eq(try Immediate19(jumpOffset.immediate))
+                            return M1Op.b_eq(try Immediate21(jumpOffset.immediate))
                         case .OJTrue:
                             fallthrough
                         case .OJNotNull:
-                            return M1Op.b_ne(try Immediate19(jumpOffset.immediate))
+                            return M1Op.b_ne(try Immediate21(jumpOffset.immediate))
                         default:
                             fatalError("Unsupported jump id \(op.id)")
                         }
@@ -1625,7 +1629,7 @@ class M1Compiler2 {
 //                            // TODO: remove after testing
 //                            return M1Op.nop
 //                        }
-                        return M1Op.b_ne(try Immediate19(jumpOverDeath.value))
+                        return M1Op.b_ne(try Immediate21(jumpOverDeath.value))
                     }
                 )
                 appendDebugPrintAligned4("Null access exception", builder: mem)
@@ -1869,7 +1873,7 @@ class M1Compiler2 {
                     PseudoOp.withOffset(
                         offset: &setJmpEq0Target,
                         mem: mem,
-                        M1Op.b_eq(try! Immediate19(setJmpEq0Target.value))
+                        M1Op.b_eq(try! Immediate21(setJmpEq0Target.value))
                     )
                 )
                 
@@ -2166,9 +2170,7 @@ class M1Compiler2 {
                 appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
             case .OType(let dst, let ty):
                 let typeMemory = try ctx.getType(ty)
-                print("Type IX \(ty) resulted in \(typeMemory.kind)")
                 let typeMemoryVal = Int(bitPattern: typeMemory.ccompatAddress)
-                print("Storing type mem \(typeMemoryVal)")
                 mem.append(PseudoOp.mov(.x0, typeMemoryVal))
                 appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
 
@@ -2308,7 +2310,7 @@ class M1Compiler2 {
                     
                     mem.append(
                         PseudoOp.deferred(4) {
-                            M1Op.b_eq(try Immediate19(jumpOffset.immediate))
+                            M1Op.b_eq(try Immediate21(jumpOffset.immediate))
                         }
                     )
                     

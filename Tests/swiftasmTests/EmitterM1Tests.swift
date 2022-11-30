@@ -482,9 +482,10 @@ final class EmitterM1Tests: XCTestCase {
     }
     
     func testB_gt() throws {
+        try XCTAssertM1Op(M1Op.b_gt(262424), "b.gt #262424", 0xcc, 0x08, 0x20, 0x54)
         XCTAssertM1OpDesc(M1Op.b_gt(16), "b.gt #16")
         XCTAssertM1OpDesc(M1Op.b_gt(-4), "b.gt #-4")
-        
+
         try XCTAssertM1OpBytes(.b_gt(16), 0x8c, 0x00, 0x00, 0x54)
         try XCTAssertM1OpBytes(.b_gt(-4), 0xec, 0xff, 0xff, 0x54)
         try XCTAssertM1OpBytes(.b_gt(-8), 0xcc, 0xff, 0xff, 0x54)
@@ -611,6 +612,8 @@ final class EmitterM1Tests: XCTestCase {
     }
         
     func testB() throws {
+        try XCTAssertM1Op(M1Op.b(RelativeLiteralOffset(262424)), "b #262424", 0x46, 0x00, 0x01, 0x14)
+        
         try XCTAssertM1Op(
             .b(RelativeLiteralOffset(-264)),
             "b #-264",

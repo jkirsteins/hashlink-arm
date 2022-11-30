@@ -176,12 +176,17 @@ extension Immediate {
         self.immediate << lsl
     }
     
-    func shiftedRight(_ lsl: any BinaryInteger) -> Int64 {
+    func signedShiftedRight(_ lsr: any BinaryInteger) -> Int64 {
+        signedTruncate(lsr: lsr, capBits: bits)
+    }
+    
+    func signedTruncate(lsr: any BinaryInteger, capBits: Int64) -> Int64 {
+        let mask: Int64 = (1 << capBits) - 1
         var res = self.immediate
-        for _ in 0..<Int(lsl) {
+        for _ in 0..<Int(lsr) {
             res = (res >> 1) | (self.isNegative ? (1 << (self.bits-1)) : 0)
         }
-        return res
+        return res & mask
     }
 
     var signMask: Int64 {
@@ -325,6 +330,27 @@ extension Immediate {
             result = result | (1 << ix)
         }
         return result
+    }
+}
+
+struct Immediate21: Immediate, ExpressibleByIntegerLiteral {
+    let bits: Int64 = 21
+
+    let wrapped: VariableImmediate
+
+    var immediate: Int64 { wrapped.immediate }
+    
+    init(integerLiteral: Int32) {
+        self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
+    }
+    
+    init(_ val: Int64, bits: Int64) throws {
+        self.wrapped = try VariableImmediate(val, bits: bits)
+    }
+
+    init(_ val: any BinaryInteger) throws {
+        let i = Int(val)
+        self.wrapped = try VariableImmediate(Int64(i), bits: bits)
     }
 }
 

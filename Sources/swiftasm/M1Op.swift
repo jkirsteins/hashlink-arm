@@ -425,12 +425,13 @@ enum M1Op : CpuOp {
     case cmp(any RegisterI, any RegisterI)
     case subs(any RegisterI, any RegisterI, Offset)
     
-    case b_lt(Immediate19)
-    case b_gt(Immediate19)
-    case b_le(Immediate19)
-    case b_ge(Immediate19)
-    case b_eq(Immediate19)
-    case b_ne(Immediate19)
+    // 19 bits for all conditional jump offsets, but we add 2 bits cause the value will be divided by 4 (or >>2)
+    case b_lt(Immediate21)
+    case b_gt(Immediate21)
+    case b_le(Immediate21)
+    case b_ge(Immediate21)
+    case b_eq(Immediate21)
+    case b_ne(Immediate21)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SXTW--Sign-Extend-Word--an-alias-of-SBFM-?lang=en
     case sxtw(Register64, Register32)   // SBFM <Xd>, <Xn>, #0, #31
