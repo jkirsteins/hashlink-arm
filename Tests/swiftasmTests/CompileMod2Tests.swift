@@ -216,14 +216,7 @@ final class CompileMod2Tests: RealHLTestCase {
             throw TestError.unexpected("Function \(fqname) not found")
         }
         
-        let compiler = try sut(strip: strip)
-        let deps = try extractDeps(fix: fix, depHints: depHints)
-        
-        print("Function \(fqname)@\(fix) has these dependencies: \(deps)")
-        for depFix in deps {
-            try compiler.compile(findex: depFix, into: mem)
-        }
-        return (fix, mem)
+        return try _compileDeps(strip: strip, mem: mem, fix: fix, depHints: depHints)
     }
     
     func _compileDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), fix: RefFun, depHints: [RefFun] = []) throws -> (RefFun, CpuOpBuffer) {
@@ -231,7 +224,6 @@ final class CompileMod2Tests: RealHLTestCase {
         let compiler = try sut(strip: strip)
         let deps = try extractDeps(fix: fix, depHints: depHints)
         
-        print("Function ?@\(fix) has these dependencies: \(deps)")
         for depFix in deps {
             try compiler.compile(findex: depFix, into: mem)
         }
@@ -248,7 +240,7 @@ final class CompileMod2Tests: RealHLTestCase {
     ///   - name:
     ///   - depHints: function indexes which are dependencies of the function under test (if they cannot be determined from OCall opcodes)
     ///   - callback:
-    func _withPatchedEntrypoint(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), name: String, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
+    func _withPatchedEntrypoint(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), name fqname: String, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
         
         guard let ep = ctx.mainContext.pointee.code?.pointee.entrypoint else {
             return XCTFail("No entrypoint")
@@ -267,10 +259,11 @@ final class CompileMod2Tests: RealHLTestCase {
         ctx.patch(findex: RefFun(ep), ops: ops)
         
         let mem = CpuOpBuffer()
-        let (sutFix, _) = try _compileDeps(strip: strip, fqname: name, depHints: depHints)
+        let (sutFix, _) = try _compileDeps(strip: strip, mem: mem, fqname: fqname, depHints: depHints)
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: strip,
+            mem: mem,
             fix: RefFun(ep),
             // these deps can't be determined currently automatically
             // (if hashlink bytecode changes, these indexes
@@ -278,15 +271,17 @@ final class CompileMod2Tests: RealHLTestCase {
             depHints: depHints
         ) {
             epFix, jitMemory in
-            print("Running entrypoint first @\(epFix)")
-            try jitMemory.jit(ctx: ctx, fix: sutFix) { (entrypoint: (@convention(c) ()->())) in entrypoint() }
-            print("Returning to test with @\(sutFix)")
+            print("Running entrypoint first _@\(epFix)")
+            try jitMemory.jit(ctx: ctx, fix: epFix) { (entrypoint: (@convention(c) ()->())) in
+                entrypoint()
+            }
+            print("Returning to test with \(fqname)@\(sutFix)")
             try callback(sutFix, jitMemory)
         }
     }
     
     func _compileAndLinkWithDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), name: String, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
-        let (fix, buff) = try self._compileDeps(strip: strip, fqname: name, depHints: depHints)
+        let (fix, buff) = try self._compileDeps(strip: strip, mem: mem, fqname: name, depHints: depHints)
         let mapper = BufferMapper(ctx: self.ctx, buffer: buff)
         let mem = try mapper.getMemory()
         
@@ -296,7 +291,7 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func _compileAndLinkWithDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), fix: RefFun, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
-        let (fix, buff) = try self._compileDeps(strip: strip, fix: fix, depHints: depHints)
+        let (fix, buff) = try self._compileDeps(strip: strip, mem: mem, fix: fix, depHints: depHints)
         let mapper = BufferMapper(ctx: self.ctx, buffer: buff)
         let mem = try mapper.getMemory()
         
@@ -899,7 +894,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Int32/*field ix 0|1|2*/) -> (Int32))
         
         try _withPatchedEntrypoint(
-            strip: true,
+            strip: false,
             name: "Main.testStaticVirtual_globalVirtual"
         ) {
             sutFix, mem in
@@ -908,9 +903,9 @@ final class CompileMod2Tests: RealHLTestCase {
                 (entrypoint: _JitFunc) in
                 
                 // fetch already set fields (ignore the new values)
-                XCTAssertEqual(entrypoint(0), 123)
-                XCTAssertEqual(entrypoint(1), 1)
-                XCTAssertEqual(entrypoint(2), 456)
+                XCTAssertEqual(123, entrypoint(0))
+                XCTAssertEqual(1, entrypoint(1))
+                XCTAssertEqual(456, entrypoint(2))
             }
         }
     }

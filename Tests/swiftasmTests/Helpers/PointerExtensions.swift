@@ -78,7 +78,6 @@ extension UnsafeMutableRawPointer {
             throw TestError.unexpected("Function (fix=\(fix)) not found")
         }
         
-        print("Casting entrypoint from \(c.address.value)")
         let entrypoint = unsafeBitCast(c.address.value, to: U.self)
         return callback(entrypoint)
     }
@@ -88,7 +87,6 @@ extension UnsafeMutableRawPointer {
             throw TestError.unexpected("Function (fix=\(fix)) not found")
         }
         
-        print("Casting entrypoint from \(c.address.value)")
         let entrypoint = unsafeBitCast(c.address.value, to: U.self)
         callback(entrypoint)
     }

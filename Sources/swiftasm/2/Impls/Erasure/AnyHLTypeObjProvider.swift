@@ -12,7 +12,6 @@ class AnyHLTypeObjProvider : Equatable, Hashable, CustomDebugStringConvertible, 
     
     static func == (lhs: AnyHLTypeObjProvider, rhs: AnyHLTypeObjProvider) -> Bool {
         let res = lhs.isEquivalent(rhs)
-        print("AnyHLTypeObjProvider isEquivalent: \(res)")
         return res
     }
     

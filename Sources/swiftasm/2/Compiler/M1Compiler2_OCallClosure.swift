@@ -76,7 +76,6 @@ extension M1Compiler2 {
         let totalArgKinds = preArgs.map({ $0.1 }) + args.map({ requireTypeKind(reg: $0, from: regs) })
         
         let additionalSizeUnrounded = totalArgKinds.dropFirst(ARG_REGISTER_COUNT).reduce(0) {
-            print("Adding size for \($1)")
             return $0 + Int($1.hlRegSize)
         }
         let additionalSize = StackInfo.roundUpStackReservation(Int16(additionalSizeUnrounded))
@@ -179,7 +178,6 @@ extension M1Compiler2 {
         let totalArgKinds = preArgs.map({ $0.1 }) + args.map({ requireTypeKind(reg: $0, from: regs) })
         
         let additionalSizeUnrounded = totalArgKinds.dropFirst(ARG_REGISTER_COUNT).reduce(0) {
-            print("Adding size for \($1)")
             return $0 + Int($1.hlRegSize)
         }
         let additionalSize = StackInfo.roundUpStackReservation(Int16(additionalSizeUnrounded))
@@ -201,7 +199,6 @@ extension M1Compiler2 {
                 load = {
                     let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
                     
-                    print("[__ocallmethod_impl] loading vreg \($1) from offset \(offset)")
                     $0.append(
                         PseudoOp.ldrVreg($1, offset, argTypeKind.hlRegSize)
                     )
@@ -210,7 +207,6 @@ extension M1Compiler2 {
                 load = {
                     let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
                     
-                    print("[__ocallmethod_impl] append load \($1) from offset \(offset)")
                     self.appendLoad(reg: $1,
                                from: argReg,
                                kinds: regs, // careful, pass all kinds, not just the arg ones

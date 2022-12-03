@@ -72,10 +72,8 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
         ]
         switch(regSize) {
         case 8:
-            print("_ldrVreg 64 offset \(offset)")
             result.append(M1Op.ldr(reg, .reg(X.sp, .r64ext(reg, .sxtx(0)))))
         case 4:
-            print("_ldrVreg 32 offset \(offset)")
             result.append(M1Op.ldr(reg.to32, .reg(X.sp, .r64ext(reg, .sxtx(0)))))
         case 2:
             result.append(M1Op.ldrh(reg.to32, .reg(X.sp, .r64ext(reg, .sxtx(0)))))

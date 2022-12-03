@@ -191,13 +191,11 @@ class CCompatJitContext : JitContext2 {
             }
             guard version >= 5 else {
                 let result = $0.pointee.code.pointee.strings.advanced(by: ix)
-                print("Returning bytes for <v5: \(result.pointee)")
                 return result.pointee
             }
             let offset = $0.pointee.code.pointee.bytes_pos.advanced(by: ix).pointee
             let bytes = $0.pointee.code.pointee.bytes.advanced(by: Int(offset))
             
-            print("Returning bytes for >=v5: \(bytes)")
             return bytes
         }
     }
@@ -325,7 +323,6 @@ class CCompatJitContext : JitContext2 {
             (m)->(any Callable2)? in
             
             let realIx = try getFunctionTableIndex(findex: fix)
-            print("Real ix: \(realIx)")
             
             let isNative = realIx >= m.pointee.code.pointee.nfunctions
             
@@ -371,7 +368,6 @@ class CCompatJitContext : JitContext2 {
             }
             
             let realIx = try getFunctionTableIndex(findex: fix)
-            print("Real ix: \(realIx)")
             
             guard let nat = self.mainContext.pointee.code?.pointee.getNative(Int(realIx)) else {
                 return nil
@@ -391,7 +387,6 @@ class CCompatJitContext : JitContext2 {
             }
             
             let realIx = try getFunctionTableIndex(findex: fix)
-            print("Real ix: \(realIx)")
             
             guard let fun = self.mainContext.pointee.code?.pointee.getFunction(Int(realIx)) else {
                 return nil
@@ -410,7 +405,6 @@ class CCompatJitContext : JitContext2 {
             let ops_final: [HLOpCode]
             if let opsPatched = patchedOps[fix] {
                 ops_final = opsPatched
-                print("Using patched ops: \(ops_final)")
             } else {
                 ops_final = fun.pointee.ops
             }

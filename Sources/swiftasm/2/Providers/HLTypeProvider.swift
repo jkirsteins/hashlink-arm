@@ -28,7 +28,6 @@ extension HLTypeProvider {
             }
             
             let res = lhs.isEquivalent(rhs)
-            print("HLTypeProvider: true")
             return res
         case .ref:
             guard let lt = self.tparamProvider, let rt = other.tparamProvider else {

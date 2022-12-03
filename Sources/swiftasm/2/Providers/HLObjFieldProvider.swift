@@ -22,7 +22,6 @@ extension HLObjFieldProvider {
             return false
         }
         guard self.nameProvider.isEquivalent(other.nameProvider) else {
-            print("failed name provider check.\n lhs: \(self.nameProvider.stringValue)\n rhs: \(other.nameProvider.stringValue)")
             return false
         }
         

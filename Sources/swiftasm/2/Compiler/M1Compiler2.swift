@@ -85,7 +85,6 @@ let OSetEnumField_impl: (@convention(c) (
     let fieldPtr = type.pointee.t.pointee.tenum.pointee.constructs.pointee.offsets.advanced(by: Int(fieldIndex))
     let mFieldPtr: UnsafeMutablePointer<Int32> = .init(mutating: fieldPtr)
     mFieldPtr.pointee = source
-    print("Done")
 }
 
 let OEnumAlloc_impl: (@convention(c) (
@@ -115,7 +114,6 @@ let OMakeEnum_impl: (@convention(c) (
     defer {
         argRegs.deallocate()
         argValues.deallocate()
-        print("Deallocated")
     }
     
     let result = LibHl.hl_alloc_enum(.init(type), index)
@@ -151,9 +149,7 @@ let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/Unsafe
     let res = LibHl.hl_alloc_dynamic(srcTypeB)  // use the source type
     
     var mutatingRes: UnsafeMutableRawPointer = .init(mutating: res)
-    
-    print("Setting to source: \(src)")
-    
+      
     switch(srcTypeB.pointee.kind) {
     case .i32:
         let srcI32 = Int32(truncatingIfNeeded: src)
@@ -169,7 +165,6 @@ let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/Unsafe
         fatalError("Casting ToDyn from \(srcTypeB.pointee.kind) not implemented")
     }
     
-    print("Checking for type. Actual: \(res.pointee.t.pointee.kind). Expected: \(srcTypeB.pointee.kind)")
     assert(res.pointee.t.pointee.kind == srcTypeB.pointee.kind)
     
     return .init(res)
@@ -239,7 +234,6 @@ extension M1Compiler2 {
     
     func appendLoad(reg: Register64, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
-        print("Loading \(reg) from vreg \(vreg) at offset \(offset) size \(vregKind.hlRegSize)")
         if vregKind.hlRegSize == 8 {
             mem.append(
                 M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
@@ -265,7 +259,6 @@ extension M1Compiler2 {
     
     func appendLoad(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
-        print("Loading \(reg) from vreg \(vreg) at offset \(offset) size \(vregKind.hlRegSize)")
         if vregKind.hlRegSize == 8 {
             mem.append(
                 M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
@@ -480,10 +473,8 @@ extension M1Compiler2 {
                 overflowOffset += regSize
             }
 
-            print("stack init strVreg. overflow offset: \(offset)")
             builder.append(PseudoOp.strVreg(regToUse, offset, reg.hlRegSize))
 
-            print("Inc offset by \(reg.hlRegSize) from \(reg)")
             offset += reg.hlRegSize
         }
         
@@ -899,10 +890,6 @@ class M1Compiler2 {
         
         let fix = compilable.findex
 
-        // Check memory
-        regs.forEach { print("reg \($0.kind) == mem \($0.ccompatAddress)") }
-        args.forEach { print("arg \($0.kind) == mem \($0.ccompatAddress)") }
-        
         guard !compilable.linkableAddress.hasOffset else {
             throw GlobalError.invalidOperation("Can not compile function (findex=\(fix)) because it already has been compiled and linked. \(compilable.address)")
         }
@@ -911,10 +898,6 @@ class M1Compiler2 {
 
         // if we need to return early, we jump to these
         var retTargets: [RelativeDeferredOffset] = []
-
-        print("Compiling function \(fix) at linkable address \(compilable.address)")
-        print("REGS: \n--" + regs.map { String(reflecting: $0) }.joined(separator: "\n--"))
-        //        print("OPS: \n--" + funPtr.pointee.ops.map { String(reflecting: $0) }.joined(separator: "\n--"))
 
         appendDebugPrintAligned4("Entering fix \(fix)", builder: mem)
         
@@ -950,7 +933,6 @@ class M1Compiler2 {
                 PseudoOp.debugMarker("Marking position for \(currentInstruction) at \(mem.byteSize)")
             )
 
-            print("f\(compilable.findex): #\(currentInstruction): \(op.debugDescription)")
             appendDebugPrintAligned4("f\(compilable.findex): #\(currentInstruction): \(op.debugDescription)", builder: mem)
             
             switch op {
@@ -974,7 +956,6 @@ class M1Compiler2 {
 
                 // jmp to end (NOTE: DO NOT ADD ANYTHING BETWEEN .start() and mem.append()
                 var retTarget = RelativeDeferredOffset()
-                print("Starting retTarget at \(mem.byteSize)")
                 retTarget.start(at: mem.byteSize)
                 retTargets.append(retTarget)
                 mem.append(M1Op.b(retTarget)
@@ -1462,37 +1443,6 @@ class M1Compiler2 {
                 mem.append(M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil)))
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 appendDebugPrintRegisterAligned4(X.x0, prepend: "OGetGlobal result", builder: mem)
-                
-                struct _String {
-                    let t: UnsafePointer<HLType_CCompat>
-                    let bytes: UnsafePointer<CChar16>
-                    let length: Int32
-                }
-                
-                struct _haxeLog {
-                    let type: UnsafePointer<HLType_CCompat>
-                    let __type__: UnsafePointer<HLType_CCompat>
-                    let meta: UnsafePointer<vdynamic>
-                    let implementedBy: UnsafePointer<varray>
-                    let name: UnsafePointer<_String>
-                    let constructor: UnsafePointer<vdynamic>
-                    let formatOutput: UnsafePointer<vclosure>
-                    let trace: UnsafePointer<vclosure>
-                };
-                
-                let _c: (@convention(c)(OpaquePointer)->()) = {
-                    dPtr in
-                    
-                    let x: UnsafePointer<vdynamic> = .init(dPtr)
-                    print(x)
-                }
-                if compilable.findex == 229 && currentInstruction == 5 {
-                    mem.append(
-                        PseudoOp.mov(X.x10, unsafeBitCast(_c, to: OpaquePointer.self)),
-                        M1Op.blr(X.x10)
-                    )
-                }
-                
             case .OSetGlobal(let globalRef, let src):
                 let globalInstanceAddress = try ctx.requireGlobalData(globalRef)
                 assert(reg: src, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct, HLTypeKind.abstract, HLTypeKind.enum])
@@ -1945,10 +1895,6 @@ class M1Compiler2 {
                 )
                 // TODO: check for failed cast result
                 appendDebugPrintAligned4("TODO: OSafeCast should check for failed cast result", builder: mem)
-                
-                if compilable.findex == 33 {
-                    appendDebugPrintRegisterAligned4(X.x0, prepend: "#\(currentInstruction) OSafeCast result \(dst)", builder: mem)
-                }
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OLabel:
                 appendDebugPrintAligned4("OLabel", builder: mem)
@@ -2027,8 +1973,6 @@ class M1Compiler2 {
 
                 let _test: (@convention(c) (UnsafeRawPointer) -> ()) = { (_ ptr: UnsafeRawPointer) in
                     let p = UnsafePointer<HLType_CCompat>(OpaquePointer(ptr))
-                    print("Addr for type: \(p) \(Int(bitPattern: p))")
-                    print("Got kind: \(p.pointee.kind)")
                 }
                 let _testAddress = unsafeBitCast(_test, to: UnsafeMutableRawPointer.self)
                 mem.append(
@@ -2354,28 +2298,15 @@ class M1Compiler2 {
                 guard let funIndex = ctx.mainContext.pointee.m?.pointee.functions_indexes.advanced(by: fun).pointee else {
                     fatalError("No real fun index")
                 }
-                print("Fun index \(funIndex)")
                 guard let funType = ctx.mainContext.pointee.code?.pointee.functions.advanced(by: Int(funIndex)).pointee.typePtr else {
                     fatalError("No fun type")
                 }
                 
-                print("fun \(fun); funType: \(funType.kind); \(funType._overrideDebugDescription)")
                 Swift.assert(funType.kind == .fun)
                 
                 let callTarget = try ctx.requireCallable(findex: fun)
                 ctx.funcTracker.referenced2(callTarget)
                 
-                print("Got fun address: \(callTarget.address)")
-                
-//                typealias _ClosureType = (@convention(c) (OpaquePointer)->(Int32))
-//                let newInstanceClosure: _ClosureType = {
-//                    objPtr in
-//                    let x: UnsafePointer<vdynamic> = .init(objPtr)
-//                    return 1234
-//                }
-//                let newClosurePtr = unsafeBitCast(newInstanceClosure, to: UnsafeRawPointer.self)
-                
-                // hl_alloc_closure_ptr( hl_type *fullt, void *fvalue, void *v ) {
                 
                 let allocClosure_jumpTarget = unsafeBitCast(LibHl._hl_alloc_closure_ptr, to: UnsafeRawPointer.self)
                 
@@ -2399,7 +2330,7 @@ class M1Compiler2 {
                     allocPtr in
                     
                     let c: UnsafeMutablePointer<vclosure> = .init(LibHl.hl_malloc(allocPtr, Int32(MemoryLayout<vclosure>.size)))
-                    print("OStaticClosure hl_malloc returned \(c) == \(Int(bitPattern: c))")
+                    
                     let fidx = mutatingMod.pointee.functions_indexes.advanced(by: fun).pointee
                     
                     let nfuncs = mutatingMod.pointee.code.pointee.nfunctions
@@ -2476,7 +2407,6 @@ class M1Compiler2 {
                         }
                         //
                         
-                        print("OCallMethod fetched proto findex \(protoFix)")
                         return protoFix
                     }
                     let _getType: (@convention(c)(Int32, OpaquePointer)->OpaquePointer) = {
