@@ -30,6 +30,7 @@ struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
         return UnsafePointer(union!.bindMemory(to: T.self, capacity: 1))
     }
     var obj: UnsafePointer<HLTypeObj_CCompat> { getUnion() }
+    var virt: UnsafePointer<HLTypeVirtual_CCompat> { getUnion() }
     var fun: UnsafePointer<HLTypeFun_CCompat> { getUnion() }
     var tparam: UnsafePointer<HLType_CCompat> { getUnion() }
     var tenum: UnsafePointer<HLTypeEnum_CCompat> { getUnion() }

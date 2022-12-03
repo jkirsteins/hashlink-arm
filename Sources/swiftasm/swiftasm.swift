@@ -48,89 +48,52 @@ struct SwiftAsm: ParsableCommand {
         var file_time: Int32 = 0
     }
     
+    static var logger = LoggerFactory.create(SwiftAsm.self)
+    
     mutating func run() throws {
-
-        var _mctx = MainContext()
-
-        LibHl.hl_global_init()
-        LibHl._hl_register_thread(&_mctx)
-
-        let file = try! Data(contentsOf: URL(fileURLWithPath: hlFileIn))
-        let reader = ByteReader(file)
-
-        let hlcode = LibHl.load_code(hlFileIn)
         
-        // TODO: remove when not needed. Useful for printing for now
-        let mod = try! reader.readModule()        
-        printerr(String(reflecting: mod))
-        printerr("==> Compiling functions")
+        let tmpDeps = [
+            332, 42, 231, 230, 259, 16,
+            340,
+            245,
+            230,
+            335,
+            341,
+            20,
+            344,
+            237,
+            231,
+            348,
+            289,
+            5,
+            241,
+            269,
+            332,
+            305, 437, 350, 28, 14, 42, 240, 337, 303
+]
 
-        let ctx = JitContext(module: mod, hlcode: hlcode)
-        let jit = OpBuilder(ctx: ctx)
-//        let compiler = M1Compiler2() 
-//
-//        for fn in mod.storage.functionResolver.table {
-//            try compiler.compile(findex: fn.findex, into: jit)
-//        }
- 
-    //     // entrypoint initializes types, memory, and all that good stuff
-    //     let funcs = [
-    //         head.storage.functionResolver.table.first { $0.findex == 295 }!,
-    //         head.storage.functionResolver.table.first { $0.findex == 404 }!,
+        let mod = try! Bootstrap.start2(hlFileIn, args: [])
+        let sut = M1Compiler2(ctx: mod, stripDebugMessages: true)
+        let buf = CpuOpBuffer()
+        Self.logger.debug("Compiling...")
+        for frix in (0..<mod.nfunctions) {
+            let fix = mod.mainContext.pointee.code!.pointee.functions.advanced(by: Int(frix)).pointee.findex
             
-    //         // head.functionResolver.table.first { $0.findex == 1 }!,
-
-    //         // // Type_init
-    //         // head.functionResolver.table.first { $0.findex == 295 }!,
-    //         // // entrypoint
-    //         // head.functionResolver.table.first { $0.findex == 404 }!,
-    //         // // pathTest
-    //         // head.functionResolver.table.first { $0.findex == 29 }!,
-    //         // // pathTest2
-    //         // head.functionResolver.table.first { $0.findex == 30 }!
-    //     ]
-
-    //     let ctx = JitContext(storage: head.storage)
-    //     let jit = OpBuilder()
-
-    //    fatalError("wip")
-
-    //     // compiledTable.wrappedValue = try /*head.functionResolver.table*/funcs.map {
-    //     // // compiledTable.wrappedValue = try head.functionResolver.table.map {
-    //     //     try compiler.compile(native: $0, into: jit, ctx: ctx)
-    //     //     // break
-    //     // }
-
-
-    //     // let entrypointCompiled = compiler.compile(native: entrypoint)
-    //     // let entrypointCompiled = compiler.compile(native: entrypoint)
-    //     // let pathTestCompiled = compiler.compile(native: pathTest)
-    //     // let pathTest2Compiled = compiler.compile(native: pathTest2)
-
-    //     try wft.requireReady()
-
-    //     let compiledEntrypoint = try wft.get(Int(head.entrypoint))
-    //     let xxx = compiledEntrypoint as! HLCompiledFunction
+            if !tmpDeps.contains(Int(fix)) { continue }
+            
+            try sut.compile(findex: RefFun(fix), into: buf)
+        }
         
-    //     jit.debugPrint()
-
-    //     print("Got \(xxx)@\((xxx.memory as! any DeferredMemoryAddress))")
-
-
-    //     let finalEntrypoint = jit.buildMain(compiledEntrypoint)
-    //     let result = finalEntrypoint()
-    //     print("Entrypoint returned \(result)")
-    //     // fatalError("Ready")
-    //     // for funIx in 0..<head.nfunctions {
-    //     //     let fun: HLFunction = head.functionResolver.table.first { $0.findex == funIx }!
-    //     //     print("Compiling \(fun.debugDescription)")
-    //     //     print("    regs: \([fun.regs.map { $0.value.debugName }])")
-    //     //     let bytes = try compiler.compile(native: fun)
-    //     //     print("    done \(fun.debugDescription)")
-    //     //     print(bytes)
-    //     //     fatalError()
-    //     // }
-
-    //     return
+        let epIx = mod.mainContext.pointee.code!.pointee.entrypoint
+        
+        Self.logger.debug("Linking...")
+        let mapper = BufferMapper(ctx: mod, buffer: buf)
+        let mem = try mapper.getMemory()
+        
+        Self.logger.debug("Executing entrypoint _@\(epIx)...")
+        let addr = try mod.getCallable(findex: RefFun(epIx))!.address.value
+        
+        let _cc = unsafeBitCast(addr, to: (@convention(c) ()->()).self)
+        _cc()
     }
 }

@@ -224,14 +224,21 @@ final class CompileMod2Tests: RealHLTestCase {
         let compiler = try sut(strip: strip)
         let deps = try extractDeps(fix: fix, depHints: depHints)
         
+        
         for depFix in deps {
-            try compiler.compile(findex: depFix, into: mem)
+            do {
+                try compiler.compile(findex: depFix, into: mem)
+            } catch GlobalError.functionAlreadyCompiled {
+                print("Not compiling @\(depFix) a second time...")
+            }
         }
         return (fix, mem)
     }
     
     
     /// Patch the entrypoint to not start the main function, run it, and then run the function-under-test.
+    ///
+    /// Use this for functions that depend on global initialization.
     ///
     /// This is useful because the entrypoint initializes globals.
     /// - Parameters:
@@ -286,8 +293,6 @@ final class CompileMod2Tests: RealHLTestCase {
         let mem = try mapper.getMemory()
         
         try callback(fix, mem)
-        
-        try mapper.freeMemory()
     }
     
     func _compileAndLinkWithDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), fix: RefFun, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
@@ -709,48 +714,6 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
-    func testCompile__testEntrypoint() throws {
-//        throw XCTSkip("testEntrypoint not finished yet")
-        
-        typealias _JitFunc =  (@convention(c) () -> ())
-        
-        guard let ep = ctx.mainContext.pointee.code?.pointee.entrypoint else {
-            return XCTFail("No entrypoint")
-        }
-        guard let testTraceFix = try _findStaticFindex_fieldNameUnset(className: "Main", name: "testTrace") else {
-            return XCTFail("No Main.testTrace")
-        }
-        
-        let compilableEntrypoint = try ctx.getCompilable(findex: RefFun(ep))
-        guard var ops = compilableEntrypoint?.ops, let secondToLast = ops.dropLast(1).last, let last = ops.last else {
-            return XCTFail("Can't fetch entrypoint ops")
-        }
-        
-        guard case .OCall0(let dst, _) = secondToLast, case .ORet(_) = last else {
-            return XCTFail("Can't patch entrypoint, op assumption not correct")
-        }
-        
-        ops = Array(ops.dropLast(2)) + [.OCall0(dst: dst, fun: testTraceFix), last]
-        ctx.patch(findex: RefFun(ep), ops: ops)
-        
-        try _compileAndLinkWithDeps(
-            strip: false,
-            fix: RefFun(ep),
-            // these deps can't be determined currently automatically
-            // (if hashlink bytecode changes, these indexes
-            // might need to be updated)
-            depHints: [230, 329, 229, 41]
-        ) {
-            sutFix, mem in
-            print("Compiling fix \(sutFix) vs \(ep)")
-            try mem.jit(ctx: ctx, fix: sutFix) {
-                (entrypoint: _JitFunc) in
-                
-                entrypoint()
-            }
-        }
-    }
-    
     // add strings
     func testCompile__test__add__() throws {
         typealias _JitFunc =  (@convention(c) (OpaquePointer, OpaquePointer) -> (OpaquePointer))
@@ -815,18 +778,15 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testTrace() throws {
-        throw XCTSkip("testTrace not implemented")
-        
-        typealias _JitFunc =  (@convention(c) () -> ())
-        
-        try _compileAndLinkWithDeps(
-            strip: true,
-            name: "Main.testTrace"
+        try _withPatchedEntrypoint(
+            strip: false,
+            name: "Main.testTrace",
+            depHints: [231, 332, 230, 42]
         ) {
             sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
-                (entrypoint: _JitFunc) in
+                (entrypoint: (@convention(c)()->())) in
                 
                 entrypoint()
             }
@@ -839,7 +799,7 @@ final class CompileMod2Tests: RealHLTestCase {
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testFieldClosure",
-            depHints: [30]
+            depHints: [31]
         ) {
             sutFix, mem in
             
@@ -852,14 +812,12 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testStaticClosure() throws {
-        throw XCTSkip("This test is flaky.")
-        
         typealias _JitFunc =  (@convention(c) (Int32, Int32) -> (Int32))
         
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testStaticClosure",
-            depHints: [259]
+            depHints: [261]
         ) {
             sutFix, mem in
             
@@ -877,7 +835,7 @@ final class CompileMod2Tests: RealHLTestCase {
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testInstanceMethod",
-            depHints: [30]
+            depHints: [31]
         ) {
             sutFix, mem in
             
@@ -894,7 +852,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Int32/*field ix 0|1|2*/) -> (Int32))
         
         try _withPatchedEntrypoint(
-            strip: false,
+            strip: true,
             name: "Main.testStaticVirtual_globalVirtual"
         ) {
             sutFix, mem in

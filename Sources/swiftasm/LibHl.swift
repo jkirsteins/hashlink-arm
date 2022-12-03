@@ -107,7 +107,6 @@ struct LibHl {
         
             res = val.withCString {
                 charPtr in
-                print("charPtr: \(charPtr)")
                 return _load_code(charPtr, errPtr, true)
             }
         }

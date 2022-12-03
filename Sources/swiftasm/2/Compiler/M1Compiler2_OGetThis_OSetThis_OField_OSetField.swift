@@ -29,7 +29,7 @@ extension M1Compiler2 {
             
             // x1 point to field base (right after the (vvirtual) content at x0
             mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<vvirtual>.stride), nil)))
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "ofield/virtual before deref", builder: mem)
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "ofield/virtual field base", builder: mem)
             
             // x2 load field index multiplied by size of (void*)
             let fieldOffsetInBytes = fieldRef * MemoryLayout<OpaquePointer>.stride
@@ -37,9 +37,15 @@ extension M1Compiler2 {
             appendDebugPrintAligned4("ofield/virtual field index: \(fieldRef)", builder: mem)
             appendDebugPrintRegisterAligned4(X.x2, prepend: "ofield/virtual field offset: \(fieldOffsetInBytes) bytes", builder: mem)
             
-            // x1 -> points to **void of value (will need to be dereferenced if not 0)
+            // add field offset to base
             mem.append(M1Op.add(X.x1, X.x1, .r64shift(X.x2, .lsl(0))))
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "ofield/virtual field \(fieldRef)", builder: mem)
             
+            // field source is pointer to a pointer, so we need to dereference it once before
+            // we check if it is null or not (and if null - don't use)
+            mem.append(M1Op.ldr(X.x1, .reg(X.x1, .imm(0, nil))))
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "ofield/virtual dereferenced address", builder: mem)
+                        
             // compare x1 to 0
             var jmpTarget_hlvfieldNoAddress = RelativeDeferredOffset()
             var jmpTarget_postCheck = RelativeDeferredOffset()
@@ -54,10 +60,6 @@ extension M1Compiler2 {
                 )
             )
             appendDebugPrintAligned4("ofield/virtual HAS ADDRESS", builder: mem)
-            
-            // field source is pointer to a pointer, so we need to dereference it once before
-            mem.append(M1Op.ldr(X.x1, .reg(X.x1, .imm(0, nil))))
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "ofield/virtual dereferenced address", builder: mem)
             
             // load field value into x2
             switch(dstType.hlRegSize) {
@@ -88,7 +90,37 @@ extension M1Compiler2 {
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)
             
             appendDebugPrintAligned4("ofield/virtual HAS NO ADDRESS (TODO)", builder: mem)
-            appendSystemExit(11, builder: mem)
+            
+            var _fieldHashGetter: (@convention(c)(OpaquePointer, Int32)->(Int64)) = {
+                opPtr, field in
+                
+                let p: UnsafePointer<vvirtual> = .init(opPtr)
+                
+                return p.pointee.t.pointee.virt.pointee.fields.advanced(by: Int(field)).pointee.hashedName
+            }
+            
+            // fetch the field hash name
+            appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
+            mem.append(M1Op.movz64(X.x1, UInt16(fieldRef), nil))
+            mem.append(
+                PseudoOp.mov(X.x2, unsafeBitCast(_fieldHashGetter, to: OpaquePointer.self)),
+                M1Op.blr(X.x2)
+            )
+            let dstTypeAddr = requireType(reg: dstReg, regs: regs).ccompatAddress
+            
+            // x1 = field hash name
+            mem.append(M1Op.movr64(X.x0, X.x1))
+            // x0 = obj
+            appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
+            // x2 = dst type (only needed for f32/f64)
+            mem.append(PseudoOp.mov(X.x2, dstTypeAddr))
+            
+            mem.append(
+                PseudoOp.mov(X.x10, getFunc),
+                M1Op.blr(X.x10))
+            
+            appendStore(reg: X.x0, into: dstReg, kinds: regs, mem: mem)
+            appendDebugPrintRegisterAligned4(X.x0, prepend: "ofield/virtual result", builder: mem)
             
             jmpTarget_postCheck.stop(at: mem.byteSize)
             appendDebugPrintAligned4("ofield virtual EXITING", builder: mem)
@@ -172,7 +204,7 @@ extension M1Compiler2 {
             
             // x1 point to field base (right after the (vvirtual) content at x0
             mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<vvirtual>.stride), nil)))
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "osetfield/virtual before deref", builder: mem)
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "osetfield/virtual field base", builder: mem)
             
             // x2 load field index multiplied by size of (void*)
             let fieldOffsetInBytes = fieldRef * MemoryLayout<OpaquePointer>.stride
@@ -180,8 +212,14 @@ extension M1Compiler2 {
             appendDebugPrintAligned4("ofield/virtual field index: \(fieldRef)", builder: mem)
             appendDebugPrintRegisterAligned4(X.x2, prepend: "osetfield/virtual field offset: \(fieldOffsetInBytes) bytes", builder: mem)
             
-            // x1 -> points to **void of value (will need to be dereferenced if not 0)
+            // add field offset to base
             mem.append(M1Op.add(X.x1, X.x1, .r64shift(X.x2, .lsl(0))))
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "osetfield/virtual field \(fieldRef)", builder: mem)
+            
+            // field source is pointer to a pointer, so we need to dereference it once before
+            // we check if it is null or not (and if null - don't use)
+            mem.append(M1Op.ldr(X.x1, .reg(X.x1, .imm(0, nil))))
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "osetfield/virtual dereferenced address", builder: mem)
             
             // compare x1 to 0
             var jmpTarget_hlvfieldNoAddress = RelativeDeferredOffset()
@@ -197,10 +235,6 @@ extension M1Compiler2 {
                 )
             )
             appendDebugPrintAligned4("osetfield/virtual HAS ADDRESS", builder: mem)
-            
-            // field source is pointer to a pointer, so we need to dereference it once before
-            mem.append(M1Op.ldr(X.x1, .reg(X.x1, .imm(0, nil))))
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "osetfield/virtual dereferenced address", builder: mem)
             
             // load field value into x2 and store at x1
             appendLoad(reg: X.x2, from: srcReg, kinds: regs, mem: mem)

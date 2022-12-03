@@ -468,7 +468,6 @@ extension M1Compiler2 {
             case (false, _):
                 break
             case (true, let regSize):
-                print("stack init ldrVreg. overflow offset: \(overflowOffset)")
                 builder.append(PseudoOp.ldrVreg(regToUse, overflowOffset, regSize))
                 overflowOffset += regSize
             }
@@ -829,7 +828,6 @@ class M1Compiler2 {
         for i in 0..<ix {
             result += regs[Int(i)].hlRegSize
         }
-        printerr("Stack offset for \(ix) is \(result)")
         return result
     }
     
@@ -891,7 +889,7 @@ class M1Compiler2 {
         let fix = compilable.findex
 
         guard !compilable.linkableAddress.hasOffset else {
-            throw GlobalError.invalidOperation("Can not compile function (findex=\(fix)) because it already has been compiled and linked. \(compilable.address)")
+            throw GlobalError.functionAlreadyCompiled("Can not compile function (findex=\(fix)) because it already has been compiled and linked. \(compilable.address)")
         }
         
         compilable.linkableAddress.setOffset(mem.byteSize)
@@ -982,6 +980,20 @@ class M1Compiler2 {
                     PseudoOp.strVreg(X.x0, dstStackOffset, dstKind.hlRegSize)
                 )
             case .OCall1(let dst, let fun, let arg0):
+                if currentInstruction == 1 && compilable.findex == 231 {
+                    let c: (@convention(c) (OpaquePointer)->()) = {
+                        strP in
+                        
+                        let str: UnsafePointer<_StringX> = .init(strP)
+                        print("__passing string", str.pointee.bytes.stringValue)
+                        return
+                    }
+                    appendLoad(reg: X.x0, from: arg0, kinds: regs, mem: mem)
+                    mem.append(
+                        PseudoOp.mov(X.x10, unsafeBitCast(c, to: OpaquePointer.self)),
+                        M1Op.blr(X.x10)
+                    )
+                }
                 try __ocalln(
                     dst: dst,
                     funIndex: fun,
@@ -1032,6 +1044,22 @@ class M1Compiler2 {
                     
                     appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: mem)
                     appendDebugPrintRegisterAligned4(X.x10, prepend: "OCallClosure obj", builder: mem)
+                    
+                    // MARK: tmp
+//                    if currentInstruction == 14 && compilable.findex == 259 {
+//                        let _c: (@convention(c)(OpaquePointer)->()) = {
+//                            ptr in
+//                            
+//                            let x: UnsafePointer<vclosure> = .init(ptr)
+//                            print(x)
+//                        }
+//                        appendLoad(reg: X.x0, from: closureObject, kinds: regs, mem: mem)
+//                        mem.append(
+//                            PseudoOp.mov(X.x15, unsafeBitCast(_c, to: OpaquePointer.self)),
+//                            M1Op.blr(X.x15)
+//                        )
+//                    }
+                    // MARK: /tmp
                     
                     var jmpTargetHasValue = RelativeDeferredOffset()
                     var jmpTargetFinish = RelativeDeferredOffset()
@@ -2495,7 +2523,6 @@ class M1Compiler2 {
 
         // initialize targets for 'ret' jumps
         for var retTarget in retTargets {
-            print("Stopping retTarget at \(mem.byteSize)")
             retTarget.stop(at: mem.byteSize)
         }
 

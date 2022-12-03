@@ -1,7 +1,9 @@
 enum GlobalError : Error {
     /* trying to use a deferred immediate which is not yet finalized
     */
-    case immediateMissingValue(_ reason: String)   
+    case immediateMissingValue(_ reason: String)
+    
+    case functionAlreadyCompiled(_ comment: String)
 
     // generic invalid value passed
     case invalidValue(_ reason: String)
