@@ -238,6 +238,53 @@ final class CompileMod2Tests: RealHLTestCase {
         return (fix, mem)
     }
     
+    
+    /// Patch the entrypoint to not start the main function, run it, and then run the function-under-test.
+    ///
+    /// This is useful because the entrypoint initializes globals.
+    /// - Parameters:
+    ///   - strip:
+    ///   - mem:
+    ///   - name:
+    ///   - depHints: function indexes which are dependencies of the function under test (if they cannot be determined from OCall opcodes)
+    ///   - callback:
+    func _withPatchedEntrypoint(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), name: String, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
+        
+        guard let ep = ctx.mainContext.pointee.code?.pointee.entrypoint else {
+            return XCTFail("No entrypoint")
+        }
+        
+        let compilableEntrypoint = try ctx.getCompilable(findex: RefFun(ep))
+        guard var ops = compilableEntrypoint?.ops, let secondToLast = ops.dropLast(1).last, let last = ops.last else {
+            return XCTFail("Can't fetch entrypoint ops")
+        }
+        
+        guard case .OCall0(_, _) = secondToLast, case .ORet(_) = last else {
+            return XCTFail("Can't patch entrypoint, op assumption not correct")
+        }
+        
+        ops = Array(ops.dropLast(2)) + [.ONop, last]
+        ctx.patch(findex: RefFun(ep), ops: ops)
+        
+        let mem = CpuOpBuffer()
+        let (sutFix, _) = try _compileDeps(strip: strip, fqname: name, depHints: depHints)
+        
+        try _compileAndLinkWithDeps(
+            strip: false,
+            fix: RefFun(ep),
+            // these deps can't be determined currently automatically
+            // (if hashlink bytecode changes, these indexes
+            // might need to be updated)
+            depHints: depHints
+        ) {
+            epFix, jitMemory in
+            print("Running entrypoint first @\(epFix)")
+            try jitMemory.jit(ctx: ctx, fix: sutFix) { (entrypoint: (@convention(c) ()->())) in entrypoint() }
+            print("Returning to test with @\(sutFix)")
+            try callback(sutFix, jitMemory)
+        }
+    }
+    
     func _compileAndLinkWithDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), name: String, depHints: [RefFun] = [], _ callback: (RefFun, UnsafeMutableRawPointer) throws->()) throws {
         let (fix, buff) = try self._compileDeps(strip: strip, fqname: name, depHints: depHints)
         let mapper = BufferMapper(ctx: self.ctx, buffer: buff)
@@ -709,6 +756,69 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    // add strings
+    func testCompile__test__add__() throws {
+        typealias _JitFunc =  (@convention(c) (OpaquePointer, OpaquePointer) -> (OpaquePointer))
+        
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "String.__add__"
+        ) {
+            sutFix, mem in
+            
+            var strType: UnsafePointer<HLType_CCompat>? = nil
+            for typeIx in (0..<ctx.ntypes) {
+                let t = try ctx.getType(Int(typeIx)) as any HLTypeProvider
+                if t.isEquivalent(_StringType) {
+                    strType = .init(OpaquePointer(t.ccompatAddress))
+                    break
+                }
+            }
+            guard let strType = strType else {
+                fatalError("Could not find initialized string type")
+            }
+            
+            let a = "Hello "
+            let b = "World"
+            
+            let aBytes = (a + "\0").data(using: .utf16LittleEndian)!
+            let bBytes = (b + "\0").data(using: .utf16LittleEndian)!
+            
+            let aBytePtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: aBytes.count)
+            let bBytePtr: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: bBytes.count)
+            defer {
+                aBytePtr.deallocate()
+                bBytePtr.deallocate()
+            }
+            _ = aBytePtr.initialize(from: aBytes)
+            _ = bBytePtr.initialize(from: bBytes)
+            
+            var strA = _String(
+                t: strType,
+                bytes: .init(OpaquePointer(aBytePtr.baseAddress!)),
+                length: Int32(a.count))
+            
+            var strB = _String(
+                t: strType,
+                bytes: .init(OpaquePointer(bBytePtr.baseAddress!)),
+                length: Int32(b.count))
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+            
+                withUnsafeMutablePointer(to: &strA) {
+                    strAPtr in
+                    withUnsafeMutablePointer(to: &strB) {
+                        strBPtr in
+                        
+                        let added: UnsafePointer<_String> = .init(entrypoint(.init(strAPtr), .init(strBPtr)))
+                        XCTAssertEqual(added.pointee.bytes.stringValue, "Hello World")
+                    }
+                }
+            }
+        }
+    }
+    
     func testCompile__testTrace() throws {
         throw XCTSkip("testTrace not implemented")
         
@@ -785,8 +895,29 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     ///
+    func testCompile__testStaticVirtual_globalVirtual() throws {
+        typealias _JitFunc =  (@convention(c) (Int32/*field ix 0|1|2*/) -> (Int32))
+        
+        try _withPatchedEntrypoint(
+            strip: true,
+            name: "Main.testStaticVirtual_globalVirtual"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                // fetch already set fields (ignore the new values)
+                XCTAssertEqual(entrypoint(0), 123)
+                XCTAssertEqual(entrypoint(1), 1)
+                XCTAssertEqual(entrypoint(2), 456)
+            }
+        }
+    }
+    
+    ///
     func testCompile__testStaticVirtual_setField() throws {
-        typealias _JitFunc =  (@convention(c) (Int32, Bool) -> (Int32))
+        typealias _JitFunc =  (@convention(c) (Int32/*value*/, Bool/*set or not*/, Int32/*field ix 0|1|2*/) -> (Int32))
         
         try _compileAndLinkWithDeps(
             strip: true,
@@ -797,8 +928,17 @@ final class CompileMod2Tests: RealHLTestCase {
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
-                XCTAssertEqual(0, entrypoint(123, false))
-                XCTAssertEqual(123, entrypoint(123, true))
+                XCTAssertEqual(entrypoint(0, true, 5), -1)  // unknown field
+                
+                XCTAssertEqual(entrypoint(0, true, 1), 0) // set bool to !0 => sets and returns true (== 1)
+                XCTAssertEqual(entrypoint(123, true, 1), 1) // set bool to !0 => sets and returns true (== 1)
+                XCTAssertEqual(entrypoint(123, true, 0), 123)
+                XCTAssertEqual(entrypoint(456, true, 2), 456)
+                
+                // fetch already set fields (ignore the new values)
+                XCTAssertEqual(entrypoint(999, false, 0), 1)
+                XCTAssertEqual(entrypoint(999, false, 1), 1)
+                XCTAssertEqual(entrypoint(999, false, 2), 2)
             }
         }
     }

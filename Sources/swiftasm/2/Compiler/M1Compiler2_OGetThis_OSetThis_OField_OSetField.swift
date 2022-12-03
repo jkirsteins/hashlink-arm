@@ -14,42 +14,37 @@ extension M1Compiler2 {
         switch(objRegKind) {
         case .obj: fallthrough
         case .struct:
-            appendDebugPrintAligned4("OField for obj/struct", builder: mem)
             // offset from obj address
             let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
-            appendDebugPrintAligned4("field offset \(fieldOffset) for \(objReg)", builder: mem)
             appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
-            appendDebugPrintAligned4("loading...", builder: mem)
             mem.append(M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil)))
-            appendDebugPrintAligned4("storing...", builder: mem)
             appendStore(reg: X.x1, into: dstReg, kinds: regs, mem: mem)
-//
-            // --- tmp
-            let _c: (@convention(c)(OpaquePointer)->()) = {
-                oPtr in
-                
-                let p: UnsafePointer<vdynamic> = .init(oPtr)
-                print(p)
-            }
-            mem.append(PseudoOp.mov(X.x9, unsafeBitCast(_c, to: OpaquePointer.self)))
-            mem.append(M1Op.blr(X.x9))
-            // --- tmp
-            
         case .virtual:
             let dstType = requireTypeKind(reg: dstReg, from: regs)
-            let castFunc = get_dynget(to: dstType.kind)
+            let getFunc = get_dynget(to: dstType.kind)
                 
             // x0 -> points to ((*_vvirtual)(obj))+1
             appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
-            mem.append(M1Op.add(X.x0, X.x0, .imm(Int64(MemoryLayout<vvirtual>.stride), nil)))
+            appendDebugPrintRegisterAligned4(X.x0, prepend: "ofield/virtual", builder: mem)
             
-            appendDebugPrintRegisterAligned4(X.x0, prepend: "ofield virtual", builder: mem)
+            // x1 point to field base (right after the (vvirtual) content at x0
+            mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<vvirtual>.stride), nil)))
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "ofield/virtual before deref", builder: mem)
             
-            // compare x0 to 0
+            // x2 load field index multiplied by size of (void*)
+            let fieldOffsetInBytes = fieldRef * MemoryLayout<OpaquePointer>.stride
+            mem.append(M1Op.movz64(X.x2, UInt16(fieldOffsetInBytes), nil))
+            appendDebugPrintAligned4("ofield/virtual field index: \(fieldRef)", builder: mem)
+            appendDebugPrintRegisterAligned4(X.x2, prepend: "ofield/virtual field offset: \(fieldOffsetInBytes) bytes", builder: mem)
+            
+            // x1 -> points to **void of value (will need to be dereferenced if not 0)
+            mem.append(M1Op.add(X.x1, X.x1, .r64shift(X.x2, .lsl(0))))
+            
+            // compare x1 to 0
             var jmpTarget_hlvfieldNoAddress = RelativeDeferredOffset()
             var jmpTarget_postCheck = RelativeDeferredOffset()
-            mem.append(M1Op.movz64(X.x1, 0, nil))
-            mem.append(M1Op.cmp(X.x0, X.x1))
+            mem.append(M1Op.movz64(X.x2, 0, nil))
+            mem.append(M1Op.cmp(X.x1, X.x2))
             
             mem.append(
                 PseudoOp.withOffset(
@@ -58,47 +53,27 @@ extension M1Compiler2 {
                     M1Op.b_eq(try! Immediate21(jmpTarget_hlvfieldNoAddress.value))
                 )
             )
-            appendDebugPrintAligned4("ofield virtual HAS ADDRESS", builder: mem)
+            appendDebugPrintAligned4("ofield/virtual HAS ADDRESS", builder: mem)
             
             // field source is pointer to a pointer, so we need to dereference it once before
-            mem.append(M1Op.ldr(X.x0, .reg(X.x0, .imm(0, nil))))
+            mem.append(M1Op.ldr(X.x1, .reg(X.x1, .imm(0, nil))))
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "ofield/virtual dereferenced address", builder: mem)
             
-            // test
-            let _c: (@convention(c) (OpaquePointer)->()) = {
-                opPtr in
-                
-                let p: UnsafePointer<vvirtual>? = .init(opPtr)
-                
-//                Swift.assert(Int(bitPattern: p) - Int(bitPattern: p1) == 24)
-                print("r1", p)
-//                print("r2", p.pointee)
-                
-//                let p: UnsafePointer<vdynamic> = .init(opPtr)
-//                print("p", p.pointee.t.pointee.kind._overrideDebugDescription)
-//                print("p", p.pointee.next)
-//                print("p", p.pointee.t.pointee.kind._overrideDebugDescription)
-            }
-
-//            mem.append(PseudoOp.mov(X.x10, unsafeBitCast(_c, to: OpaquePointer.self)), M1Op.blr(X.x10))
-            //
-            
-            
-            //
+            // load field value into x2
             switch(dstType.hlRegSize) {
             case 8:
-                mem.append(M1Op.ldr(X.x1, .reg(X.x0, .imm(0, nil))))
+                mem.append(M1Op.ldr(X.x2, .reg(X.x1, .imm(0, nil))))
             case 4:
-                mem.append(M1Op.ldr(W.w1, .reg(X.x0, .imm(0, nil))))
+                mem.append(M1Op.ldr(W.w2, .reg(X.x1, .imm(0, nil))))
             case 2:
-                mem.append(M1Op.ldrh(W.w1, .reg(X.x0, .imm(0, nil))))
+                mem.append(M1Op.ldrh(W.w2, .reg(X.x1, .imm(0, nil))))
             case 1:
-                mem.append(M1Op.ldrb(W.w1, .reg(X.x0, .imm(0, nil))))
+                mem.append(M1Op.ldrb(W.w2, .reg(X.x1, .imm(0, nil))))
             default:
-                fatalError("ofield virtual Not implemented")
+                fatalError("ofield virtual Not implemented for size \(dstType.hlRegSize)")
             }
-            appendStore(reg: X.x1, into: dstReg, kinds: regs, mem: mem)
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "got it", builder: mem)
-//            appendSystemExit(123, builder: mem)
+            appendStore(reg: X.x2, into: dstReg, kinds: regs, mem: mem)
+            appendDebugPrintRegisterAligned4(X.x2, prepend: "ofield/virtual result", builder: mem)
             
             // finish this branch
             mem.append(
@@ -112,7 +87,7 @@ extension M1Compiler2 {
             // marker for other branch
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)
             
-            appendDebugPrintAligned4("ofield virtual HAS NO ADDRESS", builder: mem)
+            appendDebugPrintAligned4("ofield/virtual HAS NO ADDRESS (TODO)", builder: mem)
             appendSystemExit(11, builder: mem)
             
             jmpTarget_postCheck.stop(at: mem.byteSize)
@@ -189,23 +164,30 @@ extension M1Compiler2 {
              */
             
             let srcType = requireTypeKind(reg: srcReg, from: regs)
-            let castFunc = get_dynset(from: srcType.kind)
+            let setFunc = get_dynset(from: srcType.kind)
                 
             // x0 -> points to ((*_vvirtual)(obj))+1
             appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
-            mem.append(M1Op.add(X.x0, X.x0, .imm(Int64(MemoryLayout<vvirtual>.stride), nil)))
+            appendDebugPrintRegisterAligned4(X.x0, prepend: "osetfield/virtual", builder: mem)
             
-//            // x0 -> [x0 + field offset into values]
-//            mem.append(PseudoOp.mov(X.x1, fieldRef * MemoryLayout<UnsafePointer<vdynamic>>.stride))
-//            mem.append(M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))))
+            // x1 point to field base (right after the (vvirtual) content at x0
+            mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<vvirtual>.stride), nil)))
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "osetfield/virtual before deref", builder: mem)
             
-            appendDebugPrintRegisterAligned4(X.x0, prepend: "osetfield virtual", builder: mem)
+            // x2 load field index multiplied by size of (void*)
+            let fieldOffsetInBytes = fieldRef * MemoryLayout<OpaquePointer>.stride
+            mem.append(M1Op.movz64(X.x2, UInt16(fieldOffsetInBytes), nil))
+            appendDebugPrintAligned4("ofield/virtual field index: \(fieldRef)", builder: mem)
+            appendDebugPrintRegisterAligned4(X.x2, prepend: "osetfield/virtual field offset: \(fieldOffsetInBytes) bytes", builder: mem)
             
-            // compare x0 to 0
+            // x1 -> points to **void of value (will need to be dereferenced if not 0)
+            mem.append(M1Op.add(X.x1, X.x1, .r64shift(X.x2, .lsl(0))))
+            
+            // compare x1 to 0
             var jmpTarget_hlvfieldNoAddress = RelativeDeferredOffset()
             var jmpTarget_postCheck = RelativeDeferredOffset()
-            mem.append(M1Op.movz64(X.x1, 0, nil))
-            mem.append(M1Op.cmp(X.x0, X.x1))
+            mem.append(M1Op.movz64(X.x2, 0, nil))
+            mem.append(M1Op.cmp(X.x1, X.x2))
             
             mem.append(
                 PseudoOp.withOffset(
@@ -214,42 +196,23 @@ extension M1Compiler2 {
                     M1Op.b_eq(try! Immediate21(jmpTarget_hlvfieldNoAddress.value))
                 )
             )
-            appendDebugPrintAligned4("osetfield virtual HAS ADDRESS", builder: mem)
+            appendDebugPrintAligned4("osetfield/virtual HAS ADDRESS", builder: mem)
             
             // field source is pointer to a pointer, so we need to dereference it once before
-            mem.append(M1Op.ldr(X.x0, .reg(X.x0, .imm(0, nil))))
+            mem.append(M1Op.ldr(X.x1, .reg(X.x1, .imm(0, nil))))
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "osetfield/virtual dereferenced address", builder: mem)
             
-            // test
-            let _c: (@convention(c) (OpaquePointer)->()) = {
-                opPtr in
-                
-                let p1: UnsafePointer<vvirtual> = .init(opPtr)
-                let p = p1.advanced(by: 0)
-                
-//                Swift.assert(Int(bitPattern: p) - Int(bitPattern: p1) == 24)
-                
-//                let p: UnsafePointer<vdynamic> = .init(opPtr)
-//                print("p", p.pointee.t.pointee.kind._overrideDebugDescription)
-//                print("p", p.pointee.next)
-//                print("p", p.pointee.t.pointee.kind._overrideDebugDescription)
-            }
-//            /*TODO*/appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
-//            /*TODO*/appendLoad(reg: X.x1, from: srcReg, kinds: regs, mem: mem)
-//            appendDebugPrintRegisterAligned4(X.x0, prepend: "osetfield 2", builder: mem)
-//            mem.append(PseudoOp.mov(X.x10, unsafeBitCast(_c, to: OpaquePointer.self)), M1Op.blr(X.x10))
-            //
-            
-            //
-            appendLoad(reg: X.x1, from: srcReg, kinds: regs, mem: mem)
+            // load field value into x2 and store at x1
+            appendLoad(reg: X.x2, from: srcReg, kinds: regs, mem: mem)
             switch(srcType.hlRegSize) {
             case 8:
-                mem.append(M1Op.str(X.x1, .reg(X.x0, .imm(0, nil))))
+                mem.append(M1Op.str(X.x2, .reg(X.x1, .imm(0, nil))))
             case 4:
-                mem.append(M1Op.str(W.w1, .reg(X.x0, .imm(0, nil))))
+                mem.append(M1Op.str(W.w2, .reg(X.x1, .imm(0, nil))))
             case 2:
-                mem.append(M1Op.strh(W.w1, .reg(X.x0, .imm(0, nil))))
+                mem.append(M1Op.strh(W.w2, .reg(X.x1, .imm(0, nil))))
             case 1:
-                mem.append(M1Op.strb(W.w1, .reg(X.x0, .imm(0, nil))))
+                mem.append(M1Op.strb(W.w2, .reg(X.x1, .imm(0, nil))))
             default:
                 fatalError("osetfield virtual Not implemented")
             }
@@ -266,11 +229,11 @@ extension M1Compiler2 {
             // marker for other branch
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)
             
-            appendDebugPrintAligned4("osetfield virtual HAS NO ADDRESS", builder: mem)
+            appendDebugPrintAligned4("osetfield/virtual HAS NO ADDRESS", builder: mem)
             appendSystemExit(11, builder: mem)
             
             jmpTarget_postCheck.stop(at: mem.byteSize)
-            appendDebugPrintAligned4("osetfield virtual EXITING", builder: mem)
+            appendDebugPrintAligned4("osetfield/virtual EXITING", builder: mem)
         default:
             fatalError("OSetField not implemented for \(objRegKind)")
         }

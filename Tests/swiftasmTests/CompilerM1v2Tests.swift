@@ -24,9 +24,9 @@ fileprivate func prepareContext(compilables: [any Compilable2], natives: [any Na
     return try CCompatJitContext(ctx: tm)
 }
 
-fileprivate func compileAndLink(ctx: CCompatJitContext, _ fix: Int..., callback: (UnsafeMutableRawPointer)throws->()) throws {
+fileprivate func compileAndLink(ctx: CCompatJitContext, _ fix: Int..., strip: Bool = true, callback: (UnsafeMutableRawPointer)throws->()) throws {
     let mem = CpuOpBuffer()
-    let sut = M1Compiler2(ctx: ctx, stripDebugMessages: true)
+    let sut = M1Compiler2(ctx: ctx, stripDebugMessages: strip)
     
     try fix.forEach { try sut.compile(findex: $0, into: mem) }
     
@@ -3044,6 +3044,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    /// Test creating a reference, and passing to a different function (which sets the reference)
     func testCompile__ORef() throws {
         let ref = Test_HLTypeRef(tparamProvider: HLTypeKind.i32)
         
@@ -3098,6 +3099,73 @@ final class CompilerM1v2Tests: CCompatTestCase {
         typealias _JitFunc = (@convention(c) (UInt8) -> (Int32))
         
         try compileAndLink(ctx: ctx, 0, 1) {
+            mappedMem in
+            
+            let callable = try ctx.getCallable(findex: 0)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: _JitFunc.self)
+            
+            let res = entrypoint(0 /*doesn't matter. Only here for padding*/ )
+            XCTAssertEqual(2, res)
+        }
+    }
+    
+    /// Same as ORef test, except we don't return the original value, but we Unref the created reference (1 line difference in first function's return)
+    func testCompile__OUnref() throws {
+        let ref = Test_HLTypeRef(tparamProvider: HLTypeKind.i32)
+        
+        let ctx = try prepareContext(compilables: [
+            /*
+             fn testRef () -> (i32)
+             
+             reg0  u8       // to force non-0 offset for test coverage
+             reg1  i32
+             reg2  void
+             reg3  ref<i32>
+             
+             0: Int         reg1 = 10
+             1: Ref         reg3 = &reg0
+             2: Call1       reg2 = testRefSet(reg2)
+             3: Unref       reg1 = *reg3
+             4: Ret         reg1
+             */
+            prepareFunction(
+                retType: HLTypeKind.u8,
+                findex: 0,
+                regs: [HLTypeKind.u8,
+                       HLTypeKind.i32, HLTypeKind.void, ref],
+                args: [HLTypeKind.u8],
+                ops: [
+                    .OInt(dst: 1, ptr: 0),
+                    .ORef(dst: 3, src: 1),
+                    .OCall1(dst: 2, fun: 1, arg0: 3),
+                    .OUnref(dst: 1, src: 3),
+                    .ORet(ret: 1)
+                ]),
+            /*
+             fn testRefSet (ref<i32>) -> (void)
+             reg0  ref<i32>
+             reg1  i32
+             reg2  void
+             
+             0: Int         reg1 = 2
+             1: Setref { dst: Reg(0), value: Reg(1) }
+             2: Ret         reg2
+             */
+            prepareFunction(
+                retType: HLTypeKind.void,
+                findex: 1,
+                regs: [ref, HLTypeKind.i32, HLTypeKind.void],
+                args: [ref],
+                ops: [
+                    .OInt(dst: 1, ptr: 1),
+                    .OSetref(dst: 0, value: 1),
+                    .ORet(ret: 2)
+                ]),
+        ], ints: [10, 2])
+        
+        typealias _JitFunc = (@convention(c) (UInt8) -> (Int32))
+        
+        try compileAndLink(ctx: ctx,  0, 1, strip: false) {
             mappedMem in
             
             let callable = try ctx.getCallable(findex: 0)

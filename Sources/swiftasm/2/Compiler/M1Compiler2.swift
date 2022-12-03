@@ -4,6 +4,13 @@ extension M1Compiler2 : CompilerUtilities2 {
     
 }
 
+struct _StringX {
+    let t: UnsafePointer<HLType_CCompat>
+    let bytes: UnsafePointer<CChar16>
+    let length: Int32
+}
+
+
 protocol CompilerUtilities2 {
     func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer);
 }
@@ -278,6 +285,36 @@ extension M1Compiler2 {
 //            mem.append(
 //                M1Op.ldrb(reg.to32, .imm64(.sp, offset, nil))
 //            )
+        } else if vregKind.hlRegSize == 0 {
+            // nop
+        } else {
+            fatalError("Size must be 8, 4, 2, 1, or 0")
+        }
+    }
+    
+    func appendStore(reg: Register64, as vreg: Reg, intoAddressFrom addrReg: Register64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        
+        if vregKind.hlRegSize == 8 {
+            mem.append(
+                PseudoOp.debugMarker("Storing 8 bytes in vreg \(vreg)"),
+                M1Op.str(reg, .reg64offset(addrReg, 0, nil))
+            )
+        } else if vregKind.hlRegSize == 4 {
+            mem.append(
+                PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
+                M1Op.str(reg.to32, .reg64offset(addrReg, 0, nil))
+            )
+        } else if vregKind.hlRegSize == 2 {
+            mem.append(
+                PseudoOp.debugMarker("Storing 2 bytes in vreg \(vreg)"),
+                M1Op.strh(reg.to32, .imm64(addrReg, 0, nil))
+            )
+        } else if vregKind.hlRegSize == 1 {
+            mem.append(
+                PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
+                M1Op.strb(reg.to32, .imm64(addrReg, 0, nil))
+            )
         } else if vregKind.hlRegSize == 0 {
             // nop
         } else {
@@ -972,36 +1009,6 @@ class M1Compiler2 {
                     reservedStackBytes: stackInfo.total,
                     mem: mem)
             case .OCall3(let dst, let fun, let arg0, let arg1, let arg2):
-                
-                if compilable.findex == 342 && currentInstruction == 27 {
-                    struct _String {
-                        let t: UnsafePointer<HLType_CCompat>
-                        let bytes: UnsafePointer<CChar16>
-                        let length: Int32
-                    }
-                    let _c: (@convention(c) (OpaquePointer, OpaquePointer, Int32)->()) = {
-                        strAPtr, strBPtr, ix in
-                        
-                        let a: UnsafePointer<_String> = .init(strAPtr)
-                        let b: UnsafePointer<_String> = .init(strBPtr)
-                        
-                        print("Ac:", a.pointee.length)
-                        print("A: ", a.pointee.bytes.stringValue)
-                        print("Bc:", b.pointee.length)
-                        print("B: ", b.pointee.bytes.stringValue)
-                        
-                        fatalError("here")
-                    }
-                    appendLoad(reg: X.x0, from: arg0, kinds: regs, mem: mem)
-                    appendLoad(reg: X.x1, from: arg1, kinds: regs, mem: mem)
-                    appendLoad(reg: X.x2, from: arg1, kinds: regs, mem: mem)
-                    mem.append(
-                        PseudoOp.mov(X.x10, unsafeBitCast(_c, to: OpaquePointer.self)),
-                        M1Op.blr(X.x10)
-                    )
-                }
-                
-                
                 try __ocalln(
                     dst: dst,
                     funIndex: fun,
@@ -1144,20 +1151,6 @@ class M1Compiler2 {
                     args: [arg0, arg1],
                     reservedStackBytes: stackInfo.total,
                     mem: mem)
-                
-                // MARK: --
-                if compilable.findex == 33 {
-                    let _c: (@convention(c)(OpaquePointer)->()) = {
-                        _ptr in
-                        
-                        let ptr: UnsafePointer<vdynamic> = .init(_ptr)
-                        print("# OSafeCast result OCall2: ", ptr.pointee.i)
-                    }
-                    let _cAddr = unsafeBitCast(_c, to: OpaquePointer.self)
-                    mem.append(PseudoOp.mov(X.x15, _cAddr), M1Op.blr(X.x15))
-                }
-                // MARK: --
-                
             case .ONew(let dst):
                 appendDebugPrintAligned4("Entering ONew", builder: mem)
                 // LOOK AT: https://github.com/HaxeFoundation/hashlink/blob/284301f11ea23d635271a6ecc604fa5cd902553c/src/jit.c#L3263
@@ -1249,20 +1242,6 @@ class M1Compiler2 {
                 )
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OInt(let dst, let iRef):
-                
-                if (currentInstruction == 8 && compilable.findex == 37) {
-//                    appendDebugPrintAligned4("ARRIVED HERE", builder: mem)
-//                    let _c: (@convention(c) ()->()) = {
-//                        print("Hello world")
-//                        fatalError("end")
-//                    }
-//                    let _cAddr = unsafeBitCast(_c, to: OpaquePointer.self)
-//                    mem.append(
-//                        PseudoOp.mov(X.x0, _cAddr),
-//                        M1Op.blr(X.x0)
-//                    )
-                }
-                
                 assert(reg: dst, from: regs, in: [HLTypeKind.i64, HLTypeKind.i32, HLTypeKind.u8, HLTypeKind.u16])
                 let c = try ctx.requireInt(iRef)
                 let regStackOffset = getRegStackOffset(regs, dst)
@@ -1504,24 +1483,10 @@ class M1Compiler2 {
                 let _c: (@convention(c)(OpaquePointer)->()) = {
                     dPtr in
                     
-                    let lptr: UnsafePointer<_haxeLog> = .init(dPtr)
-                    // fun is nil :(
-                    print("Fetched lptr", lptr)
-                    let rto = lptr.pointee.type.pointee.obj.pointee.getRt(lptr.pointee.type)
-                    print(rto.pointee.bindings.advanced(by: 0))
-                    print(rto.pointee.bindings.advanced(by: 1))
-                    
-                    print("[hl_get_obj_proto] mcontext", lptr.pointee.type.pointee.obj.pointee.moduleContext)
-                    print("[hl_get_obj_proto] type", lptr.pointee.type)
-                    print("[hl_get_obj_proto] obj", lptr.pointee.type.pointee.obj)
-                    
-                    let rto2 = LibHl.hl_get_obj_proto(.init(OpaquePointer(lptr.pointee.type)))
-                    LibHl.hl_flush_proto(lptr.pointee.type)
-                    
-                    print("rto", rto)
-                    print("rto2", rto2)
+                    let x: UnsafePointer<vdynamic> = .init(dPtr)
+                    print(x)
                 }
-                if compilable.findex == 257 && currentInstruction == 0 {
+                if compilable.findex == 229 && currentInstruction == 5 {
                     mem.append(
                         PseudoOp.mov(X.x10, unsafeBitCast(_c, to: OpaquePointer.self)),
                         M1Op.blr(X.x10)
@@ -1539,16 +1504,9 @@ class M1Compiler2 {
                 appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
                 mem.append(M1Op.lsl_r(X.x2, X.x0, X.x1))
                 appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
-                
                 appendLoad(reg: X.x15, from: a, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x15, prepend: "db_OShl a", builder: mem)
-                
                 appendLoad(reg: X.x15, from: b, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x15, prepend: "db_OShl b", builder: mem)
-                
                 appendLoad(reg: X.x15, from: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x15, prepend: "db_OShl out", builder: mem)
-                
             case .OSetI8(let bytes, let index, let src):
                 fallthrough
             case .OSetI16(let bytes, let index, let src):
@@ -1575,22 +1533,6 @@ class M1Compiler2 {
                     )
                 } else {
                     fatalError("Unexpected op \(op.id)")
-                }
-                
-                if (compilable.findex == 33 && currentInstruction == 61) {
-                    let _c: (@convention(c) (OpaquePointer)->()) = {
-                        _ptr in
-                        
-                        let bptr: UnsafePointer<UInt8> = .init(_ptr)
-                        print("Got \(bptr.advanced(by: 0).pointee)")
-                        print("Got \(bptr.advanced(by: 1).pointee)")
-                        print("Got \(bptr.advanced(by: 2).pointee)")
-                        print("Got \(bptr.advanced(by: 3).pointee)")
-                    }
-                    let _cAddr = unsafeBitCast(_c, to: OpaquePointer.self)
-                    mem.append(PseudoOp.mov(X.x15, _cAddr))
-                    mem.append(M1Op.blr(X.x15))
-                    print("OSetX in \(compilable.findex)@\(currentInstruction)")
                 }
             case .OGetMem(let dst, let bytes, let index):
                 fallthrough
@@ -1675,62 +1617,15 @@ class M1Compiler2 {
                 jumpOverDeath.start(at: mem.byteSize)
                 mem.append(
                     PseudoOp.deferred(4) {
-//                        guard compilable.findex != 28 else {
-//                            // TODO: remove after testing
-//                            return M1Op.nop
-//                        }
                         return M1Op.b_ne(try Immediate21(jumpOverDeath.value))
                     }
                 )
                 appendDebugPrintAligned4("Null access exception", builder: mem)
                 
-                // MARK: ------ tmp
-                struct _ByteStruct {
-                    let t: UnsafeRawPointer
-                    let length: Int32
-                    let bytes: UnsafeRawPointer
-                }
-                let testFunc: (@convention(c) (UnsafeRawPointer)->()) = {
-                    rawPtr in
-                    
-                    _ = rawPtr.bindMemory(to: _ByteStruct.self, capacity: 1)
-                    
-                    print("Got byte struct")
-                    fatalError()
-                }
-                let testFuncTarget = unsafeBitCast(testFunc, to: UnsafeRawPointer.self)
-                
-                mem.append(
-                    PseudoOp.mov(.x1, testFuncTarget),
-                    M1Op.blr(.x1)
-                )
-                // MARK: ------
-                
-                /*
-                 // ideally we jump to hl_null_access() here, BUT
-                 // we need hl_throw() to work before that, which means
-                 // we need the handlers set up.
-                let allocFunc_jumpTarget = unsafeBitCast(LibHl.hl_null_access, to: UnsafeRawPointer.self)
-                
-                mem.append(
-                    PseudoOp.mov(.x1, allocFunc_jumpTarget),
-                    M1Op.blr(.x1)
-                )
-                */
-                
                 // tmp crash on null access
                 appendSystemExit(1, builder: mem)
                 jumpOverDeath.stop(at: mem.byteSize)
             case .OAnd(let dst, let a, let b):
-                // MARK: --
-                if compilable.findex == 33 {
-                    let aKind = requireTypeKind(reg: a, from: regs)
-                    let bKind = requireTypeKind(reg: b, from: regs)
-                    let dstKind = requireTypeKind(reg: dst, from: regs)
-                    print("Wat happenin \(currentInstruction): \(aKind) \(bKind) \(dstKind)")
-                }
-                // MARK: --
-                
                 appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
                 
@@ -1825,56 +1720,7 @@ class M1Compiler2 {
                     M1Op.str(X.x2, .reg(X.sp, .r64ext(X.x14, .sxtx(0))))
                 )
                 appendDebugPrintAligned4("[traptest] Offset: \(testOff)", builder: mem)
-                // MARK: tmp
-                mem.append(
-                    M1Op.movz64(X.x14, UInt16(testOff), nil),
-                    M1Op.ldr(X.x13, .reg(X.sp, .r64ext(X.x14, .sxtx(0))))
-                )
-                appendDebugPrintRegisterAligned4(X.x13, prepend: "[traptest] Verify ldr", builder: mem)
-                mem.append(M1Op.movr64(X.x13, X.x2))
-                appendDebugPrintRegisterAligned4(X.x13, prepend: "[traptest] Verify mov", builder: mem)
-                // MARK: /tmp
-                
-                print("[traptest] tinf__trapCurrent: \(tinf__trapCurrent)")
-                print("[traptest] trapOffsetInStack: \(trapOffsetInStack)")
-                print("[traptest] prevOffset: \(prevOffset)")
                 //
-                
-                // MARK: --
-                let _c: (@convention(c) (OpaquePointer?, OpaquePointer?)->()) = {
-                    oPtre, optr2 in
-                    guard let ptr = oPtre else { return }
-                    
-//                    print("traptest x9 had tinf: \(optr2)")
-                    
-                    let tc: UnsafePointer<HLTrapCtx_CCompat> = .init(ptr)
-                    
-                    let x = LibHl.hl_get_thread()
-//                    print("[traptest feu] __tinf: \(x)")
-                    print("[traptest feu] __tinf.cur: \(x.pointee.trap_current)")
-//                    print("[traptest feu] cur: \(tc)")
-                    print("[traptest feu] cur.prev: \(tc.pointee.prev)")
-                    print("[traptest feu] cur.tcheck: \(tc.pointee.tcheck)")
-                    return
-                }
-                mem.append(
-                    M1Op.movr64(X.x21, X.x0),
-                    M1Op.movr64(X.x20, X.x9),
-                    M1Op.movr64(X.x0, .sp),
-                    M1Op.add(X.x0, X.x0, .imm(trapOffsetInStack, nil)),
-                    
-                    // returns nil
-//                    M1Op.ldr(X.x1, .reg64offset(X.x0, prevOffset, nil)),
-                    
-                    // so what's the val?
-                    M1Op.ldr(X.x1, .reg64offset(X.x9, tinf__trapCurrent, nil)),
-                    
-                    PseudoOp.mov(X.x11, unsafeBitCast(_c, to: OpaquePointer.self)),
-                    M1Op.blr(X.x11),
-                    M1Op.movr64(X.x0, X.x21),
-                    M1Op.movr64(X.x9, X.x20)
-                )
-                // MARK: --
                 
                 // __tinf->trap_current = &ctx;
                 appendDebugPrintAligned4(
@@ -2071,40 +1917,8 @@ class M1Compiler2 {
                 _ = requireTypeKind(reg: src, from: regs)
                 let dstType = requireTypeKind(reg: dst, from: regs)
                 
-//                let _st: UnsafePointer<HLType_CCompat> = .init(OpaquePointer(requireTypeMemory(reg: src, regs: regs)))
-//                let _dt: UnsafePointer<HLType_CCompat> = .init(OpaquePointer(requireTypeMemory(reg: dst, regs: regs)))
-//                print("Src type", _st._overrideDebugDescription)
-//                print("Dst type", _dt._overrideDebugDescription)
-//
-//
                 let srcOffset = getRegStackOffset(regs, src)
                 
-                // MARK: --
-                if compilable.findex == 33 {
-                    let _c: (@convention(c)(OpaquePointer)->()) = {
-                        _ptr in
-                        
-                        let x1: UnsafePointer<UnsafePointer<vdynamic>> = .init(_ptr)
-                        let x = x1.pointee
-                        print("Data: \(x)")
-                        print("Hello: \(x.pointee.t.pointee.kind)")
-                        //                    print("Hello: \(x.pointee.t._overrideDebugDescription): \(x.pointee.i)")
-                        print("^")
-                    }
-                    let _cAddr = unsafeBitCast(_c, to: OpaquePointer.self)
-                    mem.append(
-                        // load &src into x.0
-                        M1Op.movr64(X.x0, .sp),
-                        M1Op.movz64(X.x1, UInt16(srcOffset), nil),
-                        M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0)))
-                    )
-                    appendLoad(reg: X.x15, from: 14, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(X.x15, prepend: "OSafeCast test reg14", builder: mem)
-                    
-                    mem.append(PseudoOp.mov(X.x15, _cAddr), M1Op.blr(X.x15))
-                }
-                // MARK: --
-
                 let castFunc = get_dyncast(to: dstType.kind)
                 appendDebugPrintAligned4("Determined cast function", builder: mem)
                 
@@ -2136,19 +1950,6 @@ class M1Compiler2 {
                     appendDebugPrintRegisterAligned4(X.x0, prepend: "#\(currentInstruction) OSafeCast result \(dst)", builder: mem)
                 }
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
-                
-                // MARK: --
-                if compilable.findex == 33 {
-                    let _c2: (@convention(c)(Int32)->()) = {
-                        _ptr in
-                        
-                        print("Result: \(_ptr)")
-                        print("^")
-                    }
-                    let _c2Addr = unsafeBitCast(_c2, to: OpaquePointer.self)
-                    mem.append(PseudoOp.mov(X.x15, _c2Addr), M1Op.blr(X.x15))
-                }
-                // MARK: --
             case .OLabel:
                 appendDebugPrintAligned4("OLabel", builder: mem)
             case .OSub(let dst, let a, let b):
@@ -2339,21 +2140,6 @@ class M1Compiler2 {
                 appendLoad(reg: .x3, from: src, kinds: regs, mem: mem)
                 mem.append(M1Op.blr(.x10))
                 appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
-                
-                // MARK: --
-                if compilable.findex == 33 {
-                    let _c: (@convention(c)(OpaquePointer)->()) = {
-                        _ptr in
-                        
-                        let ptr: UnsafePointer<vdynamic> = .init(_ptr)
-                        print("# OSafeCast result OToDyn: ", ptr.pointee.i)
-                    }
-                    let _cAddr = unsafeBitCast(_c, to: OpaquePointer.self)
-                    mem.append(PseudoOp.mov(X.x15, _cAddr), M1Op.blr(X.x15))
-                    appendDebugPrintRegisterAligned4(X.x0, prepend: "#\(currentInstruction) OSafeCast result OToDyn \(dst)", builder: mem)
-                }
-                // MARK: --
-                
             case .OOr(let dst, let a, let b):
                 appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
@@ -2427,13 +2213,42 @@ class M1Compiler2 {
                 let srcOffset = getRegStackOffset(regs, src)
                 
                 mem.append(
+                    // creates a pointer to the stack value and puts the addr in x0
                     // x0 = [sp + srcOffset]
                     M1Op.movr64(X.x0, .sp),
                     M1Op.movz64(X.x1, UInt16(srcOffset), nil),
                     M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0)))
                 )
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OUnref(let dst, let src):
+                let dstType = requireType(reg: dst, regs: regs)
+                let srcType = requireType(reg: src, regs: regs)
+                Swift.assert(srcType.kind == .ref)
+                Swift.assert(dstType.kind == srcType.tparamProvider?.kind)
                 
+                appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
+                
+                switch(dstType.hlRegSize) {
+                case 8:
+                    mem.append(
+                        M1Op.ldr(X.x1, .reg64offset(X.x0, 0, nil))
+                    )
+                case 4:
+                    mem.append(
+                        M1Op.ldr(W.w1, .reg64offset(X.x0, 0, nil))
+                    )
+                case 2:
+                    mem.append(
+                        M1Op.ldrh(W.w1, .imm64(X.x0, 0, nil))
+                    )
+                case 1:
+                    mem.append(
+                        M1Op.ldrb(W.w1, .imm64(X.x0, 0, nil))
+                    )
+                default:
+                    fatalError("Invalid size \(dstType.hlRegSize)")
+                }
+                appendStore(reg: X.x1, into: dst, kinds: regs, mem: mem)
             case .OSetref(let dst, let src):
                 let dstType = requireType(reg: dst, regs: regs)
                 let srcType = requireType(reg: src, regs: regs)
@@ -2442,9 +2257,8 @@ class M1Compiler2 {
                 // x0 = address of ref
                 appendLoad(reg: X.x0, from: dst, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: src, kinds: regs, mem: mem)
-                mem.append(
-                    M1Op.str(X.x1, .reg64offset(X.x0, 0, nil))
-                )
+                appendStore(reg: X.x1, as: src, intoAddressFrom: X.x0, kinds: regs, mem: mem)
+                break
             case .OMakeEnum(let dst, let construct, let args):
                 assert(reg: dst, from: regs, is: HLTypeKind.enum)
                 let type = requireType(reg: dst, regs: regs)
@@ -2655,6 +2469,14 @@ class M1Compiler2 {
                         guard let protoFix = protoPtr?.pointee.findex else {
                             fatalError("OCallMethod failed. Could not find proto findex")
                         }
+                        
+                        // TODO: remove
+                        if protoFix == 0 {
+                            fatalError(":(")
+                        }
+                        //
+                        
+                        print("OCallMethod fetched proto findex \(protoFix)")
                         return protoFix
                     }
                     let _getType: (@convention(c)(Int32, OpaquePointer)->OpaquePointer) = {
