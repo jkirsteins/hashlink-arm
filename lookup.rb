@@ -153,11 +153,13 @@ def lookup_loads_store_register__register_offset(val)
     elsif match("00 1 01 xxx", valStr) and !match("xx x xx 011", valStr)
         abort("LDR (register, SIMD&FP)")
     elsif match("00 1 01 011", valStr)
-        abort("LDR (register, SIMD&FP)")
+        puts("LDR (register, SIMD&FP)")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/LDR--register--SIMD-FP---Load-SIMD-FP-Register--register-offset--?lang=en")
     elsif match("00 1 10 xxx", valStr)
         abort("STR (register, SIMD&FP)")
     elsif match("00 1 11 xxx", valStr)
-        abort("LDR (register, SIMD&FP)")
+        puts("LDR (register, SIMD&FP)")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/LDR--register--SIMD-FP---Load-SIMD-FP-Register--register-offset--?lang=en")
     elsif match("01 0 00 xxx", valStr)
         puts("STRH (register)")
         puts("    https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/STRH--register---Store-Register-Halfword--register--?lang=en")
@@ -171,7 +173,8 @@ def lookup_loads_store_register__register_offset(val)
     elsif match("01 1 00 xxx", valStr)
         abort("STR (register, SIMD&FP)")
     elsif match("01 1 01 xxx", valStr)
-        abort("LDR (register, SIMD&FP)")
+        puts("LDR (register, SIMD&FP)")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/LDR--register--SIMD-FP---Load-SIMD-FP-Register--register-offset--?lang=en")
     elsif match("1x 0 11 xxx", valStr)
         abort("UNALLOCATED")
     elsif match("1x 1 1x xxx", valStr)
@@ -199,7 +202,8 @@ def lookup_loads_store_register__register_offset(val)
     elsif match("11 1 00 xxx", valStr)
         abort("STR (register, SIMD&FP)")
     elsif match("11 1 01 xxx", valStr)
-        abort("LDR (register, SIMD&FP)")
+        puts("LDR (register, SIMD&FP)")
+        puts("    https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/LDR--register--SIMD-FP---Load-SIMD-FP-Register--register-offset--?lang=en")
     else 
         abort("Unknown")
     end
@@ -536,8 +540,8 @@ def lookup_data_processing__2source(val)
             "1 0 010xx0",
             "1 0 010x0x"
         ] => "UNALLOCATED",
-        ["0 0 000010"] => "UDIV — 32-bit",
-        ["0 0 000011"] => "SDIV — 32-bit",
+        ["0 0 000010"] => ["UDIV — 32-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/UDIV--Unsigned-Divide-?lang=en"],
+        ["0 0 000011"] => ["SDIV — 32-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/SDIV--Signed-Divide-?lang=en"],
         ["0 0 001000"] => "LSLV — 32-bit",
         ["0 0 001001"] => ["LSRV — 32-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LSRV--Logical-Shift-Right-Variable-?lang=en"],
         ["0 0 001010"] => ["ASRV — 32-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/ASRV--Arithmetic-Shift-Right-Variable-?lang=en"],
@@ -549,7 +553,7 @@ def lookup_data_processing__2source(val)
         ["0 0 010101"] => "CRC32CB, CRC32CH, CRC32CW, CRC32CX — CRC32CH",
         ["0 0 010110"] => "CRC32CB, CRC32CH, CRC32CW, CRC32CX — CRC32CW",
         ["1 0 000000"] => "SUBP FEAT_MTE",
-        ["1 0 000010"] => "UDIV — 64-bit",
+        ["1 0 000010"] => ["UDIV — 64-bit", "https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/UDIV--Unsigned-Divide-?lang=en"],
         ["1 0 000011"] => "SDIV — 64-bit",
         ["1 0 000100"] => "IRG FEAT_MTE",
         ["1 0 000101"] => "GMI FEAT_MTE",
@@ -660,7 +664,7 @@ def lookup_branches_exception_generating_and_system_instructions(val)
     puts("op2 = #{op2}")
 
     matches = {
-        ["010 0xxxxxxxxxxxxx xxxxx"] => "Conditional branch (immediate)",      
+        ["010 0xxxxxxxxxxxxx xxxxx"] => ["Conditional branch (immediate)", "https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Branches--Exception-Generating-and-System-instructions?lang=en#condbranch"],      
      ["110 00xxxxxxxxxxxx xxxxx"] => "Exception generation",
      ["110 01000000110001 xxxxx"] => "System instructions with register argument",
         ["110 01000000110010 11111"] => "Hints",
@@ -773,16 +777,75 @@ def lookup_data_processing__scalar_floating_point_and_advanced_simd(val)
         ["1100 01 1000 0001000xx"] => "Cryptographic two-register SHA 512 FEAT_SHA512",
         ["x0x1 0x x0xx xxxxxxxxx"] => "Conversion between floating-point and fixed-point FEAT_FP16",
         ["x0x1 0x x1xx xxx000000"] => Proc.new { |val| lookup__conversion_between_floating_point_and_integer(val) },
-        ["x0x1 0x x1xx xxxx10000"] => "Floating-point data-processing (1 source) FEAT_FRINTTS",
+        ["x0x1 0x x1xx xxxx10000"] => "Floating-point data-processing (1 source) FEAT_FRINTTS: https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Scalar-Floating-Point-and-Advanced-SIMD?lang=en#floatdp1",
         ["x0x1 0x x1xx xxxxx1000"] => "Floating-point compare FEAT_FP16",
         ["x0x1 0x x1xx xxxxxx100"] => "Floating-point immediate FEAT_FP16",
         ["x0x1 0x x1xx xxxxxxx01"] => "Floating-point conditional compare FEAT_FP16",
-        ["x0x1 0x x1xx xxxxxxx10"] => "Floating-point data-processing (2 source) FEAT_FP16",
+        ["x0x1 0x x1xx xxxxxxx10"] => Proc.new { |val| lookup__floating_point_data_processing__2_source(val) },
         ["x0x1 0x x1xx xxxxxxx11"] => "Floating-point conditional select FEAT_FP16",
         ["x0x1 1x xxxx xxxxxxxxx"] => "Floating-point data-processing (3 source)",
     }
     _handle_matches(matches, valStr, val)
 end
+
+
+def lookup__floating_point_data_processing__2_source(val)
+    puts("Floating-point data-processing (2 source) FEAT_FP16: https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Scalar-Floating-Point-and-Advanced-SIMD?lang=en#floatdp2")
+    m = p(val, 1, 31)
+    s = p(val, 1, 29)
+    ptype = p(val, 2, 22)
+    rm = p(val, 5, 16)
+    opcode = p(val, 4, 12)
+    rn = p(val, 5, 5)
+    rd = p(val, 5, 0)
+
+    valStr = "#{m} #{s} #{ptype} #{opcode}"
+    puts("m = #{m}")
+    puts("s = #{s}")
+    puts("ptype = #{ptype}")
+    puts("rm = #{rm}")
+    puts("opcode = #{opcode}")
+    puts("rn = #{rn}")
+    puts("rd = #{rd}")
+
+    matches = {
+        ["x x xx 1xx1"] => "UNALLOCATED -",
+        ["x x xx 1x1x"] => "UNALLOCATED -",
+        ["x x xx 11xx"] => "UNALLOCATED -",
+        ["x x 10 xxxx"] => " UNALLOCATED -",
+        ["x 1 xx xxxx"] => " UNALLOCATED -",
+        ["0 0 00 0000"] => "FMUL (scalar) — single-precision -",
+        ["0 0 00 0001"] => ["FDIV (scalar) — single-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FDIV--scalar---Floating-point-Divide--scalar--?lang=en"],
+        ["0 0 00 0010"] => "FADD (scalar) — single-precision -",
+        ["0 0 00 0011"] => "FSUB (scalar) — single-precision -",
+        ["0 0 00 0100"] => "FMAX (scalar) — single-precision -",
+        ["0 0 00 0101"] => "FMIN (scalar) — single-precision -",
+        ["0 0 00 0110"] => "FMAXNM (scalar) — single-precision -",
+        ["0 0 00 0111"] => "FMINNM (scalar) — single-precision -",
+        ["0 0 00 1000"] => "FNMUL (scalar) — single-precision -",
+        ["0 0 01 0000"] => "FMUL (scalar) — double-precision -",
+        ["0 0 01 0001"] => ["FDIV (scalar) — double-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FDIV--scalar---Floating-point-Divide--scalar--?lang=en"],
+        ["0 0 01 0010"] => "FADD (scalar) — double-precision -",
+        ["0 0 01 0011"] => "FSUB (scalar) — double-precision -",
+        ["0 0 01 0100"] => "FMAX (scalar) — double-precision -",
+        ["0 0 01 0101"] => "FMIN (scalar) — double-precision -",
+        ["0 0 01 0110"] => "FMAXNM (scalar) — double-precision -",
+        ["0 0 01 0111"] => "FMINNM (scalar) — double-precision -",
+        ["0 0 01 1000"] => "FNMUL (scalar) — double-precision -",
+        ["0 0 11 0000"] => "FMUL (scalar) — half-precision FEAT_FP16",
+        ["0 0 11 0001"] => "FDIV (scalar) — half-precision FEAT_FP16",
+        ["0 0 11 0010"] => "FADD (scalar) — half-precision FEAT_FP16",
+        ["0 0 11 0011"] => "FSUB (scalar) — half-precision FEAT_FP16",
+        ["0 0 11 0100"] => "FMAX (scalar) — half-precision FEAT_FP16",
+        ["0 0 11 0101"] => "FMIN (scalar) — half-precision FEAT_FP16",
+        ["0 0 11 0110"] => "FMAXNM (scalar) — half-precision FEAT_FP16",
+        ["0 0 11 0111"] => "FMINNM (scalar) — half-precision FEAT_FP16",
+        ["0 0 11 1000"] => "FNMUL (scalar) — half-precision FEAT_FP16",
+        ["1 x   xx  xxxx"] => "UNALLOCATED -",
+    }
+    _handle_matches(matches, valStr, val)
+end
+        
 
 def lookup__conversion_between_floating_point_and_integer(val)
     puts("Conversion between floating-point and integer: https://developer.arm.com/documentation/ddi0596/2020-12/Index-by-Encoding/Data-Processing----Scalar-Floating-Point-and-Advanced-SIMD?lang=en#float2int")
@@ -811,7 +874,7 @@ def lookup__conversion_between_floating_point_and_integer(val)
         ["0 0 00 00 000"] => "FCVTNS (scalar) — single-precision to 32-bit -",
         ["0 0 00 00 001"] => "FCVTNU (scalar) — single-precision to 32-bit -",
         ["0 0 00 00 010"] => "SCVTF (scalar, integer) — 32-bit to single-precision -",
-        ["0 0 00 00 011"] => "UCVTF (scalar, integer) — 32-bit to single-precision -",
+        ["0 0 00 00 011"] => ["UCVTF (scalar, integer) — 32-bit to single-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/UCVTF--scalar--integer---Unsigned-integer-Convert-to-Floating-point--scalar--?lang=en"],
         ["0 0 00 00 100"] => "FCVTAS (scalar) — single-precision to 32-bit -",
         ["0 0 00 00 101"] => "FCVTAU (scalar) — single-precision to 32-bit -",
         ["0 0 00 00 110"] => "FMOV (general) — single-precision to 32-bit -",
@@ -827,7 +890,7 @@ def lookup__conversion_between_floating_point_and_integer(val)
         ["0 0 01 00 000"] => "FCVTNS (scalar) — double-precision to 32-bit -",
         ["0 0 01 00 001"] => "FCVTNU (scalar) — double-precision to 32-bit -",
         ["0 0 01 00 010"] => "SCVTF (scalar, integer) — 32-bit to double-precision -",
-        ["0 0 01 00 011"] => "UCVTF (scalar, integer) — 32-bit to double-precision -",
+        ["0 0 01 00 011"] => ["UCVTF (scalar, integer) — 32-bit to double-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/UCVTF--scalar--integer---Unsigned-integer-Convert-to-Floating-point--scalar--?lang=en"], 
         ["0 0 01 00 100"] => "FCVTAS (scalar) — double-precision to 32-bit -",
         ["0 0 01 00 101"] => "FCVTAU (scalar) — double-precision to 32-bit -",
         ["0 0 01 01 000"] => "FCVTPS (scalar) — double-precision to 32-bit -",
@@ -871,7 +934,7 @@ def lookup__conversion_between_floating_point_and_integer(val)
         ["1 0 01 00 000"] => "FCVTNS (scalar) — double-precision to 64-bit -",
         ["1 0 01 00 001"] => "FCVTNU (scalar) — double-precision to 64-bit -",
         ["1 0 01 00 010"] => "SCVTF (scalar, integer) — 64-bit to double-precision -",
-        ["1 0 01 00 011"] => "UCVTF (scalar, integer) — 64-bit to double-precision -",
+        ["1 0 01 00 011"] => ["UCVTF (scalar, integer) — 64-bit to double-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/UCVTF--scalar--integer---Unsigned-integer-Convert-to-Floating-point--scalar--?lang=en"],
         ["1 0 01 00 100"] => "FCVTAS (scalar) — double-precision to 64-bit -",
         ["1 0 01 00 101"] => "FCVTAU (scalar) — double-precision to 64-bit -",
         ["1 0 01 00 110"] => "FMOV (general) — double-precision to 64-bit -",
@@ -938,5 +1001,5 @@ def from_objd(str)
     ("0x" + str.split(" ").reverse.join("")).to_i(16)
 end
 
-puts lookup(from_objd("e1 6b 62 f8"))
+puts lookup(from_objd("41 c0 22 1e"))
 #puts lookup(0b11111001010000000000110100100010)
