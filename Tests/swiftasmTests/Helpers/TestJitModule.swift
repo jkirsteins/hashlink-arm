@@ -24,6 +24,7 @@ class TestJitModule : JitContext2 {
     var nnatives: UInt32 { UInt32(natives.count) }
     var nstrings: UInt32 { UInt32(strings.count) }
     var nglobals: UInt32 { UInt32(globals.count) }
+    var nfloats: UInt32 { UInt32(floats.count) }
     
     let versionHint: Int?
     
@@ -41,6 +42,10 @@ class TestJitModule : JitContext2 {
         ints[ix]
     }
     
+    func getFloat(_ ix: Int) throws -> Float64 {
+        floats[ix]
+    }
+    
     func getString(_ ix: Int) throws -> any StringProvider {
         strings[ix]
     }
@@ -49,6 +54,7 @@ class TestJitModule : JitContext2 {
     let natives: [any NativeCallable2]
     let types: Set<AnyHLTypeProvider>
     let ints: [Int32]
+    let floats: [Float64]
     let strings: [String]
     let bytes: [[UInt8]]
     let globals: [any HLTypeProvider]
@@ -74,10 +80,11 @@ class TestJitModule : JitContext2 {
     let funcTracker = FunctionTracker()
     
     // MARK: Initializers
-    init(_ compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], globals: [any HLTypeProvider], v versionHint: Int? = nil) {
+    init(_ compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], globals: [any HLTypeProvider] = [], floats: [Float64] = [], v versionHint: Int? = nil) {
         self.compilables = compilables
         self.natives = natives
         self.globals = globals
+        self.floats = floats
         self.versionHint = versionHint
         self.bytes = bytes
         
@@ -119,6 +126,7 @@ class TestJitModule : JitContext2 {
         self.versionHint = nil
         self.bytes = []
         self.globals = []
+        self.floats = []
     }
     
     static func expand(_ t: any HLTypeProvider) -> [any HLTypeProvider] {

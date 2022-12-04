@@ -168,6 +168,12 @@ class CCompatJitContext : JitContext2 {
         }
     }
     
+    var nfloats: UInt32  {
+        try! withModule {
+            $0.pointee.code.pointee.nfloats
+        }
+    }
+    
     func getType(_ ix: Int) throws -> any HLTypeProvider {
         try withModule {
             return $0.pointee.code.pointee.getType(ix)
@@ -177,6 +183,12 @@ class CCompatJitContext : JitContext2 {
     func getInt(_ ix: Int) throws -> Int32 {
         try withModule {
             return $0.pointee.code.pointee.getInt(ix)
+        }
+    }
+    
+    func getFloat(_ ix: Int) throws -> Float64 {
+        try withModule {
+            return $0.pointee.code.pointee.getFloat(ix)
         }
     }
     
@@ -262,12 +274,28 @@ class CCompatJitContext : JitContext2 {
         return result
     }
     
+    func requireFloat(_ ix: Ref) throws -> Float64 {
+        guard let result = try getFloat(ix) else {
+            throw GlobalError.invalidOperation("Required float (ix==\(ix)) not found.")
+        }
+        return result
+    }
+    
     func getInt(_ ix: Ref) throws -> Int32? {
         try withModule { m in
             guard ix < m.pointee.code.pointee.nints else {
                 return nil
             }
             return m.pointee.code.pointee.getInt(ix)
+        }
+    }
+    
+    func getFloat(_ ix: Ref) throws -> Float64? {
+        try withModule { m in
+            guard ix < m.pointee.code.pointee.nfloats else {
+                return nil
+            }
+            return m.pointee.code.pointee.getFloat(ix)
         }
     }
     

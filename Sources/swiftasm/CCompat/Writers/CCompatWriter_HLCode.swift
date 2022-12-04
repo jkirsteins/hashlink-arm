@@ -10,7 +10,7 @@ class CCompatWriter_HLCode {
     let bytePos: [Int32]
     
     let ints: UnsafeMutableBufferPointer<Int32>
-    let floats: UnsafeMutablePointer<Double>
+    let floats: UnsafeMutableBufferPointer<Float64>
     let strings: UnsafeMutableBufferPointer<UnsafePointer<CChar>>
     let string_lens: UnsafeMutableBufferPointer<UInt32>
     let bytes: UnsafeMutableBufferPointer<Int8>
@@ -79,7 +79,7 @@ class CCompatWriter_HLCode {
         self.nativesWriter = try CCompatWriter_HLNatives(ctx, typeLookup: typeLookup)
         
         self.ints = .allocate(capacity: Int(ctx.nints))
-        self.floats = .allocate(capacity: 0)
+        self.floats = .allocate(capacity: Int(ctx.nfloats))
         self.strings = .allocate(capacity: Int(ctx.nstrings))
         self.string_lens = .allocate(capacity: Int(ctx.nstrings))
         self.bytes = .allocate(capacity: self.byteData.count)
@@ -95,7 +95,6 @@ class CCompatWriter_HLCode {
     }
     
     deinit {
-        self.floats.deinitialize(count: 0)
         self.debugfiles.deinitialize(count: 0)
         self.debugfiles_lens.deinitialize(count: 0)
         self.ustrings.deinitialize(count: Int(ctx.nstrings))
@@ -134,6 +133,8 @@ class CCompatWriter_HLCode {
         
         let intArray = try (0..<ctx.nints).map { try ctx.getInt(Int($0)) }
         _ = self.ints.initialize(from: intArray)
+        let floatArray = try (0..<ctx.nfloats).map { try ctx.getFloat(Int($0)) }
+        _ = self.floats.initialize(from: floatArray)
         
         let stringArray = try (0..<ctx.nstrings).map { try ctx.getString(Int($0)) }
         let stringLengths = stringArray.map({ UInt32($0.stringValue.count) })
@@ -181,7 +182,7 @@ class CCompatWriter_HLCode {
         target.initialize(to: HLCode_CCompat(
             version: version, // <5 bytes pointed to strings
             nints: ctx.nints,
-            nfloats: 0,
+            nfloats: ctx.nfloats,
             nstrings: 0,
             nbytes: 0,
             ntypes: ctx.ntypes,
@@ -193,7 +194,7 @@ class CCompatWriter_HLCode {
             ndebugfiles: 0,
             hasdebug: false,
             ints: ints.baseAddress!,
-            floats: floats,
+            floats: floats.baseAddress!,
             strings: .init(OpaquePointer(strings.baseAddress!)),
             string_lens: string_lens.baseAddress!,
             bytes: bytes.baseAddress!,

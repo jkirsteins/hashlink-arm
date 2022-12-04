@@ -52,24 +52,24 @@ struct SwiftAsm: ParsableCommand {
     
     mutating func run() throws {
         
-        let tmpDeps = [
-            332, 42, 231, 230, 259, 16,
-            340,
-            245,
-            230,
-            335,
-            341,
-            20,
-            344,
-            237,
-            231,
-            348,
-            289,
-            5,
-            241,
-            269,
-            332,
-            305, 437, 350, 28, 14, 42, 240, 337, 303
+        let tmpDeps: [RefFun] = [
+//            332, 42, 231, 230, 259, 16,
+//            340,
+//            245,
+//            230,
+//            335,
+//            341,
+//            20,
+//            344,
+//            237,
+//            231,
+//            348,
+//            289,
+//            5,
+//            241,
+//            269,
+//            332,
+//            305, 437, 350, 28, 14, 42, 240, 337, 303
 ]
 
         let mod = try! Bootstrap.start2(hlFileIn, args: [])
@@ -79,7 +79,7 @@ struct SwiftAsm: ParsableCommand {
         for frix in (0..<mod.nfunctions) {
             let fix = mod.mainContext.pointee.code!.pointee.functions.advanced(by: Int(frix)).pointee.findex
             
-            if !tmpDeps.contains(Int(fix)) { continue }
+            if !tmpDeps.isEmpty && !tmpDeps.contains(Int(fix)) { continue }
             
             try sut.compile(findex: RefFun(fix), into: buf)
         }

@@ -18,8 +18,8 @@ fileprivate func prepareFunction(
         typeProvider: funType)
 }
 
-fileprivate func prepareContext(compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], globals: [any HLTypeProvider] = [], v: Int? = nil) throws -> CCompatJitContext {
-    let tm = TestJitModule(compilables, natives: natives, ints: ints, strings: strings, bytes: bytes, globals: globals, v: v)
+fileprivate func prepareContext(compilables: [any Compilable2], natives: [any NativeCallable2] = [], ints: [Int32] = [], strings: [String] = [], bytes: [[UInt8]] = [], globals: [any HLTypeProvider] = [], floats: [Float64] = [], v: Int? = nil) throws -> CCompatJitContext {
+    let tm = TestJitModule(compilables, natives: natives, ints: ints, strings: strings, bytes: bytes, globals: globals, floats: floats, v: v)
     assert(tm.ntypes > 0)
     return try CCompatJitContext(ctx: tm)
 }
@@ -1016,6 +1016,25 @@ final class CompilerM1v2Tests: CCompatTestCase {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int32) -> Float64)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64], floats: [Float64], _ callback: @escaping (()->Float64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f64,
+                findex: 0,
+                regs: regs,
+                args: [],
+                ops: ops)
+        ], floats: floats)
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) () -> Float64)) in
                 callback(ep)
             }
         }
@@ -2217,6 +2236,15 @@ final class CompilerM1v2Tests: CCompatTestCase {
             let res: Int32 = entrypoint(100, 156)
             
             XCTAssertEqual(256, res)
+        }
+    }
+    
+    func testCompile_OFloat() throws {
+        try _rf64(ops: [
+            .OFloat(dst: 0, ptr: 1),
+            .ORet(ret: 0)
+        ], floats: [0.1, 0.2, 0.3]) { function in
+            XCTAssertEqual(function(), 0.2)
         }
     }
     

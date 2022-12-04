@@ -1250,18 +1250,16 @@ class M1Compiler2 {
                     M1Op.blr(X.x2)
                 )
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OFloat(let dst, let fref):
+                assert(reg: dst, from: regs, in: [HLTypeKind.f32, HLTypeKind.f64])
+                let f = try ctx.requireFloat(fref)
+                mem.append(PseudoOp.mov(X.x0, f.bitPattern))
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OInt(let dst, let iRef):
                 assert(reg: dst, from: regs, in: [HLTypeKind.i64, HLTypeKind.i32, HLTypeKind.u8, HLTypeKind.u16])
                 let c = try ctx.requireInt(iRef)
-                let regStackOffset = getRegStackOffset(regs, dst)
-                appendDebugPrintAligned4("--> Storing int \(iRef) (val \(c)) in \(dst)", builder: mem)
-                mem.append(
-                    PseudoOp.debugMarker(
-                        "Mov \(c) into \(X.x0) and store in stack for HL reg \(iRef) at offset \(regStackOffset)"
-                    ),
-                    PseudoOp.mov(X.x0, c),
-                    M1Op.str(W.w0, .reg64offset(X.sp, regStackOffset, nil))
-                )
+                mem.append(PseudoOp.mov(X.x0, c))
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OSetThis(field: let fieldRef, src: let srcReg):
                 try __osetthis_osetfield(objReg: 0, fieldRef: fieldRef, srcReg: srcReg, regs: regs, mem: mem)
             case .OSetField(let objReg, let fieldRef, let srcReg):
