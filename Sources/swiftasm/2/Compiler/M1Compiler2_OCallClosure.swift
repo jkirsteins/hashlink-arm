@@ -123,7 +123,7 @@ extension M1Compiler2 {
         for (load, regKind) in regWkindToPass.dropFirst(ARG_REGISTER_COUNT) {
             load(mem, X.x0)
             mem.append(
-                PseudoOp.strVreg(X.x0, argOffset, regKind.hlRegSize)
+                PseudoOp.strVreg(X.x0, X.x15, argOffset, regKind.hlRegSize)
             )
             argOffset += regKind.hlRegSize
         }
@@ -143,7 +143,7 @@ extension M1Compiler2 {
         appendDebugPrintAligned4("[__ocall_impl] Finished call...", builder: mem)
         
         mem.append(
-            PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
+            PseudoOp.strVreg(X.x0, X.x15, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
         )
         appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
             
@@ -224,7 +224,7 @@ extension M1Compiler2 {
         for (load, regKind) in regWkindToPass.dropFirst(ARG_REGISTER_COUNT) {
             load(mem, X.x0)
             mem.append(
-                PseudoOp.strVreg(X.x0, argOffset, regKind.hlRegSize)
+                PseudoOp.strVreg(X.x0, X.x15, argOffset, regKind.hlRegSize)
             )
             argOffset += regKind.hlRegSize
         }
@@ -242,7 +242,7 @@ extension M1Compiler2 {
         mem.append(M1Op.blr(X.x9))
         
         mem.append(
-            PseudoOp.strVreg(X.x0, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
+            PseudoOp.strVreg(X.x0, X.x15, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
         )
         appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
             

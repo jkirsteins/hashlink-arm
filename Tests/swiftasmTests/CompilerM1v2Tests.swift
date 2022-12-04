@@ -34,8 +34,6 @@ fileprivate func compileAndLink(ctx: CCompatJitContext, _ fix: Int..., strip: Bo
     let mappedMem = try mapper.getMemory()
     
     try callback(mappedMem)
-    
-    //    try mapper.freeMemory()
 }
 
 final class CompilerM1v2Tests: CCompatTestCase {
@@ -1339,7 +1337,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 retType: HLTypeKind.u8,
                 findex: 0,
                 regs: regs,
-                args: [HLTypeKind.u8],
+                args: [HLTypeKind.u8, HLTypeKind.u8],
                 ops: ops)
         ])
         
@@ -1347,6 +1345,82 @@ final class CompilerM1v2Tests: CCompatTestCase {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int8, Int8) -> Int8)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32__u8_u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u8, .f32], strip: Bool = true, _ callback: @escaping ((Int8, Int8)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.u8, HLTypeKind.u8],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int8, Int8) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32__f32_f32(ops: [HLOpCode], regs: [HLTypeKind] = [.f32, .f32, .f32], strip: Bool = true, _ callback: @escaping ((Float32, Float32)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f32, HLTypeKind.f32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float32, Float32) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf64__f64_f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64, .f64, .f64], strip: Bool = true, _ callback: @escaping ((Float64, Float64)->Float64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f64, HLTypeKind.f64],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float64, Float64) -> Float64)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32__f32_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.f32, .i32, .f32], strip: Bool = true, _ callback: @escaping ((Float32, Int32)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f32, HLTypeKind.i32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float32, Int32) -> Float32)) in
                 callback(ep)
             }
         }
@@ -2379,7 +2453,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         XCTAssertEqual(
             mem,
             [
-                0xff, 0x03, 0x02, 0xd1, // sub sp, sp, #128
+                0xff, 0xc3, 0x04, 0xd1, // sub sp, sp, #304
                 0xef, 0x43, 0x00, 0xa9, // stp x15, x16, [sp, #0]
                 0xf1, 0x4b, 0x01, 0xa9, // stp x17, x18, [sp, #16]
                 0xf3, 0x53, 0x02, 0xa9, // stp x19, x20, [sp, #32]
@@ -2388,6 +2462,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 0xf9, 0x6b, 0x05, 0xa9, // stp x25, x26, [sp, #80]
                 0xfb, 0x73, 0x06, 0xa9, // stp x27, x28, [sp, #96]
                 0xfd, 0x7b, 0x07, 0xa9, // stp x29, x30, [sp, #112]
+                0xe9, 0x2b, 0x08, 0x6d, // stp d9, d10, [sp, #128]
+                0xeb, 0x33, 0x09, 0x6d, // stp d11, d12, [sp, #144]
+                0xed, 0x3b, 0x0a, 0x6d, // stp d13, d14, [sp, #160]
+                0xef, 0x43, 0x0b, 0x6d, // stp d15, d16, [sp, #176]
+                0xf1, 0x4b, 0x0c, 0x6d, // stp d17, d18, [sp, #192]
+                0xf3, 0x53, 0x0d, 0x6d, // stp d19, d20, [sp, #208]
+                0xf5, 0x5b, 0x0e, 0x6d, // stp d21, d22, [sp, #224]
+                0xf7, 0x63, 0x0f, 0x6d, // stp d23, d24, [sp, #240]
+                0xf9, 0x6b, 0x10, 0x6d, // stp d25, d26, [sp, #256]
+                0xfb, 0x73, 0x11, 0x6d, // stp d27, d28, [sp, #272]
+                0xfd, 0x7b, 0x12, 0x6d, // stp d29, d30, [sp, #288]
                 0xfd, 0x03, 0x00, 0x91, // movr x29, sp
             ]
         )
@@ -2413,7 +2498,18 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 0xf9, 0x6b, 0x45, 0xa9, // ldp x25, x26, [sp, #80]
                 0xfb, 0x73, 0x46, 0xa9, // ldp x27, x28, [sp, #96]
                 0xfd, 0x7b, 0x47, 0xa9, // ldp x29, x30, [sp, #112]
-                0xff, 0x03, 0x02, 0x91, // add sp, sp, #128
+                0xe9, 0x2b, 0x48, 0x6d, // ldp d9, d10, [sp, #128]
+                0xeb, 0x33, 0x49, 0x6d, // ldp d11, d12, [sp, #144]
+                0xed, 0x3b, 0x4a, 0x6d, // ldp d13, d14, [sp, #160]
+                0xef, 0x43, 0x4b, 0x6d, // ldp d15, d16, [sp, #176]
+                0xf1, 0x4b, 0x4c, 0x6d, // ldp d17, d18, [sp, #192]
+                0xf3, 0x53, 0x4d, 0x6d, // ldp d19, d20, [sp, #208]
+                0xf5, 0x5b, 0x4e, 0x6d, // ldp d21, d22, [sp, #224]
+                0xf7, 0x63, 0x4f, 0x6d, // ldp d23, d24, [sp, #240]
+                0xf9, 0x6b, 0x50, 0x6d, // ldp d25, d26, [sp, #256]
+                0xfb, 0x73, 0x51, 0x6d, // ldp d27, d28, [sp, #272]
+                0xfd, 0x7b, 0x52, 0x6d, // ldp d29, d30, [sp, #288]
+                0xff, 0xc3, 0x04, 0x91, // add sp, sp, #304
             ]
         )
     }
@@ -2443,11 +2539,15 @@ final class CompilerM1v2Tests: CCompatTestCase {
         // 4 byte requirement should still be aligned to 16 byte boundary
         let mem1 = CpuOpBuffer()
         try sut.appendStackInit(_1_need16, args: _1_need16, builder: mem1, prologueSize: 0)
-        //mem1.hexPrint()
+//        mem1.hexPrint()
         XCTAssertEqual(
             [
-                0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
-                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
+                0xff, 0x43, 0x00, 0xd1, // sub sp, sp, #16
+                0x0f, 0x00, 0x80, 0xd2, // .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0xe0, 0xeb, 0x2f, 0xb8, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
             ],
             try BufferMapper(ctx: ctx, buffer: mem1).emitMachineCode()
         )
@@ -2455,29 +2555,67 @@ final class CompilerM1v2Tests: CCompatTestCase {
         // 16 byte requirement should not round to 32
         let mem2 = CpuOpBuffer()
         try sut.appendStackInit(_4_need16, args: _4_need16, builder: mem2, prologueSize: 0)
-        //mem2.hexPrint()
+//        mem2.hexPrint()
         XCTAssertEqual(
             [
-                0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
-                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
-                0xe1, 0x43, 0x00, 0xb8,  // str w1, [sp, #4]
-                0xe2, 0x83, 0x00, 0xb8,  // str w2, [sp, #8]
-                0xe3, 0xc3, 0x00, 0xb8,  // str w3, [sp, #12]
+                // Reserving 16 bytes for entire stack
+                0xff, 0x43, 0x00, 0xd1, // sub sp, sp, #16
+                0x0f, 0x00, 0x80, 0xd2, // .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0xe0, 0xeb, 0x2f, 0xb8, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x8f, 0x00, 0x80, 0xd2, // .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0xe1, 0xeb, 0x2f, 0xb8, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x01, 0x80, 0xd2, // .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0xe2, 0xeb, 0x2f, 0xb8, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x8f, 0x01, 0x80, 0xd2, // .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0xe3, 0xeb, 0x2f, 0xb8, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
             ],
             try BufferMapper(ctx: ctx, buffer: mem2).emitMachineCode()
         )
         // 20 byte requirement should round to 32
         let mem3 = CpuOpBuffer()
         try sut.appendStackInit(_5_need32, args: _5_need32, builder: mem3, prologueSize: 0)
-        
+//        mem3.hexPrint()
         XCTAssertEqual(
             [
-                0xff, 0x83, 0x00, 0xd1,  // sub sp, sp, #32
-                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
-                0xe1, 0x43, 0x00, 0xb8,  // str w1, [sp, #4]
-                0xe2, 0x83, 0x00, 0xb8,  // str w2, [sp, #8]
-                0xe3, 0xc3, 0x00, 0xb8,  // str w3, [sp, #12]
-                0xe4, 0x03, 0x01, 0xb8,  // str w4, [sp, #16]
+                // Reserving 32 bytes for entire stack
+                0xff, 0x83, 0x00, 0xd1, // sub sp, sp, #32
+                0x0f, 0x00, 0x80, 0xd2, // .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0xe0, 0xeb, 0x2f, 0xb8, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x8f, 0x00, 0x80, 0xd2, // .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0xe1, 0xeb, 0x2f, 0xb8, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x01, 0x80, 0xd2, // .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0xe2, 0xeb, 0x2f, 0xb8, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x8f, 0x01, 0x80, 0xd2, // .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0xe3, 0xeb, 0x2f, 0xb8, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x02, 0x80, 0xd2, // .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
+                0xe4, 0xeb, 0x2f, 0xb8, // ... .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
             ],
             try BufferMapper(ctx: ctx, buffer: mem3).emitMachineCode()
         )
@@ -2496,9 +2634,18 @@ final class CompilerM1v2Tests: CCompatTestCase {
         
         XCTAssertEqual(
             [
-                0xff, 0x43, 0x00, 0xd1,  // sub sp, sp, #16
-                0xe0, 0x03, 0x00, 0xb8,  // str w0, [sp, #0]
-                0xe1, 0x43, 0x00, 0xf8,  // str x1, [sp, #4]
+                // Reserving 16 bytes for entire stack
+                0xff, 0x43, 0x00, 0xd1, // sub sp, sp, #16
+                0x0f, 0x00, 0x80, 0xd2, // .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0xe0, 0xeb, 0x2f, 0xb8, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x8f, 0x00, 0x80, 0xd2, // .mov x15, #4\nstr x1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #4\nstr x1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #4\nstr x1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #4\nstr x1, [sp, x15, sxtx #0]
+                0xe1, 0xeb, 0x2f, 0xf8, // ... .mov x15, #4\nstr x1, [sp, x15, sxtx #0]
             ],
             try BufferMapper(ctx: ctx, buffer: mem).emitMachineCode()
         )
@@ -2514,43 +2661,91 @@ final class CompilerM1v2Tests: CCompatTestCase {
             builder: mem,
             prologueSize: 0
         )
-        mem.hexPrint()
+//        mem.hexPrint()
         XCTAssertEqual(
             [
                 // Reserving 48 bytes for entire stack
                 0xff, 0xc3, 0x00, 0xd1, // sub sp, sp, #48
-                0xe0, 0x03, 0x00, 0xb8, // str w0, [sp, #0]
-                0xe1, 0x43, 0x00, 0xb8, // str w1, [sp, #4]
-                0xe2, 0x83, 0x00, 0xb8, // str w2, [sp, #8]
-                0xe3, 0xc3, 0x00, 0xb8, // str w3, [sp, #12]
-                0xe4, 0x03, 0x01, 0xb8, // str w4, [sp, #16]
-                0xe5, 0x43, 0x01, 0xb8, // str w5, [sp, #20]
-                0xe6, 0x83, 0x01, 0xb8, // str w6, [sp, #24]
-                0xe7, 0xc3, 0x01, 0xb8, // str w7, [sp, #28]
-                0x01, 0x06, 0x80, 0xd2, // [.mov x1, #48, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xa0, 0xf2, // ... [.mov x1, #48, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xc0, 0xf2, // ... [.mov x1, #48, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xe0, 0xf2, // ... [.mov x1, #48, ldr w1, [sp, x1, sxtx #0]]
-                0xe1, 0xeb, 0x61, 0xb8, // ... [.mov x1, #48, ldr w1, [sp, x1, sxtx #0]]
-                0xe1, 0x03, 0x02, 0xb8, // str w1, [sp, #32]
-                0x81, 0x06, 0x80, 0xd2, // [.mov x1, #52, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xa0, 0xf2, // ... [.mov x1, #52, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xc0, 0xf2, // ... [.mov x1, #52, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xe0, 0xf2, // ... [.mov x1, #52, ldr w1, [sp, x1, sxtx #0]]
-                0xe1, 0xeb, 0x61, 0xb8, // ... [.mov x1, #52, ldr w1, [sp, x1, sxtx #0]]
-                0xe1, 0x43, 0x02, 0xb8, // str w1, [sp, #36]
-                0x01, 0x07, 0x80, 0xd2, // [.mov x1, #56, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xa0, 0xf2, // ... [.mov x1, #56, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xc0, 0xf2, // ... [.mov x1, #56, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xe0, 0xf2, // ... [.mov x1, #56, ldr w1, [sp, x1, sxtx #0]]
-                0xe1, 0xeb, 0x61, 0xb8, // ... [.mov x1, #56, ldr w1, [sp, x1, sxtx #0]]
-                0xe1, 0x83, 0x02, 0xb8, // str w1, [sp, #40]
-                0x81, 0x07, 0x80, 0xd2, // [.mov x1, #60, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xa0, 0xf2, // ... [.mov x1, #60, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xc0, 0xf2, // ... [.mov x1, #60, ldr w1, [sp, x1, sxtx #0]]
-                0x01, 0x00, 0xe0, 0xf2, // ... [.mov x1, #60, ldr w1, [sp, x1, sxtx #0]]
-                0xe1, 0xeb, 0x61, 0xb8, // ... [.mov x1, #60, ldr w1, [sp, x1, sxtx #0]]
-                0xe1, 0xc3, 0x02, 0xb8, // str w1, [sp, #44]
+                0x0f, 0x00, 0x80, 0xd2, // .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0xe0, 0xeb, 0x2f, 0xb8, // ... .mov x15, #0\nstr w0, [sp, x15, sxtx #0]
+                0x8f, 0x00, 0x80, 0xd2, // .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0xe1, 0xeb, 0x2f, 0xb8, // ... .mov x15, #4\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x01, 0x80, 0xd2, // .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0xe2, 0xeb, 0x2f, 0xb8, // ... .mov x15, #8\nstr w2, [sp, x15, sxtx #0]
+                0x8f, 0x01, 0x80, 0xd2, // .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0xe3, 0xeb, 0x2f, 0xb8, // ... .mov x15, #12\nstr w3, [sp, x15, sxtx #0]
+                0x0f, 0x02, 0x80, 0xd2, // .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
+                0xe4, 0xeb, 0x2f, 0xb8, // ... .mov x15, #16\nstr w4, [sp, x15, sxtx #0]
+                0x8f, 0x02, 0x80, 0xd2, // .mov x15, #20\nstr w5, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #20\nstr w5, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #20\nstr w5, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #20\nstr w5, [sp, x15, sxtx #0]
+                0xe5, 0xeb, 0x2f, 0xb8, // ... .mov x15, #20\nstr w5, [sp, x15, sxtx #0]
+                0x0f, 0x03, 0x80, 0xd2, // .mov x15, #24\nstr w6, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #24\nstr w6, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #24\nstr w6, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #24\nstr w6, [sp, x15, sxtx #0]
+                0xe6, 0xeb, 0x2f, 0xb8, // ... .mov x15, #24\nstr w6, [sp, x15, sxtx #0]
+                0x8f, 0x03, 0x80, 0xd2, // .mov x15, #28\nstr w7, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #28\nstr w7, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #28\nstr w7, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #28\nstr w7, [sp, x15, sxtx #0]
+                0xe7, 0xeb, 0x2f, 0xb8, // ... .mov x15, #28\nstr w7, [sp, x15, sxtx #0]
+                0x01, 0x06, 0x80, 0xd2, // .mov x1, #48\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xa0, 0xf2, // ... .mov x1, #48\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xc0, 0xf2, // ... .mov x1, #48\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xe0, 0xf2, // ... .mov x1, #48\nldr w1, [sp, x1, sxtx #0]
+                0xe1, 0xeb, 0x61, 0xb8, // ... .mov x1, #48\nldr w1, [sp, x1, sxtx #0]
+                0x0f, 0x04, 0x80, 0xd2, // .mov x15, #32\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #32\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #32\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #32\nstr w1, [sp, x15, sxtx #0]
+                0xe1, 0xeb, 0x2f, 0xb8, // ... .mov x15, #32\nstr w1, [sp, x15, sxtx #0]
+                0x81, 0x06, 0x80, 0xd2, // .mov x1, #52\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xa0, 0xf2, // ... .mov x1, #52\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xc0, 0xf2, // ... .mov x1, #52\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xe0, 0xf2, // ... .mov x1, #52\nldr w1, [sp, x1, sxtx #0]
+                0xe1, 0xeb, 0x61, 0xb8, // ... .mov x1, #52\nldr w1, [sp, x1, sxtx #0]
+                0x8f, 0x04, 0x80, 0xd2, // .mov x15, #36\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #36\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #36\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #36\nstr w1, [sp, x15, sxtx #0]
+                0xe1, 0xeb, 0x2f, 0xb8, // ... .mov x15, #36\nstr w1, [sp, x15, sxtx #0]
+                0x01, 0x07, 0x80, 0xd2, // .mov x1, #56\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xa0, 0xf2, // ... .mov x1, #56\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xc0, 0xf2, // ... .mov x1, #56\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xe0, 0xf2, // ... .mov x1, #56\nldr w1, [sp, x1, sxtx #0]
+                0xe1, 0xeb, 0x61, 0xb8, // ... .mov x1, #56\nldr w1, [sp, x1, sxtx #0]
+                0x0f, 0x05, 0x80, 0xd2, // .mov x15, #40\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #40\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #40\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #40\nstr w1, [sp, x15, sxtx #0]
+                0xe1, 0xeb, 0x2f, 0xb8, // ... .mov x15, #40\nstr w1, [sp, x15, sxtx #0]
+                0x81, 0x07, 0x80, 0xd2, // .mov x1, #60\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xa0, 0xf2, // ... .mov x1, #60\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xc0, 0xf2, // ... .mov x1, #60\nldr w1, [sp, x1, sxtx #0]
+                0x01, 0x00, 0xe0, 0xf2, // ... .mov x1, #60\nldr w1, [sp, x1, sxtx #0]
+                0xe1, 0xeb, 0x61, 0xb8, // ... .mov x1, #60\nldr w1, [sp, x1, sxtx #0]
+                0x8f, 0x05, 0x80, 0xd2, // .mov x15, #44\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xa0, 0xf2, // ... .mov x15, #44\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xc0, 0xf2, // ... .mov x15, #44\nstr w1, [sp, x15, sxtx #0]
+                0x0f, 0x00, 0xe0, 0xf2, // ... .mov x15, #44\nstr w1, [sp, x15, sxtx #0]
+                0xe1, 0xeb, 0x2f, 0xb8, // ... .mov x15, #44\nstr w1, [sp, x15, sxtx #0]
             ],
             try BufferMapper(ctx: ctx, buffer: mem).emitMachineCode()
         )
@@ -2590,7 +2785,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         XCTAssertEqual(
             [
                 // Printing debug message: Hello World
-                0xff, 0x83, 0x02, 0xd1, // sub sp, sp, #160
+                0xff, 0xc3, 0x03, 0xd1, // sub sp, sp, #240
                 0xe0, 0x83, 0x00, 0xf8, // str x0, [sp, #8]
                 0xf3, 0x03, 0x00, 0xf8, // str x19, [sp, #0]
                 0xe1, 0x0b, 0x01, 0xa9, // stp x1, x2, [sp, #16]
@@ -2602,8 +2797,13 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 0xed, 0x3b, 0x07, 0xa9, // stp x13, x14, [sp, #112]
                 0xef, 0x43, 0x08, 0xa9, // stp x15, x16, [sp, #128]
                 0xf1, 0x4b, 0x09, 0xa9, // stp x17, x18, [sp, #144]
+                0xe0, 0x07, 0x0a, 0x6d, // stp d0, d1, [sp, #160]
+                0xe2, 0x0f, 0x0b, 0x6d, // stp d2, d3, [sp, #176]
+                0xe4, 0x17, 0x0c, 0x6d, // stp d4, d5, [sp, #192]
+                0xe6, 0x1f, 0x0d, 0x6d, // stp d6, d7, [sp, #208]
+                0xe8, 0x27, 0x0e, 0x6d, // stp d8, d9, [sp, #224]
                 0x20, 0x00, 0x80, 0xd2, // movz x0, #1
-                0x21, 0x02, 0x00, 0x10, // adr x1, #68
+                0xc1, 0x02, 0x00, 0x10, // adr x1, #88
                 0xe2, 0x02, 0x80, 0xd2, // movz x2, #23
                 0x90, 0x00, 0x80, 0xd2, // movz x16, #4
                 0x01, 0x10, 0x00, 0xd4, // svc 0x0080
@@ -2618,7 +2818,12 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 0xed, 0x3b, 0x47, 0xa9, // ldp x13, x14, [sp, #112]
                 0xef, 0x43, 0x48, 0xa9, // ldp x15, x16, [sp, #128]
                 0xf1, 0x4b, 0x49, 0xa9, // ldp x17, x18, [sp, #144]
-                0xff, 0x83, 0x02, 0x91, // add sp, sp, #160
+                0xe0, 0x07, 0x4a, 0x6d, // ldp d0, d1, [sp, #160]
+                0xe2, 0x0f, 0x4b, 0x6d, // ldp d2, d3, [sp, #176]
+                0xe4, 0x17, 0x4c, 0x6d, // ldp d4, d5, [sp, #192]
+                0xe6, 0x1f, 0x4d, 0x6d, // ldp d6, d7, [sp, #208]
+                0xe8, 0x27, 0x4e, 0x6d, // ldp d8, d9, [sp, #224]
+                0xff, 0xc3, 0x03, 0x91, // add sp, sp, #240
                 0x07, 0x00, 0x00, 0x14, // b #28
                 0x5b, 0x6a, 0x69, 0x74, // [jit
                 0x64, 0x65, 0x62, 0x75, // debu
@@ -2698,6 +2903,57 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(36, entrypoint(4, 9))
             XCTAssertEqual(0, entrypoint(1, 0))
             XCTAssertEqual(-10, entrypoint(-5, 2))
+        }
+    }
+    
+    /// Test OUDiv. Remember: Haxe division result is always a float.
+    func testCompile__OUDiv() throws {
+        try _rf32__u8_u8(ops: [
+            .OUDiv(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2),
+        ], strip: false) { entrypoint in
+            
+            XCTAssertEqual(entrypoint(4, 2), 2.0)
+            XCTAssertEqual(entrypoint(-4, 2), 126.0)
+        }
+    }
+    
+    /// Test OSDiv. Remember: Haxe division result is always a float.
+    func testCompile__OSDiv() throws {
+        try _rf32__u8_u8(ops: [
+            .OSDiv(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2),
+        ], strip: false) { entrypoint in
+
+            XCTAssertEqual(entrypoint(4, 2), 2.0)
+            XCTAssertEqual(entrypoint(-4, 2), -2.0)
+        }
+
+        try _rf64__f64_f64(ops: [
+            .OSDiv(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2),
+        ], strip: false) { entrypoint in
+
+            XCTAssertEqual(entrypoint(4.0, 2.0), 2.0)
+            XCTAssertEqual(entrypoint(-4.0, 2.0), -2.0)
+        }
+        
+        try _rf32__f32_f32(ops: [
+            .OSDiv(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2),
+        ], strip: false) { entrypoint in
+
+            XCTAssertEqual(entrypoint(4.0, 2.0), 2.0)
+            XCTAssertEqual(entrypoint(-4.0, 2.0), -2.0)
+        }
+        
+        try _rf32__f32_i32(ops: [
+            .OSDiv(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2),
+        ], strip: false) { entrypoint in
+
+            XCTAssertEqual(entrypoint(4.0, 2), 2.0)
+            XCTAssertEqual(entrypoint(-4.0, 2), -2.0)
         }
     }
     

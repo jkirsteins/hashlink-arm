@@ -10,6 +10,9 @@ struct _StringX {
     let length: Int32
 }
 
+let FP_TYPE_KINDS = [HLTypeKind.f32, HLTypeKind.f64]
+let INTEGER_TYPE_KINDS = [HLTypeKind.u8, HLTypeKind.u16, HLTypeKind.i32, HLTypeKind.i64]
+let NUMERIC_TYPE_KINDS = FP_TYPE_KINDS + INTEGER_TYPE_KINDS
 
 protocol CompilerUtilities2 {
     func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer);
@@ -200,9 +203,93 @@ extension M1Compiler2 {
         return (StackInfo.roundUpStackReservation(result), stackArgs)
     }
     
+    func isInteger(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
+        return INTEGER_TYPE_KINDS.contains( (kinds[Int(vreg)] as (any HLTypeKindProvider)).kind )
+    }
+    
+    func isFP(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
+        return FP_TYPE_KINDS.contains( (kinds[Int(vreg)] as (any HLTypeKindProvider)).kind )
+    }
+    
+    func appendPrepareDoubleForStore(reg: RegisterFP64, to vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        switch(vregKind.hlRegSize) {
+        case 8:
+            // no op
+            break
+        case 4:
+            mem.append(M1Op.fcvt(reg.to32, reg))
+        default:
+            fatalError("Can't convert floating point to size \(vregKind.hlRegSize)")
+        }
+    }
+    
+    func appendFPRegToDouble(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        switch(vregKind.hlRegSize) {
+        case 8:
+            // no op
+            break
+        case 4:
+            mem.append(M1Op.fcvt(reg, reg.to32))
+        default:
+            fatalError("Can't convert floating point to size \(vregKind.hlRegSize)")
+        }
+    }
+    
+    func appendLoadNumeric(reg: Int, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        assertNumeric(reg: vreg, from: kinds)
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        if INTEGER_TYPE_KINDS.contains(vregKind) {
+            let reg = Register64(rawValue: UInt8(reg))!
+            appendLoad(reg: reg, from: vreg, kinds: kinds, mem: mem)
+        } else if FP_TYPE_KINDS.contains(vregKind) {
+            let reg = RegisterFP64(rawValue: UInt8(reg))!
+            appendLoad(reg: reg, from: vreg, kinds: kinds, mem: mem)
+        } else {
+            fatalError("Can't append numeric for \(vregKind)")
+        }
+    }
+    
     func appendLoad(reg: Register64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let offset = getRegStackOffset(kinds, vreg)
         appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
+    }
+    
+    func appendUcvtf(reg: Register64, to fp: RegisterFP64, target vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let tk = requireTypeKind(reg: vreg, from: kinds)
+        switch(tk.hlRegSize) {
+        case 8:
+            mem.append(M1Op.ucvtf(fp, reg))
+        case 4:
+            mem.append(M1Op.ucvtf(fp.to32, reg))
+        default:
+            fatalError("appendUcvtf not implemented for size \(tk.hlRegSize)")
+        }
+    }
+    
+    func appendScvtf(reg: Register64, to fp: RegisterFP64, target vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let tk = requireTypeKind(reg: vreg, from: kinds)
+        switch(tk.hlRegSize) {
+        case 8:
+            mem.append(M1Op.scvtf(fp, reg))
+        case 4:
+            mem.append(M1Op.scvtf(fp.to32, reg))
+        default:
+            fatalError("appendScvtf not implemented for size \(tk.hlRegSize)")
+        }
+    }
+    
+    func appendFcvtzs(reg: RegisterFP64, to gp: Register64, target vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let tk = requireTypeKind(reg: vreg, from: kinds)
+        switch(tk.hlRegSize) {
+        case 8:
+            mem.append(M1Op.fcvtzs(gp, reg))
+        case 4:
+            mem.append(M1Op.fcvtzs(gp.to32, reg))
+        default:
+            fatalError("appendFcvtzs not implemented for size \(tk.hlRegSize)")
+        }
     }
     
     func appendLoad(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
@@ -264,10 +351,9 @@ extension M1Compiler2 {
                 M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
             )
         } else if vregKind.hlRegSize == 4 {
-            fatalError("32-bit load not implemented for fp registers")
-//            mem.append(
-//                M1Op.ldr(reg.to32, .reg64offset(.sp, offset, nil))
-//            )
+            mem.append(
+                M1Op.ldr(reg.to32, .reg64offset(.sp, offset, nil))
+            )
         } else if vregKind.hlRegSize == 2 {
             fatalError("16-bit load not implemented for fp registers")
 //            mem.append(
@@ -356,11 +442,10 @@ extension M1Compiler2 {
                 M1Op.str(reg, .reg64offset(.sp, offset, nil))
             )
         } else if vregKind.hlRegSize == 4 {
-            fatalError("32-bit str not implemented for fp registers")
-//            mem.append(
-//                PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
-//                M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
-//            )
+            mem.append(
+                PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
+                M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
+            )
         } else if vregKind.hlRegSize == 2 {
             fatalError("16-bit str not implemented for fp registers")
 //            mem.append(
@@ -458,21 +543,53 @@ extension M1Compiler2 {
         var overflowOffset: ByteCount = stackInfo.total + prologueSize // for regs passed in via stack
         
         // Now move all data from (stack/registers) to (stack) in the expected layout
-        for (ix, reg) in unfilteredRegs.filter({ $0.hlRegSize > 0 }).enumerated() {
+        // Keep track of general-purpose and floating-point registers separately
+        var gpIx = 0
+        var fpIx = 0
+        for (rix, reg) in unfilteredRegs.filter({ $0.hlRegSize > 0 }).enumerated() {
 
             Swift.assert(reg.hlRegSize > 0, "empty registers have to be filtered out earlier to not affect register index")
-
-            let needLoad = ix >= ARG_REGISTER_COUNT
-            let regToUse: Register64 = needLoad ? .x1 : Register64(rawValue: UInt8(ix))!
-            switch (needLoad, reg.hlRegSize) {
-            case (false, _):
+            
+            let isFpReg = FP_TYPE_KINDS.contains(reg.kind)
+            let needLoad = (isFpReg && fpIx >= ARG_REGISTER_COUNT) || (!isFpReg && gpIx >= ARG_REGISTER_COUNT)
+            
+            let regToUse = needLoad ? (1) : (isFpReg ? fpIx : gpIx)
+            defer {
+                if isFpReg {
+                    fpIx+=1
+                } else {
+                    gpIx+=1
+                }
+            }
+            
+            switch (needLoad, isFpReg, reg.hlRegSize) {
+            case (false, _, _):
                 break
-            case (true, let regSize):
-                builder.append(PseudoOp.ldrVreg(regToUse, overflowOffset, regSize))
+            case (true, true/*is fp*/, let regSize):
+                // floating point register
+                fatalError("TODO: add a test for loading FP properly")
+                builder.append(PseudoOp.ldrVregFP(RegisterFP64(rawValue: UInt8(regToUse))!, X.x15, overflowOffset, regSize))
+                overflowOffset += regSize
+            case (true, false/*is !fp*/, let regSize):
+                // general purpose register
+                builder.append(PseudoOp.ldrVreg(Register64(rawValue: UInt8(regToUse))!, overflowOffset, regSize))
                 overflowOffset += regSize
             }
 
-            builder.append(PseudoOp.strVreg(regToUse, offset, reg.hlRegSize))
+            if isFpReg {
+                let fpreg = RegisterFP64(rawValue: UInt8(regToUse))!
+                
+                // we can't use 64-bit or 32-bit interchangeably
+                // convert ?argsize? to 64-bit register
+                appendFPRegToDouble(reg: fpreg, from: Reg(rix), kinds: unfilteredRegs, mem: builder)
+                
+                // now that we know the value is in 64-bit,
+                // we can store in stack
+                appendPrepareDoubleForStore(reg: fpreg, to: Reg(rix), kinds: unfilteredRegs, mem: builder)
+                builder.append(PseudoOp.strVregFP(fpreg, X.x15, offset, reg.hlRegSize))
+            } else {
+                builder.append(PseudoOp.strVreg(Register64(rawValue: UInt8(regToUse))!, X.x15, offset, reg.hlRegSize))
+            }
 
             offset += reg.hlRegSize
         }
@@ -506,7 +623,8 @@ extension M1Compiler2 {
         
         builder.append(
             // Stash registers we'll use (so we can reset)
-            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(176)),
+            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(256)),
+            
             M1Op.str(Register64.x0, .reg64offset(.sp, 8, nil)),
             M1Op.str(reg, .reg64offset(.sp, 0, nil)),
             M1Op.stp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
@@ -518,7 +636,14 @@ extension M1Compiler2 {
             M1Op.stp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
             M1Op.stp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
             M1Op.stp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
-            M1Op.stp((Register64.x29_fp, Register64.x30_lr), .reg64offset(.sp, 160, nil))
+            M1Op.stp((Register64.x29_fp, Register64.x30_lr), .reg64offset(.sp, 160, nil)),
+            
+            M1Op.stp((D.d0, D.d1), .reg64offset(.sp, 176, nil)),
+            M1Op.stp((D.d2, D.d3), .reg64offset(.sp, 192, nil)),
+            M1Op.stp((D.d4, D.d5), .reg64offset(.sp, 208, nil)),
+            M1Op.stp((D.d6, D.d7), .reg64offset(.sp, 224, nil)),
+            M1Op.stp((D.d8, D.d9), .reg64offset(.sp, 240, nil))
+
         )
         adr.start(at: builder.byteSize)
         builder.append(M1Op.adr64(.x0, adr))
@@ -538,7 +663,98 @@ extension M1Compiler2 {
             M1Op.ldp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
             M1Op.ldp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
             M1Op.ldp((Register64.x29_fp, Register64.x30_lr), .reg64offset(.sp, 160, nil)),
-            try! M1Op._add(X.sp, X.sp, 176)
+            
+            M1Op.ldp((D.d0, D.d1), .reg64offset(.sp, 176, nil)),
+            M1Op.ldp((D.d2, D.d3), .reg64offset(.sp, 192, nil)),
+            M1Op.ldp((D.d4, D.d5), .reg64offset(.sp, 208, nil)),
+            M1Op.ldp((D.d6, D.d7), .reg64offset(.sp, 224, nil)),
+            M1Op.ldp((D.d8, D.d9), .reg64offset(.sp, 240, nil)),
+
+            try! M1Op._add(X.sp, X.sp, 256)
+        )
+        
+        jmpTarget.start(at: builder.byteSize)
+        builder.append(M1Op.b(jmpTarget))
+        adr.stop(at: builder.byteSize)
+        builder.append(PseudoOp.ascii(str)).align(4)
+
+        Swift.assert(builder.byteSize % 4 == 0)
+        jmpTarget.stop(at: builder.byteSize)
+    }
+    
+    func appendDebugPrintRegisterAligned4(_ reg: RegisterFP64, prepend: String? = nil, builder: CpuOpBuffer) {
+        guard let printfAddr = dlsym(dlopen(nil, RTLD_LAZY), "printf") else {
+            fatalError("No printf addr")
+        }
+        
+        var adr = RelativeDeferredOffset()
+        var jmpTarget = RelativeDeferredOffset()
+        let str: String
+        if let prepend = prepend {
+            str = "[jitdebug] [\(prepend)] Register \(reg): %f\n\0"
+        } else {
+            str = "[jitdebug] Register \(reg): %f\n\0"
+        }
+        
+        guard stripDebugMessages == false else {
+            builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
+            return
+        }
+        builder.append(PseudoOp.debugMarker("Printing debug register: \(reg)"))
+        
+        guard reg.rawValue <= D.d9.rawValue else {
+            fatalError("reg \(reg) not supported")
+        }
+        
+        builder.append(
+            // Stash registers we'll use (so we can reset)
+            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(256)),
+            
+            M1Op.str(Register64.x0, .reg64offset(.sp, 8, nil)),
+            M1Op.str(reg, .reg64offset(.sp, 0, nil)),
+            M1Op.stp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
+            M1Op.stp((Register64.x3, Register64.x4), .reg64offset(.sp, 32, nil)),
+            M1Op.stp((Register64.x5, Register64.x6), .reg64offset(.sp, 48, nil)),
+            M1Op.stp((Register64.x7, Register64.x8), .reg64offset(.sp, 64, nil)),
+            M1Op.stp((Register64.x9, Register64.x10), .reg64offset(.sp, 80, nil)),
+            M1Op.stp((Register64.x11, Register64.x12), .reg64offset(.sp, 96, nil)),
+            M1Op.stp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
+            M1Op.stp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
+            M1Op.stp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
+            M1Op.stp((Register64.x29_fp, Register64.x30_lr), .reg64offset(.sp, 160, nil)),
+            
+            M1Op.stp((D.d0, D.d1), .reg64offset(.sp, 176, nil)),
+            M1Op.stp((D.d2, D.d3), .reg64offset(.sp, 192, nil)),
+            M1Op.stp((D.d4, D.d5), .reg64offset(.sp, 208, nil)),
+            M1Op.stp((D.d6, D.d7), .reg64offset(.sp, 224, nil)),
+            M1Op.stp((D.d8, D.d9), .reg64offset(.sp, 240, nil))
+        )
+        adr.start(at: builder.byteSize)
+        builder.append(M1Op.adr64(.x0, adr))
+        
+        builder.append(
+            PseudoOp.mov(.x16, printfAddr),
+            M1Op.blr(.x16),
+//            // restore
+            M1Op.ldr(Register64.x0, .reg64offset(.sp, 8, nil)),
+            M1Op.ldp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
+            M1Op.ldp((Register64.x3, Register64.x4), .reg64offset(.sp, 32, nil)),
+            M1Op.ldp((Register64.x5, Register64.x6), .reg64offset(.sp, 48, nil)),
+            M1Op.ldp((Register64.x7, Register64.x8), .reg64offset(.sp, 64, nil)),
+            M1Op.ldp((Register64.x9, Register64.x10), .reg64offset(.sp, 80, nil)),
+            M1Op.ldp((Register64.x11, Register64.x12), .reg64offset(.sp, 96, nil)),
+            M1Op.ldp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
+            M1Op.ldp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
+            M1Op.ldp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
+            M1Op.ldp((Register64.x29_fp, Register64.x30_lr), .reg64offset(.sp, 160, nil)),
+            
+            M1Op.ldp((D.d0, D.d1), .reg64offset(.sp, 176, nil)),
+            M1Op.ldp((D.d2, D.d3), .reg64offset(.sp, 192, nil)),
+            M1Op.ldp((D.d4, D.d5), .reg64offset(.sp, 208, nil)),
+            M1Op.ldp((D.d6, D.d7), .reg64offset(.sp, 224, nil)),
+            M1Op.ldp((D.d8, D.d9), .reg64offset(.sp, 240, nil)),
+            
+            try! M1Op._add(X.sp, X.sp, 256)
         )
         
         jmpTarget.start(at: builder.byteSize)
@@ -561,7 +777,7 @@ extension M1Compiler2 {
         }
         builder.append(
             // Stash registers we'll use (so we can reset)
-            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(160)),
+            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(240)),
             M1Op.str(Register64.x0, .reg64offset(.sp, 8, nil)),
             M1Op.str(Register64.x19, .reg64offset(.sp, 0, nil)),
             M1Op.stp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
@@ -572,7 +788,13 @@ extension M1Compiler2 {
             M1Op.stp((Register64.x11, Register64.x12), .reg64offset(.sp, 96, nil)),
             M1Op.stp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
             M1Op.stp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
-            M1Op.stp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil))
+            M1Op.stp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
+            
+            M1Op.stp((D.d0, D.d1), .reg64offset(.sp, 160, nil)),
+            M1Op.stp((D.d2, D.d3), .reg64offset(.sp, 176, nil)),
+            M1Op.stp((D.d4, D.d5), .reg64offset(.sp, 192, nil)),
+            M1Op.stp((D.d6, D.d7), .reg64offset(.sp, 208, nil)),
+            M1Op.stp((D.d8, D.d9), .reg64offset(.sp, 224, nil))
         )
         
         builder.append(
@@ -598,7 +820,14 @@ extension M1Compiler2 {
             M1Op.ldp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
             M1Op.ldp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
             M1Op.ldp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
-            try! M1Op._add(X.sp, X.sp, 160)
+            
+            M1Op.ldp((D.d0, D.d1), .reg64offset(.sp, 160, nil)),
+            M1Op.ldp((D.d2, D.d3), .reg64offset(.sp, 176, nil)),
+            M1Op.ldp((D.d4, D.d5), .reg64offset(.sp, 192, nil)),
+            M1Op.ldp((D.d6, D.d7), .reg64offset(.sp, 208, nil)),
+            M1Op.ldp((D.d8, D.d9), .reg64offset(.sp, 224, nil)),
+            
+            try! M1Op._add(X.sp, X.sp, 240)
         )
         jmpTarget.start(at: builder.byteSize)
         builder.append(M1Op.b(jmpTarget))
@@ -627,21 +856,33 @@ extension M1Compiler2 {
     func appendPrologue(builder: CpuOpBuffer) -> ByteCount {
         appendDebugPrintAligned4("Starting prologue", builder: builder)
 
-        let stackReservation: ByteCount = 128
+        let stackReservation: ByteCount = 304
         
         // Storing all non-corruptible registers so we don't have to keep track of them
         // during the execution. Potential optimization here.
         builder.append(
             M1Op.subImm12(X.sp, X.sp, try! Imm12Lsl12(stackReservation)),
             
-            M1Op.stp((.x15, .x16), .reg64offset(.sp, 0, nil)),
-            M1Op.stp((.x17, .x18), .reg64offset(.sp, 16, nil)),
-            M1Op.stp((.x19, .x20), .reg64offset(.sp, 32, nil)),
-            M1Op.stp((.x21, .x22), .reg64offset(.sp, 48, nil)),
-            M1Op.stp((.x23, .x24), .reg64offset(.sp, 64, nil)),
-            M1Op.stp((.x25, .x26), .reg64offset(.sp, 80, nil)),
-            M1Op.stp((.x27, .x28), .reg64offset(.sp, 96, nil)),
-            M1Op.stp((.x29_fp, .x30_lr), .reg64offset(.sp, 112, nil)),
+            M1Op.stp((X.x15, X.x16), .reg64offset(.sp, 0, nil)),
+            M1Op.stp((X.x17, X.x18), .reg64offset(.sp, 16, nil)),
+            M1Op.stp((X.x19, X.x20), .reg64offset(.sp, 32, nil)),
+            M1Op.stp((X.x21, X.x22), .reg64offset(.sp, 48, nil)),
+            M1Op.stp((X.x23, X.x24), .reg64offset(.sp, 64, nil)),
+            M1Op.stp((X.x25, X.x26), .reg64offset(.sp, 80, nil)),
+            M1Op.stp((X.x27, X.x28), .reg64offset(.sp, 96, nil)),
+            M1Op.stp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 112, nil)),
+            
+            M1Op.stp((D.d9, D.d10), .reg64offset(.sp, 128, nil)),
+            M1Op.stp((D.d11, D.d12), .reg64offset(.sp, 144, nil)),
+            M1Op.stp((D.d13, D.d14), .reg64offset(.sp, 160, nil)),
+            M1Op.stp((D.d15, D.d16), .reg64offset(.sp, 176, nil)),
+            M1Op.stp((D.d17, D.d18), .reg64offset(.sp, 192, nil)),
+            M1Op.stp((D.d19, D.d20), .reg64offset(.sp, 208, nil)),
+            M1Op.stp((D.d21, D.d22), .reg64offset(.sp, 224, nil)),
+            M1Op.stp((D.d23, D.d24), .reg64offset(.sp, 240, nil)),
+            M1Op.stp((D.d25, D.d26), .reg64offset(.sp, 256, nil)),
+            M1Op.stp((D.d27, D.d28), .reg64offset(.sp, 272, nil)),
+            M1Op.stp((D.d29, D.d30), .reg64offset(.sp, 288, nil)),
             
             M1Op.movr64(.x29_fp, .sp)
         )
@@ -651,16 +892,28 @@ extension M1Compiler2 {
     func appendEpilogue(builder: CpuOpBuffer) {
         appendDebugPrintAligned4("Starting epilogue", builder: builder)
         builder.append(
-            M1Op.ldp((.x15, .x16), .reg64offset(.sp, 0, nil)),
-            M1Op.ldp((.x17, .x18), .reg64offset(.sp, 16, nil)),
-            M1Op.ldp((.x19, .x20), .reg64offset(.sp, 32, nil)),
-            M1Op.ldp((.x21, .x22), .reg64offset(.sp, 48, nil)),
-            M1Op.ldp((.x23, .x24), .reg64offset(.sp, 64, nil)),
-            M1Op.ldp((.x25, .x26), .reg64offset(.sp, 80, nil)),
-            M1Op.ldp((.x27, .x28), .reg64offset(.sp, 96, nil)),
-            M1Op.ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 112, nil)),
+            M1Op.ldp((X.x15, X.x16), .reg64offset(.sp, 0, nil)),
+            M1Op.ldp((X.x17, X.x18), .reg64offset(.sp, 16, nil)),
+            M1Op.ldp((X.x19, X.x20), .reg64offset(.sp, 32, nil)),
+            M1Op.ldp((X.x21, X.x22), .reg64offset(.sp, 48, nil)),
+            M1Op.ldp((X.x23, X.x24), .reg64offset(.sp, 64, nil)),
+            M1Op.ldp((X.x25, X.x26), .reg64offset(.sp, 80, nil)),
+            M1Op.ldp((X.x27, X.x28), .reg64offset(.sp, 96, nil)),
+            M1Op.ldp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 112, nil)),
             
-            try! M1Op._add(X.sp, X.sp, 128)
+            M1Op.ldp((D.d9, D.d10), .reg64offset(.sp, 128, nil)),
+            M1Op.ldp((D.d11, D.d12), .reg64offset(.sp, 144, nil)),
+            M1Op.ldp((D.d13, D.d14), .reg64offset(.sp, 160, nil)),
+            M1Op.ldp((D.d15, D.d16), .reg64offset(.sp, 176, nil)),
+            M1Op.ldp((D.d17, D.d18), .reg64offset(.sp, 192, nil)),
+            M1Op.ldp((D.d19, D.d20), .reg64offset(.sp, 208, nil)),
+            M1Op.ldp((D.d21, D.d22), .reg64offset(.sp, 224, nil)),
+            M1Op.ldp((D.d23, D.d24), .reg64offset(.sp, 240, nil)),
+            M1Op.ldp((D.d25, D.d26), .reg64offset(.sp, 256, nil)),
+            M1Op.ldp((D.d27, D.d28), .reg64offset(.sp, 272, nil)),
+            M1Op.ldp((D.d29, D.d30), .reg64offset(.sp, 288, nil)),
+            
+            try! M1Op._add(X.sp, X.sp, 304)
         )
         appendDebugPrintAligned4("Finished epilogue", builder: builder)
     }
@@ -794,6 +1047,18 @@ class M1Compiler2 {
                 "Register \(reg) expected to be \(type.kind) but is \(from[Int(reg)])"
             )
         }
+    }
+    
+    func assertFP(reg: Reg, from: [any HLTypeKindProvider]) {
+        assert(reg: reg, from: from, in: FP_TYPE_KINDS)
+    }
+    
+    func assertNumeric(reg: Reg, from: [any HLTypeKindProvider]) {
+        assert(reg: reg, from: from, in: NUMERIC_TYPE_KINDS)
+    }
+    
+    func assertInteger(reg: Reg, from: [any HLTypeKindProvider]) {
+        assert(reg: reg, from: from, in: INTEGER_TYPE_KINDS)
     }
     
     func assert(reg: Reg, from: [any HLTypeKindProvider], is target: any HLTypeKindProvider) {
@@ -942,7 +1207,7 @@ class M1Compiler2 {
                 let dstKind = requireTypeKind(reg: dst, from: regs)
                 
                 if dstKind.hlRegSize > 0 {
-                    if dstKind.kind == .f64 || dstKind.kind == .f32 {
+                    if isFP(vreg: dst, kinds: regs) {
                         appendDebugPrintAligned4("Returning FP stack offset \(dstStackOffset)", builder: mem)
                         appendLoad(reg: D.d0, from: dst, kinds: regs, mem: mem)
                     } else {
@@ -977,7 +1242,7 @@ class M1Compiler2 {
                     PseudoOp.debugMarker("Call0 fn@\(funRef) -> \(dst)"),
                     PseudoOp.mov(.x10, fn.address),
                     M1Op.blr(.x10),
-                    PseudoOp.strVreg(X.x0, dstStackOffset, dstKind.hlRegSize)
+                    PseudoOp.strVreg(X.x0, X.x15, dstStackOffset, dstKind.hlRegSize)
                 )
             case .OCall1(let dst, let fun, let arg0):
                 if currentInstruction == 1 && compilable.findex == 231 {
@@ -2071,6 +2336,78 @@ class M1Compiler2 {
                 
                 mem.append(M1Op.mul(X.x0, X.x0, X.x1))
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OUDiv(let dst, let a, let b):
+                // UDiv only defined for integer types
+                // See: https://haxe.org/blog/hashlink-in-depth-p2/
+                fallthrough
+            case .OSDiv(let dst, let a, let b) where isInteger(vreg: a, kinds: regs) && isInteger(vreg: b, kinds: regs):
+                assertFP(reg: dst, from: regs)
+                assertInteger(reg: a, from: regs)
+                assertInteger(reg: b, from: regs)
+                
+                appendLoadNumeric(reg: 0, from: a, kinds: regs, mem: mem)
+                appendLoadNumeric(reg: 1, from: b, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(op.id)", builder: mem)
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(op.id)", builder: mem)
+                
+                if case .OUDiv = op {
+                    appendSignMode(false, reg: X.x0, from: a, kinds: regs, mem: mem)
+                    appendSignMode(false, reg: X.x1, from: b, kinds: regs, mem: mem)
+                    mem.append(M1Op.udiv(X.x0, X.x0, X.x1))
+                } else if case .OSDiv = op {
+                    appendSignMode(true, reg: X.x0, from: a, kinds: regs, mem: mem)
+                    appendSignMode(true, reg: X.x1, from: b, kinds: regs, mem: mem)
+                    mem.append(M1Op.sdiv(X.x0, X.x0, X.x1))
+                } else {
+                    fatalError("Invalid op for div (to determine udiv/sdiv)")
+                }
+                
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(op.id) res (before float)", builder: mem)
+                
+                if case .OUDiv = op {
+                    appendUcvtf(reg: X.x0, to: D.d0, target: dst, kinds: regs, mem: mem)
+                } else if case .OSDiv = op {
+                    appendScvtf(reg: X.x0, to: D.d0, target: dst, kinds: regs, mem: mem)
+                } else {
+                    fatalError("Invalid op for div (to determine how to convert to float)")
+                }
+                
+                appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                
+            case .OSDiv(let dst, let a, let b) where isFP(vreg: a, kinds: regs) && isFP(vreg: b, kinds: regs):
+                assertFP(reg: dst, from: regs)
+                appendLoad(reg: D.d0, from: a, kinds: regs, mem: mem)
+                appendLoad(reg: D.d1, from: b, kinds: regs, mem: mem)
+                
+                appendFPRegToDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
+                appendFPRegToDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSDiv a", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d1, prepend: "OSDiv b", builder: mem)
+                mem.append(M1Op.fdiv(D.d0, D.d0, D.d1))
+                appendPrepareDoubleForStore(reg: D.d0, to: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSDiv result", builder: mem)
+                appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+            case .OSDiv(let dst, let a, let b):
+                assertFP(reg: dst, from: regs)
+                
+                // load ?0 and convert to d0
+                appendLoadNumeric(reg: 0, from: a, kinds: regs, mem: mem)
+                if isInteger(vreg: a, kinds: regs) {
+                    appendScvtf(reg: X.x0, to: D.d0, target: a, kinds: regs, mem: mem)
+                }
+                appendFPRegToDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
+                
+                // load ?1 and convert to d1
+                appendLoadNumeric(reg: 1, from: b, kinds: regs, mem: mem)
+                if isInteger(vreg: b, kinds: regs) {
+                    appendScvtf(reg: X.x1, to: D.d1, target: b, kinds: regs, mem: mem)
+                }
+                appendFPRegToDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
+                
+                mem.append(M1Op.fdiv(D.d0, D.d0, D.d1))
+                
+                appendPrepareDoubleForStore(reg: D.d0, to: dst, kinds: regs, mem: mem)
+                appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
             case .OToSFloat(let dst, let src):
                 fallthrough
             case .OToInt(let dst, let src):

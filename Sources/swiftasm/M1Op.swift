@@ -12,7 +12,7 @@ protocol CpuOp : CustomAsmStringConvertible {
 extension M1Op {
     func resolveFinalForm() throws -> M1Op {
         switch(self) {
-        case .str(let Rt_double as any RegisterFP, .reg64offset(let Rn, let offsetCount, nil)) where Rt_double.double && (offsetCount % 8) != 0:
+        case .str(let Rt_double as any RegisterFP, .reg64offset(let Rn, let offsetCount, nil)) where ((Rt_double.double && (offsetCount % 8) != 0) || (Rt_double.single && (offsetCount % 4) != 0)):
             return .stur(Rt_double, Rn, Int16(offsetCount))
         case .str(let Rti as any RegisterI, .reg64offset(let Rn, let offsetCount, nil)) where offsetCount >= -256 && offsetCount < 256:
             return .stur(Rti, Rn, Int16(offsetCount))
@@ -64,7 +64,7 @@ extension M1Op {
             return .subs(W.wZR, Rn, .reg32shift(Rm as! Register32, nil))
         case .cmp(let Rn, let Rm) where !Rn.is32 && !Rm.is32:
             return .subs(X.sp, Rn, .reg64shift(Rm as! Register64, nil))
-        case .ldr(let Rt as any RegisterFP, .reg64offset(let Rn, let offsetCount, nil)) where (offsetCount % 8) != 0:
+        case .ldr(let Rt as any RegisterFP, .reg64offset(let Rn, let offsetCount, nil)) where ((Rt.double && offsetCount % 8 != 0) || (Rt.single && offsetCount % 4 != 0)):
             let imm9 = try Immediate9(offsetCount)
             return .ldur(Rt, Rn, imm9)
         case .ldr(let Rt as any RegisterI, .reg64offset(let Rn, let offsetCount, nil)) where offsetCount >= -256 && offsetCount < 256 && ((Rt.is32 && offsetCount % 4 != 0) || (Rt.is64 && offsetCount % 8 != 0)):
@@ -359,8 +359,18 @@ enum M1Op : CpuOp {
             return "fcvtzs \(Rt), \(Rn)"
         case .scvtf(let Rt, let Rn):
             return "scvtf \(Rt), \(Rn)"
+        case .ucvtf(let Rt, let Rn):
+            return "ucvtf \(Rt), \(Rn)"
         case .asr(_, _, .immediate6(_)):
             fatalError("asr can't have signed immediate6")
+        case .sdiv(let Rt, let Rn, let Rm):
+            return "sdiv \(Rt), \(Rn), \(Rm)"
+        case .udiv(let Rt, let Rn, let Rm):
+            return "udiv \(Rt), \(Rn), \(Rm)"
+        case .fdiv(let Rt, let Rn, let Rm):
+            return "fdiv \(Rt), \(Rn), \(Rm)"
+        case .fcvt(let Rt, let Rn):
+            return "fcvt \(Rt), \(Rn)"
         }
     }
     
@@ -415,6 +425,10 @@ enum M1Op : CpuOp {
     // deprecated
     case addImm12(any RegisterI, any RegisterI, Imm12Lsl12) // negative -> alias for sub
     case add(any RegisterI, any RegisterI, RegModifier?)
+    
+    case udiv(any RegisterI, any RegisterI, any RegisterI)
+    case sdiv(any RegisterI, any RegisterI, any RegisterI)
+    case fdiv(any RegisterFP, any RegisterFP, any RegisterFP)
     
     case b(RelativeOffset) // 26 bits max
     case b_v2(Immediate26) // 26 bits max
@@ -501,10 +515,12 @@ enum M1Op : CpuOp {
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOVK--Move-wide-with-keep-
     case movk64(Register64, UInt16, Register64.Shift?)
     
-    case stp((Register64, Register64), Offset)
+    case fcvt(any RegisterFP, any RegisterFP)
+    
+    case stp((any Register, any Register), Offset)
     
     // https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/LDP--Load-Pair-of-Registers-?lang=en
-    case ldp((Register64, Register64), Offset)
+    case ldp((any Register, any Register), Offset)
     
     /*
      # LDR (immediate)
@@ -542,6 +558,7 @@ enum M1Op : CpuOp {
     // https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FCVTZS--vector--integer---Floating-point-Convert-to-Signed-integer--rounding-toward-Zero--vector--?lang=en
     case fcvtzs(any RegisterI, any RegisterFP)
     case scvtf(any RegisterFP, any RegisterI)
+    case ucvtf(any RegisterFP, any RegisterI)
 }
 
 

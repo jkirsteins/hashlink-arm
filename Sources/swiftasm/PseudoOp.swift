@@ -7,9 +7,11 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
     
     // load value from SP+offset using the correct size of the reg
     case ldrVreg(Register64, /*offset from sp*/ByteCount, /*vreg size*/ByteCount)
+    case ldrVregFP(RegisterFP64, /*reg to hold offset*/Register64, /*offset from sp*/ByteCount, /*vreg size*/ByteCount)
     
     // store value at SP+offset using the correct size of the reg
-    case strVreg(Register64, /*offset from sp*/ByteCount, /*vreg size*/ByteCount)
+    case strVreg(Register64, /*reg to hold offset*/Register64, /*offset from sp*/ByteCount, /*vreg size*/ByteCount)
+    case strVregFP(RegisterFP64, /*reg to hold offset*/Register64, /*offset from sp*/ByteCount, /*vreg size*/ByteCount)
     
     case deferred(ByteCount, () throws->CpuOp)
     
@@ -35,8 +37,12 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
         switch(self) {
         case .ldrVreg(let reg, let off, let s):
             return Self._ldrVreg(reg, off, s).reduce(0) { $0 + $1.size }
-        case .strVreg(let reg, let off, let s):
-            return Self._strVreg(reg, off, s).size
+        case .ldrVregFP(let reg, let regOffset, let off, let s):
+            return Self._ldrVregFP(reg, regOffset, off, s).reduce(0) { $0 + $1.size }
+        case .strVreg(let reg, let offsetReg, let off, let s):
+            return Self._strVreg(reg, offsetReg, off, s).reduce(0) { $0 + $1.size }
+        case .strVregFP(let reg, let regOffset, let off, let s):
+            return Self._strVregFP(reg, regOffset, off, s).reduce(0) { $0 + $1.size }
         case .deferred(let size, _):
             return size
         case .debugMarker:
@@ -59,8 +65,12 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
         case .zero: return ".zero"
         case .ldrVreg(let reg, let offset, let regSize):
             return Self._ldrVreg(reg, offset, regSize).map { $0.asmDescription }.joined(separator: "\n")
-        case .strVreg(let reg, let offset, let regSize):
-            return Self._strVreg(reg, offset, regSize).asmDescription
+        case .ldrVregFP(let reg, let regOffset, let offset, let regSize):
+            return Self._ldrVregFP(reg, regOffset, offset, regSize).map { $0.asmDescription }.joined(separator: "\n")
+        case .strVreg(let reg, let offsetReg, let offset, let regSize):
+            return Self._strVreg(reg, offsetReg, offset, regSize).map { $0.asmDescription }.joined(separator: "\n")
+        case .strVregFP(let reg, let regOffset, let offset, let regSize):
+            return Self._strVregFP(reg, regOffset, offset, regSize).map { $0.asmDescription }.joined(separator: "\n")
         case .ascii(let val):
             return ".ascii(\(val))"
         }
@@ -87,24 +97,77 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
         return result
     }
     
-    static func _strVreg(_ reg: Register64, _ offset: ByteCount, _ regSize: ByteCount) -> M1Op {
+    static func _ldrVregFP(_ reg: RegisterFP64, _ offsetReg: Register64, _ offset: ByteCount, _ regSize: ByteCount) -> [any CpuOp] {
+        var result: [any CpuOp] = [
+            PseudoOp.mov(offsetReg, offset)
+        ]
         switch(regSize) {
-        case 8: return M1Op.str(reg, .reg64offset(.sp, offset, nil))
-        case 4: return M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
-        case 2: return M1Op.strh(reg.to32, .imm64(.sp, offset, nil))
-        case 1: return M1Op.strb(reg.to32, .imm64(.sp, offset, nil))
-        case 0: return M1Op.nop
+        case 8:
+            result.append(M1Op.ldr(reg, .reg(X.sp, .r64ext(offsetReg, .sxtx(0)))))
+        case 4:
+            result.append(M1Op.ldr(reg.to32, .reg(X.sp, .r64ext(offsetReg, .sxtx(0)))))
+        case 2:
+            fatalError("_ldrVregFP not implemented for size 2")
+        case 1:
+            fatalError("_ldrVregFP not implemented for size 1")
+        case 0:
+            result.append(M1Op.nop)
         default:
             fatalError("Unsupported vreg size \(regSize)")
         }
+        return result
+    }
+    
+    static func _strVreg(_ reg: Register64, _ offsetReg: Register64, _ offset: ByteCount, _ regSize: ByteCount) -> [any CpuOp] {
+        var result: [any CpuOp] = [
+            PseudoOp.mov(offsetReg, offset)
+        ]
+        switch(regSize) {
+        case 8: result.append(M1Op.str(reg, .reg(X.sp, .r64ext(offsetReg, .sxtx(0)))))
+        case 4: result.append(M1Op.str(reg.to32, .reg(X.sp, .r64ext(offsetReg, .sxtx(0)))))
+        case 2: result.append(M1Op.strh(reg.to32, .reg(X.sp, .r64ext(offsetReg, .sxtx(0)))))
+        case 1: result.append(M1Op.strb(reg.to32, .reg(X.sp, .r64ext(offsetReg, .sxtx(0)))))
+        case 0: result.append(M1Op.nop)
+        default:
+            fatalError("Unsupported vreg size \(regSize)")
+        }
+        return result
+    }
+    
+    static func _strVregFP(_ reg: RegisterFP64, _ offsetReg: Register64, _ offset: ByteCount, _ regSize: ByteCount) -> [any CpuOp] {
+        var result: [any CpuOp] = [
+            PseudoOp.mov(offsetReg, offset)
+        ]
+        switch(regSize) {
+        case 8:
+            result.append(M1Op.str(reg, .reg(X.sp, .r64ext(offsetReg, .sxtx(0)))))
+        case 4:
+            result.append(M1Op.str(reg.to32, .reg(X.sp, .r64ext(offsetReg, .sxtx(0)))))
+        case 2:
+            fatalError("_strVregFP not implemented for size 2")
+        case 1:
+            fatalError("_strVregFP not implemented for size 1")
+        case 0:
+            result.append(M1Op.nop)
+        default:
+            fatalError("Unsupported vreg size \(regSize)")
+        }
+        return result
     }
     
     func emit() throws -> [UInt8] {
         switch(self) {
-        case .strVreg(let reg, let offset, let regSize):
-            return try Self._strVreg(reg, offset, regSize).emit()
+        case .strVreg(let reg, let offsetReg, let offset, let regSize):
+            let res = try Self._strVreg(reg, offsetReg, offset, regSize).reduce([]) { return $0 + (try $1.emit()) }
+            return res
         case .ldrVreg(let reg, let offset, let regSize):
             let res = try Self._ldrVreg(reg, offset, regSize).reduce([]) { return $0 + (try $1.emit()) }
+            return res
+        case .strVregFP(let reg, let offsetReg, let offset, let regSize):
+            let res = try Self._strVregFP(reg, offsetReg, offset, regSize).reduce([]) { return $0 + (try $1.emit()) }
+            return res
+        case .ldrVregFP(let reg, let offsetReg, let offset, let regSize):
+            let res = try Self._ldrVregFP(reg, offsetReg, offset, regSize).reduce([]) { return $0 + (try $1.emit()) }
             return res
         case .deferred(_, let closure):
             return try closure().emit()

@@ -12,17 +12,20 @@ extension String {
 
 extension [UInt8] {
     var b16: String {
+        guard self.count > 0 else { return "" }
         let c = String(u32, radix: 16).leftPadding(toLength: 8, withPad: "0")
         return "0x\(c.chunked(into: 2))"
     }
     
     var b2: String {
+        guard self.count > 0 else { return "" }
         let c = String(u32, radix: 2).leftPadding(toLength: 32, withPad: "0")
         return "0b\(c.chunked(into: 4))"
     }
     
     var u32: UInt32 {
-        UInt32(self[0]) | (UInt32(self[1]) << 8) | (UInt32(self[2]) << 16) | (UInt32(self[3]) << 24)
+        guard self.count > 0 else { return 0 }
+        return UInt32(self[0]) | (UInt32(self[1]) << 8) | (UInt32(self[2]) << 16) | (UInt32(self[3]) << 24)
     }
 }
 
@@ -52,6 +55,45 @@ extension XCTestCase {
 
 final class EmitterM1Tests: XCTestCase {
     
+    func testDiv() throws {
+        // throw cause sizes should be the same
+        XCTAssertThrowsError(
+            try XCTAssertM1OpBytes(M1Op.sdiv(X.x1, W.w2, X.x3)))
+        XCTAssertThrowsError(
+            try XCTAssertM1OpBytes(M1Op.udiv(X.x1, W.w2, X.x3)))
+        
+        try XCTAssertM1Op(
+            M1Op.sdiv(X.x1, X.x2, X.x3),
+            "sdiv x1, x2, x3",
+            0x41, 0x0c, 0xc3, 0x9a
+        )
+        try XCTAssertM1Op(
+            M1Op.sdiv(W.w1, W.w2, W.w3),
+            "sdiv w1, w2, w3",
+            0x41, 0x0c, 0xc3, 0x1a
+        )
+        try XCTAssertM1Op(
+            M1Op.udiv(X.x1, X.x2, X.x3),
+            "udiv x1, x2, x3",
+            0x41, 0x08, 0xc3, 0x9a
+        )
+        try XCTAssertM1Op(
+            M1Op.udiv(W.w1, W.w2, W.w3),
+            "udiv w1, w2, w3",
+            0x41, 0x08, 0xc3, 0x1a
+        )
+        try XCTAssertM1Op(
+            M1Op.fdiv(D.d1, D.d2, D.d3),
+            "fdiv d1, d2, d3",
+            0x41, 0x18, 0x63, 0x1e
+        )
+        try XCTAssertM1Op(
+            M1Op.fdiv(S.s1, S.s2, S.s3),
+            "fdiv s1, s2, s3",
+            0x41, 0x18, 0x23, 0x1e
+        )
+    }
+    
     func testFcvtzs() throws {
         try XCTAssertM1Op(
             M1Op.fcvtzs(W.w8, D.d0),
@@ -62,6 +104,16 @@ final class EmitterM1Tests: XCTestCase {
             M1Op.fcvtzs(X.x8, D.d0),
             "fcvtzs x8, d0",
             0x08, 0x00, 0x78, 0x9e
+        )
+        try XCTAssertM1Op(
+            M1Op.fcvtzs(W.w8, S.s0),
+            "fcvtzs w8, s0",
+            0x08, 0x00, 0x38, 0x1e
+        )
+        try XCTAssertM1Op(
+            M1Op.fcvtzs(X.x8, S.s0),
+            "fcvtzs x8, s0",
+            0x08, 0x00, 0x38, 0x9e
         )
     }
     
@@ -75,6 +127,29 @@ final class EmitterM1Tests: XCTestCase {
             M1Op.scvtf(D.d0, W.w8),
             "scvtf d0, w8",
             0x00, 0x01, 0x62, 0x1e
+        )
+        try XCTAssertM1Op(
+            M1Op.scvtf(S.s0, X.x8),
+            "scvtf s0, x8",
+            0x00, 0x01, 0x22, 0x9e
+        )
+        try XCTAssertM1Op(
+            M1Op.scvtf(S.s0, W.w8),
+            "scvtf s0, w8",
+            0x00, 0x01, 0x22, 0x1e
+        )
+    }
+    
+    func testUcvtf() throws {
+        try XCTAssertM1Op(
+            M1Op.ucvtf(D.d0, X.x8),
+            "ucvtf d0, x8",
+            0x00, 0x01, 0x63, 0x9e
+        )
+        try XCTAssertM1Op(
+            M1Op.ucvtf(D.d0, W.w8),
+            "ucvtf d0, w8",
+            0x00, 0x01, 0x63, 0x1e
         )
     }
     
@@ -610,6 +685,29 @@ final class EmitterM1Tests: XCTestCase {
             try EmitterM1.emit(for: M1Op.str(X.x2, .reg64offset(X.sp, 303, nil)))
         )
     }
+    
+    func testLdrStr_fp() throws {
+        try XCTAssertM1Op(
+            .str(D.d0, .reg(X.sp, .r64ext(X.x15, .sxtx(0)))),
+            "str d0, [sp, x15, sxtx #0]",
+            0xe0, 0xeb, 0x2f, 0xfc
+        )
+        try XCTAssertM1Op(
+            .str(S.s0, .reg(X.sp, .r64ext(X.x15, .sxtx(0)))),
+            "str s0, [sp, x15, sxtx #0]",
+            0xe0, 0xeb, 0x2f, 0xbc
+        )
+        try XCTAssertM1Op(
+            .ldr(D.d0, .reg(X.sp, .r64ext(X.x15, .sxtx(0)))),
+            "ldr d0, [sp, x15, sxtx #0]",
+            0xe0, 0xeb, 0x6f, 0xfc
+        )
+        try XCTAssertM1Op(
+            .ldr(S.s0, .reg(X.sp, .r64ext(X.x15, .sxtx(0)))),
+            "ldr s0, [sp, x15, sxtx #0]",
+            0xe0, 0xeb, 0x6f, 0xbc
+        )
+    }
         
     func testB() throws {
         try XCTAssertM1Op(M1Op.b(RelativeLiteralOffset(262424)), "b #262424", 0x46, 0x00, 0x01, 0x14)
@@ -685,6 +783,16 @@ final class EmitterM1Tests: XCTestCase {
             "ldr d0, [sp], #8",
             0xe0, 0x87, 0x40, 0xfc
         )
+        try XCTAssertM1Op(
+            M1Op.ldr(S.s0, .reg64offset(.sp, 4, nil)),
+            "ldr s0, [sp, #4]",
+            0xe0, 0x07, 0x40, 0xbd
+        )
+        try XCTAssertM1Op(
+            M1Op.ldr(S.s0, .reg64offset(.sp, 2, nil)),
+            "ldr s0, [sp, #2]",
+            0xe0, 0x23, 0x40, 0xbc
+        )
     }
     
     func testStr_fp() throws {
@@ -707,6 +815,21 @@ final class EmitterM1Tests: XCTestCase {
             M1Op.str(D.d0, .reg64offset(.sp, 8, .post)),
             "str d0, [sp], #8",
             0xe0, 0x87, 0x00, 0xfc
+        )
+        try XCTAssertM1Op(
+            M1Op.str(S.s0, .reg64offset(.sp, 4, .post)),
+            "str s0, [sp], #4",
+            0xe0, 0x47, 0x00, 0xbc
+        )
+        try XCTAssertM1Op(
+            M1Op.str(S.s0, .reg64offset(.sp, 2, .post)),
+            "str s0, [sp], #2",
+            0xe0, 0x27, 0x00, 0xbc
+        )
+        try XCTAssertM1Op(
+            M1Op.str(S.s0, .reg64offset(.sp, 2, nil)),
+            "str s0, [sp, #2]",
+            0xe0, 0x23, 0x00, 0xbc
         )
     }
     
@@ -790,25 +913,74 @@ final class EmitterM1Tests: XCTestCase {
     }
     func testLdp() throws {
         XCTAssertEqual(
-            try EmitterM1.emit(for: .ldp((.x29_fp, .x30_lr), .reg64offset(.sp, 16, .post))),
+            try EmitterM1.emit(for: .ldp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 16, .post))),
             [0xfd, 0x7b, 0xc1, 0xa8]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .ldp((.x0, .x1), .reg64offset(.sp, 16, .post))),
+            try EmitterM1.emit(for: .ldp((X.x0, X.x1), .reg64offset(.sp, 16, .post))),
             [0xe0, 0x07, 0xc1, 0xa8]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .ldp((.x0, .x1), .reg64offset(.sp, 16, nil))),
+            try EmitterM1.emit(for: .ldp((X.x0, X.x1), .reg64offset(.sp, 16, nil))),
             [0xe0, 0x07, 0x41, 0xa9]
         )
         XCTAssertEqual(
-            try EmitterM1.emit(for: .ldp((.x0, .x1), .reg64offset(.sp, 16, .pre))),
+            try EmitterM1.emit(for: .ldp((X.x0, X.x1), .reg64offset(.sp, 16, .pre))),
             [0xe0, 0x07, 0xc1, 0xa9]
         )
     }
     
+    func testFcvt() throws {
+        try XCTAssertM1Op(
+            M1Op.fcvt(D.d1, S.s2),
+            "fcvt d1, s2",
+            0x41, 0xc0, 0x22, 0x1e
+        )
+        try XCTAssertM1Op(
+            M1Op.fcvt(S.s3, D.d4),
+            "fcvt s3, d4",
+            0x83, 0x40, 0x62, 0x1e
+        )
+    }
+    
+    func testLdp_fp() throws {
+        try XCTAssertM1Op(
+            M1Op.ldp((D.d0, D.d1), .reg64offset(.sp, 8, nil)),
+            "ldp d0, d1, [sp, #8]",
+            0xe0, 0x87, 0x40, 0x6d
+        )
+        try XCTAssertM1Op(
+            M1Op.ldp((D.d0, D.d1), .reg64offset(.sp, 8, .pre)),
+            "ldp d0, d1, [sp, #8]!",
+            0xe0, 0x87, 0xc0, 0x6d
+        )
+        try XCTAssertM1Op(
+            M1Op.ldp((D.d0, D.d1), .reg64offset(.sp, 8, .post)),
+            "ldp d0, d1, [sp], #8",
+            0xe0, 0x87, 0xc0, 0x6c
+        )
+    }
+    
+    func testStp_fp() throws {
+        try XCTAssertM1Op(
+            M1Op.stp((D.d0, D.d1), .reg64offset(.sp, 8, nil)),
+            "stp d0, d1, [sp, #8]",
+            0xe0, 0x87, 0x00, 0x6d
+        )
+        try XCTAssertM1Op(
+            M1Op.stp((D.d0, D.d1), .reg64offset(.sp, 8, .pre)),
+            "stp d0, d1, [sp, #8]!",
+            0xe0, 0x87, 0x80, 0x6d
+        )
+        try XCTAssertM1Op(
+            M1Op.stp((D.d0, D.d1), .reg64offset(.sp, 8, .post)),
+            "stp d0, d1, [sp], #8",
+            0xe0, 0x87, 0x80, 0x6c
+        )
+    }
+    
     func testStp() throws {
-        XCTAssertThrowsError(try EmitterM1.emit(for: .stp((.x0, .x1), .immediate_depr(10))))
+        XCTAssertThrowsError(try EmitterM1.emit(for: .stp((X.x0, X.x1), .immediate_depr(10))))
         { error in
             XCTAssertEqual(
                 error as! EmitterM1Error,
@@ -817,7 +989,7 @@ final class EmitterM1Tests: XCTestCase {
         }
         
         XCTAssertThrowsError(
-            try EmitterM1.emit(for: .stp((.x0, .x1), .reg64offset(.sp, -520, nil)))
+            try EmitterM1.emit(for: .stp((X.x0, X.x1), .reg64offset(.sp, -520, nil)))
         ) { error in
             XCTAssertEqual(
                 error as! EmitterM1Error,
@@ -826,30 +998,30 @@ final class EmitterM1Tests: XCTestCase {
         }
         
         XCTAssertEqual(
-            try EmitterM1.emit(for: .stp((.x10, .x12), .reg64offset(.sp, 16, .pre))),
+            try EmitterM1.emit(for: .stp((X.x10, X.x12), .reg64offset(.sp, 16, .pre))),
             [0xea, 0x33, 0x81, 0xa9]
         )
         
         XCTAssertEqual(
-            try EmitterM1.emit(for: .stp((.x10, .x12), .reg64offset(.sp, 16, .post))),
+            try EmitterM1.emit(for: .stp((X.x10, X.x12), .reg64offset(.sp, 16, .post))),
             [0xea, 0x33, 0x81, 0xa8]
         )
         
         XCTAssertEqual(
-            try EmitterM1.emit(for: .stp((.x10, .x12), .reg64offset(.sp, 16, nil))),
+            try EmitterM1.emit(for: .stp((X.x10, X.x12), .reg64offset(.sp, 16, nil))),
             [0xea, 0x33, 0x01, 0xa9]
         )
         
         XCTAssertEqual(
             try EmitterM1.emit(
-                for: .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -512, .pre))
+                for: .stp((X.x29_fp, X.x30_lr), .reg64offset(.sp, -512, .pre))
             ),
             [0xfd, 0x7b, 0xa0, 0xa9]
         )
         
         XCTAssertEqual(
             try EmitterM1.emit(
-                for: .stp((.x29_fp, .x30_lr), .reg64offset(.sp, -16, .pre))
+                for: .stp((X.x29_fp, X.x30_lr), .reg64offset(.sp, -16, .pre))
             ),
             [0xfd, 0x7b, 0xbf, 0xa9]
         )
