@@ -36,14 +36,31 @@ def p(num, bits, offset)
     res.rjust(bits, "0")
 end
 
+## TODO
 
+- [ ] Tests for functions mixing floating poing/general purpose stack arguments (e.g. we should pass x0/d0 not x0/x1 or x0/d1)
+- [ ] Zero non-argument registers when initializing stack
 
 ## hl type C structs
 
-    // See: /usr/local/include/hl.h
+    // See: /usr/local/include/hl.he
     typedef struct {
         hl_type *t;
         uchar *bytes;
         int length;
     } vstring;
+    
+    
+## Numeric operation results
+
+See also: https://haxe.org/blog/hashlink-in-depth-p2/
+
+    E.g. OUDiv is only for integers. OSDiv is for either.
+
+    Operator    Operation       Operand 1    Operand 2    Result type
+    %           modulo          Float/Int    Float/Int    Float/Int
+    *           multiplication  Float/Int    Float/Int    Float/Int
+    /           division        Float/Int    Float/Int    Float
+    +           addition        Float/Int    Float/Int    Float/Int
+    -           subtraction     Float/Int    Float/Int    Float/Int
     
