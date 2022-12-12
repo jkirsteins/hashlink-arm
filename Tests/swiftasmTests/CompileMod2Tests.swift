@@ -829,6 +829,23 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    func testCompile_testDynGet() throws {
+        typealias _JitFunc =  (@convention(c) () -> (Int32))
+        
+        try _withPatchedEntrypoint(
+            strip: false,
+            name: "Main.testDynGet"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(456, entrypoint())
+            }
+        }
+    }
+    
     func testCompile__testInstanceMethod() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
         

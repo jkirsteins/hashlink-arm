@@ -193,7 +193,9 @@ class CCompatJitContext : JitContext2 {
     }
     
     func getString(_ ix: Int) throws -> any StringProvider {
-        fatalError("Not implemented")
+        try withModule {
+            return $0.pointee.code.pointee.strings.advanced(by: ix).pointee
+        }
     }
     
     func getBytes(_ ix: Int) throws -> any BytesProvider {

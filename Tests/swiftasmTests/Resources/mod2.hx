@@ -5,6 +5,11 @@ import haxe.Exception;
 import hl.UI8;
 import hl.UI16;
 
+// might be unset if testGlobals called before globals are initialized
+var globalString: String = "Global";
+	
+var globalVirtualTest : { test : Int, second: Bool, third: Int } = new VirtualTest(123, true, 456);
+
 enum Color {
 	Red;
 	Green;
@@ -17,6 +22,18 @@ class Path {
 
 	public function new(test) {
 		this.test = test;
+	}
+}
+
+class VirtualTest {
+	public var test:Int;
+	public var second:Bool;
+	public var third:Int;
+
+	public function new(test: Int = 0, second: Bool = false, third: Int = 0) {
+		this.test = test;
+		this.second = second;
+		this.third = third;
 	}
 }
 
@@ -114,6 +131,13 @@ class Main {
 			return 3;
 		}
 		return 0;
+	}
+
+	static public function testGlobals(str: String, setIt: Bool): String {
+		if (setIt) {
+			globalString = str;
+		}
+		return globalString;
 	}
 
 	static public function testTrapX(a: Int, msg: String): String {
@@ -216,47 +240,49 @@ class Main {
 		return -1;
 	}
 
-	static private function testStaticVirtual_setField(val: Int, set: Bool): Int {
-		var o : { test : Int } = new Path(0);
-		if (set) {
-			o.test = val;
+	static private function testStaticVirtual_globalVirtual(field: Int): Int {
+		switch(field) {
+			case 0: return globalVirtualTest.test;
+			case 1: return globalVirtualTest.second ? 1 : 0;
+			case 2: return globalVirtualTest.third;
+			default: return -1;
 		}
-		return o.test;
+	}
+
+	static private function testStaticVirtual_setField(val: Int, set: Bool, field: Int): Int {
+		var o : { test : Int, second: Bool, third: Int } = new VirtualTest();
+		o.test = 1;
+		o.second = true;
+		o.third = 2;
+		if (set) {
+			if (field == 0) {
+				o.test = val;
+			}
+			if (field == 1) {
+				o.second = val != 0 ? true : false;
+			}
+			if (field == 2) {
+				o.third = val;
+			}
+		}
+		switch(field) {
+			case 0: return o.test;
+			case 1: return o.second ? 1 : 0;
+			case 2: return o.third;
+			default: return -1;
+		}
+	}
+
+	static public function _testDynGet_getObj(): Dynamic {
+		return globalVirtualTest;
+	}
+
+	static public function testDynGet(): Int {
+		var obj: Dynamic = _testDynGet_getObj();
+		return obj.third;
 	}
 
 	static public function main():Void {
-		// var path = new Path(3);
-		// trace('${path.test}');
-		// path = null;
-		// trace('enum ${testEnum()}');
-
-		// trace('static closure: ${testStaticClosure(11, 22)}');
-		// trace('instance method: ${testInstanceMethod(3)}');
-		// trace('field closure: ${testFieldClosure(14)}');
-
-		// var a = testGetUI8(0);
-		// var b = testGetUI8(1);
-		// var c = testGetUI8(2);
-		var d = testGetUI8(3);
-		trace('getUI8 $d');
-
-		// trace('getUI8_2 ${testGetUI8_2()}');
-
-		// // var e = testGetUI16(0);
-		// // var f = testGetUI16(1);
-		// // var g = testGetUI16(2);
-		// // var h = testGetUI16(3);
-		// // trace('getUI16 $e $f $g $h');
-
-		// trace('got 32: ${testGetArrayInt32(10, 1234, 5)}');
-		// trace('got 64b: ${testGetArrayInt64__haxe(10, 5678, 3)}');
-		// trace('got 64n: ${testGetArrayInt64__hl(10, 5678, 3)}');
-
-		// trace('At ${getInt(0)}');
-		// trace('At ${getInt(1)}');
-		// trace('At ${getInt(2)}');
-		// trace('At ${getInt(3)}');
-        // testTrap();
-        // testTrap2();
+		
 	}
 }

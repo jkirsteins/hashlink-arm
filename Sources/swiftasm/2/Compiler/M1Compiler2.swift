@@ -2851,6 +2851,33 @@ class M1Compiler2 {
                 default:
                     fatalError("Invalid target for OCallMethod")
                 }
+            case .ODynGet(let dst, let obj, let field):
+                let dstType = requireTypeKind(reg: dst, from: regs)
+                let dyngetFunc = get_dynget(to: dstType.kind)
+                
+                // load obj into x0
+                appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
+                
+                // load field name hash into x1
+                let fieldName = try ctx.getString(field)
+                let fNameHash = LibHl.hl_hash_utf8(fieldName.ccompatCCharAddress)
+                mem.append(
+                    PseudoOp.mov(X.x1, fNameHash)
+                )
+                
+                // load type into x2 (for non-f32 and non-f64 arguments)
+                if (dstType != .f32 && dstType != .f64) {
+                    mem.append(PseudoOp.mov(X.x2, requireTypeMemory(reg: dst, regs: regs)))
+                }
+                
+                appendDebugPrintAligned4("Jumping to dynget function", builder: mem)
+                mem.append(
+                    PseudoOp.mov(X.x15, dyngetFunc),
+                    M1Op.blr(X.x15)
+                )
+                // TODO: check for failed cast result
+                appendDebugPrintAligned4("TODO: ODynGet should check for failed cast result", builder: mem)
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }
