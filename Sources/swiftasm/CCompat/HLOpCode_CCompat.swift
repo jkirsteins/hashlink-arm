@@ -392,7 +392,8 @@ extension HLOpCode {
             return .ODecr(dst: cop.p1)
         case .OCallMethod:
             guard let extra = cop.extra else {
-                fatalError("OCallClosure missing extra")
+                // OCallMethod always needs extra because it contains a reference to the object
+                fatalError("OCallMethod missing extra")
             }
             
             let argc = cop.p3
@@ -408,12 +409,18 @@ extension HLOpCode {
             fatalError("wip")
         case .OCallClosure:
             let c = cop.p3
-            guard let extra = cop.extra else {
-                fatalError("OCallClosure missing extra")
+            let args: [Reg]
+            if let extra = cop.extra {
+                args = (0..<c).map {
+                    Reg(extra.advanced(by: Int($0)).pointee)
+                }
+            } else {
+                guard c == 0 else {
+                    fatalError("OCallMethod extra can't be nil if argc > 0 (argc: \(c))")
+                }
+                args = []
             }
-            let args = (0..<c).map {
-                Reg(extra.advanced(by: Int($0)).pointee)
-            }
+            
             return .OCallClosure(dst: cop.p1, closure: cop.p2, args: args)
         case .OStaticClosure:
             return .OStaticClosure(dst: cop.p1, fun: RefFun(cop.p2))
