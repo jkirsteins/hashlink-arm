@@ -1,3 +1,4 @@
+import hl.F64;
 import haxe.io.BytesData;
 import hl.I64;
 import hl.NativeArray;
@@ -8,7 +9,7 @@ import hl.UI16;
 // might be unset if testGlobals called before globals are initialized
 var globalString: String = "Global";
 	
-var globalVirtualTest : { test : Int, second: Bool, third: Int } = new VirtualTest(123, true, 456);
+var globalVirtualTest : { test : Int, second: Bool, third: Int, f64: F64 } = new VirtualTest(123, true, 456, 789.0);
 
 enum Color {
 	Red;
@@ -29,11 +30,13 @@ class VirtualTest {
 	public var test:Int;
 	public var second:Bool;
 	public var third:Int;
+	public var f64:F64;
 
-	public function new(test: Int = 0, second: Bool = false, third: Int = 0) {
+	public function new(test: Int = 0, second: Bool = false, third: Int = 0, f64: F64 = 0) {
 		this.test = test;
 		this.second = second;
 		this.third = third;
+		this.f64 = f64;
 	}
 }
 
@@ -277,9 +280,20 @@ class Main {
 		return globalVirtualTest;
 	}
 
-	static public function testDynGet(): Int {
+	static public function testDynGetSet(set: Bool, val: Int): Int {
 		var obj: Dynamic = _testDynGet_getObj();
+		if (set) {
+			obj.third = val;
+		}
 		return obj.third;
+	}
+
+	static public function testDynGetSet_f64(set: Bool, val: F64): F64 {
+		var obj: Dynamic = _testDynGet_getObj();
+		if (set) {
+			obj.f64 = val;
+		}
+		return obj.f64;
 	}
 
 	static public function main():Void {

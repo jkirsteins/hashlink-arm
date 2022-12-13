@@ -2186,7 +2186,15 @@ class M1Compiler2 {
                 )
                 // TODO: check for failed cast result
                 appendDebugPrintAligned4("TODO: OSafeCast should check for failed cast result", builder: mem)
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                
+                if (dstType != .f32 && dstType != .f64) {
+                    appendDebugPrintRegisterAligned4(X.x0, prepend: "OSafeCast result (gp)", builder: mem)
+                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                } else {
+                    appendFPRegToDouble(reg: D.d0, from: dst, kinds: regs, mem: mem)
+                    appendDebugPrintRegisterAligned4(D.d0, prepend: "OSafeCast result (float)", builder: mem)
+                    appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                }
             case .OLabel:
                 appendDebugPrintAligned4("OLabel", builder: mem)
             case .OSub(let dst, let a, let b):
@@ -2859,6 +2867,7 @@ class M1Compiler2 {
                 appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
                 
                 // load field name hash into x1
+                // note: different from ODynSet
                 let fieldName = try ctx.getString(field)
                 let fNameHash = LibHl.hl_hash_utf8(fieldName.ccompatCCharAddress)
                 mem.append(
@@ -2877,7 +2886,66 @@ class M1Compiler2 {
                 )
                 // TODO: check for failed cast result
                 appendDebugPrintAligned4("TODO: ODynGet should check for failed cast result", builder: mem)
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                
+                if (dstType != .f32 && dstType != .f64) {
+                    appendDebugPrintRegisterAligned4(X.x0, prepend: "ODynGet result (non float)", builder: mem)
+                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                } else {
+                    // TODO: test coverage
+                    appendDebugPrintAligned4("TODO: ODynGet test for returning floats", builder: mem)
+                    
+                    appendFPRegToDouble(reg: D.d0, from: dst, kinds: regs, mem: mem)
+                    appendDebugPrintRegisterAligned4(D.d0, prepend: "ODynGet result (float)", builder: mem)
+                    appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                }
+            case .ODynSet(let obj, let field, let src):
+                let srcType = requireTypeKind(reg: src, from: regs)
+                let dynsetFunc = get_dynset(from: srcType.kind)
+                
+                // load obj into x0
+                appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
+                
+                // load field name hash into x1
+                //
+                // NOTE: different impl from ODynGet (same result though)
+                // keeping it for compatibility with hashlink jit.c just in
+                // case there are sideeffects
+                guard let hlcode = ctx.mainContext.pointee.code else {
+                    fatalError("No hl_code* available")
+                }
+                
+                let nameUstr = LibHl._hl_get_ustring(.init(hlcode), Int32(field))
+                let nameHash = LibHl.hl_hash_gen(.init(nameUstr), true)
+                
+                mem.append(
+                    PseudoOp.mov(X.x1, nameHash)
+                )
+                
+                // order of following args is diff for (non-f32, non-f64) and (other) arguments
+                // b/c the f* arguments don't need the type
+                if (srcType != .f32 && srcType != .f64) {
+                    // load type into x2
+                    mem.append(PseudoOp.mov(X.x2, requireTypeMemory(reg: src, regs: regs)))
+                    
+                    // load value into x3
+                    appendLoad(reg: X.x3, from: src, kinds: regs, mem: mem)
+                    
+                    appendDebugPrintRegisterAligned4(X.x3, prepend: "ODynSet value (gp)", builder: mem)
+                } else {
+                    // load value into d0 (for f32 and f64 arguments)
+                    // as it's the first floating point arg)
+                    appendLoad(reg: D.d0, from: src, kinds: regs, mem: mem)
+                    appendFPRegToDouble(reg: D.d0, from: src, kinds: regs, mem: mem)
+                    appendDebugPrintRegisterAligned4(D.d0, prepend: "ODynSet value (float)", builder: mem)
+                }
+                
+                appendDebugPrintAligned4("Jumping to dynset function", builder: mem)
+                mem.append(
+                    PseudoOp.mov(X.x15, dynsetFunc),
+                    M1Op.blr(X.x15)
+                )
+                // TODO: check for failed cast result
+                appendDebugPrintAligned4("TODO: ODynSet should check for failed cast result", builder: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

@@ -829,19 +829,38 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
-    func testCompile_testDynGet() throws {
-        typealias _JitFunc =  (@convention(c) () -> (Int32))
+    func testCompile_testDynGetSet() throws {
+        typealias _JitFunc =  (@convention(c) (Bool, Int32) -> (Int32))
         
         try _withPatchedEntrypoint(
             strip: false,
-            name: "Main.testDynGet"
+            name: "Main.testDynGetSet"
         ) {
             sutFix, mem in
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
-                XCTAssertEqual(456, entrypoint())
+                XCTAssertEqual(entrypoint(false, 123), 456)
+                XCTAssertEqual(entrypoint(true, 123), 123)
+            }
+        }
+    }
+    
+    func testCompile_testDynGetSet_f64() throws {
+        typealias _JitFunc =  (@convention(c) (Bool, Float64) -> (Float64))
+        
+        try _withPatchedEntrypoint(
+            strip: false,
+            name: "Main.testDynGetSet_f64"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(entrypoint(false, 123.0), 789.0)
+                XCTAssertEqual(entrypoint(true, 123.0), 123.0)
             }
         }
     }
