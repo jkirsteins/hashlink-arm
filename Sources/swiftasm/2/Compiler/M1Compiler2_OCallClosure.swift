@@ -92,6 +92,9 @@ extension M1Compiler2 {
             
             assert(reg: argReg, from: regs, matchesCallArg: Reg(position), inFunArgs: funType.funProvider!.argsProvider)
             let argTypeKind = requireTypeKind(reg: argReg, from: regs)
+            if argTypeKind == .f64 || argTypeKind == .f32 {
+               fatalError("TODO: implement test and handling for floats")
+            }
             let load: (CpuOpBuffer, Register64)->()
             
             if position >= ARG_REGISTER_COUNT {
@@ -142,10 +145,14 @@ extension M1Compiler2 {
         appendCall(mem)
         appendDebugPrintAligned4("[__ocall_impl] Finished call...", builder: mem)
         
-        mem.append(
-            PseudoOp.strVreg(X.x0, X.x15, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
-        )
-        appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
+        if dstKind != .f32 && dstKind != .f64 {
+            mem.append(
+                PseudoOp.strVreg(X.x0, X.x15, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
+            )
+            appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
+        } else {
+            fatalError("TODO: test and store as float")
+        }
             
         
         if additionalSize > 0 {
@@ -241,10 +248,14 @@ extension M1Compiler2 {
         // PERFORM BLR
         mem.append(M1Op.blr(X.x9))
         
-        mem.append(
-            PseudoOp.strVreg(X.x0, X.x15, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
-        )
-        appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
+        if dstKind != .f32 && dstKind != .f64 {
+            mem.append(
+                PseudoOp.strVreg(X.x0, X.x15, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
+            )
+            appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
+        } else {
+            fatalError("TODO: test and store as float")
+        }
             
         
         if additionalSize > 0 {

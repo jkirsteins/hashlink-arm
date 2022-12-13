@@ -296,7 +296,13 @@ class Main {
 		return obj.f64;
 	}
 
+	static public function testCallClosure_Dynamic(inval: Int): Float {
+		var myLocalFunction = function(a: Int) { return a * 2.0; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
 	static public function main():Void {
-		
+		trace('testing: ${testCallClosure_Dynamic(123)}');
 	}
 }

@@ -847,6 +847,24 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    func testCompile_testCallClosure_Dynamic() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> (Float64))
+        
+        try _compileAndLinkWithDeps(
+            strip: false,
+            name: "Main.testCallClosure_Dynamic",
+            depHints: [307]
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(entrypoint(2), 246.0)
+            }
+        }
+    }
+    
     func testCompile_testDynGetSet_f64() throws {
         typealias _JitFunc =  (@convention(c) (Bool, Float64) -> (Float64))
         

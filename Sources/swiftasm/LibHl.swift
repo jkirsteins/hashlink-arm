@@ -391,4 +391,17 @@ struct LibHl {
     static func hl_hash_utf8(_ name: UnsafePointer<CChar>) -> (Int32) {
         _hl_hash_utf8(.init(name))
     }
+    
+    // HL_PRIM vdynamic *hl_dyn_call( vclosure *c, vdynamic **args, int nargs )
+    static let _hl_dyn_call: (@convention(c) (OpaquePointer, OpaquePointer, Int32)->(OpaquePointer)) = { load("hl_dyn_call") }()
+    static func hl_dyn_call(
+        _ c: vclosurePointer,
+        _ args: UnsafePointer<vdynamicPointer>,
+        _ nargs: Int32
+    ) -> (vdynamicPointer) {
+        .init(_hl_dyn_call(.init(c), .init(args), nargs))
+    }
+    
+    // HL_PRIM void hl_setup_callbacks( void *c, void *w ) {
+    static let _hl_setup_callbacks: (@convention(c) (OpaquePointer, OpaquePointer)->()) = { load("hl_setup_callbacks") }()
 }

@@ -15,3 +15,7 @@ typealias RefProto = TableIndex
 typealias RefGlobal = TableIndex
 typealias RefType = TableIndex
 typealias RefEnumConstruct = TableIndex
+
+typealias vdynamicPointer = UnsafePointer<vdynamic>
+typealias vclosurePointer = UnsafePointer<vclosure>
+typealias hlTypePointer = UnsafePointer<HLType_CCompat>

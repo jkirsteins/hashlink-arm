@@ -371,28 +371,28 @@ extension M1Compiler2 {
         }
     }
     
-    func appendStore(reg: Register64, as vreg: Reg, intoAddressFrom addrReg: Register64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    func appendStore(reg: Register64, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
         if vregKind.hlRegSize == 8 {
             mem.append(
                 PseudoOp.debugMarker("Storing 8 bytes in vreg \(vreg)"),
-                M1Op.str(reg, .reg64offset(addrReg, 0, nil))
+                M1Op.str(reg, .reg64offset(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 4 {
             mem.append(
                 PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
-                M1Op.str(reg.to32, .reg64offset(addrReg, 0, nil))
+                M1Op.str(reg.to32, .reg64offset(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 2 {
             mem.append(
                 PseudoOp.debugMarker("Storing 2 bytes in vreg \(vreg)"),
-                M1Op.strh(reg.to32, .imm64(addrReg, 0, nil))
+                M1Op.strh(reg.to32, .imm64(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 1 {
             mem.append(
                 PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
-                M1Op.strb(reg.to32, .imm64(addrReg, 0, nil))
+                M1Op.strb(reg.to32, .imm64(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 0 {
             // nop
@@ -1044,7 +1044,7 @@ class M1Compiler2 {
         }
         guard from[Int(reg)].kind == type.kind else {
             fatalError(
-                "Register \(reg) expected to be \(type.kind) but is \(from[Int(reg)])"
+                "Register \(reg) expected to be \(type.kind) but is \(from[Int(reg)].kind)"
             )
         }
     }
@@ -1072,6 +1072,26 @@ class M1Compiler2 {
                 "Register \(reg) expected to be \(target.kind) but is \(from[Int(reg)].kind)"
             )
         }
+    }
+    
+    func assertDynamic(reg: Reg, from regs: [any HLTypeKindProvider]) {
+        assert(reg: reg, from: regs, in: [
+            HLTypeKind.dyn,
+            HLTypeKind.fun,
+            HLTypeKind.obj,
+            HLTypeKind.array,
+            HLTypeKind.virtual,
+            HLTypeKind.dynobj,
+            HLTypeKind.enum,
+            HLTypeKind.null
+        ])
+    }
+    
+    func assertCallable(reg: Reg, from regs: [any HLTypeKindProvider]) {
+        /* HLTypeKind.fun
+           HLTypeKind.dyn can also be callable (see String#call_toString)
+         */
+        assert(reg: reg, from: regs, in: [HLTypeKind.fun, HLTypeKind.dyn])
     }
     
     func assert(reg: Reg, from: [any HLTypeKindProvider], in targets: [any HLTypeKindProvider]) {
@@ -1189,7 +1209,7 @@ class M1Compiler2 {
 
         for (currentInstruction, op) in compilable.ops.enumerated() {
 
-            Self.logger.debug("Offset for op \(currentInstruction) is \(mem.byteSize)")
+            Self.logger.debug("f\(compilable.findex): #\(currentInstruction) (offset: \(mem.byteSize))")
             addrBetweenOps[currentInstruction].finalize(try Immediate26(mem.byteSize))
 
             mem.append(
@@ -1283,48 +1303,69 @@ class M1Compiler2 {
                     reservedStackBytes: stackInfo.total,
                     mem: mem)
             case .OCallClosure(let dst, let closureObject, let args):
-                assert(reg: closureObject, from: regs, matches: HLTypeKind.fun)
+                assertCallable(reg: closureObject, from: regs)
                 
                 let dstType = self.requireType(reg: dst, regs: regs)
                 let clType = self.requireType(reg: closureObject, regs: regs)
-                assert(reg: closureObject, from: regs, is: HLTypeKind.fun)
                 
                 // vclosure offsets
-                let funOffset: Int64 = 8
-                let hasValueOffset: Int64 = 16
-                let valueOffset: Int64 = 24
+                let funOffset: Int64 = Int64(MemoryLayout<vclosure>.offset(of: \vclosure.fun)!)
+                let hasValueOffset: Int64 = Int64(MemoryLayout<vclosure>.offset(of: \vclosure.hasValue)!)
+                let valueOffset: Int64 = Int64(MemoryLayout<vclosure>.offset(of: \vclosure.value)!)
                 
                 if (dstType.kind == .dyn) {
+                        
                     /*
                      needs:
                      // ASM for {
-                     //    vdynamic *args[] = {args};
-                     //  vdynamic *ret = hl_dyn_call(closure,args,nargs);
-                     //  dst = hl_dyncast(ret,t_dynamic,t_dst);
+                     //     vdynamic *args[] = {args};
+                     //     vdynamic *ret = hl_dyn_call(closure,args,nargs);
+                     //     dst = hl_dyncast(ret,t_dynamic,t_dst);  // OSafeCast
                      // }
                      */
-                    fatalError("not implemented")
+                    let nargs = args.count
+                    let dynArgs: UnsafeMutableBufferPointer<vdynamicPointer> = .allocate(capacity: nargs)
+                    mem.append(PseudoOp.mov(X.x0, OpaquePointer(dynArgs.baseAddress!)))
+                    for (ix, argRegister) in args.enumerated() {
+                        /* Every arg must be a dyn, see jit.c:
+                               if( !hl_is_dynamic(a->t) ) ASSERT(0);
+                        */
+                        assertDynamic(reg: argRegister, from: regs)
+                        
+                        appendLoad(reg: X.x1, from: argRegister, kinds: regs, mem: mem)
+                        let offset: Int64 = Int64(ix * MemoryLayout<UnsafePointer<vdynamic>>.stride)
+                        appendStore(reg: X.x1, as: argRegister, intoAddressFrom: X.x0, offsetFromAddress: offset, kinds: regs, mem: mem)
+                    }
+                    
+                    // call hl_dyn_call
+                    appendLoad(reg: X.x0, from: closureObject, kinds: regs, mem: mem)
+                    mem.append(PseudoOp.mov(X.x1, OpaquePointer(dynArgs.baseAddress!)))
+                    mem.append(M1Op.movz64(X.x2, UInt16(nargs), nil))
+                    mem.append(
+                        PseudoOp.mov(X.x10, unsafeBitCast(LibHl._hl_dyn_call, to: OpaquePointer.self)),
+                        M1Op.blr(X.x10)
+                    )
+                    
+                    // MARK: TMP
+                    let _c: (@convention(c) (OpaquePointer)->()) = {
+                        optr in
+                        
+                        let x: vdynamicPointer = .init(optr)
+                        print(x)
+                    }
+                    mem.append(
+                        PseudoOp.mov(X.x2, unsafeBitCast(_c, to: OpaquePointer.self)),
+                        PseudoOp.mov(X.x1, nargs),
+                        M1Op.blr(X.x2))
+                    appendSystemExit(123, builder: mem)
+                    // MARK: TMP
+                    
+                    
                 } else {
                     // ASM for  if( c->hasValue ) c->fun(value,args) else c->fun(args)
                     
                     appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: mem)
                     appendDebugPrintRegisterAligned4(X.x10, prepend: "OCallClosure obj", builder: mem)
-                    
-                    // MARK: tmp
-//                    if currentInstruction == 14 && compilable.findex == 259 {
-//                        let _c: (@convention(c)(OpaquePointer)->()) = {
-//                            ptr in
-//                            
-//                            let x: UnsafePointer<vclosure> = .init(ptr)
-//                            print(x)
-//                        }
-//                        appendLoad(reg: X.x0, from: closureObject, kinds: regs, mem: mem)
-//                        mem.append(
-//                            PseudoOp.mov(X.x15, unsafeBitCast(_c, to: OpaquePointer.self)),
-//                            M1Op.blr(X.x15)
-//                        )
-//                    }
-                    // MARK: /tmp
                     
                     var jmpTargetHasValue = RelativeDeferredOffset()
                     var jmpTargetFinish = RelativeDeferredOffset()
@@ -2146,7 +2187,7 @@ class M1Compiler2 {
             case .OMov(let dst, let src):
                 let srcType = requireTypeKind(reg: src, from: regs)
                 let dstType = requireTypeKind(reg: dst, from: regs)
-                Swift.assert(srcType.kind == dstType.kind)
+                Swift.assert(srcType.kind == dstType.kind || dstType.kind == .dyn)
                 
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
@@ -2572,7 +2613,7 @@ class M1Compiler2 {
                 // x0 = address of ref
                 appendLoad(reg: X.x0, from: dst, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: src, kinds: regs, mem: mem)
-                appendStore(reg: X.x1, as: src, intoAddressFrom: X.x0, kinds: regs, mem: mem)
+                appendStore(reg: X.x1, as: src, intoAddressFrom: X.x0, offsetFromAddress: 0, kinds: regs, mem: mem)
                 break
             case .OMakeEnum(let dst, let construct, let args):
                 assert(reg: dst, from: regs, is: HLTypeKind.enum)
