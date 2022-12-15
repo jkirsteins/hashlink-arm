@@ -33,9 +33,6 @@ final class CCompatTests: XCTestCase {
         XCTAssertEqual(MemoryLayout<vvirtual>.size, 24)
         XCTAssertEqual(MemoryLayout<HLTypeVirtual_CCompat>.size, 32)
         XCTAssertEqual(MemoryLayout<HLFieldLookup_CCompat>.size, 16)
-        
-        
-        
     }
 }
 

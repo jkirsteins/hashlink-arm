@@ -850,13 +850,23 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile_testCallClosure_Dynamic() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Float64))
         
+        let dependency = 307
         try _compileAndLinkWithDeps(
             strip: false,
             name: "Main.testCallClosure_Dynamic",
-            depHints: [307]
+            depHints: [dependency]
         ) {
             sutFix, mem in
             
+            // first test the dependency is working directly
+            guard let x = try ctx.getCallable(findex: dependency) else {
+                return XCTFail("Couldn't load dependency function \(dependency)")
+            }
+            typealias _DepType = (@convention(c)(Int32)->Float64)
+            let _dep: _DepType = unsafeBitCast(x.address.value, to: _DepType.self)
+            XCTAssertEqual(_dep(2), 246.0)
+            
+            // now test via closure
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 

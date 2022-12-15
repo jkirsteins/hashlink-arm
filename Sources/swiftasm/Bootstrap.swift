@@ -6,16 +6,6 @@ actor Bootstrap
     private(set) static var _file: ContiguousArray<CChar> = []
     private(set) static var canStart = true
     
-    // void *hlc_static_call( void *fun, hl_type *t, void **args, vdynamic *out ) {
-    static let hlc_static_call: (@convention(c) (_ fun: OpaquePointer, _ t: OpaquePointer, _ args: OpaquePointer, _ out: OpaquePointer)->()) = {
-        funPtr, tPtr, argPtr, outPtr in
-        
-        let t: hlTypePointer = .init(tPtr)
-        
-        print(t.kind)
-        fatal("hlc_static_call not implemented", bootstrapLogger)
-    }
-    
     // void *hlc_get_wrapper( hl_type *t )
     static let hlc_get_wrapper: (@convention(c) (_ fun: OpaquePointer)->(OpaquePointer)) = {
         _ in
@@ -31,7 +21,7 @@ actor Bootstrap
         LibHl.hl_global_init()
         LibHl.hl_sys_init(args: args, file: file)
         
-        let hsc = unsafeBitCast(hlc_static_call, to: OpaquePointer.self)
+        let hsc = unsafeBitCast(M1Compiler2.hlc_static_call, to: OpaquePointer.self)
         let hgw = unsafeBitCast(hlc_get_wrapper, to: OpaquePointer.self)
         LibHl._hl_setup_callbacks(hsc, hgw)
         

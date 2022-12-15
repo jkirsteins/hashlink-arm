@@ -204,11 +204,156 @@ extension M1Compiler2 {
     }
     
     func isInteger(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
+        Self.isInteger(vreg: vreg, kinds: kinds)
+    }
+    
+    static func isInteger(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
         return INTEGER_TYPE_KINDS.contains( (kinds[Int(vreg)] as (any HLTypeKindProvider)).kind )
     }
     
     func isFP(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
+        Self.isFP(vreg: vreg, kinds: kinds)
+    }
+    
+    static func isFP(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
         return FP_TYPE_KINDS.contains( (kinds[Int(vreg)] as (any HLTypeKindProvider)).kind )
+    }
+    
+    /// Result:
+    ///     - Should return whatever the callee closure returns (if anything)
+    ///
+    /// C signature:
+    ///
+    ///     void *hlc_static_call( void *fun, hl_type *t, void **args, vdynamic *out ) {
+    static let hlc_static_call: (@convention(c) (_ fun: OpaquePointer, _ t: OpaquePointer, _ args: OpaquePointer, _ out: OpaquePointer)->(OpaquePointer?)) = {
+        funPtr, tPtr, argPtr, outPtr in
+        
+        let t: hlTypePointer = .init(tPtr)
+        let out: UnsafeMutablePointer<vdynamic> = .init(outPtr)
+
+        guard let funProvider = t.funProvider else {
+            fatal("hlc_static_call fails, invalid type passed", logger)
+        }
+
+        /* we'll JIT the call
+         *
+         * x20 will hold the arg offset
+         * x21 will hold the target func offset
+         */
+        let mem = CpuOpBuffer()
+        
+        // no-stack-prologue
+        mem.append(
+            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(16)),
+            M1Op.stp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 0, nil))
+        )
+        
+        // set x20/x21
+        mem.append(
+            PseudoOp.mov(X.x20, argPtr),
+            PseudoOp.mov(X.x21, funPtr)
+        )
+
+        var offset: ByteCount = 0
+        var gpRegisterIx: Int = 0
+        var fpRegisterIx: Int = 0
+        for (argIx, arg) in funProvider.argsProvider.enumerated() {
+            guard !isFP(vreg: Reg(argIx), kinds: funProvider.argsProvider) else {
+                fatal("floating point arguments not implemented", logger)
+            }
+
+            // only general purpose registers from here on
+            guard gpRegisterIx < ARG_REGISTER_COUNT else {
+                fatal("hlc_static_call does not support more than \(ARG_REGISTER_COUNT) arguments", logger)
+            }
+            defer { gpRegisterIx += 1 }
+
+            let gpRegister = Register64(rawValue: UInt8(gpRegisterIx))!
+
+            M1Compiler2.appendLoad(
+                reg: gpRegister,
+                as: Reg(argIx),
+                fromAddressFrom: X.x20,
+                offsetFromAddress: offset,
+                kinds: funProvider.argsProvider,
+                mem: mem)
+
+            print("argIx", argIx, "into", gpRegister)
+            print("arg", arg)
+            print("arg kind", arg.kind)
+            print("offset", offset)
+            offset += arg.hlRegSize
+        }
+
+        mem.append(
+            M1Op.blr(X.x21)
+        )
+        
+        // no-stack-epilogue
+        mem.append(
+            M1Op.ldp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 0, nil)),
+            M1Op.addImm12(X.sp, X.sp, Imm12Lsl12(16)),
+            M1Op.ret
+        )
+
+        // JIT
+        let emittedBytes = try! mem.ops.flatMap { try $0.emit() }
+
+        let execMem = mmap(
+            nil,
+            Int(mem.byteSize),
+            PROT_WRITE | PROT_EXEC,
+            MAP_ANONYMOUS | MAP_PRIVATE | MAP_JIT,
+            -1,
+            0
+        )
+
+        guard let execMem = execMem else {
+            fatal("mmap returned nil: \(errno)", logger)
+        }
+
+        if execMem == MAP_FAILED {
+            fatal("mmap failed: \(errno)", logger)
+        }
+
+        Swift.assert(mem.byteSize == Int64(emittedBytes.count))
+
+        pthread_jit_write_protect_np(0)
+        memcpy(execMem, emittedBytes, emittedBytes.count)
+        pthread_jit_write_protect_np(1)
+        // End JIT
+
+        switch(funProvider.retProvider.kind) {
+        case .void:
+            return nil
+        case .f32:
+            // TODO: test
+            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Float32).self)
+            let result = _jitFunc()
+            out.pointee.set(f: result)
+            Swift.assert(out.pointee.f == result)
+            return withUnsafeMutablePointer(to: &out.pointee.union) { res in
+                print(res, "vs", out)
+                print(res.pointee)
+                fatalError("Not tested")
+                return .init(res)
+            }
+        case .f64:
+            mem.hexPrint()
+            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Float64).self)
+            let result = _jitFunc()
+            out.pointee.set(d: result)
+            Swift.assert(out.pointee.d == result)
+            print("Got result", result)
+            return withUnsafeMutablePointer(to: &out.pointee.union) { res in
+                print(res, "vs", out)
+                print(res.pointee)
+                fatalError("Not tested")
+                return .init(res)
+            }
+        default:
+            fatal("hlc_static_call does not support return type \(funProvider.retProvider.kind)", logger)
+        }
     }
     
     func appendPrepareDoubleForStore(reg: RegisterFP64, to vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
@@ -316,6 +461,32 @@ extension M1Compiler2 {
             mem.append(M1Op.uxtb(reg.to32, reg.to32))
         default:
             fatalError("Unknown size for setting size mode modifier")
+        }
+    }
+    
+    static func appendLoad(reg: Register64, as vreg: Reg, fromAddressFrom addrReg: Register64, offsetFromAddress offset: ByteCount, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        // TODO: combine appendLoads
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        if vregKind.hlRegSize == 8 {
+            mem.append(
+                M1Op.ldr(reg, .reg64offset(addrReg, offset, nil))
+            )
+        } else if vregKind.hlRegSize == 4 {
+            mem.append(
+                M1Op.ldr(reg.to32, .reg64offset(addrReg, offset, nil))
+            )
+        } else if vregKind.hlRegSize == 2 {
+            mem.append(
+                M1Op.ldrh(reg.to32, .imm64(addrReg, offset, nil))
+            )
+        } else if vregKind.hlRegSize == 1 {
+            mem.append(
+                M1Op.ldrb(reg.to32, .imm64(addrReg, offset, nil))
+            )
+        } else if vregKind.hlRegSize == 0 {
+            // nop
+        } else {
+            fatalError("Size must be 8, 4, 2, 1, or 0")
         }
     }
     
@@ -980,6 +1151,10 @@ class M1Compiler2 {
     }
     
     func requireTypeKind(reg: Reg, from resolvedRegs: [any HLTypeKindProvider]) -> HLTypeKind {
+        Self.requireTypeKind(reg: reg, from: resolvedRegs)
+    }
+    
+    static func requireTypeKind(reg: Reg, from resolvedRegs: [any HLTypeKindProvider]) -> HLTypeKind {
         guard reg < resolvedRegs.count else {
             let _debug = resolvedRegs as [any OverrideCustomDebugStringConvertible]
             fatalError("requireType(reg:from:): Not enough registers. Expected \(reg) to be available. Got: \(_debug._overrideDebugDescription)")

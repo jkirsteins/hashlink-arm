@@ -28,7 +28,7 @@ import Foundation
  */
 struct vdynamic {
     let t: UnsafePointer<HLType_CCompat>
-    let union: UnsafeMutableRawPointer?
+    var union: UnsafeMutableRawPointer?
     
     var b: Bool { ui8 > 0 }
     var ui8: UInt8 { UInt8(truncatingIfNeeded: Int8(truncatingIfNeeded: Int(bitPattern: union))) }
@@ -39,4 +39,20 @@ struct vdynamic {
     var bytes: UnsafeRawPointer? { .init(union) }
     var ptr: UnsafeRawPointer? { .init(union) }
     var i64: Int64 { Int64(truncatingIfNeeded: Int(bitPattern: union)) }
+    
+    mutating func set(d: Float64) {
+        let ui64 = d.bitPattern
+        let i64 = Int64(bitPattern: ui64)
+        let i: Int = Int(i64)
+        let ui: UInt = UInt(bitPattern: i)
+        union = UnsafeMutableRawPointer(bitPattern: ui)
+    }
+    
+    mutating func set(f: Float32) {
+        let ui32 = f.bitPattern
+        let i32 = Int32(bitPattern: ui32)
+        let i: Int = Int(i32)
+        let ui: UInt = UInt(bitPattern: i)
+        union = UnsafeMutableRawPointer(bitPattern: ui)
+    }
 }
