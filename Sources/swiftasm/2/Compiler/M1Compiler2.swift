@@ -2439,7 +2439,7 @@ class M1Compiler2 {
             case .OMov(let dst, let src):
                 let srcType = requireTypeKind(reg: src, from: regs)
                 let dstType = requireTypeKind(reg: dst, from: regs)
-                Swift.assert(srcType.kind == dstType.kind || dstType.kind == .dyn)
+                assert(reg: src, from: regs, in: [dstType.kind, HLTypeKind.dyn])
                 
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)

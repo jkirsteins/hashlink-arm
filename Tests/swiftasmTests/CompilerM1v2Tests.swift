@@ -1426,6 +1426,63 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _rf32__f32(ops: [HLOpCode], regs: [HLTypeKind] = [.f32], strip: Bool = true, _ callback: @escaping ((Float32)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float32) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32__f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64, .f32], strip: Bool = true, _ callback: @escaping ((Float64)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f64, HLTypeKind.f32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float64) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf64__f32(ops: [HLOpCode], regs: [HLTypeKind] = [.f32, .f64], strip: Bool = true, _ callback: @escaping ((Float32)->Float64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f32, HLTypeKind.f64],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float32) -> Float64)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _rf64__f64_f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64, .f64, .f64], strip: Bool = true, _ callback: @escaping ((Float64, Float64)->Float64)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -1884,6 +1941,33 @@ final class CompilerM1v2Tests: CCompatTestCase {
             
             XCTAssertEqual(6, entrypoint(6))
         }
+        
+        try _rf32__f32(ops: [
+            .OMov(dst: 1, src: 0),
+            .ORet(ret: 1),
+        ], regs: [.f32, .f32]) {
+            entrypoint in
+            
+            XCTAssertEqual(123.456, entrypoint(123.456))
+        }
+        
+        try _rf32__f64(ops: [
+            .OMov(dst: 1, src: 0),
+            .ORet(ret: 1),
+        ], regs: [.f64, .f32]) {
+            entrypoint in
+            
+            XCTAssertEqual(456.789, entrypoint(456.789))
+        }
+        
+        try _rf64__f32(ops: [
+            .OMov(dst: 1, src: 0),
+            .ORet(ret: 1),
+        ], regs: [.f32, .f64]) {
+            entrypoint in
+            
+            XCTAssertEqual(456.789, entrypoint(456.789))
+        }
     }
     
     func testCompile__OCall__regression1() throws {
@@ -1966,6 +2050,91 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 XCTAssertEqual(
                     6,
                     try mappedMem.calljit_u8(ctx: ctx, fix: 0, u8_0: 6),
+                    "failed for \(sutOp.id)")
+            }
+        }
+    }
+    
+    func testCompile__OCall__returnFP32() throws {
+        let f1: (@convention(c) (Float32) -> Float32) = { $0 }
+        let f1p = unsafeBitCast(f1, to: UnsafeMutableRawPointer.self)
+        let f2: (@convention(c) (Float32, Float32) -> Float32) = { a, _ in a }
+        let f2p = unsafeBitCast(f2, to: UnsafeMutableRawPointer.self)
+        let f3: (@convention(c) (Float32, Float32, Float32) -> Float32) = { a, _, _ in a }
+        let f3p = unsafeBitCast(f3, to: UnsafeMutableRawPointer.self)
+        let f4: (@convention(c) (Float32, Float32, Float32, Float32) -> Float32) = { a, _, _, _ in a }
+        let f4p = unsafeBitCast(f4, to: UnsafeMutableRawPointer.self)
+        
+        for sutOp in [
+            HLOpCode.OCall1(dst: 0, fun: 1, arg0: 4),
+            HLOpCode.OCall2(dst: 0, fun: 2, arg0: 4, arg1: 4),
+            HLOpCode.OCall3(dst: 0, fun: 3, arg0: 4, arg1: 4, arg2: 4),
+            HLOpCode.OCall4(dst: 0, fun: 4, arg0: 4, arg1: 4, arg2: 4, arg3: 4),
+            HLOpCode.OCallN(dst: 0, fun: 4, args: [4, 4, 4, 4]),
+        ]
+        {
+            let ctx = try prepareContext(
+                compilables: [
+                    prepareFunction(
+                        retType: HLTypeKind.f32,
+                        findex: 0,
+                        regs: [HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.u8],
+                        args: [HLTypeKind.f32],
+                        ops: [
+                            .OMov(dst: 1, src: 0),
+                            .OMov(dst: 2, src: 0),
+                            .OMov(dst: 3, src: 0),
+                            .OMov(dst: 4, src: 0),
+                            sutOp,
+                            .ORet(ret: 0),
+                        ])
+                ],
+                natives: [
+                    TestNative2(
+                        findex: 1,
+                        libProvider: "?",
+                        nameProvider: "f1",
+                        typeProvider: Test_HLTypeFun(
+                            argsProvider: [HLTypeKind.f32],
+                            retProvider: HLTypeKind.f32),
+                        address: f1p
+                    ),
+                    TestNative2(
+                        findex: 2,
+                        libProvider: "?",
+                        nameProvider: "f2",
+                        typeProvider: Test_HLTypeFun(
+                            argsProvider: [HLTypeKind.f32, HLTypeKind.f32],
+                            retProvider: HLTypeKind.f32),
+                        address: f2p
+                    ),
+                    TestNative2(
+                        findex: 3,
+                        libProvider: "?",
+                        nameProvider: "f3",
+                        typeProvider: Test_HLTypeFun(
+                            argsProvider: [HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32],
+                            retProvider: HLTypeKind.f32),
+                        address: f3p
+                    ),
+                    TestNative2(
+                        findex: 4,
+                        libProvider: "?",
+                        nameProvider: "f4",
+                        typeProvider: Test_HLTypeFun(
+                            argsProvider: [HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32],
+                            retProvider: HLTypeKind.f32),
+                        address: f4p
+                    )
+                ]
+            )
+            
+            try compileAndLink(ctx: ctx, 0) {
+                mappedMem in
+                
+                XCTAssertEqual(
+                    try mappedMem.calljit_f32(ctx: ctx, fix: 0, f32_0: 123.456),
+                    123.456,
                     "failed for \(sutOp.id)")
             }
         }

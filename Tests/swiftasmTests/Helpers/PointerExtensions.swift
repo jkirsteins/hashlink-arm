@@ -67,6 +67,15 @@ extension UnsafeMutableRawPointer {
         return res
     }
     
+    func calljit_f32(ctx: CCompatJitContext, fix: Int, f32_0: Float32) throws -> Float32 {
+        let res = try jit(ctx: ctx, fix: fix) { (ep: (@convention(c) (Float32) -> Float32)) in
+            let res = ep(f32_0)
+            // make a copy or it crashes?
+            return res
+        }
+        return res
+    }
+    
     func calljit_u8(ctx: CCompatJitContext, fix: Int, u8_0: UInt8, u8_1: UInt8) throws -> UInt8 {
         return try jit(ctx: ctx, fix: fix) { (ep: (@convention(c) (UInt8, UInt8) -> UInt8)) in
             return ep(u8_0, u8_1)
