@@ -1312,6 +1312,44 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _rf32__i32_f32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .f32], strip: Bool = true, _ callback: @escaping ((Int32, Float32)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i32, HLTypeKind.f32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int32, Float32) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ri32__i32_f32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .f32], strip: Bool = true, _ callback: @escaping ((Int32, Float32)->Int32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i32, HLTypeKind.f32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int32, Float32) -> Int32)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _ru8__u8_u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u8], _ callback: @escaping ((UInt8, UInt8)->UInt8)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -2893,11 +2931,38 @@ final class CompilerM1v2Tests: CCompatTestCase {
     }
     
     func testCompile__OMul() throws {
+        // multiply integers
         try _ri8__i8_i8(ops: [
             .OMul(dst: 1, a: 0, b: 1),
             .ORet(ret: 1),
         ]) { entrypoint in
-            
+
+            XCTAssertEqual(4, entrypoint(1, 4))
+            XCTAssertEqual(4, entrypoint(2, 2))
+            XCTAssertEqual(36, entrypoint(4, 9))
+            XCTAssertEqual(0, entrypoint(1, 0))
+            XCTAssertEqual(-10, entrypoint(-5, 2))
+        }
+
+        // multiply integer with float, return as float
+        try _rf32__i32_f32(ops: [
+            .OMul(dst: 1, a: 0, b: 1),
+            .ORet(ret: 1),
+        ], strip: false) { entrypoint in
+
+            XCTAssertEqual(4, entrypoint(1, 4))
+            XCTAssertEqual(4, entrypoint(2, 2))
+            XCTAssertEqual(36, entrypoint(4, 9))
+            XCTAssertEqual(0, entrypoint(1, 0))
+            XCTAssertEqual(-10, entrypoint(-5, 2))
+        }
+        
+        // multiply integer with float, return as integer
+        try _ri32__i32_f32(ops: [
+            .OMul(dst: 0, a: 0, b: 1),
+            .ORet(ret: 0),
+        ], strip: false) { entrypoint in
+
             XCTAssertEqual(4, entrypoint(1, 4))
             XCTAssertEqual(4, entrypoint(2, 2))
             XCTAssertEqual(36, entrypoint(4, 9))

@@ -4,6 +4,8 @@ protocol Register: Equatable, CustomDebugStringConvertible {
     var rawValue: UInt8 { get }
     var i: (any RegisterI)? { get }
     var fp: (any RegisterFP)? { get }
+    
+    var is64: Bool { get }
 }
 
 protocol RegisterI: Register, Equatable, CustomDebugStringConvertible {
@@ -20,6 +22,7 @@ protocol RegisterI: Register, Equatable, CustomDebugStringConvertible {
 protocol RegisterFP: Register, Equatable, CustomDebugStringConvertible {
     var rawValue: UInt8 { get }
     
+    var half: Bool { get }
     var single: Bool { get }
     var double: Bool { get }
     
@@ -29,6 +32,7 @@ protocol RegisterFP: Register, Equatable, CustomDebugStringConvertible {
 extension RegisterFP {
     var to64: RegisterFP64 { RegisterFP64(rawValue: self.rawValue)! }
     var to32: RegisterFP32 { RegisterFP32(rawValue: self.rawValue)! }
+    var to16: RegisterFP16 { RegisterFP16(rawValue: self.rawValue)! }
     
     var is32: Bool { bits == 32 }
     var is64: Bool { bits == 64 }
@@ -41,6 +45,7 @@ extension RegisterI {
 typealias X = Register64
 typealias D = RegisterFP64
 typealias S = RegisterFP32
+typealias H = RegisterFP16
 typealias W = Register32
 
 extension OpBuilder
@@ -186,6 +191,7 @@ enum Register64: UInt8, RegisterI {
 
 enum RegisterFP64: UInt8, RegisterFP {
     
+    var half: Bool { false }
     var single: Bool { false }
     var double: Bool { true }
     
@@ -235,6 +241,7 @@ enum RegisterFP64: UInt8, RegisterFP {
 
 enum RegisterFP32: UInt8, RegisterFP {
     
+    var half: Bool { false }
     var single: Bool { true }
     var double: Bool { false }
     
@@ -279,6 +286,56 @@ enum RegisterFP32: UInt8, RegisterFP {
     
     var debugDescription: String {
         "s\(self.rawValue)"
+    }
+}
+
+enum RegisterFP16: UInt8, RegisterFP {
+    
+    var half: Bool { true }
+    var single: Bool { false }
+    var double: Bool { false }
+    
+    var i: (any RegisterI)? { nil }
+    var fp: (any RegisterFP)? { self }
+    
+    var bits: Int {
+        16
+    }
+    
+    case h0 = 0
+    case h1 = 1
+    case h2 = 2
+    case h3 = 3
+    case h4 = 4
+    case h5 = 5
+    case h6 = 6
+    case h7 = 7
+    case h8 = 8
+    case h9 = 9
+    case h10 = 10
+    case h11 = 11
+    case h12 = 12
+    case h13 = 13
+    case h14 = 14
+    case h15 = 15
+    case h16 = 16
+    case h17 = 17
+    case h18 = 18
+    case h19 = 19
+    case h20 = 20
+    case h21 = 21
+    case h22 = 22
+    case h23 = 23
+    case h24 = 24
+    case h25 = 25
+    case h26 = 26
+    case h27 = 27
+    case h28 = 28
+    case h29 = 29
+    case h30 = 30
+    
+    var debugDescription: String {
+        "h\(self.rawValue)"
     }
 }
 
@@ -1693,6 +1750,15 @@ public class EmitterM1 {
             let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm, Ra: Ra)
             let encoded = mask | sf | regs
             return returnAsArray(encoded)
+        case .fmul(let Rd, let Rn, let Rm):
+            try assertMatchingSize(Rd, Rn, Rm)
+            
+            //                           ftype   Rm           Rn    Rd
+            let mask: Int64 = 0b00011110_00____1_00000_000010_00000_00000
+            let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
+            let ftype = ftypeMask(Rd)
+            let encoded = mask | regs | ftype
+            return returnAsArray(encoded)
         case .orr(let Rd, let Rn, let Rm, let shift):
             //                           SH   Rm    imm6   Rn    Rd
             let mask: Int64 = 0b00101010_00_0_00000_000000_00000_00000
@@ -1709,7 +1775,7 @@ public class EmitterM1 {
             let regs = encodeRegs(Rd: Rt, Rn: Register64(rawValue: Rn.rawValue))
             let encoded = mask | s | ftype | regs
             return returnAsArray(encoded)
-        case .scvtf(let Rt, let Rn) where Rt.single || Rt.double:
+        case .scvtf(let Rt, let Rn) where Rt.single || Rt.double || Rt.half:
             //                  S        FT              Rn    Rd
             let mask: Int64 = 0b00011110_00_100010000000_00000_00000
             let ftype: Int64 = ftypeMask(Rt)
@@ -1764,6 +1830,14 @@ public class EmitterM1 {
                 // double to single
                 ftype   = 0b01 << 22
                 opc     = 0b00 << 15
+            case (16, 64):
+                // half to double
+                ftype   = 0b11 << 22
+                opc     = 0b01 << 15
+            case (64, 16):
+                // double to half
+                ftype   = 0b01 << 22
+                opc     = 0b11 << 15
             default:
                 fatalError("fcvt for \(source) -> \(target) not implemented")
             }
@@ -1798,9 +1872,11 @@ public class EmitterM1 {
     static func ftypeMask(_ reg: any RegisterFP) -> Int64 {
         let res: Int64
         if reg.double {
-            res = 1
+            res = 0b01
         } else if reg.single {
-            res = 0
+            res = 0b00
+        } else if reg.half {
+            res = 0b11
         } else {
             fatalError("Not implemented")
         }

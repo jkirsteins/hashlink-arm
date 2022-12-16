@@ -377,6 +377,8 @@ extension M1Compiler2 {
             break
         case 4:
             mem.append(M1Op.fcvt(reg, reg.to32))
+        case 2, 1:
+            mem.append(M1Op.fcvt(reg, reg.to16))
         default:
             fatalError("Can't convert floating point to size \(vregKind.hlRegSize)")
         }
@@ -394,6 +396,67 @@ extension M1Compiler2 {
         } else {
             fatalError("Can't append numeric for \(vregKind)")
         }
+    }
+    
+    /// Load numeric values into FP registers. If source is an integer (non-FP value) then it will be
+    /// loaded into a GP register first, then converted to a 64-bit FP value.
+    /// - Parameters:
+    ///   - reg: target register
+    ///   - vreg: virtual register index to load
+    ///   - kinds: list of available virtual register types
+    ///   - mem: op buffer
+    func appendLoadNumericAsFP(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer)
+    {
+        appendLoadNumeric(reg: Int(reg.rawValue), from: vreg, kinds: kinds, mem: mem)
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        if INTEGER_TYPE_KINDS.contains(vregKind) {
+            let regGP = Register64(rawValue: reg.rawValue)!
+            appendLoad(reg: regGP, from: vreg, kinds: kinds, mem: mem)
+            appendDebugPrintRegisterAligned4(regGP, prepend: "appendLoadNumericAsFP", builder: mem)
+            
+            // sign-extend -> convert to FP? -> convert FP? to FP64
+            appendSignMode(true, reg: regGP, from: vreg, kinds: kinds, mem: mem)
+            appendScvtf(reg: regGP, to: reg, target: vreg, kinds: kinds, mem: mem)
+            appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
+            
+            appendDebugPrintRegisterAligned4(reg, prepend: "appendLoadNumericAsFP", builder: mem)
+            
+        } else if FP_TYPE_KINDS.contains(vregKind) {
+            appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
+        } else {
+            fatalError("Can't append numeric for \(vregKind)")
+        }
+    }
+    
+    /// Store FP register as either integer or FP value, depending on the vreg kind.
+    ///
+    /// - Parameters:
+    ///   - reg: source FP register
+    ///   - vreg: vreg that determines the HL kind
+    ///   - addrReg: GP register holding the target address where to store the value
+    ///   - offsetFromAddress: offset from the value in `addrReg`
+    ///   - kinds: known virtual (HL) register kinds
+    ///   - mem: mem
+    func appendStoreFPAsNumeric(reg: RegisterFP64, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        
+        if FP_TYPE_KINDS.contains(vregKind) {
+            // convert FP to right size, and store
+            appendPrepareDoubleForStore(reg: reg, to: vreg, kinds: kinds, mem: mem)
+            appendStore(reg: reg, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
+        } else {
+            // convert FP to int, and store
+            let regI = Register64(rawValue: reg.rawValue)!
+            appendFcvtzs(reg: reg, to: regI, target: vreg, kinds: kinds, mem: mem)
+            appendStore(reg: regI, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
+            appendDebugPrintRegisterAligned4(reg, prepend: "store (FP)", builder: mem)
+            appendDebugPrintRegisterAligned4(regI, prepend: "store (GP)", builder: mem)
+        }
+    }
+    
+    func appendStoreFPAsNumeric(reg: RegisterFP64, as vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let offset = getRegStackOffset(kinds, vreg)
+        appendStoreFPAsNumeric(reg: reg, as: vreg, intoAddressFrom: .sp, offsetFromAddress: offset, kinds: kinds, mem: mem)
     }
     
     func appendLoad(reg: Register64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
@@ -420,6 +483,8 @@ extension M1Compiler2 {
             mem.append(M1Op.scvtf(fp, reg))
         case 4:
             mem.append(M1Op.scvtf(fp.to32, reg))
+        case 2, 1:
+            mem.append(M1Op.scvtf(fp.to16, reg))
         default:
             fatalError("appendScvtf not implemented for size \(tk.hlRegSize)")
         }
@@ -430,7 +495,7 @@ extension M1Compiler2 {
         switch(tk.hlRegSize) {
         case 8:
             mem.append(M1Op.fcvtzs(gp, reg))
-        case 4:
+        case 4, 2, 1:
             mem.append(M1Op.fcvtzs(gp.to32, reg))
         default:
             fatalError("appendFcvtzs not implemented for size \(tk.hlRegSize)")
@@ -542,8 +607,14 @@ extension M1Compiler2 {
         }
     }
     
-    func appendStore(reg: Register64, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        
+        Swift.assert(reg.is64)
+        
+        guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
+            fatalError("Can't convert \(reg) to 32-bit variant")
+        }
         
         if vregKind.hlRegSize == 8 {
             mem.append(
@@ -553,17 +624,23 @@ extension M1Compiler2 {
         } else if vregKind.hlRegSize == 4 {
             mem.append(
                 PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
-                M1Op.str(reg.to32, .reg64offset(addrReg, offsetFromAddress, nil))
+                M1Op.str(reg32, .reg64offset(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 2 {
+            guard let reg32gp = reg32.i?.to32 else {
+                fatalError("store for 2-byte FP registers not implemented")
+            }
             mem.append(
                 PseudoOp.debugMarker("Storing 2 bytes in vreg \(vreg)"),
-                M1Op.strh(reg.to32, .imm64(addrReg, offsetFromAddress, nil))
+                M1Op.strh(reg32gp, .imm64(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 1 {
+            guard let reg32gp = reg32.i?.to32 else {
+                fatalError("store for 1-byte FP registers not implemented")
+            }
             mem.append(
                 PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
-                M1Op.strb(reg.to32, .imm64(addrReg, offsetFromAddress, nil))
+                M1Op.strb(reg32gp, .imm64(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 0 {
             // nop
@@ -2552,14 +2629,15 @@ class M1Compiler2 {
                 mem.append(M1Op.eor_r(X.x2, X.x0, X.x1, nil))
                 appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
             case .OMul(let dst, let a, let b):
-                appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
-                appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
+                appendLoadNumericAsFP(reg: D.d0, from: a, kinds: regs, mem: mem)
+                appendLoadNumericAsFP(reg: D.d1, from: b, kinds: regs, mem: mem)
                 
-                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
-                appendDebugPrintRegisterAligned4(X.x1, builder: mem)
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OMul(a)", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d1, prepend: "OMul(b)", builder: mem)
                 
-                mem.append(M1Op.mul(X.x0, X.x0, X.x1))
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                mem.append(M1Op.fmul(D.d0, D.d0, D.d1))
+                
+                appendStoreFPAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             case .OUDiv(let dst, let a, let b):
                 // UDiv only defined for integer types
                 // See: https://haxe.org/blog/hashlink-in-depth-p2/

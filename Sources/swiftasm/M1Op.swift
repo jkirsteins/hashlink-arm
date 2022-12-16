@@ -353,6 +353,8 @@ enum M1Op : CpuOp {
                 .madd(let Rd, let Rn, let Rm, X.xZR as Register64),
                 .madd(let Rd, let Rn, let Rm, W.wZR as Register32):
             return "mul \(Rd), \(Rn), \(Rm)"
+        case .fmul(let Rd, let Rn, let Rm):
+            return "fmul \(Rd), \(Rn), \(Rm)"
         case .madd(let Rd, let Rn, let Rm, let Ra):
             return "madd \(Rd), \(Rn), \(Rm), \(Ra)"
         case .fcvtzs(let Rt, let Rn):
@@ -552,6 +554,7 @@ enum M1Op : CpuOp {
     case eor_r(any RegisterI, any RegisterI, any RegisterI, Shift64_Real?)
     
     case mul(any RegisterI, any RegisterI, any RegisterI)
+    case fmul(any RegisterFP, any RegisterFP, any RegisterFP)
     case madd(any RegisterI, any RegisterI, any RegisterI, any RegisterI)
     
     // Floating-point Convert to Signed integer

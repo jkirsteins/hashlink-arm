@@ -941,6 +941,16 @@ final class EmitterM1Tests: XCTestCase {
             "fcvt s3, d4",
             0x83, 0x40, 0x62, 0x1e
         )
+        try XCTAssertM1Op(
+            M1Op.fcvt(H.h3, D.d4),
+            "fcvt h3, d4",
+            0x83, 0xc0, 0x63, 0x1e
+        )
+        try XCTAssertM1Op(
+            M1Op.fcvt(D.d3, H.h4),
+            "fcvt d3, h4",
+            0x83, 0xc0, 0xe2, 0x1e
+        )
     }
     
     func testLdp_fp() throws {
@@ -1234,6 +1244,32 @@ final class EmitterM1Tests: XCTestCase {
             "mul x1, x2, x3",
             0x41, 0x7c, 0x03, 0x9b
         )
+    }
+    
+    func testFmul() throws {
+        try XCTAssertM1Op(
+            .fmul(S.s1, S.s2, S.s3),
+            "fmul s1, s2, s3",
+            0x41, 0x08, 0x23, 0x1e
+        )
+        try XCTAssertM1Op(
+            .fmul(D.d1, D.d2, D.d3),
+            "fmul d1, d2, d3",
+            0x41, 0x08, 0x63, 0x1e
+        )
+        try XCTAssertM1Op(
+            .fmul(H.h1, H.h2, H.h3),
+            "fmul h1, h2, h3",
+            0x41, 0x08, 0xe3, 0x1e
+        )
+    }
+    
+    func testMadd() throws {
+        try XCTAssertM1Op(
+            .madd(X.x1, X.x2, X.x3, X.x4),
+            "madd x1, x2, x3, x4",
+            0x41, 0x10, 0x03, 0x9b
+        )
         try XCTAssertM1Op(
             .madd(W.w1, W.w2, W.w3, W.wZR),
             "mul w1, w2, w3",
@@ -1243,14 +1279,6 @@ final class EmitterM1Tests: XCTestCase {
             .madd(X.x1, X.x2, X.x3, X.xZR),
             "mul x1, x2, x3",
             0x41, 0x7c, 0x03, 0x9b
-        )
-    }
-    
-    func testMadd() throws {
-        try XCTAssertM1Op(
-            .madd(X.x1, X.x2, X.x3, X.x4),
-            "madd x1, x2, x3, x4",
-            0x41, 0x10, 0x03, 0x9b
         )
     }
 }
