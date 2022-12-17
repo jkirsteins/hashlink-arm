@@ -864,13 +864,13 @@ final class CompileMod2Tests: RealHLTestCase {
             }
             typealias _DepType = (@convention(c)(Int32)->Float64)
             let _dep: _DepType = unsafeBitCast(x.address.value, to: _DepType.self)
-            XCTAssertEqual(_dep(2), 246.0)
+            XCTAssertEqualDouble(_dep(123), 246.0)
             
             // now test via closure
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
-                
-                XCTAssertEqual(entrypoint(2), 246.0)
+
+                XCTAssertEqualDouble(entrypoint(123), 246.0)
             }
         }
     }

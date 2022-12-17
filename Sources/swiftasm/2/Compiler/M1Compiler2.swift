@@ -203,6 +203,14 @@ extension M1Compiler2 {
         return (StackInfo.roundUpStackReservation(result), stackArgs)
     }
     
+    func isNumeric(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
+        Self.isNumeric(vreg: vreg, kinds: kinds)
+    }
+    
+    static func isNumeric(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
+        return NUMERIC_TYPE_KINDS.contains( (kinds[Int(vreg)] as (any HLTypeKindProvider)).kind )
+    }
+    
     func isInteger(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
         Self.isInteger(vreg: vreg, kinds: kinds)
     }
@@ -251,6 +259,10 @@ extension M1Compiler2 {
         // set x20/x21
         mem.append(
             PseudoOp.mov(X.x20, argPtr),
+            
+            // test
+            M1Op.ldr(X.x20, .reg(X.x20, .imm(0, nil))),
+            
             PseudoOp.mov(X.x21, funPtr)
         )
 
@@ -370,6 +382,10 @@ extension M1Compiler2 {
     }
     
     func appendFPRegToDouble(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        Self.appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
+    }
+    
+    static func appendFPRegToDouble(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         switch(vregKind.hlRegSize) {
         case 8:
@@ -567,51 +583,36 @@ extension M1Compiler2 {
         }
     }
     
-    func appendLoad(reg: Register64, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
+    func appendLoad(reg: any Register, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         if vregKind.hlRegSize == 8 {
             mem.append(
                 M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
             )
         } else if vregKind.hlRegSize == 4 {
+            guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
+                fatalError("Can't convert \(reg) to 32-bit variant")
+            }
+            
             mem.append(
-                M1Op.ldr(reg.to32, .reg64offset(.sp, offset, nil))
+                M1Op.ldr(reg32, .reg64offset(.sp, offset, nil))
             )
         } else if vregKind.hlRegSize == 2 {
+            guard let regGP32 = reg.i?.to32 else {
+                fatal("Not supported 2 byte FP load", Self.logger)
+            }
+            
             mem.append(
-                M1Op.ldrh(reg.to32, .imm64(.sp, offset, nil))
+                M1Op.ldrh(regGP32, .imm64(.sp, offset, nil))
             )
         } else if vregKind.hlRegSize == 1 {
+            guard let regGP32 = reg.i?.to32 else {
+                fatal("Not supported 1 byte FP load", Self.logger)
+            }
+            
             mem.append(
-                M1Op.ldrb(reg.to32, .imm64(.sp, offset, nil))
+                M1Op.ldrb(regGP32, .imm64(.sp, offset, nil))
             )
-        } else if vregKind.hlRegSize == 0 {
-            // nop
-        } else {
-            fatalError("Size must be 8, 4, 2, 1, or 0")
-        }
-    }
-    
-    func appendLoad(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
-        let vregKind = requireTypeKind(reg: vreg, from: kinds)
-        if vregKind.hlRegSize == 8 {
-            mem.append(
-                M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
-            )
-        } else if vregKind.hlRegSize == 4 {
-            mem.append(
-                M1Op.ldr(reg.to32, .reg64offset(.sp, offset, nil))
-            )
-        } else if vregKind.hlRegSize == 2 {
-            fatalError("16-bit load not implemented for fp registers")
-//            mem.append(
-//                M1Op.ldrh(reg.to32, .imm64(.sp, offset, nil))
-//            )
-        } else if vregKind.hlRegSize == 1 {
-            fatalError("8-bit load not implemented for fp registers")
-//            mem.append(
-//                M1Op.ldrb(reg.to32, .imm64(.sp, offset, nil))
-//            )
         } else if vregKind.hlRegSize == 0 {
             // nop
         } else {
@@ -857,7 +858,27 @@ extension M1Compiler2 {
         return stackInfo
     }
     
+    func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer)
+    {
+        if let regI = reg.i?.to64 {
+            appendDebugPrintRegisterAligned4(regI, prepend: prepend, builder: builder)
+        } else if let regFP = reg.fp?.to64 {
+            appendDebugPrintRegisterAligned4(regFP, prepend: prepend, builder: builder)
+        } else {
+            fatal("Can't debug print register \(reg)", Self.logger)
+        }
+    }
+    
     func appendDebugPrintRegisterAligned4(_ reg: Register64, prepend: String? = nil, builder: CpuOpBuffer) {
+        guard stripDebugMessages == false else {
+            builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
+            return
+        }
+        
+        Self.appendDebugPrintRegisterAligned4(reg, prepend: prepend, builder: builder)
+    }
+    
+    static func appendDebugPrintRegisterAligned4(_ reg: Register64, prepend: String? = nil, builder: CpuOpBuffer) {
         guard let printfAddr = dlsym(dlopen(nil, RTLD_LAZY), "printf") else {
             fatalError("No printf addr")
         }
@@ -871,10 +892,6 @@ extension M1Compiler2 {
             str = "[jitdebug] Register \(reg): %p\n\0"
         }
         
-        guard stripDebugMessages == false else {
-            builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
-            return
-        }
         builder.append(PseudoOp.debugMarker("Printing debug register: \(reg)"))
         
         guard reg.rawValue <= X.x18.rawValue else {
@@ -943,6 +960,15 @@ extension M1Compiler2 {
     }
     
     func appendDebugPrintRegisterAligned4(_ reg: RegisterFP64, prepend: String? = nil, builder: CpuOpBuffer) {
+        guard stripDebugMessages == false else {
+            builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
+            return
+        }
+        
+        Self.appendDebugPrintRegisterAligned4(reg, prepend: prepend, builder: builder)
+    }
+    
+    static func appendDebugPrintRegisterAligned4(_ reg: RegisterFP64, prepend: String? = nil, builder: CpuOpBuffer) {
         guard let printfAddr = dlsym(dlopen(nil, RTLD_LAZY), "printf") else {
             fatalError("No printf addr")
         }
@@ -956,10 +982,6 @@ extension M1Compiler2 {
             str = "[jitdebug] Register \(reg): %f\n\0"
         }
         
-        guard stripDebugMessages == false else {
-            builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
-            return
-        }
         builder.append(PseudoOp.debugMarker("Printing debug register: \(reg)"))
         
         guard reg.rawValue <= D.d9.rawValue else {
@@ -1718,11 +1740,15 @@ class M1Compiler2 {
                             ({
                                 buff, reg in
                                 
-                                guard reg != X.x19 else { fatalError("X.x19 can not be loaded") }
+                                guard let regI = reg.i?.to64 else {
+                                    fatal("Non-integer registers not supported", Self.logger)
+                                }
+                                
+                                guard regI != X.x19 else { fatalError("X.x19 can not be loaded") }
                                 
                                 self.appendLoad(reg: X.x19, from: closureObject, kinds: regs, mem: buff)
                                 buff.append(
-                                    M1Op.ldr(reg, .reg64offset(X.x19, valueOffset, nil))
+                                    M1Op.ldr(regI, .reg64offset(X.x19, valueOffset, nil))
                                 )
                             },
                              HLTypeKind.dyn
@@ -2480,6 +2506,11 @@ class M1Compiler2 {
                 
                 appendLoadAndConvertToDouble(reg: D.d0, from: src, kinds: regs, mem: mem)
                 appendStoreDoubleToRightSize(reg: D.d0, into: dst, kinds: regs, mem: mem)
+            case .OMov(let dst, let src) where !isNumeric(vreg: dst, kinds: regs) && !isNumeric(vreg: src, kinds: regs):
+                let srcKind = requireTypeKind(reg: src, from: regs)
+                assert(reg: dst, from: regs, in: [srcKind, HLTypeKind.dyn])
+                appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
+                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
             case .OSafeCast(let dst, let src):
                 /*
                  safecast [dst], [r] cast register r into register dst, throw an exception if there is no way to perform such operation
@@ -2668,6 +2699,9 @@ class M1Compiler2 {
             case .OMul(let dst, let a, let b):
                 appendLoadNumericAsFP(reg: D.d0, from: a, kinds: regs, mem: mem)
                 appendLoadNumericAsFP(reg: D.d1, from: b, kinds: regs, mem: mem)
+                
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "OMul(a-i)", builder: mem)
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "OMul(b-i)", builder: mem)
                 
                 appendDebugPrintRegisterAligned4(D.d0, prepend: "OMul(a)", builder: mem)
                 appendDebugPrintRegisterAligned4(D.d1, prepend: "OMul(b)", builder: mem)

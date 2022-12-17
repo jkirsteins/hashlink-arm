@@ -2132,7 +2132,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             try compileAndLink(ctx: ctx, 0) {
                 mappedMem in
                 
-                XCTAssertEqual(
+                XCTAssertEqualFloat(
                     try mappedMem.calljit_f32(ctx: ctx, fix: 0, f32_0: 123.456),
                     123.456,
                     "failed for \(sutOp.id)")
@@ -3691,6 +3691,32 @@ final class CompilerM1v2Tests: CCompatTestCase {
             
             let res = entrypoint(0 /*doesn't matter. Only here for padding*/ )
             XCTAssertEqual(2, res)
+        }
+    }
+    
+    func testCompile_multiplyIntAndFloat() throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f64,
+                findex: 0,
+                regs: [HLTypeKind.i32, HLTypeKind.f64, HLTypeKind.f64],
+                args: [HLTypeKind.i32],
+                ops: [
+                    .OToSFloat(dst: 1, src: 0),
+                    .OFloat(dst: 2, ptr: 0),
+                    .OMul(dst: 1, a: 1, b: 2),
+                    .ORet(ret: 1)
+                ])
+        ], floats: [2.0])
+        
+        try compileAndLink(ctx: ctx, 0, strip: false) {
+            mappedMem in
+            
+            let callable = try ctx.getCallable(findex: 0)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: (@convention(c) (Int32) -> (Float64)).self)
+            
+            let res = entrypoint(123)
+            XCTAssertEqualDouble(res, 246.0)
         }
     }
 }
