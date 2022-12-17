@@ -1844,6 +1844,14 @@ public class EmitterM1 {
             let regs = encodeRegs(Rd: target, Rn: source)
             let encoded = mask | ftype | opc | regs
             return returnAsArray(encoded)
+        case .fmov(let Rt, let Rn):
+            //                           ftype              Rn    Rd
+            let mask: Int64 = 0b00011110_00____100000010000_00000_00000
+            try assertMatchingSize(Rt, Rn)
+            let ft = ftypeMask(Rt)
+            let regs = encodeRegs(Rd: Rt, Rn: Rn)
+            let encoded = mask | ft | regs
+            return returnAsArray(encoded)
         default:
             print("Can't compile \(op)")
             throw EmitterM1Error.unsupportedOp
@@ -1887,7 +1895,7 @@ public class EmitterM1 {
         guard regs.count > 0 else { return }
         let f = regs[0]
         for reg in regs.dropFirst(1) {
-            guard reg.double == f.double || reg.single == f.single else {
+            guard reg.bits == f.bits else {
                 throw GlobalError.invalidValue("Mismatched register sizes \(reg) and \(f)")
             }
         }

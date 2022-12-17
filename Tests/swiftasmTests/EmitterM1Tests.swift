@@ -30,26 +30,30 @@ extension [UInt8] {
 }
 
 extension XCTestCase {
-    func XCTAssertM1OpDesc(_ op: M1Op, _ dd: String) {
+    func XCTAssertM1OpDesc(_ op: M1Op, _ dd: String, file: StaticString = #filePath,
+                           line: UInt = #line) {
         if op.asmDescription != dd {
             print("\(op) description: \n  expected: \(dd)\n  actual:   \(op.asmDescription)")
         }
-        XCTAssertEqual(dd, op.asmDescription)
+        XCTAssertEqual(dd, op.asmDescription, file: file, line: line)
     }
-    func XCTAssertM1OpBytes(_ op: M1Op, _ expected: UInt8...) throws {
-        try XCTAssertM1OpBytes(op, expected)
+    func XCTAssertM1OpBytes(_ op: M1Op, _ expected: UInt8..., file: StaticString = #filePath,
+                            line: UInt = #line) throws {
+        try XCTAssertM1OpBytes(op, expected, file: file, line: line)
     }
-    func XCTAssertM1OpBytes(_ op: M1Op, _ expected: [UInt8]) throws {
+    func XCTAssertM1OpBytes(_ op: M1Op, _ expected: [UInt8], file: StaticString = #filePath,
+                            line: UInt = #line) throws {
         let actual = try EmitterM1.emit(for: op)
         
         if actual != expected {
             print("\(op.asmDescription): \n  expected: \(expected.b16)\t\(expected.b2)\n  actual:   \(actual.b16)\t\(actual.b2)")
         }
-        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(actual, expected, file: file, line: line)
     }
-    func XCTAssertM1Op(_ op: M1Op, _ desc: String, _ expected: UInt8...) throws {
-        XCTAssertM1OpDesc(op, desc)
-        try XCTAssertM1OpBytes(op, expected)
+    func XCTAssertM1Op(_ op: M1Op, _ desc: String, _ expected: UInt8..., file: StaticString = #filePath,
+                       line: UInt = #line) throws {
+        XCTAssertM1OpDesc(op, desc, file: file, line: line)
+        try XCTAssertM1OpBytes(op, expected, file: file, line: line)
     }
 }
 
@@ -1144,6 +1148,29 @@ final class EmitterM1Tests: XCTestCase {
         XCTAssertEqual(
             try EmitterM1.emit(for: .ldur(Register64.x1, .sp, 4)),
             [0xe1, 0x43, 0x40, 0xf8]
+        )
+    }
+    
+    func testFmov() throws {
+        try XCTAssertM1Op(
+            .fmov(D.d2, D.d3),
+            "fmov d2, d3",
+            0x62, 0x40, 0x60, 0x1e
+        )
+        try XCTAssertM1Op(
+            .fmov(S.s2, S.s3),
+            "fmov s2, s3",
+            0x62, 0x40, 0x20, 0x1e
+        )
+        try XCTAssertM1Op(
+            .fmov(H.h2, H.h3),
+            "fmov h2, h3",
+            0x62, 0x40, 0xe0, 0x1e
+        )
+        
+        // sizes should be the same
+        XCTAssertThrowsError(
+            try M1Op.fmov(H.h2, D.d3).emit()
         )
     }
     

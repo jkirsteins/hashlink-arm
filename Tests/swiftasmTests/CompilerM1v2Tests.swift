@@ -1948,17 +1948,17 @@ final class CompilerM1v2Tests: CCompatTestCase {
         ], regs: [.f32, .f32]) {
             entrypoint in
             
-            XCTAssertEqual(123.456, entrypoint(123.456))
+            XCTAssertEqualFloat(123.456, entrypoint(123.456))
         }
         
-        try _rf32__f64(ops: [
-            .OMov(dst: 1, src: 0),
-            .ORet(ret: 1),
-        ], regs: [.f64, .f32]) {
-            entrypoint in
-            
-            XCTAssertEqual(456.789, entrypoint(456.789))
-        }
+        // f64 does not fit in f32 so this should throw
+        XCTAssertThrowsError(
+            try _rf32__f64(ops: [
+                .OMov(dst: 1, src: 0),
+                .ORet(ret: 1),
+            ], regs: [.f64, .f32]) { _ in 
+            }
+        )
         
         try _rf64__f32(ops: [
             .OMov(dst: 1, src: 0),
@@ -1966,7 +1966,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         ], regs: [.f32, .f64]) {
             entrypoint in
             
-            XCTAssertEqual(456.789, entrypoint(456.789))
+            XCTAssertEqualDouble(456.789, entrypoint(456.789))
         }
     }
     
@@ -2078,7 +2078,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                     prepareFunction(
                         retType: HLTypeKind.f32,
                         findex: 0,
-                        regs: [HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.u8],
+                        regs: [HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32, HLTypeKind.f32],
                         args: [HLTypeKind.f32],
                         ops: [
                             .OMov(dst: 1, src: 0),
@@ -2746,7 +2746,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         // 4 byte requirement should still be aligned to 16 byte boundary
         let mem1 = CpuOpBuffer()
         try sut.appendStackInit(_1_need16, args: _1_need16, builder: mem1, prologueSize: 0)
-//        mem1.hexPrint()
+        //        mem1.hexPrint()
         XCTAssertEqual(
             [
                 0xff, 0x43, 0x00, 0xd1, // sub sp, sp, #16
@@ -2762,7 +2762,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         // 16 byte requirement should not round to 32
         let mem2 = CpuOpBuffer()
         try sut.appendStackInit(_4_need16, args: _4_need16, builder: mem2, prologueSize: 0)
-//        mem2.hexPrint()
+        //        mem2.hexPrint()
         XCTAssertEqual(
             [
                 // Reserving 16 bytes for entire stack
@@ -2793,7 +2793,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         // 20 byte requirement should round to 32
         let mem3 = CpuOpBuffer()
         try sut.appendStackInit(_5_need32, args: _5_need32, builder: mem3, prologueSize: 0)
-//        mem3.hexPrint()
+        //        mem3.hexPrint()
         XCTAssertEqual(
             [
                 // Reserving 32 bytes for entire stack
@@ -2868,7 +2868,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             builder: mem,
             prologueSize: 0
         )
-//        mem.hexPrint()
+        //        mem.hexPrint()
         XCTAssertEqual(
             [
                 // Reserving 48 bytes for entire stack
@@ -3105,20 +3105,20 @@ final class CompilerM1v2Tests: CCompatTestCase {
             .OMul(dst: 1, a: 0, b: 1),
             .ORet(ret: 1),
         ]) { entrypoint in
-
+            
             XCTAssertEqual(4, entrypoint(1, 4))
             XCTAssertEqual(4, entrypoint(2, 2))
             XCTAssertEqual(36, entrypoint(4, 9))
             XCTAssertEqual(0, entrypoint(1, 0))
             XCTAssertEqual(-10, entrypoint(-5, 2))
         }
-
+        
         // multiply integer with float, return as float
         try _rf32__i32_f32(ops: [
             .OMul(dst: 1, a: 0, b: 1),
             .ORet(ret: 1),
         ], strip: false) { entrypoint in
-
+            
             XCTAssertEqual(4, entrypoint(1, 4))
             XCTAssertEqual(4, entrypoint(2, 2))
             XCTAssertEqual(36, entrypoint(4, 9))
@@ -3131,7 +3131,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             .OMul(dst: 0, a: 0, b: 1),
             .ORet(ret: 0),
         ], strip: false) { entrypoint in
-
+            
             XCTAssertEqual(4, entrypoint(1, 4))
             XCTAssertEqual(4, entrypoint(2, 2))
             XCTAssertEqual(36, entrypoint(4, 9))
@@ -3158,16 +3158,16 @@ final class CompilerM1v2Tests: CCompatTestCase {
             .OSDiv(dst: 2, a: 0, b: 1),
             .ORet(ret: 2),
         ], strip: false) { entrypoint in
-
+            
             XCTAssertEqual(entrypoint(4, 2), 2.0)
             XCTAssertEqual(entrypoint(-4, 2), -2.0)
         }
-
+        
         try _rf64__f64_f64(ops: [
             .OSDiv(dst: 2, a: 0, b: 1),
             .ORet(ret: 2),
         ], strip: false) { entrypoint in
-
+            
             XCTAssertEqual(entrypoint(4.0, 2.0), 2.0)
             XCTAssertEqual(entrypoint(-4.0, 2.0), -2.0)
         }
@@ -3176,7 +3176,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             .OSDiv(dst: 2, a: 0, b: 1),
             .ORet(ret: 2),
         ], strip: false) { entrypoint in
-
+            
             XCTAssertEqual(entrypoint(4.0, 2.0), 2.0)
             XCTAssertEqual(entrypoint(-4.0, 2.0), -2.0)
         }
@@ -3185,7 +3185,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             .OSDiv(dst: 2, a: 0, b: 1),
             .ORet(ret: 2),
         ], strip: false) { entrypoint in
-
+            
             XCTAssertEqual(entrypoint(4.0, 2), 2.0)
             XCTAssertEqual(entrypoint(-4.0, 2), -2.0)
         }

@@ -507,6 +507,18 @@ extension M1Compiler2 {
         appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
     }
     
+    func appendLoadAndConvertToDouble(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer)
+    {
+        appendLoad(reg: reg, from: vreg, kinds: kinds, mem: mem)
+        appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
+    }
+    
+    func appendStoreDoubleToRightSize(reg: RegisterFP64, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer)
+    {
+        appendPrepareDoubleForStore(reg: reg, to: vreg, kinds: kinds, mem: mem)
+        appendStore(reg: reg, into: vreg, kinds: kinds, mem: mem)
+    }
+    
     func appendSignMode(_ signed: Bool, reg: Register64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         switch(vregKind.hlRegSize, signed) {
@@ -1344,6 +1356,28 @@ class M1Compiler2 {
            HLTypeKind.dyn can also be callable (see String#call_toString)
          */
         assert(reg: reg, from: regs, in: [HLTypeKind.fun, HLTypeKind.dyn])
+    }
+    
+    func assertNumeric(dst: Reg, bigEnoughFor src: Reg, from kinds: [any HLTypeKindProvider]) throws {
+        
+        let dstKind = requireTypeKind(reg: dst, from: kinds)
+        let srcKind = requireTypeKind(reg: src, from: kinds)
+        
+        // if src or target is dynamic, let's assume good faith
+        guard srcKind != .dyn && dstKind != .dyn else {
+            return
+        }
+        
+        let bothFP = FP_TYPE_KINDS.contains(dstKind) && FP_TYPE_KINDS.contains(srcKind)
+        let bothI = INTEGER_TYPE_KINDS.contains(dstKind) && INTEGER_TYPE_KINDS.contains(srcKind)
+        
+        guard bothFP || bothI else {
+            throw GlobalError.invalidOperation("Src register \(srcKind) and dst register \(dstKind) should both be either floating-point or integer")
+        }
+        
+        guard dstKind.hlRegSize >= srcKind.hlRegSize else {
+            throw GlobalError.invalidOperation("Src register \(srcKind) (size \(srcKind.hlRegSize)) does not fit in dst register \(dstKind) (size \(dstKind.hlRegSize))")
+        }
     }
     
     func assert(reg: Reg, from: [any HLTypeKindProvider], in targets: [any HLTypeKindProvider]) {
@@ -2436,13 +2470,16 @@ class M1Compiler2 {
                 )
             case .OUnsafeCast(let dst, let src):
                 fallthrough
-            case .OMov(let dst, let src):
-                let srcType = requireTypeKind(reg: src, from: regs)
-                let dstType = requireTypeKind(reg: dst, from: regs)
-                assert(reg: src, from: regs, in: [dstType.kind, HLTypeKind.dyn])
+            case .OMov(let dst, let src) where isInteger(vreg: dst, kinds: regs) && isInteger(vreg: src, kinds: regs):
+                try assertNumeric(dst: dst, bigEnoughFor: src, from: regs)
                 
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
                 appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+            case .OMov(let dst, let src) where isFP(vreg: dst, kinds: regs) && isFP(vreg: src, kinds: regs):
+                try assertNumeric(dst: dst, bigEnoughFor: src, from: regs)
+                
+                appendLoadAndConvertToDouble(reg: D.d0, from: src, kinds: regs, mem: mem)
+                appendStoreDoubleToRightSize(reg: D.d0, into: dst, kinds: regs, mem: mem)
             case .OSafeCast(let dst, let src):
                 /*
                  safecast [dst], [r] cast register r into register dst, throw an exception if there is no way to perform such operation

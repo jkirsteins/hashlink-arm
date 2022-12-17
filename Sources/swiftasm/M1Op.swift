@@ -373,6 +373,8 @@ enum M1Op : CpuOp {
             return "fdiv \(Rt), \(Rn), \(Rm)"
         case .fcvt(let Rt, let Rn):
             return "fcvt \(Rt), \(Rn)"
+        case .fmov(let Rt, let Rn):
+            return "fmov \(Rt), \(Rn)"
         }
     }
     
@@ -496,6 +498,8 @@ enum M1Op : CpuOp {
     // https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/MOVZ
     case movz32(Register32, UInt16, Register32.Shift?)
     case movz64(Register64, UInt16, Register64.Shift?)
+    
+    case fmov(any RegisterFP, any RegisterFP)
     
     // when SP not included:
     //  - https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOV--register---Move--register---an-alias-of-ORR--shifted-register--?lang=en
