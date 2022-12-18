@@ -816,7 +816,7 @@ def lookup__floating_point_data_processing__2_source(val)
         ["x 1 xx xxxx"] => " UNALLOCATED -",
         ["0 0 00 0000"] => ["FMUL (scalar) — single-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FMUL--scalar---Floating-point-Multiply--scalar--?lang=en"],
         ["0 0 00 0001"] => ["FDIV (scalar) — single-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FDIV--scalar---Floating-point-Divide--scalar--?lang=en"],
-        ["0 0 00 0010"] => "FADD (scalar) — single-precision -",
+        ["0 0 00 0010"] => ["FADD (scalar) — single-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FADD--scalar---Floating-point-Add--scalar--?lang=en"],
         ["0 0 00 0011"] => "FSUB (scalar) — single-precision -",
         ["0 0 00 0100"] => "FMAX (scalar) — single-precision -",
         ["0 0 00 0101"] => "FMIN (scalar) — single-precision -",
@@ -825,7 +825,7 @@ def lookup__floating_point_data_processing__2_source(val)
         ["0 0 00 1000"] => "FNMUL (scalar) — single-precision -",
         ["0 0 01 0000"] => ["FMUL (scalar) — double-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FMUL--scalar---Floating-point-Multiply--scalar--?lang=en"],
         ["0 0 01 0001"] => ["FDIV (scalar) — double-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FDIV--scalar---Floating-point-Divide--scalar--?lang=en"],
-        ["0 0 01 0010"] => "FADD (scalar) — double-precision -",
+        ["0 0 01 0010"] => ["FADD (scalar) — double-precision -", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FADD--scalar---Floating-point-Add--scalar--?lang=en"],
         ["0 0 01 0011"] => "FSUB (scalar) — double-precision -",
         ["0 0 01 0100"] => "FMAX (scalar) — double-precision -",
         ["0 0 01 0101"] => "FMIN (scalar) — double-precision -",
@@ -834,7 +834,7 @@ def lookup__floating_point_data_processing__2_source(val)
         ["0 0 01 1000"] => "FNMUL (scalar) — double-precision -",
         ["0 0 11 0000"] => ["FMUL (scalar) — half-precision FEAT_FP16", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FMUL--scalar---Floating-point-Multiply--scalar--?lang=en"],
         ["0 0 11 0001"] => "FDIV (scalar) — half-precision FEAT_FP16",
-        ["0 0 11 0010"] => "FADD (scalar) — half-precision FEAT_FP16",
+        ["0 0 11 0010"] => ["FADD (scalar) — half-precision FEAT_FP16", "https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FADD--scalar---Floating-point-Add--scalar--?lang=en"],
         ["0 0 11 0011"] => "FSUB (scalar) — half-precision FEAT_FP16",
         ["0 0 11 0100"] => "FMAX (scalar) — half-precision FEAT_FP16",
         ["0 0 11 0101"] => "FMIN (scalar) — half-precision FEAT_FP16",
@@ -1001,5 +1001,5 @@ def from_objd(str)
     ("0x" + str.split(" ").reverse.join("")).to_i(16)
 end
 
-puts lookup(from_objd("62 40 60 1e"))
+puts lookup(from_objd("00 28 61 1e"))
 #puts lookup(0b1001_1110_0110_0011_0000_1000_0100_0001)
