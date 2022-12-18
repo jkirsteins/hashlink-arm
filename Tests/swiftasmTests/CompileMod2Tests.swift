@@ -778,10 +778,27 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testTrace() throws {
+        /* NOTE: depHints must contain the function referenced
+         in haxe.$Log bindings under `trace`.
+         
+         (alternatively, `fnn trace` can help find it)
+         
+         Otherwise you will get a 0 memory dereference issue.
+         
+         It is tricky to infer the right function index, so it is not done automatically as a dependency.
+         
+         If the mod2.hl file changes, this findex might need to be changed.
+        */
+        
+        /* NOTE2: the String object must have it's toString method initialized
+         (look at the type, under protos look for `__string` and make sure depHints contains
+         the corresponding function)
+         
+         Otherwise the output will be `String` (i.e. object name, not the actual value)*/
         try _withPatchedEntrypoint(
             strip: true,
             name: "Main.testTrace",
-            depHints: [231, 332, 230, 42]
+            depHints: [231, 230, 354, 42, 12]
         ) {
             sutFix, mem in
             

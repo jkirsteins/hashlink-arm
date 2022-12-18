@@ -627,7 +627,7 @@ extension M1Compiler2 {
     }
     
     func appendLoad(
-        _ regRawValue: UInt8, 
+        _ regRawValue: UInt8,
         as vreg: Reg,
         addressRegister addrReg: Register64,
         offset: Int64,
@@ -1685,25 +1685,19 @@ class M1Compiler2 {
                     PseudoOp.strVreg(X.x0, X.x15, dstStackOffset, dstKind.hlRegSize)
                 )
             case .OCall1(let dst, let fun, let arg0):
-                if currentInstruction == 1 && compilable.findex == 231 {
-                    let c: (@convention(c) (OpaquePointer)->()) = {
-                        strP in
-                        
-                        let str: UnsafePointer<_StringX> = .init(strP)
-                        print("__passing string", str.pointee.bytes.stringValue)
-                        return
-                    }
-                    appendLoad(reg: X.x0, from: arg0, kinds: regs, mem: mem)
-                    mem.append(
-                        PseudoOp.mov(X.x10, unsafeBitCast(c, to: OpaquePointer.self)),
-                        M1Op.blr(X.x10)
-                    )
-                }
                 try __ocalln(
                     dst: dst,
                     funIndex: fun,
                     regs: regs,
                     args: [arg0],
+                    reservedStackBytes: stackInfo.total,
+                    mem: mem)
+            case .OCall2(let dst, let fun, let arg0, let arg1):
+                try __ocalln(
+                    dst: dst,
+                    funIndex: fun,
+                    regs: regs,
+                    args: [arg0, arg1],
                     reservedStackBytes: stackInfo.total,
                     mem: mem)
             case .OCall3(let dst, let fun, let arg0, let arg1, let arg2):
@@ -1887,14 +1881,6 @@ class M1Compiler2 {
                     funIndex: fun,
                     regs: regs,
                     args: args,
-                    reservedStackBytes: stackInfo.total,
-                    mem: mem)
-            case .OCall2(let dst, let fun, let arg0, let arg1):
-                try __ocalln(
-                    dst: dst,
-                    funIndex: fun,
-                    regs: regs,
-                    args: [arg0, arg1],
                     reservedStackBytes: stackInfo.total,
                     mem: mem)
             case .ONew(let dst):

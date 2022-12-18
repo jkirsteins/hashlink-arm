@@ -9,4 +9,4 @@ struct _String {
 let _StringType = Test_HLTypeObj(fieldsProvider: [
     Test_HLObjField(nameProvider: "bytes", typeProvider: HLTypeKind.bytes),
     Test_HLObjField(nameProvider: "length", typeProvider: HLTypeKind.i32)
-], nameProvider: "String")
+], nameProvider: "_String")
