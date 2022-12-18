@@ -40,6 +40,9 @@ end
 
 - [ ] Tests for functions mixing floating poing/general purpose stack arguments (e.g. we should pass x0/d0 not x0/x1 or x0/d1)
 - [ ] Zero non-argument registers when initializing stack
+- [ ] Combine appendLoad() methods
+- [ ] Cleanup load methods (e.g. OToSFloat uses appendLoad with a GP register but it can mean an FP register)
+- [ ] debug-printing registers can mess up floating-point registers that are not stored/restored
 
 ## hl type C structs
 
