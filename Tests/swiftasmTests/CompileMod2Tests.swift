@@ -777,6 +777,9 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    /// Tests the `trace` method prints to `stdout`.
+    ///
+    /// This test captures output, which isn't very stable (it flushes and then waits for the data to be available).
     func testCompile__testTrace() throws {
         /* NOTE: depHints must contain the function referenced
          in haxe.$Log bindings under `trace`.
@@ -795,6 +798,11 @@ final class CompileMod2Tests: RealHLTestCase {
          the corresponding function)
          
          Otherwise the output will be `String` (i.e. object name, not the actual value)*/
+        
+        let expected = "haxesrc/Main.hx:218: Hello Trace\n"
+        
+        let output = OutputListener(STDOUT_FILENO)
+        
         try _withPatchedEntrypoint(
             strip: true,
             name: "Main.testTrace",
@@ -804,10 +812,19 @@ final class CompileMod2Tests: RealHLTestCase {
             
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: (@convention(c)()->())) in
-                
+        
+                output.openConsolePipe()
                 entrypoint()
+                fflush(stdout)
+                Thread.sleep(forTimeInterval: 0.1)
+                output.closeConsolePipe()
             }
         }
+        
+        XCTAssertEqual(output.contents, expected)
+        
+        // double check (in case there are some debug prints from libhl etc.)
+        XCTAssertTrue(output.contents.contains("\(expected)"), "\(output.contents) does not contain \(expected)")
     }
     
     func testCompile__testFieldClosure() throws {

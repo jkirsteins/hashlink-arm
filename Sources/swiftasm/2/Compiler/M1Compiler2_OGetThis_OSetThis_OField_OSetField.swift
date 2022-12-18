@@ -226,19 +226,8 @@ extension M1Compiler2 {
             appendDebugPrintAligned4("osetfield/virtual HAS ADDRESS", builder: mem)
             
             // load field value into x2 and store at x1
-            appendLoad(reg: X.x2, from: srcReg, kinds: regs, mem: mem)
-            switch(srcType.hlRegSize) {
-            case 8:
-                mem.append(M1Op.str(X.x2, .reg(X.x1, .imm(0, nil))))
-            case 4:
-                mem.append(M1Op.str(W.w2, .reg(X.x1, .imm(0, nil))))
-            case 2:
-                mem.append(M1Op.strh(W.w2, .reg(X.x1, .imm(0, nil))))
-            case 1:
-                mem.append(M1Op.strb(W.w2, .reg(X.x1, .imm(0, nil))))
-            default:
-                fatalError("osetfield virtual Not implemented")
-            }
+            appendLoad(2, from: srcReg, kinds: regs, mem: mem)
+            appendStore(2, as: srcReg, intoAddressFrom: X.x1, offsetFromAddress: 0, kinds: regs, mem: mem)
             
             // finish this branch
             mem.append(
