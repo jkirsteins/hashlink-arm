@@ -2,4 +2,5 @@
 -main Main
 -debug 
 -D dump
+-D HL_C
 -hl haxebin/app.c

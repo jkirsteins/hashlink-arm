@@ -1,3 +1,5 @@
+import hl.Ref;
+import hl.F32;
 import hl.F64;
 import haxe.io.BytesData;
 import hl.I64;
@@ -9,7 +11,7 @@ import hl.UI16;
 // might be unset if testGlobals called before globals are initialized
 var globalString: String = "Global";
 	
-var globalVirtualTest : { test : Int, second: Bool, third: Int, f64: F64 } = new VirtualTest(123, true, 456, 789.0);
+var globalVirtualTest : { test : Int, second: Bool, third: Int, f64: F64, f32: F32 } = new VirtualTest(123, true, 456, 789.0, 101.0);
 
 enum Color {
 	Red;
@@ -31,12 +33,14 @@ class VirtualTest {
 	public var second:Bool;
 	public var third:Int;
 	public var f64:F64;
+	public var f32:F32;
 
-	public function new(test: Int = 0, second: Bool = false, third: Int = 0, f64: F64 = 0) {
+	public function new(test: Int = 0, second: Bool = false, third: Int = 0, f64: F64 = 0, f32: F32 = 0) {
 		this.test = test;
 		this.second = second;
 		this.third = third;
 		this.f64 = f64;
+		this.f32 = f32;
 	}
 }
 
@@ -252,6 +256,14 @@ class Main {
 		}
 	}
 
+	static private function testStaticVirtual_globalVirtual_f32(): F32 {
+		return globalVirtualTest.f32;
+	}
+
+	static private function testStaticVirtual_globalVirtual_f64(): F64 {
+		return globalVirtualTest.f64;
+	}
+
 	static private function testStaticVirtual_setField(val: Int, set: Bool, field: Int): Int {
 		var o : { test : Int, second: Bool, third: Int } = new VirtualTest();
 		o.test = 1;
@@ -296,13 +308,87 @@ class Main {
 		return obj.f64;
 	}
 
-	static public function testCallClosure_Dynamic(inval: Int): Float {
-		var myLocalFunction = function(a: Int) { return a * 2.0; };
+	static public function testCallClosure_Dynamic_returnFloat64(inval: Int): F64 {
+		var myLocalFunction = function(a: Int): F64 { return a * 2.0; };
 		var dynFun: Dynamic = myLocalFunction;
 		return dynFun(inval);
 	}
 
+	static public function testCallClosure_Dynamic_returnFloat32(inval: Int): F32 {
+		var myLocalFunction = function(a: Int): F32 { return a * 2.0; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
+	static public function testCallClosure_Dynamic_returnInt32(inval: Int): Int {
+		var myLocalFunction = function(a: Int): Int { return a * 2; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
+	static public function testCallClosure_Dynamic_returnUInt16(inval: Int): UI16 {
+		var myLocalFunction = function(a: Int): UI16 { return a * 2; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
+	static public function testCallClosure_Dynamic_returnUInt8(inval: Int): UI8 {
+		var myLocalFunction = function(a: Int): UI8 { return a * 2; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
+	#if !HL_C
+	static public function testCallClosure_Dynamic_returnInt64(inval: Int): I64 {
+		var myLocalFunction = function(a: Int): I64 { return a * 2; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+	#end
+
+	static public function testRef_fp_internal(r32: Ref<F32>, r64: Ref<F64>) {
+		r32.set(101.0);
+		r64.set(202.0);
+	}
+
+	static public function testRef_fp(): F64 {
+		var f32: F32 = 0.0;
+		var f64: F64 = 0.0;
+		var ref32 = Ref.make(f32);
+		var ref64 = Ref.make(f64);
+		testRef_fp_internal(ref32, ref64);
+		return ref32.get() + ref64.get();
+	}
+
+	static public function testRef_i_internal(r32: Ref<Int>, r64: Ref<I64>) {
+		r32.set(101);
+		r64.set(202);
+	}
+
+	static public function testRef_i(): hl.I64 {
+		var i32: Int = 0;
+		var i64: I64 = 0;
+		var ref32 = Ref.make(i32);
+		var ref64 = Ref.make(i64);
+		testRef_i_internal(ref32, ref64);
+		return ref32.get() + ref64.get();
+	}
+
 	static public function main():Void {
-		trace('testing: ${testCallClosure_Dynamic(123)}');
+		trace('testing f64: ${testCallClosure_Dynamic_returnFloat64(123)}');
+		trace('testing f32: ${testCallClosure_Dynamic_returnFloat32(123)}');
+		trace('testing i32: ${testCallClosure_Dynamic_returnInt32(123)}');
+		trace('testing u16: ${testCallClosure_Dynamic_returnUInt16(123)}');
+		trace('testing u8: ${testCallClosure_Dynamic_returnUInt8(123)}');
+		
+		#if !HL_C
+		trace('testing i64: ${testCallClosure_Dynamic_returnInt64(123)}');
+		#end
+
+		trace('testing virtual init (f32): ${testStaticVirtual_globalVirtual_f32()}');
+		trace('testing virtual init (f64): ${testStaticVirtual_globalVirtual_f64()}');
+
+		trace('testing float references (FP): ${testRef_fp()}');
+		trace('testing float references (I): ${testRef_i()}');
 	}
 }

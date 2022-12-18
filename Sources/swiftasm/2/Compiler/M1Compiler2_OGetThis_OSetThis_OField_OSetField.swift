@@ -18,7 +18,7 @@ extension M1Compiler2 {
             let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
             appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
             mem.append(M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil)))
-            appendStore(reg: X.x1, into: dstReg, kinds: regs, mem: mem)
+            appendStore(1, into: dstReg, kinds: regs, mem: mem)
         case .virtual:
             let dstType = requireTypeKind(reg: dstReg, from: regs)
             let getFunc = get_dynget(to: dstType.kind)
@@ -62,20 +62,9 @@ extension M1Compiler2 {
             appendDebugPrintAligned4("ofield/virtual HAS ADDRESS", builder: mem)
             
             // load field value into x2
-            switch(dstType.hlRegSize) {
-            case 8:
-                mem.append(M1Op.ldr(X.x2, .reg(X.x1, .imm(0, nil))))
-            case 4:
-                mem.append(M1Op.ldr(W.w2, .reg(X.x1, .imm(0, nil))))
-            case 2:
-                mem.append(M1Op.ldrh(W.w2, .reg(X.x1, .imm(0, nil))))
-            case 1:
-                mem.append(M1Op.ldrb(W.w2, .reg(X.x1, .imm(0, nil))))
-            default:
-                fatalError("ofield virtual Not implemented for size \(dstType.hlRegSize)")
-            }
-            appendStore(reg: X.x2, into: dstReg, kinds: regs, mem: mem)
-            appendDebugPrintRegisterAligned4(X.x2, prepend: "ofield/virtual result", builder: mem)
+            appendLoad(2, as: dstReg, addressRegister: X.x1, offset: 0, kinds: regs, mem: mem)
+            appendStore(2, into: dstReg, kinds: regs, mem: mem)
+            appendDebugPrintRegisterAligned4(2, kind: dstType, prepend: "ofield/virtual result", builder: mem)
             
             // finish this branch
             mem.append(
@@ -119,7 +108,7 @@ extension M1Compiler2 {
                 PseudoOp.mov(X.x10, getFunc),
                 M1Op.blr(X.x10))
             
-            appendStore(reg: X.x0, into: dstReg, kinds: regs, mem: mem)
+            appendStore(0, into: dstReg, kinds: regs, mem: mem)
             appendDebugPrintRegisterAligned4(X.x0, prepend: "ofield/virtual result", builder: mem)
             
             jmpTarget_postCheck.stop(at: mem.byteSize)

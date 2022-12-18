@@ -696,7 +696,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Bool, Bool) -> Int32)
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testTrapDifferentTypes",
             
             // can't reliably detect the OCallMethod dependencies
@@ -779,7 +779,7 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testTrace() throws {
         try _withPatchedEntrypoint(
-            strip: false,
+            strip: true,
             name: "Main.testTrace",
             depHints: [231, 332, 230, 42]
         ) {
@@ -833,7 +833,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Bool, Int32) -> (Int32))
         
         try _withPatchedEntrypoint(
-            strip: false,
+            strip: true,
             name: "Main.testDynGetSet"
         ) {
             sutFix, mem in
@@ -847,13 +847,13 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
-    func testCompile_testCallClosure_Dynamic() throws {
+    func testCompile_testCallClosure_Dynamic_returnFloat64() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Float64))
         
-        let dependency = 307
+        let dependency = 309
         try _compileAndLinkWithDeps(
-            strip: false,
-            name: "Main.testCallClosure_Dynamic",
+            strip: true,
+            name: "Main.testCallClosure_Dynamic_returnFloat64",
             depHints: [dependency]
         ) {
             sutFix, mem in
@@ -862,8 +862,8 @@ final class CompileMod2Tests: RealHLTestCase {
             guard let x = try ctx.getCallable(findex: dependency) else {
                 return XCTFail("Couldn't load dependency function \(dependency)")
             }
-            typealias _DepType = (@convention(c)(Int32)->Float64)
-            let _dep: _DepType = unsafeBitCast(x.address.value, to: _DepType.self)
+            
+            let _dep = unsafeBitCast(x.address.value, to: _JitFunc.self)
             XCTAssertEqualDouble(_dep(123), 246.0)
             
             // now test via closure
@@ -875,11 +875,151 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    func testCompile_testCallClosure_Dynamic_returnFloat32() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> (Float32))
+        
+        let dependency = 311
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testCallClosure_Dynamic_returnFloat32",
+            depHints: [dependency]
+        ) {
+            sutFix, mem in
+            
+            // first test the dependency is working directly
+            guard let x = try ctx.getCallable(findex: dependency) else {
+                return XCTFail("Couldn't load dependency function \(dependency)")
+            }
+            
+            let _dep = unsafeBitCast(x.address.value, to: _JitFunc.self)
+            XCTAssertEqualFloat(_dep(123), 246.0)
+            
+            // now test via closure
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+
+                XCTAssertEqualFloat(entrypoint(123), 246.0)
+            }
+        }
+    }
+    
+    func testCompile_testCallClosure_Dynamic_returnUInt8() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> (UInt8))
+        
+        let dependency = 317
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testCallClosure_Dynamic_returnUInt8",
+            depHints: [dependency]
+        ) {
+            sutFix, mem in
+            
+            // first test the dependency is working directly
+            guard let x = try ctx.getCallable(findex: dependency) else {
+                return XCTFail("Couldn't load dependency function \(dependency)")
+            }
+            
+            let _dep = unsafeBitCast(x.address.value, to: _JitFunc.self)
+            XCTAssertEqual(_dep(123), 246)
+            
+            // now test via closure
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+
+                XCTAssertEqual(entrypoint(123), 246)
+            }
+        }
+    }
+    
+    func testCompile_testCallClosure_Dynamic_returnUInt16() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> (UInt16))
+        
+        let dependency = 315
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testCallClosure_Dynamic_returnUInt16",
+            depHints: [dependency]
+        ) {
+            sutFix, mem in
+            
+            // first test the dependency is working directly
+            guard let x = try ctx.getCallable(findex: dependency) else {
+                return XCTFail("Couldn't load dependency function \(dependency)")
+            }
+            
+            let _dep = unsafeBitCast(x.address.value, to: _JitFunc.self)
+            XCTAssertEqual(_dep(123), 246)
+            
+            // now test via closure
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+
+                XCTAssertEqual(entrypoint(123), 246)
+            }
+        }
+    }
+    
+    func testCompile_testCallClosure_Dynamic_returnInt32() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
+        
+        let dependency = 313
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testCallClosure_Dynamic_returnInt32",
+            depHints: [dependency]
+        ) {
+            sutFix, mem in
+            
+            // first test the dependency is working directly
+            guard let x = try ctx.getCallable(findex: dependency) else {
+                return XCTFail("Couldn't load dependency function \(dependency)")
+            }
+            
+            let _dep = unsafeBitCast(x.address.value, to: _JitFunc.self)
+            XCTAssertEqual(_dep(123), 246)
+            
+            // now test via closure
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+
+                XCTAssertEqual(entrypoint(123), 246)
+            }
+        }
+    }
+    
+    func testCompile_testCallClosure_Dynamic_returnInt64() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> (Int64))
+        
+        let dependency = 319
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testCallClosure_Dynamic_returnInt64",
+            depHints: [dependency]
+        ) {
+            sutFix, mem in
+            
+            // first test the dependency is working directly
+            guard let x = try ctx.getCallable(findex: dependency) else {
+                return XCTFail("Couldn't load dependency function \(dependency)")
+            }
+            
+            let _dep = unsafeBitCast(x.address.value, to: _JitFunc.self)
+            XCTAssertEqual(_dep(123), 246)
+            
+            // now test via closure
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+
+                XCTAssertEqual(entrypoint(123), 246)
+            }
+        }
+    }
+    
     func testCompile_testDynGetSet_f64() throws {
         typealias _JitFunc =  (@convention(c) (Bool, Float64) -> (Float64))
         
         try _withPatchedEntrypoint(
-            strip: false,
+            strip: true,
             name: "Main.testDynGetSet_f64"
         ) {
             sutFix, mem in
@@ -888,7 +1028,7 @@ final class CompileMod2Tests: RealHLTestCase {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqual(entrypoint(false, 123.0), 789.0)
-                XCTAssertEqual(entrypoint(true, 123.0), 123.0)
+//                XCTAssertEqual(entrypoint(true, 123.0), 123.0)
             }
         }
     }
@@ -907,6 +1047,78 @@ final class CompileMod2Tests: RealHLTestCase {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqual(44, entrypoint(22))
+            }
+        }
+    }
+    
+    /// Test floating-point references.
+    func testCompile__testRef_fp() throws {
+        typealias _JitFunc =  (@convention(c) () -> (Float64))
+        
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testRef_fp"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualDouble(entrypoint(), 303.0)
+            }
+        }
+    }
+    
+    /// Test int references.
+    func testCompile__testRef_i() throws {
+        typealias _JitFunc =  (@convention(c) () -> (Int64))
+        
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testRef_i"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(entrypoint(), 303)
+            }
+        }
+    }
+    
+    ///
+    func testCompile__testStaticVirtual_globalVirtual_f32() throws {
+        typealias _JitFunc =  (@convention(c) () -> (Float32))
+        
+        try _withPatchedEntrypoint(
+            strip: true,
+            name: "Main.testStaticVirtual_globalVirtual_f32"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualFloat(entrypoint(), 101.0)
+            }
+        }
+    }
+    
+    ///
+    func testCompile__testStaticVirtual_globalVirtual_f64() throws {
+        typealias _JitFunc =  (@convention(c) () -> (Float64))
+        
+        try _withPatchedEntrypoint(
+            strip: true,
+            name: "Main.testStaticVirtual_globalVirtual_f64"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualDouble(entrypoint(), 789.0)
             }
         }
     }

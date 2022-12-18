@@ -246,6 +246,20 @@ final class EmitterM1Tests: XCTestCase {
             0xff, 0x43, 0x00, 0x91
         )
     }
+    
+    func testFadd() throws {
+        try XCTAssertM1Op(
+            M1Op.fadd(S.s0, S.s0, S.s1),
+            "fadd s0, s0, s1",
+            0x00, 0x28, 0x21, 0x1e
+        )
+        try XCTAssertM1Op(
+            M1Op.fadd(D.d0, D.d0, D.d1),
+            "fadd d0, d0, d1",
+            0x00, 0x28, 0x61, 0x1e
+        )
+        
+    }
         
     func testStrb() throws {
         try XCTAssertM1Op(
@@ -374,6 +388,14 @@ final class EmitterM1Tests: XCTestCase {
             M1Op.uxtb(.w1, .w2),
             "uxtb w1, w2",
             0x41, 0x1c, 0x00, 0x53
+        )
+    }
+    
+    func testUxtw() throws {
+        try XCTAssertM1Op(
+            M1Op.uxtw(.x1, .w2),
+            "uxtw x1, w2",
+            0x41, 0x7c, 0x40, 0xd3
         )
     }
     
@@ -955,6 +977,11 @@ final class EmitterM1Tests: XCTestCase {
             "fcvt d3, h4",
             0x83, 0xc0, 0xe2, 0x1e
         )
+        try XCTAssertM1Op(
+            M1Op.fcvt(S.s0, D.d0),
+            "fcvt s0, d0",
+            0x00, 0x40, 0x62, 0x1e
+        )
     }
     
     func testLdp_fp() throws {
@@ -973,6 +1000,11 @@ final class EmitterM1Tests: XCTestCase {
             "ldp d0, d1, [sp], #8",
             0xe0, 0x87, 0xc0, 0x6c
         )
+        try XCTAssertM1Op(
+            M1Op.ldp((S.s0, S.s1), .reg64offset(.sp, 8, .post)),
+            "ldp s0, s1, [sp], #8",
+            0xe0, 0x07, 0xc1, 0x2c
+        )
     }
     
     func testStp_fp() throws {
@@ -990,6 +1022,11 @@ final class EmitterM1Tests: XCTestCase {
             M1Op.stp((D.d0, D.d1), .reg64offset(.sp, 8, .post)),
             "stp d0, d1, [sp], #8",
             0xe0, 0x87, 0x80, 0x6c
+        )
+        try XCTAssertM1Op(
+            M1Op.stp((S.s0, S.s1), .reg64offset(.sp, 8, .post)),
+            "stp s0, s1, [sp], #8",
+            0xe0, 0x07, 0x81, 0x2c
         )
     }
     

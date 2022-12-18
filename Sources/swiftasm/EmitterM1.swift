@@ -6,6 +6,7 @@ protocol Register: Equatable, CustomDebugStringConvertible {
     var fp: (any RegisterFP)? { get }
     
     var is64: Bool { get }
+    var is32: Bool { get }
 }
 
 protocol RegisterI: Register, Equatable, CustomDebugStringConvertible {
@@ -509,6 +510,8 @@ public class EmitterM1 {
 //         )
         return result
     }
+    
+    static let logger = LoggerFactory.create(EmitterM1.self)
 
     static func encodeReg(_ reg: any Register, shift: Int64) -> Int64 {
         (Int64(0b11111) & Int64(reg.rawValue)) << shift
@@ -884,11 +887,19 @@ public class EmitterM1 {
                 )
             }
 
-            let divisor: Int64 = 8  // 64-bit ops. 32-bit ops have divisor 4
-            let truncated = try truncateOffset(offsetCount, divisor: divisor, bits: 7)
-            
             let (Rt1, Rt2) = pair
             try assertMatchingSize(Rt1, Rt2)
+            
+            let divisor: Int64
+            if Rt1.double {
+                divisor = 8
+            } else if Rt1.single {
+                divisor = 4
+            } else {
+                fatal("ldp not implemented for \(pair)", Self.logger)
+            }
+            
+            let truncated = try truncateOffset(offsetCount, divisor: divisor, bits: 7)
             
             let mask: Int64
             switch ixMode {
@@ -926,10 +937,22 @@ public class EmitterM1 {
                     "STP can only have .reg64offset offset"
                 )
             }
-
-            let divisor: Int64 = 8  // 64-bit ops. 32-bit ops have divisor 4
-            let truncated = try truncateOffset(offsetCount, divisor: divisor, bits: 7)
+            
             let (Rt1, Rt2) = pair
+            try assertMatchingSize(Rt1, Rt2)
+            
+            let divisor: Int64
+            if Rt1.double {
+                divisor = 8
+            } else if Rt1.single {
+                divisor = 4
+            } else if Rt1.half {
+                divisor = 2
+            } else {
+                fatal("Not implemented stp for \(Rt1)", Self.logger)
+            }
+            
+            let truncated = try truncateOffset(offsetCount, divisor: divisor, bits: 7)
             try assertMatchingSize(Rt1, Rt2)
             let encodedRt1: Int64 = encodeReg(Rt1, shift: 0)
             let encodedRt2: Int64 = encodeReg(Rt2, shift: 10)
@@ -1755,6 +1778,15 @@ public class EmitterM1 {
             
             //                           ftype   Rm           Rn    Rd
             let mask: Int64 = 0b00011110_00____1_00000_000010_00000_00000
+            let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
+            let ftype = ftypeMask(Rd)
+            let encoded = mask | regs | ftype
+            return returnAsArray(encoded)
+        case .fadd(let Rd, let Rn, let Rm):
+            try assertMatchingSize(Rd, Rn, Rm)
+            
+            //                           ftype   Rm           Rn    Rd
+            let mask: Int64 = 0b00011110_00____1_00000_001010_00000_00000
             let regs = encodeRegs(Rd: Rd, Rn: Rn, Rm: Rm)
             let ftype = ftypeMask(Rd)
             let encoded = mask | regs | ftype

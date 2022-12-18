@@ -76,6 +76,8 @@ extension M1Op {
             return .sbfm(Rd, Rn.to64, 0, 15)
         case .sxtb(let Rd, let Rn):
             return .sbfm(Rd, Rn.to64, 0, 7)
+        case .uxtw(let Rd, let Rn):
+            return .ubfm(Rd, Rn.to64, 0, 31)
         case .uxth(let Rd, let Rn):
             return .ubfm(Rd, Rn, 0, 15)
         case .uxtb(let Rd, let Rn):
@@ -375,6 +377,8 @@ enum M1Op : CpuOp {
             return "fcvt \(Rt), \(Rn)"
         case .fmov(let Rt, let Rn):
             return "fmov \(Rt), \(Rn)"
+        case .fadd(let Rt, let Rn, let Rm):
+            return "fadd \(Rt), \(Rn), \(Rm)"
         }
     }
     
@@ -459,7 +463,7 @@ enum M1Op : CpuOp {
     
     case sxtb(Register64, Register32)   // SBFM <Xd>, <Xn>, #0, #7
     
-    case uxtw(Register32, Register32)
+    case uxtw(Register64, Register32)
     case uxth(Register32, Register32)
     case uxtb(Register32, Register32)
     
@@ -500,6 +504,7 @@ enum M1Op : CpuOp {
     case movz64(Register64, UInt16, Register64.Shift?)
     
     case fmov(any RegisterFP, any RegisterFP)
+    case fadd(any RegisterFP, any RegisterFP, any RegisterFP)
     
     // when SP not included:
     //  - https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOV--register---Move--register---an-alias-of-ORR--shifted-register--?lang=en

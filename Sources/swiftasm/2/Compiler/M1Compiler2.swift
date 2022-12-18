@@ -339,33 +339,50 @@ extension M1Compiler2 {
         case .void:
             return nil
         case .f32:
-            // TODO: test
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Float32).self)
             let result = _jitFunc()
-            out.pointee.set(f: result)
+            
+            vdynamic.set(f: result, in: out)
             Swift.assert(out.pointee.f == result)
-            return withUnsafeMutablePointer(to: &out.pointee.union) { res in
-                print(res, "vs", out)
-                print(res.pointee)
-                fatalError("Not tested")
-                return .init(res)
-            }
         case .f64:
-            mem.hexPrint()
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Float64).self)
             let result = _jitFunc()
-            out.pointee.set(d: result)
+            
+            vdynamic.set(d: result, in: out)
             Swift.assert(out.pointee.d == result)
-            print("Got result", result)
-            return withUnsafeMutablePointer(to: &out.pointee.union) { res in
-                print(res, "vs", out)
-                print(res.pointee)
-                fatalError("Not tested")
-                return .init(res)
-            }
+        case .u8:
+            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->UInt8).self)
+            let result = _jitFunc()
+            
+            vdynamic.set(ui8: result, in: out)
+            Swift.assert(out.pointee.ui8 == result)
+        case .u16:
+            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->UInt16).self)
+            let result = _jitFunc()
+            
+            vdynamic.set(ui16: result, in: out)
+            Swift.assert(out.pointee.ui16 == result)
+        case .i32:
+            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Int32).self)
+            let result = _jitFunc()
+            
+            vdynamic.set(i: result, in: out)
+            Swift.assert(out.pointee.i == result)
+        case .i64:
+            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Int64).self)
+            let result = _jitFunc()
+            
+            vdynamic.set(i64: result, in: out)
+            Swift.assert(out.pointee.i == result)
         default:
             fatal("hlc_static_call does not support return type \(funProvider.retProvider.kind)", logger)
         }
+        
+        let res: OpaquePointer = withUnsafeMutablePointer(to: &out.pointee.union) { res in
+            return .init(res)
+        }
+        print("Returning hlc_static_call: \(res) vs \(out)")
+        return res
     }
     
     func appendPrepareDoubleForStore(reg: RegisterFP64, to vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
@@ -421,7 +438,7 @@ extension M1Compiler2 {
     ///   - vreg: virtual register index to load
     ///   - kinds: list of available virtual register types
     ///   - mem: op buffer
-    func appendLoadNumericAsFP(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer)
+    func appendLoadNumericAsDouble(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer)
     {
         appendLoadNumeric(reg: Int(reg.rawValue), from: vreg, kinds: kinds, mem: mem)
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
@@ -446,6 +463,9 @@ extension M1Compiler2 {
     
     /// Store FP register as either integer or FP value, depending on the vreg kind.
     ///
+    /// The value must be in the 64-bit precision register. This method will perform the required
+    /// conversions if needed (to smaller precisions, or to integers).
+    ///
     /// - Parameters:
     ///   - reg: source FP register
     ///   - vreg: vreg that determines the HL kind
@@ -453,31 +473,59 @@ extension M1Compiler2 {
     ///   - offsetFromAddress: offset from the value in `addrReg`
     ///   - kinds: known virtual (HL) register kinds
     ///   - mem: mem
-    func appendStoreFPAsNumeric(reg: RegisterFP64, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    func appendStoreDoubleAsNumeric(reg: RegisterFP64, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
         if FP_TYPE_KINDS.contains(vregKind) {
             // convert FP to right size, and store
             appendPrepareDoubleForStore(reg: reg, to: vreg, kinds: kinds, mem: mem)
-            appendStore(reg: reg, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
+            appendStore(reg.rawValue, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
         } else {
             // convert FP to int, and store
             let regI = Register64(rawValue: reg.rawValue)!
             appendFcvtzs(reg: reg, to: regI, target: vreg, kinds: kinds, mem: mem)
-            appendStore(reg: regI, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
-            appendDebugPrintRegisterAligned4(reg, prepend: "store (FP)", builder: mem)
-            appendDebugPrintRegisterAligned4(regI, prepend: "store (GP)", builder: mem)
+            appendStore(regI.rawValue, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
         }
     }
     
-    func appendStoreFPAsNumeric(reg: RegisterFP64, as vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    func appendStoreDoubleAsNumeric(reg: RegisterFP64, as vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let offset = getRegStackOffset(kinds, vreg)
-        appendStoreFPAsNumeric(reg: reg, as: vreg, intoAddressFrom: .sp, offsetFromAddress: offset, kinds: kinds, mem: mem)
+        appendStoreDoubleAsNumeric(reg: reg, as: vreg, intoAddressFrom: .sp, offsetFromAddress: offset, kinds: kinds, mem: mem)
     }
     
     func appendLoad(reg: Register64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let offset = getRegStackOffset(kinds, vreg)
         appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
+    }
+    
+    func appendLoad(_ regRawValue: UInt8, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let offset = getRegStackOffset(kinds, vreg)
+        appendLoad(regRawValue, from: vreg, kinds: kinds, offset: offset, mem: mem)
+    }
+    
+    /// Load a FP value and (if needed) convert to double precision.
+    /// - Parameters:
+    ///   - reg: target FP register
+    ///   - vreg: virtual register that determines what (if any) conversion is needed
+    ///   - kinds: virtual registers for current context
+    ///   - mem: op buffer
+    func appendLoadFPToDouble(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        
+        assertFP(reg: vreg, from: kinds)
+        
+        appendLoad(reg.rawValue, from: vreg, kinds: kinds, mem: mem)
+        appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
+    }
+    
+    /// Convert a double-precision value to a required target precision, and store in the stack.
+    /// - Parameters:
+    ///   - reg: source register
+    ///   - vreg: virtual register that determines what (if any) conversion is needed
+    ///   - kinds: virtual registers for current context
+    ///   - mem: op buffer
+    func appendStoreDoubleToFP(reg: RegisterFP64, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        appendPrepareDoubleForStore(reg: reg, to: vreg, kinds: kinds, mem: mem)
+        appendStore(reg.rawValue, into: vreg, kinds: kinds, mem: mem)
     }
     
     func appendUcvtf(reg: Register64, to fp: RegisterFP64, target vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
@@ -523,18 +571,6 @@ extension M1Compiler2 {
         appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
     }
     
-    func appendLoadAndConvertToDouble(reg: RegisterFP64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer)
-    {
-        appendLoad(reg: reg, from: vreg, kinds: kinds, mem: mem)
-        appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
-    }
-    
-    func appendStoreDoubleToRightSize(reg: RegisterFP64, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer)
-    {
-        appendPrepareDoubleForStore(reg: reg, to: vreg, kinds: kinds, mem: mem)
-        appendStore(reg: reg, into: vreg, kinds: kinds, mem: mem)
-    }
-    
     func appendSignMode(_ signed: Bool, reg: Register64, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         switch(vregKind.hlRegSize, signed) {
@@ -543,7 +579,7 @@ extension M1Compiler2 {
         case (4, true):
             mem.append(M1Op.sxtw(reg, reg.to32))
         case (4, false):
-            mem.append(M1Op.uxtw(reg.to32, reg.to32))
+            mem.append(M1Op.uxtw(reg, reg.to32))
         case (2, true):
             mem.append(M1Op.sxth(reg, reg.to32))
         case (2, false):
@@ -583,19 +619,47 @@ extension M1Compiler2 {
         }
     }
     
-    func appendLoad(reg: any Register, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
+    func appendLoad(_ regRawValue: UInt8, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        
+        let reg = getRegister(regRawValue, kind: vregKind)
+        appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
+    }
+    
+    func appendLoad(
+        _ regRawValue: UInt8, 
+        as vreg: Reg,
+        addressRegister addrReg: Register64,
+        offset: Int64,
+        kinds: [any HLTypeKindProvider],
+        mem: CpuOpBuffer)
+    {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        let reg = getRegister(regRawValue, kind: vregKind)
+        appendLoad(reg: reg, as: vreg, addressRegister: addrReg, offset: offset, kinds: kinds, mem: mem)
+    }
+    
+    func appendLoad(
+        reg: any Register,
+        as vreg: Reg,
+        addressRegister addrReg: Register64,
+        offset: Int64,
+        kinds: [any HLTypeKindProvider],
+        mem: CpuOpBuffer)
+    {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         if vregKind.hlRegSize == 8 {
             mem.append(
-                M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
+                M1Op.ldr(reg, .reg64offset(addrReg, offset, nil))
             )
         } else if vregKind.hlRegSize == 4 {
             guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
                 fatalError("Can't convert \(reg) to 32-bit variant")
             }
             
+            appendDebugPrintAligned4("Loaded \(reg32)", builder: mem)
             mem.append(
-                M1Op.ldr(reg32, .reg64offset(.sp, offset, nil))
+                M1Op.ldr(reg32, .reg64offset(addrReg, offset, nil))
             )
         } else if vregKind.hlRegSize == 2 {
             guard let regGP32 = reg.i?.to32 else {
@@ -603,7 +667,7 @@ extension M1Compiler2 {
             }
             
             mem.append(
-                M1Op.ldrh(regGP32, .imm64(.sp, offset, nil))
+                M1Op.ldrh(regGP32, .imm64(addrReg, offset, nil))
             )
         } else if vregKind.hlRegSize == 1 {
             guard let regGP32 = reg.i?.to32 else {
@@ -611,7 +675,7 @@ extension M1Compiler2 {
             }
             
             mem.append(
-                M1Op.ldrb(regGP32, .imm64(.sp, offset, nil))
+                M1Op.ldrb(regGP32, .imm64(addrReg, offset, nil))
             )
         } else if vregKind.hlRegSize == 0 {
             // nop
@@ -620,26 +684,59 @@ extension M1Compiler2 {
         }
     }
     
-    func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    func appendLoad(reg: any Register, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
+        appendLoad(reg: reg, as: vreg, addressRegister: .sp, offset: offset, kinds: kinds, mem: mem)
+    }
+    
+    /// Store a GP or FP register (depending on the vreg type) into the specified location.
+    /// - Parameters:
+    ///   - regRawValue: CPU register index (e.g. 0 can point to X.x0 or D.d0 or S.s0 depending on the vreg)
+    ///   - vreg: virtual register index
+    ///   - addrReg: GP register holding the base address of the target location (e.g. can be `X.sp`)
+    ///   - offsetFromAddress: offset from address in `addrReg`
+    ///   - kinds: register kinds for current context
+    ///   - mem: op buffer
+    func appendStore(_ regRawValue: UInt8, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
-        Swift.assert(reg.is64)
+        let reg = getRegister(regRawValue, kind: vregKind)
+        appendStore(reg: reg, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
+    }
+    
+    /// Store a given register into the specified location.
+    ///
+    /// This method will not do any register conversions (so e.g. `vreg` can point to a FP value but if `reg` points to a GP regsiter,
+    /// then the GP register will be stored).
+    ///
+    /// This is useful for e.g. `OFloat` where we load a GP register with a float's bit pattern, and store it where a FP value should reside.
+    /// - Parameters:
+    ///   - reg: CPU register
+    ///   - vreg: virtual register index
+    ///   - addrReg: GP register holding the base address of the target location (e.g. can be `X.sp`)
+    ///   - offsetFromAddress: offset from address in `addrReg`
+    ///   - kinds: register kinds for current context
+    ///   - mem: op buffer
+    func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
         guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
             fatalError("Can't convert \(reg) to 32-bit variant")
         }
         
         if vregKind.hlRegSize == 8 {
+            Swift.assert(reg.is64)
             mem.append(
                 PseudoOp.debugMarker("Storing 8 bytes in vreg \(vreg)"),
                 M1Op.str(reg, .reg64offset(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 4 {
+            Swift.assert(reg.is32)
             mem.append(
                 PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
                 M1Op.str(reg32, .reg64offset(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 2 {
+            Swift.assert(reg.is32)
             guard let reg32gp = reg32.i?.to32 else {
                 fatalError("store for 2-byte FP registers not implemented")
             }
@@ -648,6 +745,7 @@ extension M1Compiler2 {
                 M1Op.strh(reg32gp, .imm64(addrReg, offsetFromAddress, nil))
             )
         } else if vregKind.hlRegSize == 1 {
+            Swift.assert(reg.is32)
             guard let reg32gp = reg32.i?.to32 else {
                 fatalError("store for 1-byte FP registers not implemented")
             }
@@ -662,68 +760,46 @@ extension M1Compiler2 {
         }
     }
     
-    func appendStore(reg: Register64, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
-        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+    func appendStore(_ regRawValue: UInt8, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let offset = getRegStackOffset(kinds, vreg)
-        
-        if vregKind.hlRegSize == 8 {
-            mem.append(
-                PseudoOp.debugMarker("Storing 8 bytes in vreg \(vreg)"),
-                M1Op.str(reg, .reg64offset(.sp, offset, nil))
-            )
-        } else if vregKind.hlRegSize == 4 {
-            mem.append(
-                PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
-                M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
-            )
-        } else if vregKind.hlRegSize == 2 {
-            mem.append(
-                PseudoOp.debugMarker("Storing 2 bytes in vreg \(vreg)"),
-                M1Op.strh(reg.to32, .imm64(.sp, offset, nil))
-            )
-        } else if vregKind.hlRegSize == 1 {
-            mem.append(
-                PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
-                M1Op.strb(reg.to32, .imm64(.sp, offset, nil))
-            )
-        } else if vregKind.hlRegSize == 0 {
-            // nop
-        } else {
-            fatalError("Size must be 8, 4, 2, 1, or 0")
-        }
+        appendStore(regRawValue, as: vreg, intoAddressFrom: .sp, offsetFromAddress: offset, kinds: kinds, mem: mem)
     }
     
-    func appendStore(reg: RegisterFP64, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
-        let vregKind = requireTypeKind(reg: vreg, from: kinds)
-        let offset = getRegStackOffset(kinds, vreg)
+    /// Append storing a GP register. Will choose the right size register depending on vreg size.
+    ///
+    /// `vreg` can point to a FP virtual register but this method will not use the FP registers. This is ok
+    /// for e.g. manipulating bit patterns of FP values directly.
+    ///
+    /// - Parameters:
+    ///   - regRawValue:
+    ///   - vreg:
+    ///   - kinds:
+    ///   - mem:
+    func appendStoreGPRightSize(_ regRawValue: UInt8, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         
+        let offset = getRegStackOffset(kinds, vreg)
+        appendStoreGPRightSize(regRawValue, as: vreg, intoAddressFrom: .sp, offsetFromAddress: offset, kinds: kinds, mem: mem)
+    }
+    
+    /// Append storing a GP register. Will choose the right size register depending on vreg size.
+    ///
+    /// `vreg` can point to a FP virtual register but this method will not use the FP registers. This is ok
+    /// for e.g. manipulating bit patterns of FP values directly.
+    func appendStoreGPRightSize(_ regRawValue: UInt8, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        
+        let reg: any RegisterI
         if vregKind.hlRegSize == 8 {
-            mem.append(
-                PseudoOp.debugMarker("Storing 8 bytes in vreg \(vreg)"),
-                M1Op.str(reg, .reg64offset(.sp, offset, nil))
-            )
-        } else if vregKind.hlRegSize == 4 {
-            mem.append(
-                PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
-                M1Op.str(reg.to32, .reg64offset(.sp, offset, nil))
-            )
-        } else if vregKind.hlRegSize == 2 {
-            fatalError("16-bit str not implemented for fp registers")
-//            mem.append(
-//                PseudoOp.debugMarker("Storing 2 bytes in vreg \(vreg)"),
-//                M1Op.strh(reg.to32, .imm64(.sp, offset, nil))
-//            )
-        } else if vregKind.hlRegSize == 1 {
-            fatalError("8-bit str not implemented for fp registers")
-//            mem.append(
-//                PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
-//                M1Op.strb(reg.to32, .imm64(.sp, offset, nil))
-//            )
-        } else if vregKind.hlRegSize == 0 {
-            // nop
+            reg = Register64(rawValue: regRawValue)!
         } else {
-            fatalError("Size must be 8, 4, 2, 1, or 0")
+            reg = Register32(rawValue: regRawValue)!
         }
+        appendStore(reg: reg, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
+    }
+    
+    func appendStore(reg: any Register, into vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let offset = getRegStackOffset(kinds, vreg)
+        appendStore(reg: reg, as: vreg, intoAddressFrom: .sp, offsetFromAddress: offset, kinds: kinds, mem: mem)
     }
     
     /// Holds information about the stack reservations for a function.
@@ -858,44 +934,97 @@ extension M1Compiler2 {
         return stackInfo
     }
     
-    func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer)
+    func getRegister(_ regRawValue: UInt8, kind: HLTypeKind) -> any Register {
+        let reg: any Register
+        switch(FP_TYPE_KINDS.contains(kind), kind.hlRegSize) {
+        case (true, 8):
+            reg = RegisterFP64(rawValue: regRawValue)!
+        case (true, 4):
+            reg = RegisterFP32(rawValue: regRawValue)!
+        case (false, 8):
+            reg = Register64(rawValue: regRawValue)!
+        case (false, 4):
+            fallthrough
+        case (false, 2):
+            fallthrough
+        case (false, 1):
+            reg = Register32(rawValue: regRawValue)!
+        default:
+            fatalError("Can not deduce register type for \(kind)")
+        }
+        return reg
+    }
+    
+    func appendDebugPrintRegisterAligned4(_ regRawValue: UInt8, kind: HLTypeKind, prepend: String? = nil, builder: CpuOpBuffer)
     {
-        if let regI = reg.i?.to64 {
-            appendDebugPrintRegisterAligned4(regI, prepend: prepend, builder: builder)
-        } else if let regFP = reg.fp?.to64 {
-            appendDebugPrintRegisterAligned4(regFP, prepend: prepend, builder: builder)
-        } else {
-            fatal("Can't debug print register \(reg)", Self.logger)
-        }
+        appendDebugPrintRegisterAligned4(getRegister(regRawValue, kind: kind), prepend: prepend, builder: builder)
     }
     
-    func appendDebugPrintRegisterAligned4(_ reg: Register64, prepend: String? = nil, builder: CpuOpBuffer) {
+    func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil) {
         guard stripDebugMessages == false else {
             builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
             return
         }
         
-        Self.appendDebugPrintRegisterAligned4(reg, prepend: prepend, builder: builder)
+        Self.appendDebugPrintRegisterAligned4(reg, prepend: prepend, builder: builder, format: format)
     }
     
-    static func appendDebugPrintRegisterAligned4(_ reg: Register64, prepend: String? = nil, builder: CpuOpBuffer) {
+    /// Will print the value of a register.
+    ///
+    /// The register is passed to `printf` via stack, and has 16 bytes reserved for it.
+    ///
+    /// - Parameters:
+    ///   - reg: register to print
+    ///   - prepend: an additional debug message to prepend
+    ///   - builder: `CpuOpBuffer` into which to emit the instructions
+    static func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil) {
         guard let printfAddr = dlsym(dlopen(nil, RTLD_LAZY), "printf") else {
             fatalError("No printf addr")
+        }
+        
+        // if we need to promote a FP register to 64-bits, then we will pass the
+        // promoted register to printf, and not `reg`
+        let regWithSanitizedValue: any Register
+        
+        if reg.fp != nil && !reg.is64 {
+            // need automatic promotion to double precision for printf
+            if let reg32 = reg.fp?.to32 {
+                regWithSanitizedValue = reg32.to64
+                builder.append(M1Op.fcvt(regWithSanitizedValue.fp!, reg32))
+            } else {
+                fatalError("Can't automatically promote \(reg) to double precision")
+            }
+        } else {
+            regWithSanitizedValue = reg
         }
         
         var adr = RelativeDeferredOffset()
         var jmpTarget = RelativeDeferredOffset()
         let str: String
-        if let prepend = prepend {
-            str = "[jitdebug] [\(prepend)] Register \(reg): %p\n\0"
+        
+        let fmt: String
+        if let givenFormat = format {
+            fmt = givenFormat
         } else {
-            str = "[jitdebug] Register \(reg): %p\n\0"
+            if reg.fp != nil {
+                fmt = "%f"
+            } else {
+                fmt = "%p"
+            }
+        }
+        
+        if let prepend = prepend {
+            str = "[jitdebug] [\(prepend)] Register \(reg): \(fmt)\n\0"
+        } else {
+            str = "[jitdebug] Register \(reg): \(fmt)\n\0"
         }
         
         builder.append(PseudoOp.debugMarker("Printing debug register: \(reg)"))
         
-        guard reg.rawValue <= X.x18.rawValue else {
-            fatalError("reg \(reg) not supported")
+        if reg.fp != nil {
+            guard reg.rawValue <= D.d9.rawValue else {
+                fatalError("FP reg \(reg) not supported")
+            }
         }
         
         builder.append(
@@ -903,7 +1032,6 @@ extension M1Compiler2 {
             M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(256)),
             
             M1Op.str(Register64.x0, .reg64offset(.sp, 8, nil)),
-            M1Op.str(reg, .reg64offset(.sp, 0, nil)),
             M1Op.stp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
             M1Op.stp((Register64.x3, Register64.x4), .reg64offset(.sp, 32, nil)),
             M1Op.stp((Register64.x5, Register64.x6), .reg64offset(.sp, 48, nil)),
@@ -919,8 +1047,16 @@ extension M1Compiler2 {
             M1Op.stp((D.d2, D.d3), .reg64offset(.sp, 192, nil)),
             M1Op.stp((D.d4, D.d5), .reg64offset(.sp, 208, nil)),
             M1Op.stp((D.d6, D.d7), .reg64offset(.sp, 224, nil)),
-            M1Op.stp((D.d8, D.d9), .reg64offset(.sp, 240, nil))
-
+            M1Op.stp((D.d8, D.d9), .reg64offset(.sp, 240, nil)),
+            
+            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(64)),
+            
+            M1Op.str(regWithSanitizedValue, .reg64offset(.sp, 0, nil)),
+            M1Op.stp((S.s0, S.s1), .reg64offset(.sp, 16, nil)),
+            M1Op.stp((S.s2, S.s3), .reg64offset(.sp, 24, nil)),
+            M1Op.stp((S.s4, S.s5), .reg64offset(.sp, 32, nil)),
+            M1Op.stp((S.s6, S.s7), .reg64offset(.sp, 40, nil)),
+            M1Op.stp((S.s8, S.s9), .reg64offset(.sp, 48, nil))
         )
         adr.start(at: builder.byteSize)
         builder.append(M1Op.adr64(.x0, adr))
@@ -928,96 +1064,15 @@ extension M1Compiler2 {
         builder.append(
             PseudoOp.mov(.x16, printfAddr),
             M1Op.blr(.x16),
-//            // restore
-            M1Op.ldr(Register64.x0, .reg64offset(.sp, 8, nil)),
-            M1Op.ldp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
-            M1Op.ldp((Register64.x3, Register64.x4), .reg64offset(.sp, 32, nil)),
-            M1Op.ldp((Register64.x5, Register64.x6), .reg64offset(.sp, 48, nil)),
-            M1Op.ldp((Register64.x7, Register64.x8), .reg64offset(.sp, 64, nil)),
-            M1Op.ldp((Register64.x9, Register64.x10), .reg64offset(.sp, 80, nil)),
-            M1Op.ldp((Register64.x11, Register64.x12), .reg64offset(.sp, 96, nil)),
-            M1Op.ldp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
-            M1Op.ldp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
-            M1Op.ldp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
-            M1Op.ldp((Register64.x29_fp, Register64.x30_lr), .reg64offset(.sp, 160, nil)),
+            // restore
+            M1Op.ldp((S.s0, S.s1), .reg64offset(.sp, 16, nil)),
+            M1Op.ldp((S.s2, S.s3), .reg64offset(.sp, 24, nil)),
+            M1Op.ldp((S.s4, S.s5), .reg64offset(.sp, 32, nil)),
+            M1Op.ldp((S.s6, S.s7), .reg64offset(.sp, 40, nil)),
+            M1Op.ldp((S.s8, S.s9), .reg64offset(.sp, 48, nil)),
             
-            M1Op.ldp((D.d0, D.d1), .reg64offset(.sp, 176, nil)),
-            M1Op.ldp((D.d2, D.d3), .reg64offset(.sp, 192, nil)),
-            M1Op.ldp((D.d4, D.d5), .reg64offset(.sp, 208, nil)),
-            M1Op.ldp((D.d6, D.d7), .reg64offset(.sp, 224, nil)),
-            M1Op.ldp((D.d8, D.d9), .reg64offset(.sp, 240, nil)),
-
-            try! M1Op._add(X.sp, X.sp, 256)
-        )
-        
-        jmpTarget.start(at: builder.byteSize)
-        builder.append(M1Op.b(jmpTarget))
-        adr.stop(at: builder.byteSize)
-        builder.append(PseudoOp.ascii(str)).align(4)
-
-        Swift.assert(builder.byteSize % 4 == 0)
-        jmpTarget.stop(at: builder.byteSize)
-    }
-    
-    func appendDebugPrintRegisterAligned4(_ reg: RegisterFP64, prepend: String? = nil, builder: CpuOpBuffer) {
-        guard stripDebugMessages == false else {
-            builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
-            return
-        }
-        
-        Self.appendDebugPrintRegisterAligned4(reg, prepend: prepend, builder: builder)
-    }
-    
-    static func appendDebugPrintRegisterAligned4(_ reg: RegisterFP64, prepend: String? = nil, builder: CpuOpBuffer) {
-        guard let printfAddr = dlsym(dlopen(nil, RTLD_LAZY), "printf") else {
-            fatalError("No printf addr")
-        }
-        
-        var adr = RelativeDeferredOffset()
-        var jmpTarget = RelativeDeferredOffset()
-        let str: String
-        if let prepend = prepend {
-            str = "[jitdebug] [\(prepend)] Register \(reg): %f\n\0"
-        } else {
-            str = "[jitdebug] Register \(reg): %f\n\0"
-        }
-        
-        builder.append(PseudoOp.debugMarker("Printing debug register: \(reg)"))
-        
-        guard reg.rawValue <= D.d9.rawValue else {
-            fatalError("reg \(reg) not supported")
-        }
-        
-        builder.append(
-            // Stash registers we'll use (so we can reset)
-            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(256)),
+            try! M1Op._add(X.sp, X.sp, 64),
             
-            M1Op.str(Register64.x0, .reg64offset(.sp, 8, nil)),
-            M1Op.str(reg, .reg64offset(.sp, 0, nil)),
-            M1Op.stp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
-            M1Op.stp((Register64.x3, Register64.x4), .reg64offset(.sp, 32, nil)),
-            M1Op.stp((Register64.x5, Register64.x6), .reg64offset(.sp, 48, nil)),
-            M1Op.stp((Register64.x7, Register64.x8), .reg64offset(.sp, 64, nil)),
-            M1Op.stp((Register64.x9, Register64.x10), .reg64offset(.sp, 80, nil)),
-            M1Op.stp((Register64.x11, Register64.x12), .reg64offset(.sp, 96, nil)),
-            M1Op.stp((Register64.x13, Register64.x14), .reg64offset(.sp, 112, nil)),
-            M1Op.stp((Register64.x15, Register64.x16), .reg64offset(.sp, 128, nil)),
-            M1Op.stp((Register64.x17, Register64.x18), .reg64offset(.sp, 144, nil)),
-            M1Op.stp((Register64.x29_fp, Register64.x30_lr), .reg64offset(.sp, 160, nil)),
-            
-            M1Op.stp((D.d0, D.d1), .reg64offset(.sp, 176, nil)),
-            M1Op.stp((D.d2, D.d3), .reg64offset(.sp, 192, nil)),
-            M1Op.stp((D.d4, D.d5), .reg64offset(.sp, 208, nil)),
-            M1Op.stp((D.d6, D.d7), .reg64offset(.sp, 224, nil)),
-            M1Op.stp((D.d8, D.d9), .reg64offset(.sp, 240, nil))
-        )
-        adr.start(at: builder.byteSize)
-        builder.append(M1Op.adr64(.x0, adr))
-        
-        builder.append(
-            PseudoOp.mov(.x16, printfAddr),
-            M1Op.blr(.x16),
-//            // restore
             M1Op.ldr(Register64.x0, .reg64offset(.sp, 8, nil)),
             M1Op.ldp((Register64.x1, Register64.x2), .reg64offset(.sp, 16, nil)),
             M1Op.ldp((Register64.x3, Register64.x4), .reg64offset(.sp, 32, nil)),
@@ -1046,6 +1101,15 @@ extension M1Compiler2 {
 
         Swift.assert(builder.byteSize % 4 == 0)
         jmpTarget.stop(at: builder.byteSize)
+        
+        // if we had to auto-promote an FP register, do the reverse now
+        if reg.fp != nil && !reg.is64 {
+            if let reg32 = reg.fp?.to32 {
+                builder.append(M1Op.fcvt(reg32, reg32.to64))
+            } else {
+                fatalError("Can't automatically demote \(reg) to required precision")
+            }
+        }
     }
     
     func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer) {
@@ -1452,6 +1516,54 @@ class M1Compiler2 {
         try compile(compilable: compilable, into: mem)
     }
     
+    // MARK: make_dyn_cast
+    func make_dyn_cast(_ dst: Reg, _ src: Reg, _ regs: [any HLTypeProvider], _ mem: CpuOpBuffer) {
+        /*
+         safecast [dst], [r] cast register r into register dst, throw an exception if there is no way to perform such operation
+         */
+        
+        _ = requireTypeKind(reg: src, from: regs)
+        let dstType = requireTypeKind(reg: dst, from: regs)
+        
+        let srcOffset = getRegStackOffset(regs, src)
+        
+        let castFunc = get_dyncast(to: dstType.kind)
+        appendDebugPrintAligned4("Determined cast function", builder: mem)
+        
+            
+        mem.append(
+            // load &src into x.0
+            M1Op.movr64(X.x0, .sp),
+            M1Op.movz64(X.x1, UInt16(srcOffset), nil),
+            M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0)))
+        )
+        mem.append(PseudoOp.mov(X.x1, requireTypeMemory(reg: src, regs: regs)))
+        
+        if (dstType != .f32 && dstType != .f64) {
+            // float/double casts are the only ones that don't require the third "to" arg
+            mem.append(PseudoOp.mov(X.x2, requireTypeMemory(reg: dst, regs: regs)))
+        }
+        appendDebugPrintAligned4("Jumping to cast function", builder: mem)
+        mem.append(
+            PseudoOp.mov(X.x15, castFunc),
+            M1Op.blr(X.x15)
+        )
+        
+        // TODO: check for failed cast result
+        appendDebugPrintAligned4("TODO: OSafeCast should check for failed cast result", builder: mem)
+        
+        appendDebugPrintRegisterAligned4(0, kind: dstType, prepend: "OSafeCast result (agnostic)", builder: mem)
+        if (dstType != .f32 && dstType != .f64) {
+//            appendDebugPrintRegisterAligned4(X.x0, prepend: "OSafeCast result (gp)", builder: mem)
+            appendStore(0, into: dst, kinds: regs, mem: mem)
+        } else {
+//            appendDebugPrintRegisterAligned4(0, kind: dstType, prepend: "OSafeCast result (float)", builder: mem)
+//            appendStore(0, into: dst, kinds: regs, mem: mem)
+//            appendStore(0, into: dst, kinds: regs, mem: mem)
+            appendStore(0, into: dst, kinds: regs, mem: mem)
+        }
+    }
+    
     // MARK: compile
     func compile(compilable: any Compilable2, into mem: CpuOpBuffer) throws
     {
@@ -1536,8 +1648,8 @@ class M1Compiler2 {
                 
                 if dstKind.hlRegSize > 0 {
                     if isFP(vreg: dst, kinds: regs) {
-                        appendDebugPrintAligned4("Returning FP stack offset \(dstStackOffset)", builder: mem)
-                        appendLoad(reg: D.d0, from: dst, kinds: regs, mem: mem)
+                        appendDebugPrintAligned4("Returning FP stack offset \(dstStackOffset) (size \(dstKind.hlRegSize))", builder: mem)
+                        appendLoad(0, from: dst, kinds: regs, mem: mem)
                     } else {
                         appendDebugPrintAligned4("Returning I stack offset \(dstStackOffset)", builder: mem)
                         appendLoad(reg: X.x0, from: dst, kinds: regs, mem: mem)
@@ -1642,7 +1754,7 @@ class M1Compiler2 {
                         
                         appendLoad(reg: X.x1, from: argRegister, kinds: regs, mem: mem)
                         let offset: Int64 = Int64(ix * MemoryLayout<UnsafePointer<vdynamic>>.stride)
-                        appendStore(reg: X.x1, as: argRegister, intoAddressFrom: X.x0, offsetFromAddress: offset, kinds: regs, mem: mem)
+                        appendStore(1, as: argRegister, intoAddressFrom: X.x0, offsetFromAddress: offset, kinds: regs, mem: mem)
                     }
                     
                     // call hl_dyn_call
@@ -1654,21 +1766,28 @@ class M1Compiler2 {
                         M1Op.blr(X.x10)
                     )
                     
-                    // MARK: TMP
-                    let _c: (@convention(c) (OpaquePointer)->()) = {
-                        optr in
+                    // MARK: tmp
+                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
+                        dPtr in
                         
-                        let x: vdynamicPointer = .init(optr)
-                        print(x)
+                        let x: vdynamicPointer = .init(dPtr)
+                        
+                        print("Got dynamic result", x.pointee.f)
+                        return dPtr
                     }
                     mem.append(
-                        PseudoOp.mov(X.x2, unsafeBitCast(_c, to: OpaquePointer.self)),
-                        PseudoOp.mov(X.x1, nargs),
-                        M1Op.blr(X.x2))
-                    appendSystemExit(123, builder: mem)
-                    // MARK: TMP
+                        PseudoOp.mov(X.x20, unsafeBitCast(_c, to: OpaquePointer.self))
+                        ,M1Op.blr(X.x20))
+                    // MARK: tmp
                     
-                    
+                    if( dstType.kind != .void ) {
+                        // store result into dst (which is guaranteed HLTypeKind.dyn)
+                        appendStore(0, into: dst, kinds: regs, mem: mem)
+                        
+                        /* TODO: not sure why this is needed? But @hashlink/jit.c
+                                 has this */
+                        make_dyn_cast(dst, dst, regs, mem)
+                    }
                 } else {
                     // ASM for  if( c->hasValue ) c->fun(value,args) else c->fun(args)
                     
@@ -1854,7 +1973,7 @@ class M1Compiler2 {
             case .OBytes(let dst, let ptr):
                 let bytesAddress = try ctx.getBytes(ptr).ccompatAddress
                 mem.append(PseudoOp.mov(X.x0, bytesAddress))
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OString(let dst, let ptr):
                 assert(reg: dst, from: regs, is: HLTypeKind.bytes)
                 
@@ -1867,17 +1986,19 @@ class M1Compiler2 {
                     PseudoOp.mov(X.x2, unsafeBitCast(LibHl._hl_get_ustring, to: OpaquePointer.self)),
                     M1Op.blr(X.x2)
                 )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OFloat(let dst, let fref):
                 assert(reg: dst, from: regs, in: [HLTypeKind.f32, HLTypeKind.f64])
                 let f = try ctx.requireFloat(fref)
+                let dstType = requireTypeKind(reg: dst, from: regs)
                 mem.append(PseudoOp.mov(X.x0, f.bitPattern))
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                
+                appendStoreGPRightSize(0, into: dst, kinds: regs, mem: mem)
             case .OInt(let dst, let iRef):
                 assert(reg: dst, from: regs, in: [HLTypeKind.i64, HLTypeKind.i32, HLTypeKind.u8, HLTypeKind.u16])
                 let c = try ctx.requireInt(iRef)
                 mem.append(PseudoOp.mov(X.x0, c))
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSetThis(field: let fieldRef, src: let srcReg):
                 try __osetthis_osetfield(objReg: 0, fieldRef: fieldRef, srcReg: srcReg, regs: regs, mem: mem)
             case .OSetField(let objReg, let fieldRef, let srcReg):
@@ -2085,7 +2206,7 @@ class M1Compiler2 {
                 assert(reg: dst, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct, HLTypeKind.abstract, HLTypeKind.enum])
                 mem.append(PseudoOp.mov(.x0, UnsafeRawPointer(globalInstanceAddress)))
                 mem.append(M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil)))
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
                 appendDebugPrintRegisterAligned4(X.x0, prepend: "OGetGlobal result", builder: mem)
             case .OSetGlobal(let globalRef, let src):
                 let globalInstanceAddress = try ctx.requireGlobalData(globalRef)
@@ -2097,7 +2218,7 @@ class M1Compiler2 {
                 appendLoad(reg: .x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
                 mem.append(M1Op.lsl_r(X.x2, X.x0, X.x1))
-                appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
+                appendStore(2, into: dst, kinds: regs, mem: mem)
                 appendLoad(reg: X.x15, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: X.x15, from: b, kinds: regs, mem: mem)
                 appendLoad(reg: X.x15, from: dst, kinds: regs, mem: mem)
@@ -2229,7 +2350,7 @@ class M1Compiler2 {
                     M1Op.and(X.x2, X.x0, .r64shift(X.x1, .lsl(0)))
                     //M1Op.str(X.x2, .reg64offset(X.sp, dstOffset, nil))
                 )
-                appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
+                appendStore(2, into: dst, kinds: regs, mem: mem)
             case .ORethrow(let exc):
                 appendLoad(reg: X.x0, from: exc, kinds: regs, mem: mem)
                 mem.append(
@@ -2396,7 +2517,7 @@ class M1Compiler2 {
                 mem.append(M1Op.movr64(X.x12, .sp))
                 appendDebugPrintRegisterAligned4(X.x12, prepend: "SP (after)", builder: mem)
                 
-                appendStore(reg: X.x2, into: exc, kinds: regs, mem: mem)
+                appendStore(2, into: exc, kinds: regs, mem: mem)
                 appendDebugPrintAligned4("Stored x2 in x1", builder: mem)
                 
                 // goto label;
@@ -2487,7 +2608,7 @@ class M1Compiler2 {
                 mem.append(
                     M1Op.movz64(X.x0, 0, nil)
                 )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OBool(let dst, let value):
                 let dstOffset = getRegStackOffset(regs, dst)
                 mem.append(
@@ -2500,62 +2621,24 @@ class M1Compiler2 {
                 try assertNumeric(dst: dst, bigEnoughFor: src, from: regs)
                 
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OMov(let dst, let src) where isFP(vreg: dst, kinds: regs) && isFP(vreg: src, kinds: regs):
                 try assertNumeric(dst: dst, bigEnoughFor: src, from: regs)
                 
-                appendLoadAndConvertToDouble(reg: D.d0, from: src, kinds: regs, mem: mem)
-                appendStoreDoubleToRightSize(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                appendLoadFPToDouble(reg: D.d0, from: src, kinds: regs, mem: mem)
+                appendStoreDoubleToFP(reg: D.d0, into: dst, kinds: regs, mem: mem)
             case .OMov(let dst, let src) where !isNumeric(vreg: dst, kinds: regs) && !isNumeric(vreg: src, kinds: regs):
                 let srcKind = requireTypeKind(reg: src, from: regs)
                 assert(reg: dst, from: regs, in: [srcKind, HLTypeKind.dyn])
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSafeCast(let dst, let src):
-                /*
-                 safecast [dst], [r] cast register r into register dst, throw an exception if there is no way to perform such operation
-                 */
+                make_dyn_cast(dst, src, regs, mem)
                 
-                _ = requireTypeKind(reg: src, from: regs)
-                let dstType = requireTypeKind(reg: dst, from: regs)
-                
-                let srcOffset = getRegStackOffset(regs, src)
-                
-                let castFunc = get_dyncast(to: dstType.kind)
-                appendDebugPrintAligned4("Determined cast function", builder: mem)
-                
-                    
-                mem.append(
-                    // load &src into x.0
-                    M1Op.movr64(X.x0, .sp),
-                    M1Op.movz64(X.x1, UInt16(srcOffset), nil),
-                    M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0)))
-                )
-                mem.append(PseudoOp.mov(X.x1, requireTypeMemory(reg: src, regs: regs)))
-                
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "OSafeCast", builder: mem)
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "OSafeCast", builder: mem)
-                if (dstType != .f32 && dstType != .f64) {
-                    // float/double casts are the only ones that don't require the third "to" arg
-                    mem.append(PseudoOp.mov(X.x2, requireTypeMemory(reg: dst, regs: regs)))
-                    appendDebugPrintRegisterAligned4(X.x2, prepend: "OSafeCast", builder: mem)
-                }
-                appendDebugPrintAligned4("Jumping to cast function", builder: mem)
-                mem.append(
-                    PseudoOp.mov(X.x15, castFunc),
-                    M1Op.blr(X.x15)
-                )
-                // TODO: check for failed cast result
-                appendDebugPrintAligned4("TODO: OSafeCast should check for failed cast result", builder: mem)
-                
-                if (dstType != .f32 && dstType != .f64) {
-                    appendDebugPrintRegisterAligned4(X.x0, prepend: "OSafeCast result (gp)", builder: mem)
-                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
-                } else {
-                    appendFPRegToDouble(reg: D.d0, from: dst, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(D.d0, prepend: "OSafeCast result (float)", builder: mem)
-                    appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
-                }
+                // MARK: tmp
+                appendFPRegToDouble(reg: D.d0, from: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSafeCast return", builder: mem)
+                // MARK: tmp
             case .OLabel:
                 appendDebugPrintAligned4("OLabel", builder: mem)
             case .OSub(let dst, let a, let b):
@@ -2566,14 +2649,50 @@ class M1Compiler2 {
                     M1Op.sub(X.x2, X.x0, .r64shift(X.x1, .lsl(0)))
                 )
 
-                appendStore(reg: .x2, into: dst, kinds: regs, mem: mem)
-            case .OAdd(let dst, let a, let b):
-                appendLoad(reg: .x0, from: a, kinds: regs, mem: mem)
-                appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
-                appendDebugPrintRegisterAligned4(X.x1, builder: mem)
+                appendStore(2, into: dst, kinds: regs, mem: mem)
+            case .OAdd(let dst, let a, let b) where isInteger(vreg: a, kinds: regs) && isInteger(vreg: b, kinds: regs) && isInteger(vreg: dst, kinds: regs):
+                // all vregs are integers
+                assertInteger(reg: dst, from: regs)
+                
+                appendLoad(0, from: a, kinds: regs, mem: mem)
+                appendLoad(1, from: b, kinds: regs, mem: mem)
+                
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "OAdd#i a", builder: mem, format: "%d")
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "OAdd#i b", builder: mem, format: "%d")
                 mem.append(M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))))
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "OAdd#i res", builder: mem, format: "%d")
+                
+                appendStore(0, into: dst, kinds: regs, mem: mem)
+            case .OAdd(let dst, let a, let b) where isFP(vreg: a, kinds: regs) && isFP(vreg: b, kinds: regs) && isFP(vreg: dst, kinds: regs):
+                // all vregs are floating points
+                assertFP(reg: dst, from: regs)
+                
+                appendLoadFPToDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
+                appendLoadFPToDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
+                
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OAdd#fp a", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d1, prepend: "OAdd#fp b", builder: mem)
+                
+                mem.append(M1Op.fadd(D.d0, D.d0, D.d1))
+                
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OAdd#fp res", builder: mem)
+                
+                appendStoreDoubleToFP(reg: D.d0, into: dst, kinds: regs, mem: mem)
+            case .OAdd(let dst, let a, let b):
+                // mixed registers - convert integers to FP for the operation
+                assertNumeric(reg: dst, from: regs)
+                
+                appendLoadNumericAsDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
+                appendLoadNumericAsDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
+                
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OAdd#m a", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d1, prepend: "OAdd#m b", builder: mem)
+                
+                mem.append(M1Op.fadd(D.d0, D.d0, D.d1))
+                
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OAdd#m res", builder: mem)
+                
+                appendStoreDoubleAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             case .ONot(let dst, let src):
                 assert(reg: dst, from: regs, is: HLTypeKind.bool)
                 let _notter: (@convention(c) (UInt8)->(UInt8)) = {
@@ -2586,7 +2705,7 @@ class M1Compiler2 {
                     PseudoOp.mov(X.x1, unsafeBitCast(_notter, to: OpaquePointer.self)),
                         M1Op.blr(X.x1)
                 )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .ONeg(let dst, let src):
                 assert(reg: dst, from: regs, in: [HLTypeKind.i32, HLTypeKind.i64, HLTypeKind.u8, HLTypeKind.u16])
                 let _negger: (@convention(c) (UInt64)->(UInt64)) = {
@@ -2599,7 +2718,7 @@ class M1Compiler2 {
                     PseudoOp.mov(X.x1, unsafeBitCast(_negger, to: OpaquePointer.self)),
                         M1Op.blr(X.x1)
                 )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OUShr(let dst, let a, let b):
                 fallthrough
             case .OSShr(let dst, let a, let b):
@@ -2615,7 +2734,7 @@ class M1Compiler2 {
                     fatalError("Unknown shift op")
                 }
 
-                appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
+                appendStore(2, into: dst, kinds: regs, mem: mem)
             case .OArraySize(let dst, let src):
                 _ = requireTypeKind(reg: src, from: regs, shouldMatch: HLTypeKind.array)
 
@@ -2624,12 +2743,12 @@ class M1Compiler2 {
                     // varray: skip 2 pointers (16 bytes) and load 4 bytes
                     M1Op.ldr(W.w0, .reg(X.x0, .imm(16, nil)))
                 )
-                appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OType(let dst, let ty):
                 let typeMemory = try ctx.getType(ty)
                 let typeMemoryVal = Int(bitPattern: typeMemory.ccompatAddress)
                 mem.append(PseudoOp.mov(.x0, typeMemoryVal))
-                appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
 
                 let _test: (@convention(c) (UnsafeRawPointer) -> ()) = { (_ ptr: UnsafeRawPointer) in
                     let p = UnsafePointer<HLType_CCompat>(OpaquePointer(ptr))
@@ -2641,11 +2760,11 @@ class M1Compiler2 {
             case .OIncr(let dst):
                 appendLoad(reg: .x0, from: dst, kinds: regs, mem: mem)
                 mem.append(M1Op.add(X.x0, X.x0, .imm(1, nil)))
-                appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .ODecr(let dst):
                 appendLoad(reg: .x0, from: dst, kinds: regs, mem: mem)
                 mem.append(M1Op.sub(X.x0, X.x0, .imm(1, nil)))
-                appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSetArray(let array, let index, let src):
                 // x0 -> points to ((*_varray)(array))+1
                 appendLoad(reg: X.x0, from: array, kinds: regs, mem: mem)
@@ -2687,7 +2806,7 @@ class M1Compiler2 {
                 mem.append(M1Op.ldr(X.x1, .reg(X.x1, .r64shift(X.x2, .lsl(0)))))
                 appendDebugPrintRegisterAligned4(X.x1, prepend: "OGetArray fieldbase after deref", builder: mem)
                 
-                appendStore(reg: X.x1, into: dst, kinds: regs, mem: mem)
+                appendStore(1, into: dst, kinds: regs, mem: mem)
                 appendDebugPrintRegisterAligned4(X.x1, prepend: "OGetArray fetched item", builder: mem)
             case .ONop:
                 mem.append(M1Op.nop)
@@ -2695,20 +2814,17 @@ class M1Compiler2 {
                 appendLoad(reg: .x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
                 mem.append(M1Op.eor_r(X.x2, X.x0, X.x1, nil))
-                appendStore(reg: X.x2, into: dst, kinds: regs, mem: mem)
+                appendStore(2, into: dst, kinds: regs, mem: mem)
             case .OMul(let dst, let a, let b):
-                appendLoadNumericAsFP(reg: D.d0, from: a, kinds: regs, mem: mem)
-                appendLoadNumericAsFP(reg: D.d1, from: b, kinds: regs, mem: mem)
-                
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "OMul(a-i)", builder: mem)
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "OMul(b-i)", builder: mem)
+                appendLoadNumericAsDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
+                appendLoadNumericAsDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
                 
                 appendDebugPrintRegisterAligned4(D.d0, prepend: "OMul(a)", builder: mem)
                 appendDebugPrintRegisterAligned4(D.d1, prepend: "OMul(b)", builder: mem)
                 
                 mem.append(M1Op.fmul(D.d0, D.d0, D.d1))
                 
-                appendStoreFPAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
+                appendStoreDoubleAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             case .OUDiv(let dst, let a, let b):
                 // UDiv only defined for integer types
                 // See: https://haxe.org/blog/hashlink-in-depth-p2/
@@ -2745,7 +2861,7 @@ class M1Compiler2 {
                     fatalError("Invalid op for div (to determine how to convert to float)")
                 }
                 
-                appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
                 
             case .OSDiv(let dst, let a, let b) where isFP(vreg: a, kinds: regs) && isFP(vreg: b, kinds: regs):
                 assertFP(reg: dst, from: regs)
@@ -2759,7 +2875,7 @@ class M1Compiler2 {
                 mem.append(M1Op.fdiv(D.d0, D.d0, D.d1))
                 appendPrepareDoubleForStore(reg: D.d0, to: dst, kinds: regs, mem: mem)
                 appendDebugPrintRegisterAligned4(D.d0, prepend: "OSDiv result", builder: mem)
-                appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSDiv(let dst, let a, let b):
                 assertFP(reg: dst, from: regs)
                 
@@ -2780,33 +2896,84 @@ class M1Compiler2 {
                 mem.append(M1Op.fdiv(D.d0, D.d0, D.d1))
                 
                 appendPrepareDoubleForStore(reg: D.d0, to: dst, kinds: regs, mem: mem)
-                appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OToSFloat(let dst, let src):
                 fallthrough
             case .OToInt(let dst, let src):
                 let dstKind = requireTypeKind(reg: dst, from: regs)
                 let srcKind = requireTypeKind(reg: src, from: regs)
 
-                appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
+                appendLoad(0, from: src, kinds: regs, mem: mem)
 
+                /*
+                 NOTE: not using fallthrough everywhere in order
+                 to check test coverage better (so fallen-through
+                 cases are not marked as covered accidentally)
+                 */
                 switch(srcKind, dstKind) {
                 case (let a, let b) where a == b:
-                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
-                case (.u8, .i64), (.u16, .i64), (.i32, .i64):
-                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
-                case (.u8, .i32), (.u16, .i32), (.i64, .i32):
-                    appendDebugPrintAligned4("TODO: .ToInt i64->i32: investigate if size check needed", builder: mem)
-                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast u8 to higher size
+                case (.u8, .u16):
+                    fallthrough
+                case (.u8, .i32):
+                    fallthrough
+                case (.u8, .i64):
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast u16 to higher size
+                case (.u16, .i32):
+                    fallthrough
+                case (.u16, .i64):
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast i32 to higher size
+                case (.i32, .i64):
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast u16 to lower size
+                case (.u16, .u8):
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast i32 to lower size
+                case (.i32, .u8):
+                    fallthrough
+                case (.i32, .u16):
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast i64 to lower size
+                case (.i64, .u8):
+                    fallthrough
+                case (.i64, .u16):
+                    fallthrough
+                case (.i64, .i32):
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast f64 to i32
                 case (.f64, .i32):
                     mem.append(M1Op.fcvtzs(W.w0, D.d0))
-                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                    appendStore(reg: W.w0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast i32 to f64
                 case (.i32, .f64):
-                    appendDebugPrintRegisterAligned4(X.x0, prepend: "OToSFloat", builder: mem)
                     mem.append(M1Op.scvtf(D.d0, W.w0))
+                    appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast f64 to smaller size
+                case (.f64, .f32):
+                    appendPrepareDoubleForStore(reg: D.d0, to: dst, kinds: regs, mem: mem)
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast f32 to larger size
+                case (.f32, .f64):
+                    appendFPRegToDouble(reg: D.d0, from: src, kinds: regs, mem: mem)
                     appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
                 default:
                     fatalError("Don't know how to cast \(srcKind) to \(dstKind)")
                 }
+                
+                // MARK: tmp
+                if case .OToSFloat = op {
+                    appendLoad(5, from: src, kinds: regs, mem: mem)
+                    var srcKind = requireTypeKind(reg: src, from: regs)
+                    appendDebugPrintRegisterAligned4(5, kind: srcKind, prepend: "OToSFloat src (\(dst) <- \(src))", builder: mem)
+                    
+                    appendLoad(5, from: dst, kinds: regs, mem: mem)
+                    var dstKind = requireTypeKind(reg: dst, from: regs)
+                    appendDebugPrintRegisterAligned4(5, kind: dstKind, prepend: "OToSFloat dst (\(dst) <- \(src))", builder: mem)
+                }
+                // MARK: tmp
             case .OToDyn(let dst, let src):
                 let addr = unsafeBitCast(OToDyn_impl, to: UnsafeRawPointer.self)
                 let dstType = requireType(reg: dst, regs: regs)
@@ -2819,12 +2986,12 @@ class M1Compiler2 {
                 appendLoad(reg: .x2, from: dst, kinds: regs, mem: mem)
                 appendLoad(reg: .x3, from: src, kinds: regs, mem: mem)
                 mem.append(M1Op.blr(.x10))
-                appendStore(reg: .x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OOr(let dst, let a, let b):
                 appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
                 mem.append(M1Op.orr(X.x0, X.x0, X.x1, nil))
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSwitch(let reg, let offsets, _ /*end*/):
                 
                 appendLoad(reg: X.x0, from: reg, kinds: regs, mem: mem)
@@ -2867,7 +3034,7 @@ class M1Compiler2 {
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
                 // M1Op.ldr(reg, .reg64offset(.sp, offset, nil))
                 mem.append(M1Op.ldr(W.w0, .reg(X.x0, .imm(0, nil))))
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OGetType(let dst, let src):
                 let srcType = requireType(reg: src, regs: regs)
                 switch(srcType.kind) {
@@ -2883,12 +3050,20 @@ class M1Compiler2 {
                 }
                 appendDebugPrintAligned4("INTTYPE test", builder: mem)
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .ORef(let dst, let src):
                 let dstType = requireType(reg: dst, regs: regs)
                 let srcType = requireType(reg: src, regs: regs)
                 Swift.assert(dstType.kind == .ref)
                 Swift.assert(srcType.kind == dstType.tparamProvider?.kind)
+                
+                if srcType.kind == .f32 {
+                    appendLoad(5, from: src, kinds: regs, mem: mem)
+                    appendDebugPrintRegisterAligned4(5, kind: srcType.kind, prepend: "Ref_f32", builder: mem)
+                } else if srcType.kind == .f64 {
+                    appendLoad(5, from: src, kinds: regs, mem: mem)
+                    appendDebugPrintRegisterAligned4(5, kind: srcType.kind, prepend: "Ref_f64", builder: mem)
+                }
                 
                 let srcOffset = getRegStackOffset(regs, src)
                 
@@ -2899,7 +3074,7 @@ class M1Compiler2 {
                     M1Op.movz64(X.x1, UInt16(srcOffset), nil),
                     M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0)))
                 )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OUnref(let dst, let src):
                 let dstType = requireType(reg: dst, regs: regs)
                 let srcType = requireType(reg: src, regs: regs)
@@ -2928,7 +3103,8 @@ class M1Compiler2 {
                 default:
                     fatalError("Invalid size \(dstType.hlRegSize)")
                 }
-                appendStore(reg: X.x1, into: dst, kinds: regs, mem: mem)
+                
+                appendStoreGPRightSize(1, into: dst, kinds: regs, mem: mem)
             case .OSetref(let dst, let src):
                 let dstType = requireType(reg: dst, regs: regs)
                 let srcType = requireType(reg: src, regs: regs)
@@ -2937,7 +3113,16 @@ class M1Compiler2 {
                 // x0 = address of ref
                 appendLoad(reg: X.x0, from: dst, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: src, kinds: regs, mem: mem)
-                appendStore(reg: X.x1, as: src, intoAddressFrom: X.x0, offsetFromAddress: 0, kinds: regs, mem: mem)
+                
+                if HLTypeKind.f64 == srcType.kind {
+                    appendLoad(5, from: src, kinds: regs, mem: mem)
+                    appendDebugPrintRegisterAligned4(5, kind: srcType.kind, prepend: "setref_f?64", builder: mem)
+                } else if HLTypeKind.f32 == srcType.kind {
+                    appendLoad(5, from: src, kinds: regs, mem: mem)
+                    appendDebugPrintRegisterAligned4(5, kind: srcType.kind, prepend: "setref_f?32", builder: mem)
+                }
+                
+                appendStoreGPRightSize(1, as: src, intoAddressFrom: X.x0, offsetFromAddress: 0, kinds: regs, mem: mem)
                 break
             case .OMakeEnum(let dst, let construct, let args):
                 assert(reg: dst, from: regs, is: HLTypeKind.enum)
@@ -2972,7 +3157,7 @@ class M1Compiler2 {
                     PseudoOp.mov(.x19, _implTarget),
                     M1Op.blr(.x19)
                 )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OEnumIndex(let dst, let value):
                 let _implTarget = unsafeBitCast(OEnumIndex_impl, to: UnsafeRawPointer.self)
                 
@@ -2982,7 +3167,7 @@ class M1Compiler2 {
                     M1Op.blr(.x19)
                 )
                 assert(reg: dst, from: regs, is: HLTypeKind.i32)
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OEnumField(let dst, let value, let construct, let field):
                 let _implTarget = unsafeBitCast(OEnumField_impl, to: UnsafeRawPointer.self)
                 
@@ -3000,7 +3185,7 @@ class M1Compiler2 {
                     M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil))
                 )
 //                assert(reg: dst, from: regs, is: HLTypeKind.i32)
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OEnumAlloc(let dst, let construct):
                 assert(reg: dst, from: regs, is: HLTypeKind.enum)
                 let type = requireType(reg: dst, regs: regs)
@@ -3016,7 +3201,7 @@ class M1Compiler2 {
                     PseudoOp.mov(.x19, _implTarget),
                     M1Op.blr(.x19)
                 )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSetEnumField(let value, let field, let src):
                 assert(reg: src, from: regs, is: HLTypeKind.i32)
                 
@@ -3055,7 +3240,7 @@ class M1Compiler2 {
                     PseudoOp.mov(X.x3, allocClosure_jumpTarget),
                     M1Op.blr(X.x3)
                 )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
                 appendDebugPrintRegisterAligned4(X.x0, builder: mem)
             case .OStaticClosure(let dst, let fun):
                 let mutatingMod = UnsafeMutablePointer(mutating: ctx.mainContext.pointee.m!)
@@ -3095,7 +3280,7 @@ class M1Compiler2 {
                     c.pointee.hasValue = 0
                     
                     mem.append(PseudoOp.mov(X.x0, OpaquePointer(c)))
-                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
                 }
             case .OToVirtual(let dst, let src):
                 let _ensureInitialized: (@convention(c)(OpaquePointer)->()) = {
@@ -3122,7 +3307,7 @@ class M1Compiler2 {
                     PseudoOp.mov(X.x2, unsafeBitCast(LibHl._hl_to_virtual, to: OpaquePointer.self)),
                     M1Op.blr(X.x2)
                 )
-                appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OCallMethod(let dst, let obj, let field, let args):
                 let objType = requireType(reg: obj, regs: regs)
                 switch(objType.kind) {
@@ -3253,15 +3438,32 @@ class M1Compiler2 {
                 appendDebugPrintAligned4("TODO: ODynGet should check for failed cast result", builder: mem)
                 
                 if (dstType != .f32 && dstType != .f64) {
+                    
+                    // MARK: tmp
+                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
+                        oPtr in
+                        
+                        let x: vdynamicPointer = .init(oPtr)
+                        print(x)
+                        
+                        print("i64", x.pointee.i64)
+                        print("float", x.pointee.f)
+                        print("double", x.pointee.d)
+                        
+                        return oPtr
+                    }
+                    mem.append(
+                        PseudoOp.mov(X.x15, unsafeBitCast(_c, to: OpaquePointer.self)),
+                        M1Op.blr(X.x15))
+                    // MARK: tmp
+                    
+                    
                     appendDebugPrintRegisterAligned4(X.x0, prepend: "ODynGet result (non float)", builder: mem)
-                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                    appendStore(0, into: dst, kinds: regs, mem: mem)
                 } else {
                     // TODO: test coverage
                     appendDebugPrintAligned4("TODO: ODynGet test for returning floats", builder: mem)
-                    
-                    appendFPRegToDouble(reg: D.d0, from: dst, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(D.d0, prepend: "ODynGet result (float)", builder: mem)
-                    appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                    fatalError("TODO: test coverage")
                 }
             case .ODynSet(let obj, let field, let src):
                 let srcType = requireTypeKind(reg: src, from: regs)
