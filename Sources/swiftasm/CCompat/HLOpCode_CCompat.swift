@@ -406,7 +406,25 @@ extension HLOpCode {
             
             return .OCallMethod(dst: dst, obj: obj, proto: proto, args: args)
         case .OCallThis:
-            fatalError("wip")
+            print(cop.p1, cop.p2, cop.p3)
+            
+            let c = cop.p3
+            let args: [Reg]
+            if let extra = cop.extra {
+                args = (0..<c).map {
+                    Reg(extra.advanced(by: Int($0)).pointee)
+                }
+            } else {
+                guard c == 0 else {
+                    fatalError("OCallThis extra can't be nil if argc > 0 (argc: \(c))")
+                }
+                args = []
+            }
+            
+            let dst = cop.p1
+            let field = cop.p2
+                        
+            return .OCallThis(dst: dst, field: RefField(field), args: args)
         case .OCallClosure:
             let c = cop.p3
             let args: [Reg]

@@ -1,135 +1,428 @@
-/**
-	Multi-line comments for documentation.
-**/
-
+import hl.Ref;
+import hl.F32;
+import hl.F64;
+import haxe.io.BytesData;
+import hl.I64;
+import hl.NativeArray;
+import haxe.Exception;
 import hl.UI8;
 import hl.UI16;
 
-typedef Point = {x:Int, y:Int}
+// might be unset if testGlobals called before globals are initialized
+var globalString: String = "Global";
+	
+var globalVirtualTest : { test : Int, second: Bool, third: Int, f64: F64, f32: F32 } = new VirtualTest(123, true, 456, 789.0, 101.0);
+
+enum Color {
+	Red;
+	Green;
+	Blue;
+	Rgb(r:Int, g:Int, b:Int);
+}
 
 class Path {
-    public var test: Int = 0xDEAD; // marker
-    public var start:Point;
-    public var target:Point;
-    public var current:Point;
+	public var test:Int;
+
+	public function new(test) {
+		this.test = test;
+	}
 }
 
-class Path2 extends Path {
-    public var test2: Int = 0xBEEF; // marker
-    public var childfield:Point;
+// NOTE: do not change this class. If the proto layout changes,
+// the corresponding tests might become buggy (they have hardcoded
+// proto indexes)
+class CallTest {
+	public function new() {
 
-    public function new() {
-        this.target = { x: 0, y: 0};
-        this.start = { x: 0, y: 0};
-        this.current = { x: 0, y: 0};
-        this.childfield = { x: 0, y: 0};
-    }
+	}
+
+	public function test(val: Int): Int {
+		return this.test2(val);
+	}
+
+	public function test2(val: Int): Int {
+		return val * 2;
+	}
 }
 
-// Class for testing offsets for field indexes
-class OffsetTests {
-    public var test: Int = 0xDEAD; // marker
-    public var test_2nd: UI8 = 1;
-    public var test_3rd: UI8 = 1;
-    public var test_4th: UI16 = 1; // will be memaligned
-    public var test2: Float = 0.5;
-    public var test3: Bool = true;
-    public var test4: String = "Asd";
+class VirtualTest {
+	public var test:Int;
+	public var second:Bool;
+	public var third:Int;
+	public var f64:F64;
+	public var f32:F32;
+
+	public function new(test: Int = 0, second: Bool = false, third: Int = 0, f64: F64 = 0, f32: F32 = 0) {
+		this.test = test;
+		this.second = second;
+		this.third = third;
+		this.f64 = f64;
+		this.f32 = f32;
+	}
 }
 
-typedef Point3 = { > Point, z : Int }
+class _MethodTester {
+	public var closure:(Int)->Int;
+
+	public function new(test) {
+		this.closure = (mul) -> { test * mul; };
+	}
+
+	public function mul(multiplier: Int): Int {
+		return this.closure(multiplier);
+	}
+}
 
 class Main {
-    /*
-    29 : fn pathTest@29 () -> (void)@80 (5 regs, 32 ops)
-    reg0  Path2@84
-    reg1  void@0
-    reg2  virtual<x: i32, y: i32>@83
-    reg3  virtual<x: i32, y: i32>@83
-    reg4  i32@3
-     Main.hx:68    0: New         reg0 = new Path2@84
-     Main.hx:68    1: Call1       reg1 = __constructor__@28(reg0)
-     Main.hx:69    2: Field       reg2 = reg0.target
-     Main.hx:69    3: NullCheck   if reg2 == null throw exc
-     Main.hx:69    4: Field       reg3 = reg0.target
-     Main.hx:69    5: NullCheck   if reg3 == null throw exc
-     Main.hx:69    6: Int         reg4 = 101
-     Main.hx:69    7: SetField    reg3.y = reg4
-     Main.hx:69    8: SetField    reg2.x = reg4
-     Main.hx:70    9: Field       reg2 = reg0.start
-     Main.hx:70   10: NullCheck   if reg2 == null throw exc
-     Main.hx:70   11: Field       reg3 = reg0.start
-     Main.hx:70   12: NullCheck   if reg3 == null throw exc
-     Main.hx:70   13: Int         reg4 = 202
-     Main.hx:70   14: SetField    reg3.y = reg4
-     Main.hx:70   15: SetField    reg2.x = reg4
-     Main.hx:71   16: Field       reg2 = reg0.current
-     Main.hx:71   17: NullCheck   if reg2 == null throw exc
-     Main.hx:71   18: Field       reg3 = reg0.current
-     Main.hx:71   19: NullCheck   if reg3 == null throw exc
-     Main.hx:71   20: Int         reg4 = 303
-     Main.hx:71   21: SetField    reg3.y = reg4
-     Main.hx:71   22: SetField    reg2.x = reg4
-     Main.hx:72   23: Field       reg2 = reg0.childfield
-     Main.hx:72   24: NullCheck   if reg2 == null throw exc
-     Main.hx:72   25: Field       reg3 = reg0.current
-     Main.hx:72   26: NullCheck   if reg3 == null throw exc
-     Main.hx:72   27: Int         reg4 = 404
-     Main.hx:72   28: SetField    reg3.y = reg4
-     Main.hx:72   29: SetField    reg2.x = reg4
-     Main.hx:73   30: Call1       reg1 = pathTest2@30(reg0)
-     Main.hx:74   31: Ret         reg1
-     */
-    static public function pathTest():Void {
-        var p = new Path2();
-        p.target.x = p.target.y = 101;
-        p.start.x = p.start.y = 202;
-        p.current.x = p.current.y = 303;
-        p.childfield.x = p.current.y = 404;
-        pathTest2(p);
+	static public function testGetUI8(ix:Int):Int {
+		var haxeB = haxe.io.Bytes.ofHex("11121314");
+		var a = hl.Bytes.fromBytes(haxeB);
+		return a.getUI8(ix);
+	}
+
+	static public function testGetUI8_2():Int {
+		var haxeB = haxe.io.Bytes.ofHex("11121314");
+		return haxeB.getInt32(0);
+	}
+
+	static public function testGetUI16(ix:Int):Int {
+		var haxeB = haxe.io.Bytes.ofHex("11121314");
+		var a = hl.Bytes.fromBytes(haxeB);
+		return a.getUI16(ix);
+	}
+
+	static public function getInt(ix: Int): Int {
+        var haxeB = haxe.io.Bytes.ofHex("11121314");
+        var a = hl.Bytes.fromBytes(haxeB);
+
+		var x: hl.Bytes;
+		@:privateAccess x = haxeB.b;
+		trace('At 0: ${x.getUI8(0)}');
+
+        return a.getUI8(ix);
     }
 
-    /*
-    30 : fn pathTest2@30 (Path2) -> (void)@81 (9 regs, 18 ops)
-    reg0  Path2@84
-    reg1  void@0
-    reg2  (dynamic, virtual<className: String, customParams: hl.types.ArrayDyn, fileName: String, lineNumber: i32, methodName: String>) -> (void)@42
-    reg3  haxe.$Log@38
-    reg4  String@13
-    reg5  String@13
-    reg6  virtual<className: String, fileName: String, lineNumber: i32, methodName: String>@153
-    reg7  i32@3
-    reg8  virtual<className: String, customParams: hl.types.ArrayDyn, fileName: String, lineNumber: i32, methodName: String>@40
-     Main.hx:107   0: GetGlobal   reg3 = global@9
-     Main.hx:107   1: Field       reg2 = reg3.trace
-     Main.hx:107   2: NullCheck   if reg2 == null throw exc
-     Main.hx:107   3: GetGlobal   reg4 = global@10
-     Main.hx:107   4: Call1       reg5 = string@224(reg0)
-     Main.hx:107   5: Call2       reg4 = __add__@20(reg4, reg5)
-     Main.hx:107   6: New         reg6 = new virtual<className: String, fileName: String, lineNumber: i32, methodName: String>@153
-     Main.hx:107   7: GetGlobal   reg5 = global@11
-     Main.hx:107   8: SetField    reg6.fileName = reg5
-     Main.hx:107   9: Int         reg7 = 107
-     Main.hx:107  10: SetField    reg6.lineNumber = reg7
-     Main.hx:107  11: GetGlobal   reg5 = global@12
-     Main.hx:107  12: SetField    reg6.className = reg5
-     Main.hx:107  13: GetGlobal   reg5 = global@13
-     Main.hx:107  14: SetField    reg6.methodName = reg5
-     Main.hx:107  15: ToVirtual   reg8 = cast reg6
-     Main.hx:107  16: CallClosure reg1 = reg2(reg4, reg8)
-     Main.hx:107  17: Ret         reg1
-     */
-     static public function pathTest2(p: Path2):Void {
-        trace('received path $p');
-    }
+	static public function testTrap(): Int {
+		try {
+			throw new Exception("test message");
+		} catch (e:Exception) {
+			return 1;
+		}
+        return 0;
+	}
 
-    static public function pathTest3(p: Path2):Int {
-        var result = p.test2;
-        return result;
-    }
+	static public function testTrapConditional(shouldThrow: Bool): Int {
+		try {
+			if (shouldThrow) {
+				throw new Exception("test message");
+			}
+		} catch (e:Exception) {
+			return 1;
+		}
+        return 0;
+	}
+
+	static public function testTrapContextEnding(triggerInner: Bool): Int {
+		try {
+			try {
+				if (triggerInner) {
+					throw new Exception("throw from inner");
+				}
+			} catch (e:Exception) {
+				return 2;
+			}
+
+			if (!triggerInner) {
+				throw new Exception("throw from outter");
+			}
+		} catch (e:Exception) {
+			return 1;
+		}
+        return 0;
+	}
+
+	static public function testTrapDifferentTypes(throwInt: Bool, throwString: Bool): Int {
+		try {
+			if (throwInt) {
+				throw 5;
+			}
+			if (throwString) {
+				throw "throwing this";
+			}
+		} catch (e:Int) {
+			return e;
+		} catch (e:String) {
+			return 3;
+		}
+		return 0;
+	}
+
+	static public function testGlobals(str: String, setIt: Bool): String {
+		if (setIt) {
+			globalString = str;
+		}
+		return globalString;
+	}
+
+	static public function testTrapX(a: Int, msg: String): String {
+		try {
+			if (a == 1) {
+				throw new Exception(msg);
+			}
+		} catch (e:Exception) {
+			return e.message;
+		}
+        return "nop";
+	}
+
+    static public function testTrap2() {
+		try {
+            throw 5;
+		} catch (e:Int) {
+			return e;
+		}
+	}
+
+    static public function testFieldAccess(): Int {
+		var obj = new Path(2);
+        return obj.test;
+	}
+
+	static public function testArrayLength(x: Int): Int {
+		var res = new hl.NativeArray(x);
+        return res.length;
+	}
+
+	static public function testGetArrayInt32(len: Int, start: Int, ix: Int): Int {
+		var res: NativeArray<Int> = new hl.NativeArray(len);
+		var curVal = 0;
+		for (i in (0...len)) {
+			res[i] = start + curVal++; 
+		}
+		return res[ix];
+	}
+
+	static public function testGetArrayInt64__haxe(len: Int, start: haxe.Int64, ix: Int): haxe.Int64 {
+		var res: NativeArray<haxe.Int64> = new hl.NativeArray(len);
+		var curVal = 0;
+		for (i in (0...len)) {
+			res[i] = start + curVal++; 
+		}
+		return res[ix];
+	}
+
+	static public function testGetArrayInt64__hl(len: Int, start: hl.I64, ix: Int): hl.I64 {
+		var res: NativeArray<hl.I64> = new hl.NativeArray(len);
+		var curVal = 0;
+		for (i in (0...len)) {
+			res[i] = start + curVal++; 
+		}
+		return res[ix];
+	}
+
+	static public function testGetSetField(newf: Int): Int {
+		var res = new Path(5);
+		res.test = newf * 2;
+		return res.test;
+	}
+
+	// To test fetching globals
+	static private function testGlobal():String {
+		return "Hello Globals";
+	}
+	
+	static private function testTrace() {
+		trace("Hello Trace");
+	}
+
+	static private function testStaticClosure(aIn: Int, bIn: Int) {
+		var f = (a, b) -> a + b;
+        return f(aIn, bIn);
+	}
+
+	static private function testInstanceMethod(mul: Int): Int {
+		var inst = new _MethodTester(2);
+        return inst.mul(mul);
+	}
+
+	static private function testFieldClosure(mul: Int): Int {
+		var inst = new _MethodTester(2);
+        return inst.closure(mul);
+	}
+
+	static private function testEnum(): Int {
+		return testEnum2(Color.Rgb(0, 4, 2));
+	}
+
+	static private function testEnum2(en: Color): Int {
+		switch(en) {
+			case Color.Red: return 1;
+			case Color.Green: return 2;
+			case Color.Blue: return 3;
+			case Rgb(r, g, b): return r*100 + g*10 + b;
+		}
+		return -1;
+	}
+
+	static private function testStaticVirtual_globalVirtual(field: Int): Int {
+		switch(field) {
+			case 0: return globalVirtualTest.test;
+			case 1: return globalVirtualTest.second ? 1 : 0;
+			case 2: return globalVirtualTest.third;
+			default: return -1;
+		}
+	}
+
+	static private function testStaticVirtual_globalVirtual_f32(): F32 {
+		return globalVirtualTest.f32;
+	}
+
+	static private function testStaticVirtual_globalVirtual_f64(): F64 {
+		return globalVirtualTest.f64;
+	}
+
+	static private function testStaticVirtual_setField(val: Int, set: Bool, field: Int): Int {
+		var o : { test : Int, second: Bool, third: Int } = new VirtualTest();
+		o.test = 1;
+		o.second = true;
+		o.third = 2;
+		if (set) {
+			if (field == 0) {
+				o.test = val;
+			}
+			if (field == 1) {
+				o.second = val != 0 ? true : false;
+			}
+			if (field == 2) {
+				o.third = val;
+			}
+		}
+		switch(field) {
+			case 0: return o.test;
+			case 1: return o.second ? 1 : 0;
+			case 2: return o.third;
+			default: return -1;
+		}
+	}
+
+	static public function _testDynGet_getObj(): Dynamic {
+		return globalVirtualTest;
+	}
+
+	static public function testDynGetSet(set: Bool, val: Int): Int {
+		var obj: Dynamic = _testDynGet_getObj();
+		if (set) {
+			obj.third = val;
+		}
+		return obj.third;
+	}
+
+	static public function testDynGetSet_f64(set: Bool, val: F64): F64 {
+		var obj: Dynamic = _testDynGet_getObj();
+		if (set) {
+			obj.f64 = val;
+		}
+		return obj.f64;
+	}
+
+	static public function testCallClosure_Dynamic_returnFloat64(inval: Int): F64 {
+		var myLocalFunction = function(a: Int): F64 { return a * 2.0; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
+	static public function testCallClosure_Dynamic_returnFloat32(inval: Int): F32 {
+		var myLocalFunction = function(a: Int): F32 { return a * 2.0; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
+	static public function testCallClosure_Dynamic_returnInt32(inval: Int): Int {
+		var myLocalFunction = function(a: Int): Int { return a * 2; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
+	static public function testCallClosure_Dynamic_returnUInt16(inval: Int): UI16 {
+		var myLocalFunction = function(a: Int): UI16 { return a * 2; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
+	static public function testCallClosure_Dynamic_returnUInt8(inval: Int): UI8 {
+		var myLocalFunction = function(a: Int): UI8 { return a * 2; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+
+	#if !HL_C
+	static public function testCallClosure_Dynamic_returnInt64(inval: Int): I64 {
+		var myLocalFunction = function(a: Int): I64 { return a * 2; };
+		var dynFun: Dynamic = myLocalFunction;
+		return dynFun(inval);
+	}
+	#end
+
+	static public function testRef_fp_internal(r32: Ref<F32>, r64: Ref<F64>) {
+		r32.set(101.0);
+		r64.set(202.0);
+	}
+
+	static public function testRef_fp(): F64 {
+		var f32: F32 = 0.0;
+		var f64: F64 = 0.0;
+		var ref32 = Ref.make(f32);
+		var ref64 = Ref.make(f64);
+		testRef_fp_internal(ref32, ref64);
+		return ref32.get() + ref64.get();
+	}
+
+	static public function testRef_i_internal(r32: Ref<Int>, r64: Ref<I64>) {
+		r32.set(101);
+		r64.set(202);
+	}
+
+	static public function testRef_i(): hl.I64 {
+		var i32: Int = 0;
+		var i64: I64 = 0;
+		var ref32 = Ref.make(i32);
+		var ref64 = Ref.make(i64);
+		testRef_i_internal(ref32, ref64);
+		return ref32.get() + ref64.get();
+	}
+
+	#if !HL_C
+	static public function testVoid(a: Void, b: Void): Void {
+		return a;
+	}
+	#end
+
+	static public function testCallThis(): Int {
+		var res: CallTest = new CallTest();
+		return res.test(5);
+	}
 
 	static public function main():Void {
-		trace("Hello World");
-        Main.pathTest();
+		trace('testing f64: ${testCallClosure_Dynamic_returnFloat64(123)}');
+		trace('testing f32: ${testCallClosure_Dynamic_returnFloat32(123)}');
+		trace('testing i32: ${testCallClosure_Dynamic_returnInt32(123)}');
+		trace('testing u16: ${testCallClosure_Dynamic_returnUInt16(123)}');
+		trace('testing u8: ${testCallClosure_Dynamic_returnUInt8(123)}');
+		
+		#if !HL_C
+		trace('testing i64: ${testCallClosure_Dynamic_returnInt64(123)}');
+		#end
+
+		trace('testing virtual init (f32): ${testStaticVirtual_globalVirtual_f32()}');
+		trace('testing virtual init (f64): ${testStaticVirtual_globalVirtual_f64()}');
+
+		trace('testing float references (FP): ${testRef_fp()}');
+		trace('testing float references (I): ${testRef_i()}');
+
+		trace('testing testTrapDifferentTypes (true, false): ${testTrapDifferentTypes(true, false)}');
+		trace('testing testTrapDifferentTypes (false, true): ${testTrapDifferentTypes(false, true)}');
+		trace('testing testTrapDifferentTypes (false, false): ${testTrapDifferentTypes(false, false)}');
+
+		trace('testing testCallThis: ${testCallThis()}');
 	}
 }

@@ -696,11 +696,11 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Bool, Bool) -> Int32)
         
         try _withPatchedEntrypoint(
-            strip: false,
+            strip: true,
             name: "Main.testTrapDifferentTypes",
             
             // can't reliably detect the OCallMethod dependencies
-            depHints: [369]
+            depHints: [374]
         ) {
             sutFix, mem in
             
@@ -799,7 +799,7 @@ final class CompileMod2Tests: RealHLTestCase {
          
          Otherwise the output will be `String` (i.e. object name, not the actual value)*/
         
-        let expected = "haxesrc/Main.hx:218: Hello Trace\n"
+        let expected = "haxesrc/Main.hx:232: Hello Trace\n"
         patched_sys_print = []
         
         // Patch the print call to intercept
@@ -816,7 +816,7 @@ final class CompileMod2Tests: RealHLTestCase {
         try _withPatchedEntrypoint(
             strip: true,
             name: "Main.testTrace",
-            depHints: [231, 230, 354, 42, 12]
+            depHints: [234, 359, 233, 45, 12]
         ) {
             sutFix, mem in
             
@@ -830,13 +830,46 @@ final class CompileMod2Tests: RealHLTestCase {
         XCTAssertEqual(patched_sys_print.joined(separator: ""), expected)
     }
     
+    func testCompile__testCallThis() throws {
+        typealias _JitFunc =  (@convention(c) () -> (Int32))
+        
+        let fix = try _findFindex_fieldNameUnset(className: "CallTest", name: "test", isStatic: false)!
+        let depFix = try _findFindex_fieldNameUnset(className: "CallTest", name: "test2", isStatic: false)!
+        ctx.patch(findex: fix, ops: [
+            // NOTE: careful, if proto points to the wrong place, this can cause recursive calls to self
+            .OCallThis(dst: 2, field: 1, args: [1]),
+//              These are equivalent:
+//              .OCallMethod(dst: 2, obj: 0, proto: 1, args: [1]),
+//              .OCall2(dst: 2, fun: 30, arg0: 0, arg1: 1),
+            .ORet(ret: 2)
+
+            // Original opcodes should be: 
+            // Main.hx:37    0: Call2       reg2 = test2@30(reg0, reg1)
+            // Main.hx:37    1: Ret         reg2
+        ])
+        
+        try _withPatchedEntrypoint(
+            strip: true,
+            name: "Main.testCallThis",
+            depHints: [depFix]
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(entrypoint(), 10)
+            }
+        }
+    }
+    
     func testCompile__testFieldClosure() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
         
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testFieldClosure",
-            depHints: [31]
+            depHints: [34]
         ) {
             sutFix, mem in
             
@@ -851,16 +884,10 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile__testStaticClosure() throws {
         typealias _JitFunc =  (@convention(c) (Int32, Int32) -> (Int32))
         
-        /*
-         [jitdebug] f261: #0: OAdd: reg2 = reg0 + reg1
-         [jitdebug] [OAdd#i a] Register x0: 0
-         [jitdebug] [OAdd#i b] Register x1: 11
-         [jitdebug] [OAdd#i res] Register x0: 11
-         */
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testStaticClosure",
-            depHints: [261]
+            depHints: [264]
         ) {
             sutFix, mem in
             
@@ -893,7 +920,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile_testCallClosure_Dynamic_returnFloat64() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Float64))
         
-        let dependency = 309
+        let dependency = 312
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testCallClosure_Dynamic_returnFloat64",
@@ -921,7 +948,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile_testCallClosure_Dynamic_returnFloat32() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Float32))
         
-        let dependency = 311
+        let dependency = 314
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testCallClosure_Dynamic_returnFloat32",
@@ -949,7 +976,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile_testCallClosure_Dynamic_returnUInt8() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (UInt8))
         
-        let dependency = 317
+        let dependency = 320
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testCallClosure_Dynamic_returnUInt8",
@@ -977,7 +1004,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile_testCallClosure_Dynamic_returnUInt16() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (UInt16))
         
-        let dependency = 315
+        let dependency = 318
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testCallClosure_Dynamic_returnUInt16",
@@ -1005,7 +1032,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile_testCallClosure_Dynamic_returnInt32() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
         
-        let dependency = 313
+        let dependency = 316
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testCallClosure_Dynamic_returnInt32",
@@ -1033,7 +1060,7 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile_testCallClosure_Dynamic_returnInt64() throws {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Int64))
         
-        let dependency = 319
+        let dependency = 322
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testCallClosure_Dynamic_returnInt64",
@@ -1082,7 +1109,7 @@ final class CompileMod2Tests: RealHLTestCase {
         try _compileAndLinkWithDeps(
             strip: true,
             name: "Main.testInstanceMethod",
-            depHints: [31]
+            depHints: [34]
         ) {
             sutFix, mem in
             

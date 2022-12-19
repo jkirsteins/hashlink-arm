@@ -28,6 +28,20 @@ class Path {
 	}
 }
 
+class CallTest {
+	public function new() {
+
+	}
+
+	public function test(val: Int): Int {
+		return this.test2(val);
+	}
+
+	public function test2(val: Int): Int {
+		return val * 2;
+	}
+}
+
 class VirtualTest {
 	public var test:Int;
 	public var second:Bool;
@@ -374,6 +388,17 @@ class Main {
 		return ref32.get() + ref64.get();
 	}
 
+	#if !HL_C
+	static public function testVoid(a: Void, b: Void): Void {
+		return a;
+	}
+	#end
+
+	static public function testCallThis(): Int {
+		var res: CallTest = new CallTest();
+		return res.test(5);
+	}
+
 	static public function main():Void {
 		trace('testing f64: ${testCallClosure_Dynamic_returnFloat64(123)}');
 		trace('testing f32: ${testCallClosure_Dynamic_returnFloat32(123)}');
@@ -390,5 +415,11 @@ class Main {
 
 		trace('testing float references (FP): ${testRef_fp()}');
 		trace('testing float references (I): ${testRef_i()}');
+
+		trace('testing testTrapDifferentTypes (true, false): ${testTrapDifferentTypes(true, false)}');
+		trace('testing testTrapDifferentTypes (false, true): ${testTrapDifferentTypes(false, true)}');
+		trace('testing testTrapDifferentTypes (false, false): ${testTrapDifferentTypes(false, false)}');
+
+		trace('testing testCallThis: ${testCallThis()}');
 	}
 }

@@ -26,8 +26,6 @@ extension M1Compiler2 {
         mem: CpuOpBuffer
     ) throws
     {
-        let funType = requireType(reg: fun, regs: regs)
-        
         assert(reg: fun, from: regs, is: HLTypeKind.fun)
         
         try __ocall_impl(
@@ -42,6 +40,118 @@ extension M1Compiler2 {
             args: args,
             reservedStackBytes: reservedStackBytes,
             mem: mem)
+    }
+    
+    func __ocallmethod__ocallthis(
+        dst: Reg,
+        obj: Reg,
+        funcProto: RefField,
+        args: [Reg],
+        regs: [any HLTypeProvider],
+        reservedStackBytes: ByteCount,
+        mem: CpuOpBuffer) throws {
+        let objType = requireType(reg: obj, regs: regs)
+        switch(objType.kind) {
+        case .obj:
+            let _getProtoFindex: (@convention(c)(OpaquePointer, Int32)->Int32) = {
+                (objPtr, protoIx) in
+                
+                let vd: UnsafePointer<vdynamic> = .init(objPtr)
+                let protoPtr = vd.pointee.t.pointee.obj.pointee.protoPtr?.advanced(by: Int(protoIx))
+                
+                guard let protoFix = protoPtr?.pointee.findex else {
+                    fatalError("OCallMethod failed. Could not find proto findex")
+                }
+                
+                // TODO: remove
+                if protoFix == 0 {
+                    fatalError(":(")
+                }
+                //
+                
+                return protoFix
+            }
+            let _getType: (@convention(c)(Int32, OpaquePointer)->OpaquePointer) = {
+                (findex, mPtr) in
+                
+                let mod: UnsafePointer<HLModule_CCompat> = .init(mPtr)
+                
+                let funIndex = mod.pointee.functions_indexes.advanced(by: Int(findex)).pointee
+                let fun = mod.pointee.code.pointee.functions.advanced(by: Int(funIndex))
+                guard let typePtr = fun.pointee.typePtr else {
+                    fatalError("OCallMethod encountered a proto without a type")
+                }
+                
+                guard typePtr.pointee.kind == .fun else {
+                    fatalError("OCallMethod fetched a proto type that is not .fun")
+                }
+                
+                return .init(typePtr)
+            }
+            let _getCallAddress: (@convention(c)(Int32, OpaquePointer)->OpaquePointer) = {
+                (findex, mPtr) in
+                
+                let mod: UnsafePointer<HLModule_CCompat> = .init(mPtr)
+                
+                guard let funAddr = mod.pointee.functions_ptrs.advanced(by: Int(findex)).pointee else {
+                    /* NOTE: If this happens in a test, you might need to specify depHints
+                       properly */
+                    fatalError("OCallMethod encountered a missing function address (findex: \(findex))")
+                }
+                return .init(funAddr)
+            }
+            guard let m = ctx.mainContext.pointee.m else {
+                fatalError("OCallMethod can't access the module (for function addresses)")
+            }
+            
+            // Fetch proto function index
+            appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
+            mem.append(PseudoOp.mov(X.x1, funcProto))
+            mem.append(
+                PseudoOp.mov(X.x2, unsafeBitCast(_getProtoFindex, to: OpaquePointer.self)),
+                M1Op.blr(X.x2),
+                
+                M1Op.movr64(X.x7, X.x0) // proto findex in x7
+            )
+            
+            // Fetch proto function type
+//                    mem.append(M1Op.movr64(X.x0, X.x7))
+//                    mem.append(PseudoOp.mov(X.x1, OpaquePointer(m)))
+//                    mem.append(
+//                        PseudoOp.mov(X.x2, unsafeBitCast(_getType, to: OpaquePointer.self)),
+//                        M1Op.blr(X.x2),
+//
+//                        M1Op.movr64(X.x8, X.x0) // proto function type in x8
+//                    )
+            
+            // Fetch proto function address
+            mem.append(M1Op.movr64(X.x0, X.x7))
+            mem.append(PseudoOp.mov(X.x1, OpaquePointer(m)))
+            mem.append(
+                PseudoOp.mov(X.x2, unsafeBitCast(_getCallAddress, to: OpaquePointer.self)),
+                M1Op.blr(X.x2),
+                
+                M1Op.movr64(X.x9, X.x0) // proto function address in x9
+            )
+
+            try __ocallmethod_impl__addrInX9(
+                dst: dst,
+                regs: regs,
+                preArgs: [
+                    ({ (inmem, regIxForPreArg, regKind) in
+                        Swift.assert(regKind.hlRegSize == 8)
+                        self.appendLoad(regIxForPreArg, from: obj, kinds: regs, mem: inmem)
+                    }, HLTypeKind.obj)
+                ],
+                args: args,
+                reservedStackBytes: reservedStackBytes,
+                mem: mem)
+        case .virtual:
+            fatalError("Not implemented")
+        default:
+            print("Target", objType.kind)
+            fatalError("Invalid target for OCallMethod or OCallThis")
+        }
     }
     
     
