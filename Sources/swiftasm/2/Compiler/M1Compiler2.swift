@@ -455,6 +455,7 @@ extension M1Compiler2 {
             appendDebugPrintRegisterAligned4(reg, prepend: "appendLoadNumericAsFP", builder: mem)
             
         } else if FP_TYPE_KINDS.contains(vregKind) {
+            appendLoad(reg: reg, from: vreg, kinds: kinds, mem: mem)
             appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
         } else {
             fatalError("Can't append numeric for \(vregKind)")
@@ -967,11 +968,13 @@ extension M1Compiler2 {
                 /*
                 NOTE: careful to get the alignment correct here.
                  
-                 As an example, here is how (u8, f32, u16, f64) would be laid out (assuming sp + 384 is the stack base):
-                 - u8 at 0      (or 384)
-                 - f32 at 4     (or 388)
-                 - u16 at 8     (or 392)
-                 - f64 at 16    (or 400)
+                 As an example, here is how (u8, f32, u16, f64) would be
+                 laid out (assuming sp + 384 is the stack base):
+                 
+                   - u8 at 0      (or 384)
+                   - f32 at 4     (or 388) (u8 is 1b and add 3b for float32 alignment)
+                   - u16 at 8     (or 392) (f32 is 4b, nothing extra needed for u16 alignment)
+                   - f64 at 16    (or 400) (u16 is 2b and add 6b for float64 alignment)
                 
                 (lldb) memory read --format u --size 1 --count 1 `$sp + 384`
                 0x16fdfc4a0: 10
@@ -3477,6 +3480,30 @@ class M1Compiler2 {
                 )
                 // TODO: check for failed cast result
                 appendDebugPrintAligned4("TODO: ODynSet should check for failed cast result", builder: mem)
+            case .OUMod(let dst, let a, let b) where isInteger(vreg: dst, kinds: regs) && isInteger(vreg: a, kinds: regs) && isInteger(vreg: b, kinds: regs):
+                
+                self.__omod_integer(dst: dst, a: a, b: b, signed: false, regs: regs, mem: mem)
+            case .OSMod(let dst, let a, let b) where isInteger(vreg: dst, kinds: regs) && isInteger(vreg: a, kinds: regs) && isInteger(vreg: b, kinds: regs):
+                
+                self.__omod_integer(dst: dst, a: a, b: b, signed: true, regs: regs, mem: mem)
+            case .OSMod(let dst, let a, let b) where isNumeric(vreg: dst, kinds: regs) && isNumeric(vreg: a, kinds: regs) && isNumeric(vreg: b, kinds: regs):
+                
+                appendLoadNumericAsDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
+                appendLoadNumericAsDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
+                
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSMod a#fp", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d1, prepend: "OSMod b#fp", builder: mem)
+                
+                mem.append(
+                    M1Op.fdiv(D.d3, D.d0, D.d1),
+                    M1Op.frintz(D.d3, D.d3),
+                    M1Op.fmul(D.d3, D.d3, D.d1),
+                    M1Op.fsub(D.d0, D.d0, D.d3)
+                )
+                
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSMod ret#fp", builder: mem, format: "%f")
+                
+                appendStoreDoubleAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             default:
                 fatalError("Can't compile \(op.debugDescription)")
             }

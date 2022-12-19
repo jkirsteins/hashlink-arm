@@ -380,6 +380,10 @@ enum M1Op : CpuOp {
             return "fmov \(Rt), \(Rn)"
         case .fadd(let Rt, let Rn, let Rm):
             return "fadd \(Rt), \(Rn), \(Rm)"
+        case .fsub(let Rt, let Rn, let Rm):
+            return "fsub \(Rt), \(Rn), \(Rm)"
+        case .frintz(let Rt, let Rn):
+            return "frintz \(Rt), \(Rn)"
         }
     }
     
@@ -568,6 +572,9 @@ enum M1Op : CpuOp {
     case mul(any RegisterI, any RegisterI, any RegisterI)
     case fmul(any RegisterFP, any RegisterFP, any RegisterFP)
     case madd(any RegisterI, any RegisterI, any RegisterI, any RegisterI)
+    
+    case fsub(any RegisterFP, any RegisterFP, any RegisterFP)
+    case frintz(any RegisterFP, any RegisterFP)
     
     // Floating-point Convert to Signed integer
     // https://developer.arm.com/documentation/ddi0596/2020-12/SIMD-FP-Instructions/FCVTZS--vector--integer---Floating-point-Convert-to-Signed-integer--rounding-toward-Zero--vector--?lang=en

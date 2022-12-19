@@ -1266,7 +1266,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ri32__i32_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .i32], ints: [Int32] = [], _ callback: @escaping ((Int32, Int32)->Int32)->()) throws {
+    func _ri32__i32_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .i32], ints: [Int32] = [], strip: Bool = true, _ callback: @escaping ((Int32, Int32)->Int32)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -1276,7 +1276,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 ops: ops)
         ], ints: ints)
         
-        try compileAndLink(ctx: ctx, 0) {
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int32, Int32) -> Int32)) in
@@ -1649,6 +1649,101 @@ final class CompilerM1v2Tests: CCompatTestCase {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float32, Float32) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32__i32_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .i32, .f32], strip: Bool = true, _ callback: @escaping ((Int32, Int32)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i32, HLTypeKind.i32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int32, Int32) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ri32__f32_f32(ops: [HLOpCode], regs: [HLTypeKind] = [.f32, .f32, .i32], strip: Bool = true, _ callback: @escaping ((Float32, Float32)->Int32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f32, HLTypeKind.f32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float32, Float32) -> Int32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ru8__u16_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.u16, .i32, .u8], strip: Bool = true, _ callback: @escaping ((UInt16, Int32)->UInt8)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.u8,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.u16, HLTypeKind.i32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt16, Int32)->UInt8)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ri64__u16_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.u16, .i32, .i64], strip: Bool = true, _ callback: @escaping ((UInt16, Int32)->Int64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.u16, HLTypeKind.i32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt16, Int32)->Int64)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ri64__i64_i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i64, .i32], strip: Bool = true, _ callback: @escaping ((Int64, Int32)->Int64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i64, HLTypeKind.i32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int64, Int32)->Int64)) in
                 callback(ep)
             }
         }
@@ -2337,7 +2432,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         try _ru8__u8_u8(ops: [
             .OAdd(dst: 1, a: 0, b: 1),
             .ORet(ret: 1),
-        ], strip: false) { entrypoint in
+        ]) { entrypoint in
             XCTAssertEqual(6, entrypoint(2, 4))
         }
         
@@ -4195,6 +4290,96 @@ final class CompilerM1v2Tests: CCompatTestCase {
             .ORet(ret: 0)
         ]) { entrypoint in
             XCTAssertEqual(entrypoint(), 0)
+        }
+    }
+    
+    /// Signed mod (numeric types)
+    func testCompile_smod() throws {
+        
+        try _rf32__f32_f32(ops: [
+            .OSMod(dst: 0, a: 0, b: 1),
+            .ORet(ret: 0)
+        ]) {
+            entrypoint in
+
+            XCTAssertEqualFloat(entrypoint(4.0, 3.0), Float32(4.0.truncatingRemainder(dividingBy: 3.0)))
+            XCTAssertEqualFloat(entrypoint(5.0, 3.0), Float32(5.0.truncatingRemainder(dividingBy: 3.0)))
+            XCTAssertEqualFloat(entrypoint(6.0, 3.0), Float32(6.0.truncatingRemainder(dividingBy: 3.0)))
+            XCTAssertEqualFloat(
+                entrypoint(1.5, 0.6),
+                Float32(1.5.truncatingRemainder(dividingBy: 0.6)))
+            XCTAssertEqualFloat(entrypoint(-4.0, 3.0), Float32(-4.0.truncatingRemainder(dividingBy: 3.0)))
+            XCTAssertEqualFloat(entrypoint(0.0, 3.0), Float32(0.0.truncatingRemainder(dividingBy: 3.0)))
+        }
+        
+        try _ri32__i32_i32(ops: [
+            .OSMod(dst: 0, a: 0, b: 1),
+            .ORet(ret: 0)
+        ]) {
+            entrypoint in
+
+            XCTAssertEqual(entrypoint(2, 4), 2 % 4)
+            XCTAssertEqual(entrypoint(4, 3), 4 % 3)
+            XCTAssertEqual(entrypoint(5, 3), 5 % 3)
+            XCTAssertEqual(entrypoint(6, 3), 6 % 3)
+            XCTAssertEqual(entrypoint(-4, 3), -4 % 3)
+            XCTAssertEqual(entrypoint(0, 3), 0 % 3)
+        }
+        
+        try _rf32__i32_i32(ops: [
+            .OSMod(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqualFloat(entrypoint(4, 3), 1.0)
+            XCTAssertEqualFloat(entrypoint(5, 3), 2.0)
+            XCTAssertEqualFloat(entrypoint(5, 3), 2.0)
+            XCTAssertEqualFloat(entrypoint(6, 3), 0.0)
+            XCTAssertEqualFloat(entrypoint(-4, 3), -1.0)
+            XCTAssertEqualFloat(entrypoint(0, 3), 0.0)
+        }
+
+        try _ri32__f32_f32(ops: [
+            .OSMod(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2)
+        ]) {
+            entrypoint in
+
+            XCTAssertEqual(entrypoint(4.0, 3.0), 1)
+            XCTAssertEqual(entrypoint(5, 3), 2)
+            XCTAssertEqual(entrypoint(5, 3), 2)
+            XCTAssertEqual(entrypoint(6, 3), 0)
+            XCTAssertEqual(entrypoint(-4, 3), -1)
+            XCTAssertEqual(entrypoint(0, 3), 0)
+            XCTAssertEqual(entrypoint(1.5, 0.6), 0)
+        }
+    }
+    
+    /// Signed mod (integer types)
+    func testCompile_umod() throws {
+        try _ru8__u16_i32(ops: [
+            .OUMod(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2)
+        ]) {
+            entrypoint in
+
+            XCTAssertEqual(entrypoint(2, 4), 2)
+            XCTAssertEqual(entrypoint(4, 3), 1)
+            XCTAssertEqual(entrypoint(0, 3), 0)
+            XCTAssertEqual(entrypoint(9, 2), 1)
+            XCTAssertEqual(entrypoint(11, 3), 2)
+        }
+        
+        try _ri64__i64_i32(ops: [
+            .OUMod(dst: 0, a: 0, b: 1),
+            .ORet(ret: 0)
+        ]) {
+            entrypoint in
+            
+            // unsigned 3147483648 == signed -1147483648
+            XCTAssertEqual(
+                entrypoint(3147483649, -1147483648), 1)
         }
     }
 }

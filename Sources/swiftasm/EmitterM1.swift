@@ -1886,7 +1886,23 @@ public class EmitterM1 {
             let regs = encodeRegs(Rd: Rt, Rn: Rn)
             let encoded = mask | ft | regs
             return returnAsArray(encoded)
-        case .brk(let imm):
+        case .fsub(let Rt, let Rn, let Rm):
+            //                           ftype   Rm           Rn    Rd
+            let mask: Int64 = 0b00011110_00____1_00000_001110_00000_00000
+            try assertMatchingSize(Rt, Rn, Rm)
+            let ft = ftypeMask(Rt)
+            let regs = encodeRegs(Rd: Rt, Rn: Rn, Rm: Rm)
+            let encoded = mask | ft | regs
+            return returnAsArray(encoded)
+        case .frintz(let Rd, let Rn):
+            //                           ftype              Rn    Rd
+            let mask: Int64 = 0b00011110_00____100101110000_00000_00000
+            try assertMatchingSize(Rd, Rn)
+            let ft = ftypeMask(Rd)
+            let regs = encodeRegs(Rd: Rd, Rn: Rn)
+            let encoded = mask | ft | regs
+            return returnAsArray(encoded)
+        case .brk(_):
             return returnAsArray(0xd4200000)
         default:
             print("Can't compile \(op)")

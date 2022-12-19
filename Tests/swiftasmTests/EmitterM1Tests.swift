@@ -623,6 +623,27 @@ final class EmitterM1Tests: XCTestCase {
                       0x41, 0x30, 0x03, 0x4b)
     }
     
+    func testFrintz() throws {
+        try XCTAssertM1Op(.frintz(D.d0, D.d0),
+                          "frintz d0, d0",
+                          0x00, 0xc0, 0x65, 0x1e)
+        XCTAssertThrowsError(
+            try M1Op.frintz(S.s0, D.d0).emit()
+        )
+    }
+    
+    func testFsub() throws {
+        try XCTAssertM1Op(.fsub(D.d0, D.d1, D.d2),
+                          "fsub d0, d1, d2",
+                          0x20, 0x38, 0x62, 0x1e)
+        try XCTAssertM1Op(.fsub(S.s0, S.s1, S.s2),
+                          "fsub s0, s1, s2",
+                          0x20, 0x38, 0x22, 0x1e)
+        XCTAssertThrowsError(
+            try M1Op.fsub(D.d0, S.s1, S.s2).emit()
+        )
+    }
+    
     func testSubImm12() throws {
         XCTAssertEqual("sub sp, sp, #16", M1Op.subImm12(Register64.sp, Register64.sp, 16).asmDescription)
         XCTAssertEqual("sub sp, sp, #16",
