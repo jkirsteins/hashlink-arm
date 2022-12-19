@@ -691,16 +691,14 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testTrapDifferentTypes() throws {
-        throw XCTSkip("This depends on type checking, which needs global types initialized. So this test fails (patch entrypoint?)")
-        
         typealias _JitFunc =  (@convention(c) (Bool, Bool) -> Int32)
         
-        try _compileAndLinkWithDeps(
-            strip: true,
+        try _withPatchedEntrypoint(
+            strip: false,
             name: "Main.testTrapDifferentTypes",
             
             // can't reliably detect the OCallMethod dependencies
-            depHints: [344]
+            depHints: [369]
         ) {
             sutFix, mem in
             
@@ -709,7 +707,7 @@ final class CompileMod2Tests: RealHLTestCase {
                 
                 XCTAssertEqual(5, entrypoint(true, false))
                 XCTAssertEqual(3, entrypoint(false, true))
-                XCTAssertEqual(5, entrypoint(false, false))
+                XCTAssertEqual(0, entrypoint(false, false))
             }
         }
     }
@@ -804,7 +802,7 @@ final class CompileMod2Tests: RealHLTestCase {
         let output = OutputListener(STDOUT_FILENO)
         
         try _withPatchedEntrypoint(
-            strip: true,
+            strip: false,
             name: "Main.testTrace",
             depHints: [231, 230, 354, 42, 12]
         ) {
@@ -848,8 +846,14 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile__testStaticClosure() throws {
         typealias _JitFunc =  (@convention(c) (Int32, Int32) -> (Int32))
         
+        /*
+         [jitdebug] f261: #0: OAdd: reg2 = reg0 + reg1
+         [jitdebug] [OAdd#i a] Register x0: 0
+         [jitdebug] [OAdd#i b] Register x1: 11
+         [jitdebug] [OAdd#i res] Register x0: 11
+         */
         try _compileAndLinkWithDeps(
-            strip: true,
+            strip: false,
             name: "Main.testStaticClosure",
             depHints: [261]
         ) {

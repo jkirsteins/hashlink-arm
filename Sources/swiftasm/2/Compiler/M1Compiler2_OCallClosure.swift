@@ -32,7 +32,6 @@ extension M1Compiler2 {
         
         try __ocall_impl(
             dst: dst,
-            funType: funType,
             appendCall: {
                 appendLoad(reg: .x15, from: fun, kinds: regs, mem: $0)
                 appendDebugPrintRegisterAligned4(X.x15, builder: mem)
@@ -59,10 +58,9 @@ extension M1Compiler2 {
     ///   - mem: operation buffer
     func __ocall_impl(
         dst: Reg,
-        funType: any HLTypeProvider,
         appendCall: (CpuOpBuffer)->(),
         regs: [any HLTypeProvider],
-        preArgs: [((CpuOpBuffer, any Register)->(), HLTypeKind)],
+        preArgs: [((CpuOpBuffer, RegisterRawValue, HLTypeKind)->(), HLTypeKind)],
         args: [Reg],
         reservedStackBytes: ByteCount,
         mem: CpuOpBuffer
@@ -87,80 +85,119 @@ extension M1Compiler2 {
             )
         }
 
-        let regWkindToPass: [((CpuOpBuffer, any Register)->(), HLTypeKind)] = preArgs + args.enumerated().map {
+        let regWkindToPass: [((CpuOpBuffer, RegisterRawValue, HLTypeKind)->(), HLTypeKind)] = preArgs + args.enumerated().map {
             (position, argReg) in
             
-            assert(reg: argReg, from: regs, matchesCallArg: Reg(position), inFunArgs: funType.funProvider!.argsProvider)
             let argTypeKind = requireTypeKind(reg: argReg, from: regs)
-            let load: (CpuOpBuffer, any Register)->()
+            let load: (CpuOpBuffer, RegisterRawValue, HLTypeKind)->()
             
-            if position >= ARG_REGISTER_COUNT {
-                load = {
-                    guard let regI = $1.i?.to64 else {
-                        fatal("Non-gp registers not supported on the stack", Self.logger)
-                    }
-                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
-                    
-                    $0.append(
-                        PseudoOp.ldrVreg(regI, offset, argTypeKind.hlRegSize)
-                    )
-                }
-            } else {
-                load = {
-                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
-                    
-                    if let regI = $1.i?.to64 {
-                        self.appendLoad(reg: regI,
-                                        from: argReg,
-                                        kinds: regs, // careful, pass all kinds, not just the arg ones
-                                        offset: offset,
-                                        mem: $0)
-                    } else if let regFP = $1.fp?.to64 {
-                        self.appendLoad(reg: regFP, from: argReg, kinds: regs, offset: offset, mem: $0)
-                    } else {
-                        fatal("Register not loadable \($1)", Self.logger)
-                    }
-                }
+            load = { memIn, regRVIn, regKindIn in
+                let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
+                self.appendDebugPrintAligned4("[__ocall_impl] loading arg \(argReg) into \(regRVIn) from \(offset) (\(self.getRegStackOffset(regs, argReg)) + \(Int64(additionalSize)))", builder: mem)
+                self.appendLoad(regRVIn, from: argReg, kinds: regs, offset: offset, mem: mem)
             }
+            
+//            if position >= ARG_REGISTER_COUNT {
+//                load = { memIn, regRVIn, regKindIn in
+//                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
+//                    self.appendLoad(regRVIn, as: argReg, addressRegister: .sp, offset: offset, kinds: regs, mem: memIn)
+//                }
+//            } else {
+//                load = { memIn, regRVIn, regKindIn in
+//                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
+//
+//                    self.appendLoad(regRVIn, from: argReg, kinds: regs, offset: offset, mem: mem)
+//                }
+//            }
             
             return (
                 load, argTypeKind
             )
+        }.filter {
+            (_, kind) in
+            kind != .void
         }
         
-        var argOffset: Int64 = 0
-        for (load, regKind) in regWkindToPass.dropFirst(ARG_REGISTER_COUNT) {
-            load(mem, X.x0)
+        var skippedFP = 0
+        var skippedGP = 0
+        let stackRegWkindToPass = regWkindToPass.filter {
+            _, kind in
             
-            guard !FP_TYPE_KINDS.contains(regKind) else {
-                fatal("Floating-point arguments not supported via stack", Self.logger)
-            }
-            
-            mem.append(
-                PseudoOp.strVreg(X.x0, X.x15, argOffset, regKind.hlRegSize)
-            )
-            argOffset += regKind.hlRegSize
-        }
-        
-        // load first 8 args into the respective registers
-        {
-            var fpIx: UInt8 = 0
-            var gpIx: UInt8 = 0
-            for (regIx, (load, regKind)) in regWkindToPass.enumerated() {
-                guard regIx < ARG_REGISTER_COUNT else { break }
-                let armReg: any Register
-                
-                if FP_TYPE_KINDS.contains(regKind) {
-                    armReg = RegisterFP64(rawValue: fpIx)!
-                    fpIx += 1
+            if FP_TYPE_KINDS.contains(kind) {
+                if skippedFP >= ARG_REGISTER_COUNT {
+                    return true
                 } else {
-                    armReg = Register64(rawValue: gpIx)!
-                    gpIx += 1
+                    skippedFP += 1
+                    return false
+                }
+            } else {
+                if skippedGP >= ARG_REGISTER_COUNT {
+                    return true
+                } else {
+                    skippedGP += 1
+                    return false
+                }
+            }
+        }
+        
+        // prepare the stack args
+        // NOTE: these must be in the expected order (so mixing GP and FP values)
+        // NOTE: the values on stack must be aligned
+        // TODO: deduplicate alignment code with `appendStackInit`
+        ;{
+            var stackArgOffset: Int64 = 0
+            var prevStackReg: HLTypeKind? = nil
+            for (load, regKind) in stackRegWkindToPass {
+                defer { prevStackReg = regKind }
+                
+                if let prevStackReg = prevStackReg {
+                    let align: Int
+                    switch(regKind) {
+                    case .u8: align = MemoryLayout<UInt8>.alignment
+                    case .bool: align = MemoryLayout<Bool>.alignment
+                    case .u16: align = MemoryLayout<UInt16>.alignment
+                    case .i32: align = MemoryLayout<Int32>.alignment
+                    case .i64: align = MemoryLayout<Int64>.alignment
+                    case .f32: align = MemoryLayout<Float32>.alignment
+                    case .f64: align = MemoryLayout<Float64>.alignment
+                    default:
+                        align = MemoryLayout<OpaquePointer>.alignment
+                    }
+                    stackArgOffset = Int64(StackInfo.roundUpStackReservation(Int16(stackArgOffset + prevStackReg.hlRegSize), Int16(align)))
                 }
                 
-                appendDebugPrintAligned4("loading \(armReg)", builder: mem)
-                load(mem, armReg)
-                appendDebugPrintRegisterAligned4(armReg, builder: mem)
+                load(mem, 0, regKind)
+                
+                appendStore(0, as: 0, intoAddressFrom: .sp, offsetFromAddress: stackArgOffset, kinds: [regKind], mem: mem)
+                appendDebugPrintRegisterAligned4(0, kind: regKind, prepend: "[__ocall_impl] stored stack arg \(regKind) at offset \(stackArgOffset)", builder: mem)
+            }
+        }()
+        
+        // load first 8 GP args into the respective registers
+        ;{
+            var gpIx: UInt8 = 0
+            for (vregIx, (load, regKind)) in regWkindToPass.enumerated() {
+                guard gpIx < ARG_REGISTER_COUNT else { break }
+                guard !FP_TYPE_KINDS.contains(regKind) else { continue }
+                defer { gpIx += 1 }
+                
+                appendDebugPrintAligned4("[__ocall_impl] loading GP \(gpIx) as \(regKind) from vreg \(vregIx)", builder: mem)
+                load(mem, gpIx, regKind)
+                appendDebugPrintRegisterAligned4(gpIx, kind: regKind, prepend: "[__ocall_impl] loaded GP \(gpIx) as \(regKind) from vreg \(vregIx)", builder: mem)
+            }
+        }()
+        
+        // load first 8 FP args into the respective registers
+        ;{
+            var fpIx: UInt8 = 0
+            for (vregIx, (load, regKind)) in regWkindToPass.enumerated() {
+                guard fpIx < ARG_REGISTER_COUNT else { break }
+                guard FP_TYPE_KINDS.contains(regKind) else { continue }
+                defer { fpIx += 1 }
+                
+                appendDebugPrintAligned4("[__ocall_impl] loading FP \(fpIx) as \(regKind) from vreg \(vregIx)", builder: mem)
+                load(mem, fpIx, regKind)
+                appendDebugPrintRegisterAligned4(fpIx, kind: regKind, prepend: "[__ocall_impl] loaded FP \(fpIx) as \(regKind) from vreg \(vregIx)", builder: mem)
             }
         }()
         
@@ -169,21 +206,13 @@ extension M1Compiler2 {
         appendCall(mem)
         appendDebugPrintAligned4("[__ocall_impl] Finished call...", builder: mem)
         
-        if dstKind != .f32 && dstKind != .f64 {
-            mem.append(
-                PseudoOp.strVreg(X.x0, X.x15, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
-            )
-            appendDebugPrintRegisterAligned4(X.x0, prepend: "call result", builder: mem)
+        if dstKind != .void {
+            self.appendStore(0, as: dst, intoAddressFrom: .sp, offsetFromAddress: dstStackOffset + Int64(additionalSize), kinds: regs, mem: mem)
+            self.appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "__ocall_impl result", builder: mem)
         } else {
-            mem.append(
-                PseudoOp.strVregFP(D.d0, X.x15, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
-            )
-            
-            appendFPRegToDouble(reg: D.d0, from: dst, kinds: regs, mem: mem)
-            appendDebugPrintRegisterAligned4(D.d0, prepend: "call result", builder: mem)
+            appendDebugPrintAligned4("[__ocall_impl] Ignoring .void return", builder: mem)
         }
-        appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
-        
+                         
         if additionalSize > 0 {
             appendDebugPrintAligned4("Free \(additionalSize) bytes (OCallN)", builder: mem)
             mem.append(
@@ -200,99 +229,16 @@ extension M1Compiler2 {
     func __ocallmethod_impl__addrInX9(
         dst: Reg,
         regs: [any HLTypeProvider],
-        preArgs: [((CpuOpBuffer, Register64)->(), HLTypeKind)],
+        preArgs: [((CpuOpBuffer, RegisterRawValue, HLTypeKind)->(), HLTypeKind)],
         args: [Reg],
         reservedStackBytes: ByteCount,
         mem: CpuOpBuffer
     ) throws {
-        
-        appendDebugPrintAligned4("__omethodcall_impl", builder: mem)
-        
-        let dstStackOffset = getRegStackOffset(regs, dst)
-        let dstKind = requireTypeKind(reg: dst, from: regs)
-        
-        let totalArgKinds = preArgs.map({ $0.1 }) + args.map({ requireTypeKind(reg: $0, from: regs) })
-        
-        let additionalSizeUnrounded = totalArgKinds.dropFirst(ARG_REGISTER_COUNT).reduce(0) {
-            return $0 + Int($1.hlRegSize)
-        }
-        let additionalSize = StackInfo.roundUpStackReservation(Int16(additionalSizeUnrounded))
-        
-        if additionalSize > 0 {
-            appendDebugPrintAligned4("Reserving \(additionalSize) bytes for stack (OCallN)", builder: mem)
-            mem.append(
-                M1Op.subImm12(X.sp, X.sp, try .i(additionalSize))
-            )
-        }
-
-        let regWkindToPass: [((CpuOpBuffer, Register64)->(), HLTypeKind)] = preArgs + args.enumerated().map {
-            (position, argReg) in
-            
-            let argTypeKind = requireTypeKind(reg: argReg, from: regs)
-            let load: (CpuOpBuffer, Register64)->()
-            
-            if position >= ARG_REGISTER_COUNT {
-                load = {
-                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
-                    
-                    $0.append(
-                        PseudoOp.ldrVreg($1, offset, argTypeKind.hlRegSize)
-                    )
-                }
-            } else {
-                load = {
-                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
-                    
-                    self.appendLoad(reg: $1,
-                               from: argReg,
-                               kinds: regs, // careful, pass all kinds, not just the arg ones
-                               offset: offset,
-                               mem: $0)
-                }
-            }
-            
-            return (
-                load, argTypeKind
-            )
-        }
-        
-        var argOffset: Int64 = 0
-        for (load, regKind) in regWkindToPass.dropFirst(ARG_REGISTER_COUNT) {
-            load(mem, X.x0)
-            mem.append(
-                PseudoOp.strVreg(X.x0, X.x15, argOffset, regKind.hlRegSize)
-            )
-            argOffset += regKind.hlRegSize
-        }
-        
-        for (regIx, (load, _)) in regWkindToPass.enumerated() {
-            guard regIx < ARG_REGISTER_COUNT else { break }
-            let armReg = Register64(rawValue: UInt8(regIx))!
-            
-            Swift.assert(armReg != X.x9)  // x9 must remain untouched for blr
-            
-            load(mem, armReg)
-        }
-        
-        // PERFORM BLR
-        mem.append(M1Op.blr(X.x9))
-        
-        if dstKind != .f32 && dstKind != .f64 {
-            mem.append(
-                PseudoOp.strVreg(X.x0, X.x15, dstStackOffset + Int64(additionalSize), dstKind.hlRegSize)
-            )
-            appendDebugPrintAligned4("Got back and put result at offset \(dstStackOffset + Int64(additionalSize))", builder: mem)
-        } else {
-            fatalError("TODO: test and store as float")
-        }
-            
-        
-        if additionalSize > 0 {
-            appendDebugPrintAligned4("Free \(additionalSize) bytes (OCallN)", builder: mem)
-            mem.append(
-                (try M1Op._add(X.sp, X.sp, ByteCount(additionalSize)))
-            )
-        }
+        appendDebugPrintRegisterAligned4(X.x9, prepend: "__ocallmethod_impl__addrInX9 (start)", builder: mem)
+        try __ocall_impl(dst: dst, appendCall: { buff in
+            appendDebugPrintRegisterAligned4(X.x9, prepend: "__ocallmethod_impl__addrInX9 (end)", builder: buff)
+            buff.append(M1Op.blr(X.x9))
+        }, regs: regs, preArgs: preArgs, args: args, reservedStackBytes: reservedStackBytes, mem: mem)
     }
     
     /// OCallN
@@ -312,7 +258,6 @@ extension M1Compiler2 {
         
         try __ocall_impl(
             dst: dst,
-            funType: callTarget.typeProvider,
             appendCall: { buff in
                 buff.append(
                     PseudoOp.mov(.x19, callTarget.address),

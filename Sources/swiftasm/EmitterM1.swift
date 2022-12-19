@@ -124,7 +124,9 @@ public enum Shift32: Int, CustomAsmStringConvertible {
     }
 }
 
-enum Register64: UInt8, RegisterI {
+typealias RegisterRawValue = UInt8
+
+enum Register64: RegisterRawValue, RegisterI {
     var i: (any RegisterI)? { self }
     var fp: (any RegisterFP)? { nil }
     
@@ -1884,6 +1886,8 @@ public class EmitterM1 {
             let regs = encodeRegs(Rd: Rt, Rn: Rn)
             let encoded = mask | ft | regs
             return returnAsArray(encoded)
+        case .brk(let imm):
+            return returnAsArray(0xd4200000)
         default:
             print("Can't compile \(op)")
             throw EmitterM1Error.unsupportedOp

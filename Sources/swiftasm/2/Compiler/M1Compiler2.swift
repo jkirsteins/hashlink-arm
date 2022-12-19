@@ -642,15 +642,34 @@ extension M1Compiler2 {
     func appendLoad(
         reg: any Register,
         as vreg: Reg,
-        addressRegister addrReg: Register64,
-        offset: Int64,
+        addressRegister addrRegCandidate: Register64,
+        offset offsetCandidate: Int64,
         kinds: [any HLTypeKindProvider],
         mem: CpuOpBuffer)
     {
+        let offset: Immediate9
+        let addrReg: Register64
+        do {
+            offset = try Immediate9(offsetCandidate)
+            addrReg = addrRegCandidate
+        } catch {
+            offset = Immediate9(0) // offsetCandidate is added to X.x20 instead
+            addrReg = X.x20
+            
+            mem.append(
+                M1Op.movr64(X.x20, addrRegCandidate),
+                PseudoOp.mov(X.x21, offsetCandidate),
+                M1Op.add(X.x20, X.x20, .r64shift(X.x21, .lsl(0)))
+            )
+            self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendStackInit]", builder: mem)
+            self.appendDebugPrintRegisterAligned4(X.x21, prepend: "[appendStackInit]", builder: mem)
+        }
+        
+        
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         if vregKind.hlRegSize == 8 {
             mem.append(
-                M1Op.ldr(reg, .reg64offset(addrReg, offset, nil))
+                M1Op.ldr(reg, .reg64offset(addrReg, offset.immediate, nil))
             )
         } else if vregKind.hlRegSize == 4 {
             guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
@@ -659,7 +678,7 @@ extension M1Compiler2 {
             
             appendDebugPrintAligned4("Loaded \(reg32)", builder: mem)
             mem.append(
-                M1Op.ldr(reg32, .reg64offset(addrReg, offset, nil))
+                M1Op.ldr(reg32, .reg64offset(addrReg, offset.immediate, nil))
             )
         } else if vregKind.hlRegSize == 2 {
             guard let regGP32 = reg.i?.to32 else {
@@ -667,7 +686,7 @@ extension M1Compiler2 {
             }
             
             mem.append(
-                M1Op.ldrh(regGP32, .imm64(addrReg, offset, nil))
+                M1Op.ldrh(regGP32, .imm64(addrReg, offset.immediate, nil))
             )
         } else if vregKind.hlRegSize == 1 {
             guard let regGP32 = reg.i?.to32 else {
@@ -675,7 +694,7 @@ extension M1Compiler2 {
             }
             
             mem.append(
-                M1Op.ldrb(regGP32, .imm64(addrReg, offset, nil))
+                M1Op.ldrb(regGP32, .imm64(addrReg, offset.immediate, nil))
             )
         } else if vregKind.hlRegSize == 0 {
             // nop
@@ -827,10 +846,11 @@ extension M1Compiler2 {
         /// - Parameter val: unrounded byte count needed for the stack
         /// - Returns: value rounded up to nearest multiple of 16
         static func roundUpStackReservation(
-            _ val: Int16
+            _ val: Int16,
+            _ roundBase: Int16 = 16
         ) -> Int16 {
-            guard val % 16 != 0 else { return val }
-            return (val + (16 &- 1)) & (0 &- 16)
+            guard val % roundBase != 0 else { return val }
+            return (val + (roundBase &- 1)) & (0 &- roundBase)
         }
     }
     
@@ -877,12 +897,18 @@ extension M1Compiler2 {
         )
         
         var offset: ByteCount = 0
-        var overflowOffset: ByteCount = stackInfo.total + prologueSize // for regs passed in via stack
+        let overflowOffset: ByteCount = stackInfo.total + prologueSize // for regs passed in via stack
+        appendDebugPrintAligned4("[appendStackInit] stack total: \(stackInfo.total)", builder: builder)
+        appendDebugPrintAligned4("[appendStackInit] prologue size: \(prologueSize)", builder: builder)
         
         // Now move all data from (stack/registers) to (stack) in the expected layout
         // Keep track of general-purpose and floating-point registers separately
-        var gpIx = 0
-        var fpIx = 0
+        var gpIx: UInt8 = 0
+        var fpIx: UInt8 = 0
+        var prevStackReg: HLTypeKind? = nil
+        
+        var stackArgOffset: ByteCount = 0  // NOTE: assumption that this is aligned already
+        
         for (rix, reg) in unfilteredRegs.filter({ $0.hlRegSize > 0 }).enumerated() {
 
             Swift.assert(reg.hlRegSize > 0, "empty registers have to be filtered out earlier to not affect register index")
@@ -902,32 +928,51 @@ extension M1Compiler2 {
             switch (needLoad, isFpReg, reg.hlRegSize) {
             case (false, _, _):
                 break
-            case (true, true/*is fp*/, let regSize):
-                // floating point register
-                fatalError("TODO: add a test for loading FP properly")
-                builder.append(PseudoOp.ldrVregFP(RegisterFP64(rawValue: UInt8(regToUse))!, X.x15, overflowOffset, regSize))
-                overflowOffset += regSize
-            case (true, false/*is !fp*/, let regSize):
-                // general purpose register
-                builder.append(PseudoOp.ldrVreg(Register64(rawValue: UInt8(regToUse))!, overflowOffset, regSize))
-                overflowOffset += regSize
-            }
-
-            if isFpReg {
-                let fpreg = RegisterFP64(rawValue: UInt8(regToUse))!
+            case (true, _, let regSize):
                 
-                // we can't use 64-bit or 32-bit interchangeably
-                // convert ?argsize? to 64-bit register
-                appendFPRegToDouble(reg: fpreg, from: Reg(rix), kinds: unfilteredRegs, mem: builder)
+                defer { prevStackReg = reg.kind }
                 
-                // now that we know the value is in 64-bit,
-                // we can store in stack
-                appendPrepareDoubleForStore(reg: fpreg, to: Reg(rix), kinds: unfilteredRegs, mem: builder)
-                builder.append(PseudoOp.strVregFP(fpreg, X.x15, offset, reg.hlRegSize))
-            } else {
-                builder.append(PseudoOp.strVreg(Register64(rawValue: UInt8(regToUse))!, X.x15, offset, reg.hlRegSize))
+                if let prevStackReg = prevStackReg {
+                    let align: Int
+                    switch(reg.kind) {
+                    case .u8: align = MemoryLayout<UInt8>.alignment
+                    case .bool: align = MemoryLayout<Bool>.alignment
+                    case .u16: align = MemoryLayout<UInt16>.alignment
+                    case .i32: align = MemoryLayout<Int32>.alignment
+                    case .i64: align = MemoryLayout<Int64>.alignment
+                    case .f32: align = MemoryLayout<Float32>.alignment
+                    case .f64: align = MemoryLayout<Float64>.alignment
+                    default:
+                        align = MemoryLayout<OpaquePointer>.alignment
+                    }
+                    stackArgOffset = Int64(StackInfo.roundUpStackReservation(Int16(stackArgOffset + prevStackReg.hlRegSize), Int16(align)))
+                }
+                
+                appendLoad(regToUse, as: 0, addressRegister: .sp, offset: overflowOffset + stackArgOffset, kinds: [reg], mem: builder)
+                appendDebugPrintRegisterAligned4(regToUse, kind: reg.kind, prepend: "[appendStackInit] loaded stack argument \(reg.kind) from \(overflowOffset)", builder: builder)
+                
+                /*
+                NOTE: careful to get the alignment correct here.
+                 
+                 As an example, here is how (u8, f32, u16, f64) would be laid out (assuming sp + 384 is the stack base):
+                 - u8 at 0      (or 384)
+                 - f32 at 4     (or 388)
+                 - u16 at 8     (or 392)
+                 - f64 at 16    (or 400)
+                
+                (lldb) memory read --format u --size 1 --count 1 `$sp + 384`
+                0x16fdfc4a0: 10
+                (lldb) memory read --format f --size 4 --count 1 `$sp + 388`
+                0x16fdfc4a4: 123.456001
+                (lldb) memory read --format u --size 2 --count 1 `$sp + 392`
+                0x16fdfc4a8: 11
+                (lldb) memory read --format f --size 8 --count 1 `$sp + 400`
+                0x16fdfc4b0: 789.12300000000005
+                */
             }
-
+            
+            appendDebugPrintRegisterAligned4(regToUse, kind: reg.kind, prepend: "[appendStackInit] storing argument \(reg.kind) at \(offset)", builder: builder)
+            appendStore(regToUse, as: 0, intoAddressFrom: .sp, offsetFromAddress: offset, kinds: [reg], mem: builder)
             offset += reg.hlRegSize
         }
         
@@ -955,18 +1000,18 @@ extension M1Compiler2 {
         return reg
     }
     
-    func appendDebugPrintRegisterAligned4(_ regRawValue: UInt8, kind: HLTypeKind, prepend: String? = nil, builder: CpuOpBuffer)
+    func appendDebugPrintRegisterAligned4(_ regRawValue: UInt8, kind: HLTypeKind, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil)
     {
-        appendDebugPrintRegisterAligned4(getRegister(regRawValue, kind: kind), prepend: prepend, builder: builder)
+        appendDebugPrintRegisterAligned4(getRegister(regRawValue, kind: kind), prepend: prepend, builder: builder, format: format, kind: kind)
     }
     
-    func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil) {
+    func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil, kind: HLTypeKind? = nil) {
         guard stripDebugMessages == false else {
             builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
             return
         }
         
-        Self.appendDebugPrintRegisterAligned4(reg, prepend: prepend, builder: builder, format: format)
+        Self.appendDebugPrintRegisterAligned4(reg, prepend: prepend, builder: builder, format: format, kind: kind)
     }
     
     /// Will print the value of a register.
@@ -977,7 +1022,7 @@ extension M1Compiler2 {
     ///   - reg: register to print
     ///   - prepend: an additional debug message to prepend
     ///   - builder: `CpuOpBuffer` into which to emit the instructions
-    static func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil) {
+    static func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil, kind: HLTypeKind? = nil) {
         guard let printfAddr = dlsym(dlopen(nil, RTLD_LAZY), "printf") else {
             fatalError("No printf addr")
         }
@@ -1009,7 +1054,11 @@ extension M1Compiler2 {
             if reg.fp != nil {
                 fmt = "%f"
             } else {
-                fmt = "%p"
+                if let k = kind, INTEGER_TYPE_KINDS.contains(k) {
+                    fmt = "%d"
+                } else {
+                    fmt = "%p"
+                }
             }
         }
         
@@ -1722,6 +1771,12 @@ class M1Compiler2 {
                 let dstType = self.requireType(reg: dst, regs: regs)
                 let clType = self.requireType(reg: closureObject, regs: regs)
                 
+                for arg in args {
+                    appendLoad(5, from: arg, kinds: regs, mem: mem)
+                    let argKind = requireTypeKind(reg: arg, from: regs)
+                    appendDebugPrintRegisterAligned4(5, kind: argKind, prepend: "OCallClosure arg#\(arg)(\(argKind))", builder: mem)
+                }
+                
                 // vclosure offsets
                 let funOffset: Int64 = Int64(MemoryLayout<vclosure>.offset(of: \vclosure.fun)!)
                 let hasValueOffset: Int64 = Int64(MemoryLayout<vclosure>.offset(of: \vclosure.hasValue)!)
@@ -1797,7 +1852,7 @@ class M1Compiler2 {
                         M1Op.cmp(X.x0, X.x1)
                     )
 
-                    appendDebugPrintAligned4("CHECKING TARGET VALUE", builder: mem)
+                    appendDebugPrintAligned4("OCallClosure CHECKING TARGET VALUE", builder: mem)
                     mem.append(
                         PseudoOp.withOffset(
                             offset: &jmpTargetHasValue,
@@ -1805,11 +1860,10 @@ class M1Compiler2 {
                             M1Op.b_ne(try! Immediate21(jmpTargetHasValue.value))
                         )
                     )
-                    appendDebugPrintAligned4("TARGET HAS NO VALUE", builder: mem)
+                    appendDebugPrintAligned4("OCallClosure TARGET HAS NO VALUE", builder: mem)
                     // MARK: no target value
                     try __ocall_impl(
                         dst: dst,
-                        funType: clType,
                         appendCall: { buff in
                             appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: buff)
                             appendDebugPrintAligned4("[__ocall_impl] Call", builder: buff)
@@ -1837,10 +1891,9 @@ class M1Compiler2 {
                     )
 
                     jmpTargetHasValue.stop(at: mem.byteSize)
-                    appendDebugPrintAligned4("TARGET HAS VALUE", builder: mem)
+                    appendDebugPrintAligned4("OCallClosure TARGET HAS VALUE", builder: mem)
                     try __ocall_impl(
                         dst: dst,
-                        funType: clType,
                         appendCall: { buff in
                             appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: buff)
                             buff.append(
@@ -1851,18 +1904,13 @@ class M1Compiler2 {
                         regs: regs,
                         preArgs: [
                             ({
-                                buff, reg in
+                                buff, regRawValue, regKind in
                                 
-                                guard let regI = reg.i?.to64 else {
-                                    fatal("Non-integer registers not supported", Self.logger)
-                                }
+                                guard regRawValue != 19 else { fatalError("X.x19 can not be loaded") }
                                 
-                                guard regI != X.x19 else { fatalError("X.x19 can not be loaded") }
-                                
+                                Swift.assert(regKind.hlRegSize == 8)
                                 self.appendLoad(reg: X.x19, from: closureObject, kinds: regs, mem: buff)
-                                buff.append(
-                                    M1Op.ldr(regI, .reg64offset(X.x19, valueOffset, nil))
-                                )
+                                self.appendLoad(regRawValue, as: closureObject, addressRegister: X.x19, offset: valueOffset, kinds: regs, mem: buff)
                             },
                              HLTypeKind.dyn
                              )
@@ -3383,8 +3431,9 @@ class M1Compiler2 {
                         dst: dst,
                         regs: regs,
                         preArgs: [
-                            ({ (inmem, regForPreArg) in
-                                self.appendLoad(reg: regForPreArg, from: obj, kinds: regs, mem: inmem)
+                            ({ (inmem, regIxForPreArg, regKind) in
+                                Swift.assert(regKind.hlRegSize == 8)
+                                self.appendLoad(regIxForPreArg, from: obj, kinds: regs, mem: inmem)
                             }, HLTypeKind.obj)
                         ],
                         args: args,

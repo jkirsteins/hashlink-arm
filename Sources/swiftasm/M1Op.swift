@@ -95,6 +95,7 @@ enum M1Op : CpuOp {
     /// the final form is worse at conveying intent.
     var asmDescription: String {
         switch(self) {
+        case .brk(let imm): return "brk #\(imm.immediate)"
         case .nop: return "nop"
         case .ret: return "ret"
         case .addImm12(let rt, let rn, let off) where off.imm.isNegative:
@@ -505,6 +506,8 @@ enum M1Op : CpuOp {
     
     case fmov(any RegisterFP, any RegisterFP)
     case fadd(any RegisterFP, any RegisterFP, any RegisterFP)
+    
+    case brk(Immediate16)
     
     // when SP not included:
     //  - https://developer.arm.com/documentation/ddi0596/2020-12/Base-Instructions/MOV--register---Move--register---an-alias-of-ORR--shifted-register--?lang=en
