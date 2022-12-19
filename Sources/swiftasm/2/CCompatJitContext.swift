@@ -1,6 +1,8 @@
 
 class CCompatJitContext : JitContext2 {
     
+    static let logger = LoggerFactory.create(CCompatJitContext.self)
+    
     let jitBase: JitBase
     let mainContext: UnsafeMutablePointer<MainContext_CCompat>
     let funcTracker = FunctionTracker()
@@ -387,6 +389,34 @@ class CCompatJitContext : JitContext2 {
     var patchedOps = [RefFun:[HLOpCode]]()
     func patch(findex: RefFun, ops: [HLOpCode]) {
         self.patchedOps[findex] = ops
+    }
+    
+    func patchNative(name: String, addr: OpaquePointer) -> Bool {
+        var candidate: UnsafePointer<HLNative_CCompat>? = nil
+        for n in 0..<self.nnatives {
+            guard let nat = self.mainContext.pointee.code?.pointee.getNative(Int(n)) else {
+                return false
+            }
+            
+            if nat.pointee.name == name {
+                candidate = nat
+                break
+            }
+        }
+        guard let candidate = candidate else {
+            return false
+        }
+        
+        guard let nativeAddr = self.mainContext.pointee.m?.pointee.functions_ptrs.advanced(by: Int(candidate.pointee.findex)) else {
+            fatalError("Can't get function address for \(name)")
+        }
+                    
+        let mAddr = UnsafeMutablePointer(mutating: nativeAddr)
+        
+        Self.logger.debug("Before patching '\(name)': \(String(describing: mAddr.pointee))")
+        mAddr.pointee = .init(addr)
+        Self.logger.debug("Patched '\(name)' to: \(String(describing: mAddr.pointee))")
+        return true
     }
     
     func getNative(findex fix: RefFun) throws -> (any NativeCallable2)? {

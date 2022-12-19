@@ -927,6 +927,19 @@ extension M1Compiler2 {
             
             switch (needLoad, isFpReg, reg.hlRegSize) {
             case (false, _, _):
+                if (rix >= unfilteredArgs.count) {
+                    print("Zeroing index \(rix) because arg count is \(unfilteredArgs.count)")
+                    let gpr = Register64(rawValue: regToUse)!
+                    builder.append(
+                        M1Op.movz64(gpr, 0, nil)
+                    )
+                    if FP_TYPE_KINDS.contains(reg.kind) {
+                        let fpr = getRegister(regToUse, kind: reg.kind).fp!
+                        builder.append(
+                            M1Op.ucvtf(fpr, gpr)
+                        )
+                    }
+                }
                 break
             case (true, _, let regSize):
                 

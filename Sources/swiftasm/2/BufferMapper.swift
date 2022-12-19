@@ -117,7 +117,7 @@ class BufferMapper {
             
             let mAddr = UnsafeMutablePointer(mutating: addr)
             mAddr.pointee = .init(realAddress.value)
-            Self.logger.debug("Set native address for findex \(String(describing: funIndex)) to \(String(describing: mAddr.pointee))")
+            Self.logger.debug("Set native address for findex \(String(describing: funIndex)) (\(nat.pointee.name) to \(String(describing: mAddr.pointee))")
         }
         
         guard let mapped = mapped else {

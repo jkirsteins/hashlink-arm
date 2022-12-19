@@ -260,7 +260,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 retType: HLTypeKind.i32,
                 findex: 0,
                 regs: [HLTypeKind.i32, HLTypeKind.i32],
-                args: [HLTypeKind.i32],
+                args: [HLTypeKind.i32, HLTypeKind.i32],
                 ops: [
                     // if first arg < second arg, skip 2 following ops
                     .OJULt(a: 0, b: 1, offset: 2),
@@ -1019,7 +1019,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _rf64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64], floats: [Float64], _ callback: @escaping (()->Float64)->()) throws {
+    func _rf64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64], floats: [Float64] = [], _ callback: @escaping (()->Float64)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.f64,
@@ -1033,6 +1033,101 @@ final class CompilerM1v2Tests: CCompatTestCase {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) () -> Float64)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32(ops: [HLOpCode], regs: [HLTypeKind] = [.f32], floats: [Float64] = [], _ callback: @escaping (()->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [],
+                ops: ops)
+        ], floats: floats)
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) () -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ri64(ops: [HLOpCode], regs: [HLTypeKind] = [.i64], floats: [Float64] = [], _ callback: @escaping (()->Int64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i64,
+                findex: 0,
+                regs: regs,
+                args: [],
+                ops: ops)
+        ], floats: floats)
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) () -> Int64)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ri32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32], floats: [Float64] = [], _ callback: @escaping (()->Int32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i32,
+                findex: 0,
+                regs: regs,
+                args: [],
+                ops: ops)
+        ], floats: floats)
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) () -> Int32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ru16(ops: [HLOpCode], regs: [HLTypeKind] = [.u16], floats: [Float64] = [], _ callback: @escaping (()->UInt16)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.u16,
+                findex: 0,
+                regs: regs,
+                args: [],
+                ops: ops)
+        ], floats: floats)
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) () -> UInt16)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ru8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8], floats: [Float64] = [], _ callback: @escaping (()->UInt8)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.u8,
+                findex: 0,
+                regs: regs,
+                args: [],
+                ops: ops)
+        ], floats: floats)
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) () -> UInt8)) in
                 callback(ep)
             }
         }
@@ -1228,7 +1323,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ru8__u8_u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u8], ints: [Int32] = [], _ callback: @escaping ((UInt8, UInt8)->UInt8)->()) throws {
+    func _ru8__u8_u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u8], ints: [Int32] = [], strip: Bool = true, _ callback: @escaping ((UInt8, UInt8)->UInt8)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.u8,
@@ -1238,7 +1333,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 ops: ops)
         ], ints: ints)
         
-        try compileAndLink(ctx: ctx, 0) {
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt8, UInt8) -> UInt8)) in
@@ -1489,7 +1584,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 retType: HLTypeKind.u8,
                 findex: 0,
                 regs: regs,
-                args: [HLTypeKind.u8],
+                args: [HLTypeKind.u8, HLTypeKind.u8],
                 ops: ops)
         ])
         
@@ -2242,7 +2337,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         try _ru8__u8_u8(ops: [
             .OAdd(dst: 1, a: 0, b: 1),
             .ORet(ret: 1),
-        ]) { entrypoint in
+        ], strip: false) { entrypoint in
             XCTAssertEqual(6, entrypoint(2, 4))
         }
         
@@ -2951,7 +3046,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                     retType: HLTypeKind.i32,
                     findex: 0,
                     regs: [HLTypeKind.u16, HLTypeKind.i32],
-                    args: [HLTypeKind.u16],
+                    args: [HLTypeKind.u16, HLTypeKind.i32],
                     ops: [
                         .OCall2(dst: 1, fun: 1, arg0: 0, arg1: 1),
                         .ORet(ret: 1),
@@ -4060,6 +4155,46 @@ final class CompilerM1v2Tests: CCompatTestCase {
             
             let res = entrypoint(123)
             XCTAssertEqualDouble(res, 246.0)
+        }
+    }
+    
+    /// Zero out registers before starting to use them
+    func testCompile_zeroRegs() throws {
+        
+        try _rf64(ops: [
+            .ORet(ret: 0)
+        ]) { entrypoint in
+            XCTAssertEqualDouble(entrypoint(), 0.0)
+        }
+        
+        try _rf32(ops: [
+            .ORet(ret: 0)
+        ]) { entrypoint in
+            XCTAssertEqualFloat(entrypoint(), 0.0)
+        }
+        
+        try _ri64(ops: [
+            .ORet(ret: 0)
+        ]) { entrypoint in
+            XCTAssertEqual(entrypoint(), 0)
+        }
+        
+        try _ri32(ops: [
+            .ORet(ret: 0)
+        ]) { entrypoint in
+            XCTAssertEqual(entrypoint(), 0)
+        }
+        
+        try _ru16(ops: [
+            .ORet(ret: 0)
+        ]) { entrypoint in
+            XCTAssertEqual(entrypoint(), 0)
+        }
+        
+        try _ru8(ops: [
+            .ORet(ret: 0)
+        ]) { entrypoint in
+            XCTAssertEqual(entrypoint(), 0)
         }
     }
 }

@@ -228,6 +228,8 @@ extension M1Compiler2 {
             // load field value into x2 and store at x1
             appendLoad(2, from: srcReg, kinds: regs, mem: mem)
             appendStore(2, as: srcReg, intoAddressFrom: X.x1, offsetFromAddress: 0, kinds: regs, mem: mem)
+            appendDebugPrintRegisterAligned4(2, kind: srcType, prepend: "osetfield/virtual src", builder: mem)
+            appendDebugPrintRegisterAligned4(1, kind: srcType, prepend: "osetfield/virtual target", builder: mem)
             
             // finish this branch
             mem.append(

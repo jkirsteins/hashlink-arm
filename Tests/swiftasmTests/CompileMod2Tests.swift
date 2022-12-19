@@ -2,6 +2,8 @@ import XCTest
 
 @testable import swiftasm
 
+fileprivate var patched_sys_print: [String] = []
+
 class RealHLTestCase : XCTestCase {
     var HL_FILE: String { fatalError("Override HL_FILE to point to a file in TestResources") }
         
@@ -798,11 +800,21 @@ final class CompileMod2Tests: RealHLTestCase {
          Otherwise the output will be `String` (i.e. object name, not the actual value)*/
         
         let expected = "haxesrc/Main.hx:218: Hello Trace\n"
+        patched_sys_print = []
         
-        let output = OutputListener(STDOUT_FILENO)
+        // Patch the print call to intercept
+        let _patchedSysPrint: (@convention(c) (OpaquePointer)->()) = {
+            bytePtr in
+            
+            let byteVal: UnsafePointer<CChar16> = .init(bytePtr)
+            patched_sys_print.append(byteVal.stringValue)
+        }
+        guard ctx.patchNative(name: "sys_print", addr: unsafeBitCast(_patchedSysPrint, to: OpaquePointer.self)) else {
+            return XCTFail("Failed to patch sys_print")
+        }
         
         try _withPatchedEntrypoint(
-            strip: false,
+            strip: true,
             name: "Main.testTrace",
             depHints: [231, 230, 354, 42, 12]
         ) {
@@ -811,18 +823,11 @@ final class CompileMod2Tests: RealHLTestCase {
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: (@convention(c)()->())) in
         
-                output.openConsolePipe()
                 entrypoint()
-                fflush(stdout)
-                Thread.sleep(forTimeInterval: 0.1)
-                output.closeConsolePipe()
             }
         }
         
-        XCTAssertEqual(output.contents, expected)
-        
-        // double check (in case there are some debug prints from libhl etc.)
-        XCTAssertTrue(output.contents.contains("\(expected)"), "\(output.contents) does not contain \(expected)")
+        XCTAssertEqual(patched_sys_print.joined(separator: ""), expected)
     }
     
     func testCompile__testFieldClosure() throws {
