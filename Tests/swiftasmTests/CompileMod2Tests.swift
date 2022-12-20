@@ -700,7 +700,7 @@ final class CompileMod2Tests: RealHLTestCase {
             name: "Main.testTrapDifferentTypes",
             
             // can't reliably detect the OCallMethod dependencies
-            depHints: [374]
+            depHints: [376]
         ) {
             sutFix, mem in
             
@@ -799,7 +799,7 @@ final class CompileMod2Tests: RealHLTestCase {
          
          Otherwise the output will be `String` (i.e. object name, not the actual value)*/
         
-        let expected = "haxesrc/Main.hx:232: Hello Trace\n"
+        let expected = "haxesrc/Main.hx:235: Hello Trace\n"
         patched_sys_print = []
         
         // Patch the print call to intercept
@@ -816,7 +816,13 @@ final class CompileMod2Tests: RealHLTestCase {
         try _withPatchedEntrypoint(
             strip: true,
             name: "Main.testTrace",
-            depHints: [234, 359, 233, 45, 12]
+            depHints: [
+                // these dependencies need to be manually determined
+                12, 234,
+                
+                // these will be mentioned by the BufferMapper
+                233, 361, 45
+            ]
         ) {
             sutFix, mem in
             
@@ -1311,7 +1317,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Int32) -> Float64)
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testArrayBytes_Float"
         ) {
             sutFix, mem in
