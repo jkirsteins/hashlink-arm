@@ -13,6 +13,10 @@ extension Array {
 @main
 struct SwiftAsm: ParsableCommand {
     @Argument var hlFileIn: String
+    
+    @Flag(help: "Insert debugging messages in the compiled code.")
+    var jitdebug: Bool = false
+
 
     // func testrun() throws {
 
@@ -73,7 +77,7 @@ struct SwiftAsm: ParsableCommand {
 ]
 
         let mod = try! Bootstrap.start2(hlFileIn, args: [])
-        let sut = M1Compiler2(ctx: mod, stripDebugMessages: true)
+        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug)
         let buf = CpuOpBuffer()
         Self.logger.debug("Compiling...")
         for frix in (0..<mod.nfunctions) {
