@@ -1306,5 +1306,22 @@ final class CompileMod2Tests: RealHLTestCase {
             }
         }
     }
+    
+    func testCompile__testArrayBytes_Float() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> Float64)
+        
+        try _compileAndLinkWithDeps(
+            strip: false,
+            name: "Main.testArrayBytes_Float"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(entrypoint(1), 234.567)
+            }
+        }
+    }
 }
 

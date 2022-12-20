@@ -28,6 +28,9 @@ class Path {
 	}
 }
 
+// NOTE: do not change this class. If the proto layout changes,
+// the corresponding tests might become buggy (they have hardcoded
+// proto indexes)
 class CallTest {
 	public function new() {
 
@@ -421,5 +424,12 @@ class Main {
 		trace('testing testTrapDifferentTypes (false, false): ${testTrapDifferentTypes(false, false)}');
 
 		trace('testing testCallThis: ${testCallThis()}');
+
+		trace('testing testArrayBytes_Float: ${testArrayBytes_Float(1)}');
+	}
+
+	static public function testArrayBytes_Float(ix: Int): Float {
+		var ar: Array<Float> = [123.456, 234.567, 345.678];
+		return ar[ix];
 	}
 }

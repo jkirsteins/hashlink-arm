@@ -594,8 +594,9 @@ extension M1Compiler2 {
         }
     }
     
+    // TODO: combine appendLoads
     static func appendLoad(reg: Register64, as vreg: Reg, fromAddressFrom addrReg: Register64, offsetFromAddress offset: ByteCount, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
-        // TODO: combine appendLoads
+        
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         if vregKind.hlRegSize == 8 {
             mem.append(
@@ -638,6 +639,19 @@ extension M1Compiler2 {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         let reg = getRegister(regRawValue, kind: vregKind)
         appendLoad(reg: reg, as: vreg, addressRegister: addrReg, offset: offset, kinds: kinds, mem: mem)
+    }
+    
+    func appendLoad(
+        _ regRawValue: UInt8,
+        as vreg: Reg,
+        addressRegister addrReg: Register64,
+        offsetRegister: Register64,
+        kinds: [any HLTypeKindProvider],
+        mem: CpuOpBuffer)
+    {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        let reg = getRegister(regRawValue, kind: vregKind)
+        appendLoad(reg: reg, as: vreg, addressRegister: addrReg, offsetRegister: offsetRegister, kinds: kinds, mem: mem)
     }
     
     func appendLoad(
@@ -704,6 +718,53 @@ extension M1Compiler2 {
         }
     }
     
+    func appendLoad(
+        reg: any Register,
+        as vreg: Reg,
+        addressRegister addrReg: Register64,
+        offsetRegister: Register64,
+        kinds: [any HLTypeKindProvider],
+        mem: CpuOpBuffer)
+    {
+        let offset: Immediate9 = Immediate9(0)
+        
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        if vregKind.hlRegSize == 8 {
+            mem.append(
+                M1Op.ldr(reg, .reg(addrReg, .r64ext(offsetRegister, .sxtx(0))))
+            )
+        } else if vregKind.hlRegSize == 4 {
+            guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
+                fatalError("Can't convert \(reg) to 32-bit variant")
+            }
+            
+            appendDebugPrintAligned4("Loaded \(reg32)", builder: mem)
+            mem.append(
+                M1Op.ldr(reg32, .reg(addrReg, .r64ext(offsetRegister, .sxtx(0))))
+            )
+        } else if vregKind.hlRegSize == 2 {
+            guard let regGP32 = reg.i?.to32 else {
+                fatal("Not supported 2 byte FP load", Self.logger)
+            }
+            
+            mem.append(
+                M1Op.ldrh(regGP32, .reg(addrReg, .r64ext(offsetRegister, .sxtx(0))))
+            )
+        } else if vregKind.hlRegSize == 1 {
+            guard let regGP32 = reg.i?.to32 else {
+                fatal("Not supported 1 byte FP load", Self.logger)
+            }
+            
+            mem.append(
+                M1Op.ldrb(regGP32, .reg(addrReg, .r64ext(offsetRegister, .sxtx(0))))
+            )
+        } else if vregKind.hlRegSize == 0 {
+            // nop
+        } else {
+            fatalError("Size must be 8, 4, 2, 1, or 0")
+        }
+    }
+    
     func appendLoad(reg: any Register, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
         appendLoad(reg: reg, as: vreg, addressRegister: .sp, offset: offset, kinds: kinds, mem: mem)
     }
@@ -721,6 +782,13 @@ extension M1Compiler2 {
         
         let reg = getRegister(regRawValue, kind: vregKind)
         appendStore(reg: reg, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
+    }
+    
+    func appendStore(_ regRawValue: UInt8, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromRegister: Register64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        
+        let reg = getRegister(regRawValue, kind: vregKind)
+        appendStore(reg: reg, as: vreg, intoAddressFrom: addrReg, offsetFromRegister: offsetFromRegister, kinds: kinds, mem: mem)
     }
     
     /// Store a given register into the specified location.
@@ -772,6 +840,64 @@ extension M1Compiler2 {
             mem.append(
                 PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
                 M1Op.strb(reg32gp, .imm64(addrReg, offsetFromAddress, nil))
+            )
+        } else if vregKind.hlRegSize == 0 {
+            // nop
+        } else {
+            fatalError("Size must be 8, 4, 2, 1, or 0")
+        }
+    }
+    
+    // TODO: deduplicate appendStore
+    /// Store a given register into the specified location.
+    ///
+    /// This method will not do any register conversions (so e.g. `vreg` can point to a FP value but if `reg` points to a GP regsiter,
+    /// then the GP register will be stored).
+    ///
+    /// This is useful for e.g. `OFloat` where we load a GP register with a float's bit pattern, and store it where a FP value should reside.
+    /// - Parameters:
+    ///   - reg: CPU register
+    ///   - vreg: virtual register index
+    ///   - addrReg: GP register holding the base address of the target location (e.g. can be `X.sp`)
+    ///   - offsetFromRegister: offset from address in `addrReg`
+    ///   - kinds: register kinds for current context
+    ///   - mem: op buffer
+    func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromRegister: Register64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        
+        guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
+            fatalError("Can't convert \(reg) to 32-bit variant")
+        }
+        
+        if vregKind.hlRegSize == 8 {
+            Swift.assert(reg.is64)
+            mem.append(
+                PseudoOp.debugMarker("Storing 8 bytes in vreg \(vreg)"),
+                M1Op.str(reg, .reg(addrReg, .r64ext(offsetFromRegister, .sxtx(0))))
+            )
+        } else if vregKind.hlRegSize == 4 {
+            Swift.assert(reg.is32)
+            mem.append(
+                PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
+                M1Op.str(reg32, .reg(addrReg, .r64ext(offsetFromRegister, .sxtx(0))))
+            )
+        } else if vregKind.hlRegSize == 2 {
+            Swift.assert(reg.is32)
+            guard let reg32gp = reg32.i?.to32 else {
+                fatalError("store for 2-byte FP registers not implemented")
+            }
+            mem.append(
+                PseudoOp.debugMarker("Storing 2 bytes in vreg \(vreg)"),
+                M1Op.strh(reg32gp, .reg(addrReg, .r64ext(offsetFromRegister, .sxtx(0))))
+            )
+        } else if vregKind.hlRegSize == 1 {
+            Swift.assert(reg.is32)
+            guard let reg32gp = reg32.i?.to32 else {
+                fatalError("store for 1-byte FP registers not implemented")
+            }
+            mem.append(
+                PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
+                M1Op.strb(reg32gp, .reg(addrReg, .r64ext(offsetFromRegister, .sxtx(0))))
             )
         } else if vregKind.hlRegSize == 0 {
             // nop
@@ -2272,48 +2398,63 @@ class M1Compiler2 {
                 appendLoad(reg: X.x15, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: X.x15, from: b, kinds: regs, mem: mem)
                 appendLoad(reg: X.x15, from: dst, kinds: regs, mem: mem)
+            case .OSetMem(let bytes, let index, let src):
+                fallthrough
             case .OSetI8(let bytes, let index, let src):
                 fallthrough
             case .OSetI16(let bytes, let index, let src):
                 assert(reg: bytes, from: regs, is: HLTypeKind.bytes)
                 assert(reg: index, from: regs, is: HLTypeKind.i32)
                 
+                let _name: String = String(reflecting: op.id)
+                
                 if op.id == .OSetI16 {
-                    assert(reg: src, from: regs, in: [HLTypeKind.u16, HLTypeKind.i32])
+                    assert(reg: src, from: regs, in: [
+                        HLTypeKind.u16, HLTypeKind.i32, HLTypeKind.i64]
+                    )
                 } else if op.id == .OSetI8 {
-                    assert(reg: src, from: regs, in: [HLTypeKind.u8, HLTypeKind.u16, HLTypeKind.i32])
+                    assert(reg: src, from: regs, in: [
+                        HLTypeKind.u8, HLTypeKind.u16, HLTypeKind.i32, HLTypeKind.i64]
+                    )
                 }
                 
                 appendLoad(reg: X.x0, from: bytes, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: index, kinds: regs, mem: mem)
-                appendLoad(reg: X.x2, from: src, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(_name) index", builder: mem, format: "%d")
+                
+                appendLoad(2, from: src, kinds: regs, mem: mem)
+                let srck = requireTypeKind(reg: src, from: regs)
+                appendDebugPrintRegisterAligned4(2, kind: srck, prepend: "\(_name) src value", builder: mem)
                 
                 if op.id == .OSetI8 {
-                    mem.append(
-                        M1Op.strb(W.w2, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
-                    )
+                    appendStore(2, as: 0, intoAddressFrom: X.x0, offsetFromRegister: X.x1, kinds: [HLTypeKind.u8], mem: mem)
                 } else if op.id == .OSetI16 {
-                    mem.append(
-                        M1Op.strh(W.w2, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
-                    )
+                    appendStore(2, as: 0, intoAddressFrom: X.x0, offsetFromRegister: X.x1, kinds: [HLTypeKind.u16], mem: mem)
+                } else if op.id == .OSetMem {
+                    appendStore(2, as: src, intoAddressFrom: X.x0, offsetFromRegister: X.x1, kinds: regs, mem: mem)
                 } else {
                     fatalError("Unexpected op \(op.id)")
                 }
+            
+            
             case .OGetMem(let dst, let bytes, let index):
                 fallthrough
             case .OGetI8(let dst, let bytes, let index):
                 fallthrough
             case .OGetI16(let dst, let bytes, let index):
-                
-                appendLoad(reg: X.x15, from: index, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x15, prepend: "db_OGetI*", builder: mem)
-                
                 assert(reg: bytes, from: regs, is: HLTypeKind.bytes)
                 assert(reg: index, from: regs, is: HLTypeKind.i32)
+                
+                let _name: String = String(reflecting: op.id)
+                
                 if op.id == .OGetI16 {
-                    assert(reg: dst, from: regs, in: [HLTypeKind.u16, HLTypeKind.i32])
+                    assert(reg: dst, from: regs, in: [
+                        HLTypeKind.u16, HLTypeKind.i32, HLTypeKind.i64]
+                    )
                 } else if op.id == .OGetI8 {
-                    assert(reg: dst, from: regs, in: [HLTypeKind.u8, HLTypeKind.u16, HLTypeKind.i32])
+                    assert(reg: dst, from: regs, in: [
+                        HLTypeKind.u8, HLTypeKind.u16, HLTypeKind.i32, HLTypeKind.i64]
+                    )
                 }
 
                 let dstOffset = getRegStackOffset(regs, dst)
@@ -2326,6 +2467,8 @@ class M1Compiler2 {
                     // Load index into X.x1. It is 4 bytes
                     M1Op.ldr(W.w1, .reg64offset(.sp, indexOffset, nil))
                 )
+                
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(_name) index", builder: mem, format: "%d")
                 
                 if op.id == .OGetI8 {
                     appendDebugPrintAligned4("about to load from bytes (off: \(byteOffset))", builder: mem)
@@ -2340,25 +2483,13 @@ class M1Compiler2 {
                         M1Op.ldrh(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
                     )
                 } else if op.id == .OGetMem {
-                    // TODO: add test
-                    assert(reg: dst, from: regs, is: HLTypeKind.i32)
-                    mem.append(
-                        M1Op.ldr(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
-                    )
+                    appendLoad(0, as: dst, addressRegister: X.x0, offsetRegister: X.x1, kinds: regs, mem: mem)
                 }
                 
-                let size = requireTypeKind(reg: dst, from: regs).hlRegSize
-                if size == 4 {
-                    mem.append(M1Op.str(W.w0, .reg64offset(.sp, dstOffset, nil)))
-                } else if size == 8 {
-                    mem.append(M1Op.str(X.x0, .reg64offset(.sp, dstOffset, nil)))
-                } else if size == 2 {
-                    mem.append(M1Op.strh(W.w0, .imm64(.sp, dstOffset, nil)))
-                } else if size == 1 {
-                    mem.append(M1Op.strb(W.w0, .imm64(.sp, dstOffset, nil)))
-                } else {
-                    fatalError("Invalid register size")
-                }
+                let dstKind = requireTypeKind(reg: dst, from: regs)
+                appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "\(_name) retrieved value", builder: mem)
+                
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .ONullCheck(let dst):
                 let dstOffset = getRegStackOffset(regs, dst)
                 let size = requireTypeKind(reg: dst, from: regs).hlRegSize
