@@ -1,21 +1,35 @@
-# swiftasm
+# hashlink-arm
 
-Loading and running [hashlink](https://github.com/HaxeFoundation/hashlink) 
+This repository contains a work-in-progress ARM (Aarch64) JIT compiler for the [Hashlink](https://github.com/HaxeFoundation/hashlink) [Haxe](https://haxe.org/) target. 
 
-Bytecode references:
+It is [made by Jānis Kiršteins](https://mastodon.gamedev.place/@jki)
+
+**The motivation is the [lack of official Hashlink support for ARM](https://github.com/HaxeFoundation/hashlink/issues/77). Thus it can not be used on e.g. Apple Silicon)**
+
+![Bash screenshot](carbon.png)
+
+## Current status
+
+Most of the opcodes are implemented. Currently missing support for:
+
+- 🔴 OVirtualClosure
+- 🔴 OToUFloat
+- 🔴 ORefData
+- 🔴 ORefOffset 
+- 🟡 `OCallClosure` and `OCallMethod` (these are partially implemented, but not for every edge case)
+
+‼️ Also importantly - this relies on a fork of the official `libhl`. 
+
+To guarantee the same behaviour, a lot of the internal code relies on `libhl` methods shared with the official runtime. Some of these methods are not exported for external processes, so it needs to be forked. I'll make this fork public eventually.
+
+## References
+
+Reference documents useful when working on this:
+
 - <https://github.com/Gui-Yom/hlbc/wiki/Bytecode-file-format>
 - <https://github.com/HaxeFoundation/hashlink/blob/0d2561f7805293f0745cd02c5184d43721088bfc/src/code.c>
 - <https://github.com/HaxeFoundation/haxe/blob/c35bbd4472c3410943ae5199503c23a2b7d3c5d6/src/generators/hlcode.ml>
-
-## Deviations from libhl
-
-- bin/hl should export:
-  - load_code
-  - hl_code_free
-  - HL_API hl_module *hl_module_alloc( hl_code *code );
-- hl_module_init needs to not call JIT 
-- hot reloading is ignored/commented out
-- hl_get_ustring
+- <https://haxe.org/blog/hashlink-in-depth-p2/>
 
 ## Getting started
 
@@ -27,43 +41,10 @@ Then run tests via:
 
     ./test.sh [--filter <filter>]
 
-## Checking stuff
-
-def p(num, bits, offset)
-    mask = bits.times.collect { |x| x }.reduce(0) { |x,y| x | (0b1 << y) }
-    res = (num >> offset) & mask
-    res = res.to_s(2)
-    res.rjust(bits, "0")
-end
-
 ## TODO
 
-- [ ] Tests for functions mixing floating poing/general purpose stack arguments (e.g. we should pass x0/d0 not x0/x1 or x0/d1)
-- [ ] Zero non-argument registers when initializing stack
+Quick and dirty task list:
+
 - [ ] Combine appendLoad() methods
-- [ ] Cleanup load methods (e.g. OToSFloat uses appendLoad with a GP register but it can mean an FP register)
-- [ ] debug-printing registers can mess up floating-point registers that are not stored/restored
-
-## hl type C structs
-
-    // See: /usr/local/include/hl.he
-    typedef struct {
-        hl_type *t;
-        uchar *bytes;
-        int length;
-    } vstring;
-    
-    
-## Numeric operation results
-
-See also: https://haxe.org/blog/hashlink-in-depth-p2/
-
-    E.g. OUDiv is only for integers. OSDiv is for either.
-
-    Operator    Operation       Operand 1    Operand 2    Result type
-    %           modulo          Float/Int    Float/Int    Float/Int
-    *           multiplication  Float/Int    Float/Int    Float/Int
-    /           division        Float/Int    Float/Int    Float
-    +           addition        Float/Int    Float/Int    Float/Int
-    -           subtraction     Float/Int    Float/Int    Float/Int
-    
+- [ ] deduplicate appendStore (offset immediate vs register)
+- [ ] deduplicate appendLoad (offset immediate vs register)    
