@@ -1924,7 +1924,7 @@ class M1Compiler2 {
                 let hasValueOffset: Int64 = Int64(MemoryLayout<vclosure>.offset(of: \vclosure.hasValue)!)
                 let valueOffset: Int64 = Int64(MemoryLayout<vclosure>.offset(of: \vclosure.value)!)
                 
-                if (dstType.kind == .dyn) {
+                if (clType.kind == .dyn) {
                         
                     /*
                      needs:
