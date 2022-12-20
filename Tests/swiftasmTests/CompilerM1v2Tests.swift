@@ -1019,6 +1019,44 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _rf64__u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .f64], _ callback: @escaping ((UInt8)->Float64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.u8],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt8) -> Float64)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf64__u16(ops: [HLOpCode], regs: [HLTypeKind] = [.u16, .f64], _ callback: @escaping ((UInt16)->Float64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.u16],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt16) -> Float64)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _rf64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64], floats: [Float64] = [], _ callback: @escaping (()->Float64)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -1782,6 +1820,63 @@ final class CompilerM1v2Tests: CCompatTestCase {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float32) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32__i32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32, .f32], strip: Bool = true, _ callback: @escaping ((Int32)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int32) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32__u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .f32], strip: Bool = true, _ callback: @escaping ((UInt8)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.u8],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt8) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32__u16(ops: [HLOpCode], regs: [HLTypeKind] = [.u16, .f32], strip: Bool = true, _ callback: @escaping ((UInt16)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.u16],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt16) -> Float32)) in
                 callback(ep)
             }
         }
@@ -4028,6 +4123,60 @@ final class CompilerM1v2Tests: CCompatTestCase {
             entrypoint in
             
             XCTAssertEqualFloat(entrypoint(123.0), 123.0)
+        }
+        
+        try _rf32__i32(ops: [
+            .OToSFloat(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqualFloat(entrypoint(123), 123.0)
+        }
+        
+        try _rf32__u8(ops: [
+            .OToSFloat(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqualFloat(entrypoint(123), 123.0)
+        }
+        
+        try _rf32__u16(ops: [
+            .OToSFloat(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqualFloat(entrypoint(123), 123.0)
+        }
+        
+        try _rf64__i32(ops: [
+            .OToSFloat(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqualDouble(entrypoint(123), 123.0)
+        }
+        
+        try _rf64__u8(ops: [
+            .OToSFloat(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqualDouble(entrypoint(123), 123.0)
+        }
+        
+        try _rf64__u16(ops: [
+            .OToSFloat(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqualDouble(entrypoint(123), 123.0)
         }
     }
     

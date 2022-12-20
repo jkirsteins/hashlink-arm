@@ -3128,7 +3128,24 @@ class M1Compiler2 {
                 case (.f64, .i32):
                     mem.append(M1Op.fcvtzs(W.w0, D.d0))
                     appendStore(reg: W.w0, into: dst, kinds: regs, mem: mem)
-                // MARK: cast i32 to f64
+                // MARK: cast u8 to floating points
+                case (.u8, .f32):
+                    mem.append(M1Op.scvtf(S.s0, W.w0))
+                    appendStore(reg: S.s0, into: dst, kinds: regs, mem: mem)
+                case (.u8, .f64):
+                    mem.append(M1Op.scvtf(D.d0, W.w0))
+                    appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast u16 to floating points
+                case (.u16, .f32):
+                    mem.append(M1Op.scvtf(S.s0, W.w0))
+                    appendStore(reg: S.s0, into: dst, kinds: regs, mem: mem)
+                case (.u16, .f64):
+                    mem.append(M1Op.scvtf(D.d0, W.w0))
+                    appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast i32 to floating points
+                case (.i32, .f32):
+                    mem.append(M1Op.scvtf(S.s0, W.w0))
+                    appendStore(reg: S.s0, into: dst, kinds: regs, mem: mem)
                 case (.i32, .f64):
                     mem.append(M1Op.scvtf(D.d0, W.w0))
                     appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
