@@ -65,14 +65,16 @@ class TestJitModule : JitContext2 {
     var orderedTypes_slow: [AnyHLTypeProvider] {
         let res = Array(types)
             .sorted(by: { $0.kind.rawValue > $1.kind.rawValue })
+            .sorted(by: { a, _ in a.kind == .i64 ? true : false })
             .sorted(by: { a, _ in a.kind == .bool ? true : false })
             .sorted(by: { a, _ in a.kind == .i32 ? true : false })
             .sorted(by: { a, _ in a.kind == .void ? true : false })
             
-
+        // These are the type indexes you can rely on in tests
         assert(res[0].kind == .void)
         assert(res[1].kind == .i32)
         assert(res[2].kind == .bool)
+        assert(res[3].kind == .i64)
         return res
     }
     
@@ -110,6 +112,7 @@ class TestJitModule : JitContext2 {
             // guarantee their ordering for tests
             AnyHLTypeProvider(HLTypeKind.void as (any HLTypeProvider)),
             AnyHLTypeProvider(HLTypeKind.i32 as (any HLTypeProvider)),
+            AnyHLTypeProvider(HLTypeKind.i64 as (any HLTypeProvider)),
             AnyHLTypeProvider(HLTypeKind.bool as (any HLTypeProvider))])
         print("Serializing types", self.types.map({ $0._overrideDebugDescription }).joined(separator: "\n --"))
         

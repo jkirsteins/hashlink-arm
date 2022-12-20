@@ -1,3 +1,4 @@
+import hl.Type;
 import hl.Ref;
 import hl.F32;
 import hl.F64;
@@ -59,6 +60,10 @@ class VirtualTest {
 		this.f64 = f64;
 		this.f32 = f32;
 	}
+}
+
+class VirtualTestChild extends VirtualTest {
+
 }
 
 class _MethodTester {
@@ -426,10 +431,17 @@ class Main {
 		trace('testing testCallThis: ${testCallThis()}');
 
 		trace('testing testArrayBytes_Float: ${testArrayBytes_Float(1)}');
+
+		trace('testing testGetType: ${testGetType_nonDynamicSrc()}');
 	}
 
 	static public function testArrayBytes_Float(ix: Int): Float {
 		var ar: Array<Float> = [123.456, 234.567, 345.678];
 		return ar[ix];
+	}
+
+	// test OGetType when src register is not .dyn
+	static inline public function testGetType_nonDynamicSrc(): Int {
+		return hl.Type.Type.getDynamic("a") == hl.Type.Type.getDynamic(5) ? 1 : 2;
 	}
 }

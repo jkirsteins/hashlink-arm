@@ -1114,7 +1114,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ri32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32], floats: [Float64] = [], _ callback: @escaping (()->Int32)->()) throws {
+    func _ri32(ops: [HLOpCode], regs: [HLTypeKind] = [.i32], floats: [Float64] = [], ints: [Int32] = [], _ callback: @escaping (()->Int32)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -1122,7 +1122,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 regs: regs,
                 args: [],
                 ops: ops)
-        ], floats: floats)
+        ], ints: ints, floats: floats)
         
         try compileAndLink(ctx: ctx, 0) {
             mappedMem in

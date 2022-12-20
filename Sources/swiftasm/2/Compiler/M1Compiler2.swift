@@ -3243,7 +3243,7 @@ class M1Compiler2 {
             case .OGetType(let dst, let src):
                 let srcType = requireType(reg: src, regs: regs)
                 switch(srcType.kind) {
-                case .dyn:
+                case .dyn, .obj:
                     /* X.x0 <- first 8 bytes (which are hl_type address)
                      */
                     appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
