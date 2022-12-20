@@ -3124,8 +3124,15 @@ class M1Compiler2 {
                     fallthrough
                 case (.i64, .i32):
                     appendStore(0, into: dst, kinds: regs, mem: mem)
-                // MARK: cast f64 to i32
+                // MARK: cast f64 to integers
+                case (.f64, .i64):
+                    mem.append(M1Op.fcvtzs(X.x0, D.d0))
+                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
                 case (.f64, .i32):
+                    fallthrough
+                case (.f64, .u16):
+                    fallthrough
+                case (.f64, .u8):
                     mem.append(M1Op.fcvtzs(W.w0, D.d0))
                     appendStore(reg: W.w0, into: dst, kinds: regs, mem: mem)
                 // MARK: cast u8 to floating points

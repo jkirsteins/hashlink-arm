@@ -1190,6 +1190,63 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _ri64__f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64, .i64], _ callback: @escaping ((Float64)->Int64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f64, HLTypeKind.i64],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float64) -> Int64)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ru16__f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64, .u16], _ callback: @escaping ((Float64)->UInt16)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.u16,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f64, HLTypeKind.u16],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float64) -> UInt16)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _ru8__f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64, .u8], _ callback: @escaping ((Float64)->UInt8)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.u8,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f64, HLTypeKind.u8],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float64) -> UInt8)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _ru16__u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .u16], _ callback: @escaping ((UInt8)->UInt16)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -3698,6 +3755,45 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 entrypoint_64t32(0b10000000_10000000_10000000_10000000_10000000)
             )
         }
+        
+        
+        // f64 to integers
+        
+        try _ri64__f64(ops: [
+            .OToInt(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqual(entrypoint(123.0), 123)
+        }
+        
+        try _ri32__f64(ops: [
+            .OToInt(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqual(entrypoint(123.0), 123)
+        }
+        
+        try _ru16__f64(ops: [
+            .OToInt(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqual(entrypoint(123), 123)
+        }
+        
+        try _ru8__f64(ops: [
+            .OToInt(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqual(entrypoint(123), 123)
+        }
     }
     
     func testCompile__OMul() throws {
@@ -4151,6 +4247,8 @@ final class CompilerM1v2Tests: CCompatTestCase {
             
             XCTAssertEqualFloat(entrypoint(123), 123.0)
         }
+        
+        // integers to f64
         
         try _rf64__i32(ops: [
             .OToSFloat(dst: 1, src: 0),
