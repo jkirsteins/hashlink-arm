@@ -1847,14 +1847,8 @@ class M1Compiler2 {
                 let dstKind = requireTypeKind(reg: dst, from: regs)
                 
                 if dstKind.hlRegSize > 0 {
-                    if isFP(vreg: dst, kinds: regs) {
-                        appendDebugPrintAligned4("Returning FP stack offset \(dstStackOffset) (size \(dstKind.hlRegSize))", builder: mem)
-                        appendLoad(0, from: dst, kinds: regs, mem: mem)
-                    } else {
-                        appendDebugPrintAligned4("Returning I stack offset \(dstStackOffset)", builder: mem)
-                        appendLoad(reg: X.x0, from: dst, kinds: regs, mem: mem)
-                        appendDebugPrintRegisterAligned4(X.x0, prepend: "ORet", builder: mem)
-                    }
+                    appendLoad(0, from: dst, kinds: regs, mem: mem)
+                    appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "ORet", builder: mem)
                 }
 
                 // jmp to end (NOTE: DO NOT ADD ANYTHING BETWEEN .start() and mem.append()
@@ -1865,25 +1859,13 @@ class M1Compiler2 {
                 )
 
             case .OCall0(let dst, let funRef):
-                let fn = try ctx.requireCallable(findex: funRef)
-                
-                ctx.funcTracker.referenced2(fn)
-  
-                assert(
-                    reg: dst,
-                    from: regs,
-                    matches: fn.retProvider
-                )
-
-                let dstStackOffset = getRegStackOffset(regs, dst)
-                let dstKind = requireTypeKind(reg: dst, from: regs)
-
-                mem.append(
-                    PseudoOp.debugMarker("Call0 fn@\(funRef) -> \(dst)"),
-                    PseudoOp.mov(.x10, fn.address),
-                    M1Op.blr(.x10),
-                    PseudoOp.strVreg(X.x0, X.x15, dstStackOffset, dstKind.hlRegSize)
-                )
+                try __ocalln(
+                    dst: dst,
+                    funIndex: funRef,
+                    regs: regs,
+                    args: [],
+                    reservedStackBytes: stackInfo.total,
+                    mem: mem)
             case .OCall1(let dst, let fun, let arg0):
                 try __ocalln(
                     dst: dst,
@@ -2169,7 +2151,14 @@ class M1Compiler2 {
                 let dstType = requireTypeKind(reg: dst, from: regs)
                 mem.append(PseudoOp.mov(X.x0, f.bitPattern))
                 
-                appendStoreGPRightSize(0, into: dst, kinds: regs, mem: mem)
+                // store integer bitpattern, then load as double-precision
+                // then convert double to the expected register, and store-load again
+                mem.append(M1Op.fmov(D.d0, X.x0))
+                
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "OFloat result (1st pass)", builder: mem)
+                
+                appendStoreDoubleToFP(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(0, kind: dstType, prepend: "OFloat result", builder: mem)
             case .OInt(let dst, let iRef):
                 assert(reg: dst, from: regs, in: [HLTypeKind.i64, HLTypeKind.i32, HLTypeKind.u8, HLTypeKind.u16])
                 let c = try ctx.requireInt(iRef)

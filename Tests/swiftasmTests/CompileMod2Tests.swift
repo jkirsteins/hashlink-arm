@@ -1180,6 +1180,23 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    func testCompile__testReturnFloats_secondLevel() throws {
+        typealias _JitFunc =  (@convention(c) () -> (Float32))
+        
+        try _withPatchedEntrypoint(
+            strip: true,
+            name: "Main.testReturnFloats_secondLevel"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualFloat(entrypoint(), 101.0)
+            }
+        }
+    }
+    
     ///
     func testCompile__testStaticVirtual_globalVirtual_f64() throws {
         typealias _JitFunc =  (@convention(c) () -> (Float64))

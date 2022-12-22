@@ -508,7 +508,7 @@ enum M1Op : CpuOp {
     case movz32(Register32, UInt16, Register32.Shift?)
     case movz64(Register64, UInt16, Register64.Shift?)
     
-    case fmov(any RegisterFP, any RegisterFP)
+    case fmov(any Register, any Register)
     case fadd(any RegisterFP, any RegisterFP, any RegisterFP)
     
     case brk(Immediate16)

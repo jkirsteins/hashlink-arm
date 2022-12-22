@@ -7,6 +7,8 @@ protocol Register: Equatable, CustomDebugStringConvertible {
     
     var is64: Bool { get }
     var is32: Bool { get }
+    
+    var bits: Int { get }
 }
 
 protocol RegisterI: Register, Equatable, CustomDebugStringConvertible {
@@ -26,8 +28,6 @@ protocol RegisterFP: Register, Equatable, CustomDebugStringConvertible {
     var half: Bool { get }
     var single: Bool { get }
     var double: Bool { get }
-    
-    var bits: Int { get }
 }
 
 extension RegisterFP {
@@ -134,6 +134,8 @@ enum Register64: RegisterRawValue, RegisterI {
     typealias ExtendOp = ExtendOp64
 
     var is32: Bool { false }
+    
+    var bits: Int { 64 }
     
     var to32: Register32 {
         Register32(rawValue: rawValue)!
@@ -371,6 +373,8 @@ enum Register32: UInt8, RegisterI {
     var to32: Register32 {
         self
     }
+    
+    var bits: Int { 32 }
     
     var to64: Register64 {
         Register64(rawValue: self.rawValue)!
@@ -1878,13 +1882,53 @@ public class EmitterM1 {
             let regs = encodeRegs(Rd: target, Rn: source)
             let encoded = mask | ftype | opc | regs
             return returnAsArray(encoded)
-        case .fmov(let Rt, let Rn):
+        case .fmov(let Rt as any RegisterFP, let Rn as any RegisterFP):
             //                           ftype              Rn    Rd
             let mask: Int64 = 0b00011110_00____100000010000_00000_00000
             try assertMatchingSize(Rt, Rn)
             let ft = ftypeMask(Rt)
             let regs = encodeRegs(Rd: Rt, Rn: Rn)
             let encoded = mask | ft | regs
+            return returnAsArray(encoded)
+        case .fmov(let Rt, let Rn):
+            //                  sf         ftype   rmode opcode        Rn    Rd
+            let mask: Int64 = 0b0__0011110_00____1_00____110____000000_00000_00000
+            
+            let i_to_fp = Rt.fp != nil && Rn.i != nil
+            
+            let sf_unshifted: Int64
+            let ftype_unshifted: Int64
+            let rmode_unshifted: Int64
+            let opcode_unshifted: Int64
+            
+            let regs = encodeRegs(Rd: Rt, Rn: Rn)
+            
+            switch(Rt.bits, Rn.bits, i_to_fp) {
+            case (32, 16, false):
+                fatalError("Unsupported .fmov: half-precision to 32-bit (sf == 0 && ftype == 11 && rmode == 00 && opcode == 110)")
+            case (64, 16, false):
+                fatalError("Unsupported .fmov: half-precision to 64-bit (sf == 1 && ftype == 11 && rmode == 00 && opcode == 110)")
+            case (16, 32, true):
+                fatalError("Unsupported .fmov: 32-bit to half-precision (sf == 0 && ftype == 11 && rmode == 00 && opcode == 111)")
+            case (32, 32, true):
+                fatalError("Unsupported .fmov: single-precision to 32-bit (sf == 0 && ftype == 00 && rmode == 00 && opcode == 110)")
+            case (16, 64, true):
+                fatalError("Unsupported .fmov: 64-bit to half-precision (sf == 1 && ftype == 11 && rmode == 00 && opcode == 111)")
+            case (64, 64, true):
+                sf_unshifted = 1
+                ftype_unshifted = 0b01
+                rmode_unshifted = 0b00
+                opcode_unshifted = 0b111
+            case (64, 64, false):
+                sf_unshifted = 1
+                ftype_unshifted = 0b01
+                rmode_unshifted = 0b00
+                opcode_unshifted = 0b110
+            default:
+                fatalError("Unsupported .fmov \(Rt) <- \(Rn)")
+            }
+            
+            let encoded = mask | regs | sf_unshifted << 31 | ftype_unshifted << 22 | rmode_unshifted << 19 | opcode_unshifted << 16
             return returnAsArray(encoded)
         case .fsub(let Rt, let Rn, let Rm):
             //                           ftype   Rm           Rn    Rd

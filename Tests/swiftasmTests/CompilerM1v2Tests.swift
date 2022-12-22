@@ -4629,4 +4629,37 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 entrypoint(3147483649, -1147483648), 1)
         }
     }
+    
+    /// Regression test - returning floats from methods
+    func testCompile_returnFloat() throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 1,
+                regs: [HLTypeKind.f32],
+                args: [],
+                ops: [
+                    .OFloat(dst: 0, ptr: 0),
+                    .ORet(ret: 0)
+                ]),
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: [HLTypeKind.f32],
+                args: [],
+                ops: [
+                    .OCall0(dst: 0, fun: 1),
+                    .ORet(ret: 0)
+                ])
+        ], floats: [123.456])
+        
+        try compileAndLink(ctx: ctx, 0, 1, strip: false) {
+            mappedMem in
+            
+            let callable = try ctx.getCallable(findex: 0)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: (@convention(c) () -> (Float32)).self)
+            
+            XCTAssertEqualFloat(entrypoint(), 123.456)
+        }
+    }
 }
