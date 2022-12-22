@@ -3140,6 +3140,17 @@ class M1Compiler2 {
                 case (.f64, .u8):
                     mem.append(M1Op.fcvtzs(W.w0, D.d0))
                     appendStore(reg: W.w0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast f32 to integers
+                case (.f32, .i64):
+                    mem.append(M1Op.fcvtzs(X.x0, S.s0))
+                    appendStore(reg: X.x0, into: dst, kinds: regs, mem: mem)
+                case (.f32, .i32):
+                    fallthrough
+                case (.f32, .u16):
+                    fallthrough
+                case (.f32, .u8):
+                    mem.append(M1Op.fcvtzs(W.w0, S.s0))
+                    appendStore(reg: W.w0, into: dst, kinds: regs, mem: mem)
                 // MARK: cast u8 to floating points
                 case (.u8, .f32):
                     mem.append(M1Op.scvtf(S.s0, W.w0))
