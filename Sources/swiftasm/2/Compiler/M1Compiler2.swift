@@ -157,13 +157,27 @@ let OToDyn_impl: (@convention(c) (/*dstType*/UnsafeRawPointer, /*srcType*/Unsafe
     case .i32:
         let srcI32 = Int32(truncatingIfNeeded: src)
         mutatingRes.advanced(by: 8).bindMemory(to: Int32.self, capacity: 1).pointee = srcI32
-        mutatingRes.advanced(by: 8).bindMemory(to: Int32.self, capacity: 1).pointee = srcI32
         assert(res.pointee.i == srcI32)
+    case .u16:
+        let srcU16 = UInt16(bitPattern: Int16(truncatingIfNeeded: src))
+        mutatingRes.advanced(by: 8).bindMemory(to: UInt16.self, capacity: 1).pointee = srcU16
+        assert(res.pointee.ui16 == srcU16)
+    case .i64:
+        mutatingRes.advanced(by: 8).bindMemory(to: Int64.self, capacity: 1).pointee = src
+        assert(res.pointee.i64 == src)
     case .bool, .u8:
         let srcU8 = UInt8(truncatingIfNeeded: src)
         mutatingRes.advanced(by: 8).bindMemory(to: UInt8.self, capacity: 1).pointee = srcU8
         assert(res.pointee.b == (srcU8 > 0))
         assert(res.pointee.ui8 == srcU8)
+    case .f32:
+        let srcF32 = Float32(bitPattern: UInt32(bitPattern: Int32(truncatingIfNeeded: src)))
+        mutatingRes.advanced(by: 8).bindMemory(to: Float32.self, capacity: 1).pointee = srcF32
+        assert(res.pointee.f == srcF32)
+    case .f64:
+        let srcF64 = Float64(bitPattern: UInt64(bitPattern: src))
+        mutatingRes.advanced(by: 8).bindMemory(to: Float64.self, capacity: 1).pointee = srcF64
+        assert(res.pointee.d == srcF64)
     default:
         fatalError("Casting ToDyn from \(srcTypeB.pointee.kind) not implemented")
     }
