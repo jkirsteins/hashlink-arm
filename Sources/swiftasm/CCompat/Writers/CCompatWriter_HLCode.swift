@@ -126,7 +126,6 @@ class CCompatWriter_HLCode {
     }
     
     func initialize(target: UnsafeMutablePointer<HLCode_CCompat>) throws {
-        print(types)
         try typeWriter.initialize(target: types)
         try funWriter.initialize(target: functions)
         try nativesWriter.initialize(target: natives)

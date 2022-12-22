@@ -290,10 +290,6 @@ extension M1Compiler2 {
                 kinds: funProvider.argsProvider,
                 mem: mem)
 
-            print("argIx", argIx, "into", gpRegister)
-            print("arg", arg)
-            print("arg kind", arg.kind)
-            print("offset", offset)
             offset += arg.hlRegSize
         }
 
@@ -381,7 +377,6 @@ extension M1Compiler2 {
         let res: OpaquePointer = withUnsafeMutablePointer(to: &out.pointee.union) { res in
             return .init(res)
         }
-        print("Returning hlc_static_call: \(res) vs \(out)")
         return res
     }
     
@@ -1041,7 +1036,8 @@ extension M1Compiler2 {
             Swift.assert(reg.hlRegSize > 0, "empty registers have to be filtered out earlier to not affect register index")
             
             let isFpReg = FP_TYPE_KINDS.contains(reg.kind)
-            let needLoad = (isFpReg && fpIx >= ARG_REGISTER_COUNT) || (!isFpReg && gpIx >= ARG_REGISTER_COUNT)
+            let regIsArg = rix <= unfilteredArgs.count
+            let needLoad = (isFpReg && fpIx >= ARG_REGISTER_COUNT) || (!isFpReg && gpIx >= ARG_REGISTER_COUNT) && regIsArg
             
             let regToUse = needLoad ? (1) : (isFpReg ? fpIx : gpIx)
             defer {
@@ -1055,7 +1051,6 @@ extension M1Compiler2 {
             switch (needLoad, isFpReg, reg.hlRegSize) {
             case (false, _, _):
                 if (rix >= unfilteredArgs.count) {
-                    print("Zeroing index \(rix) because arg count is \(unfilteredArgs.count)")
                     let gpr = Register64(rawValue: regToUse)!
                     builder.append(
                         M1Op.movz64(gpr, 0, nil)
@@ -1089,7 +1084,7 @@ extension M1Compiler2 {
                 }
                 
                 appendLoad(regToUse, as: 0, addressRegister: .sp, offset: overflowOffset + stackArgOffset, kinds: [reg], mem: builder)
-                appendDebugPrintRegisterAligned4(regToUse, kind: reg.kind, prepend: "[appendStackInit] loaded stack argument \(reg.kind) from \(overflowOffset)", builder: builder)
+                appendDebugPrintRegisterAligned4(regToUse, kind: reg.kind, prepend: "[appendStackInit] loaded stack \(regIsArg ? "argument" : "register") \(reg.kind) from \(overflowOffset)", builder: builder)
                 
                 /*
                 NOTE: careful to get the alignment correct here.
@@ -1113,7 +1108,7 @@ extension M1Compiler2 {
                 */
             }
             
-            appendDebugPrintRegisterAligned4(regToUse, kind: reg.kind, prepend: "[appendStackInit] storing argument \(reg.kind) at \(offset)", builder: builder)
+            appendDebugPrintRegisterAligned4(regToUse, kind: reg.kind, prepend: "[appendStackInit] storing \(regIsArg ? "argument" : "register") \(reg.kind) at \(offset)", builder: builder)
             appendStore(regToUse, as: 0, intoAddressFrom: .sp, offsetFromAddress: offset, kinds: [reg], mem: builder)
             offset += reg.hlRegSize
         }
@@ -1957,20 +1952,6 @@ class M1Compiler2 {
                         M1Op.blr(X.x10)
                     )
                     
-                    // MARK: tmp
-                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
-                        dPtr in
-                        
-                        let x: vdynamicPointer = .init(dPtr)
-                        
-                        print("Got dynamic result", x.pointee.f)
-                        return dPtr
-                    }
-                    mem.append(
-                        PseudoOp.mov(X.x20, unsafeBitCast(_c, to: OpaquePointer.self))
-                        ,M1Op.blr(X.x20))
-                    // MARK: tmp
-                    
                     if( dstType.kind != .void ) {
                         // store result into dst (which is guaranteed HLTypeKind.dyn)
                         appendStore(0, into: dst, kinds: regs, mem: mem)
@@ -1988,8 +1969,13 @@ class M1Compiler2 {
                     var jmpTargetHasValue = RelativeDeferredOffset()
                     var jmpTargetFinish = RelativeDeferredOffset()
 
+                    // NOTE: important - load 4 bytes only (we'll check for 0, and the hasValue property
+                    // is Int32 - if you load more than 4 bytes, it can randomly make the check fail)
                     mem.append(
-                        M1Op.ldr(X.x0, .reg64offset(X.x10, hasValueOffset, nil)),
+                        M1Op.ldr(W.w0, .reg64offset(X.x10, hasValueOffset, nil))
+                        )
+                    appendDebugPrintRegisterAligned4(W.w0, prepend: "OCallClosure value check", builder: mem)
+                    mem.append(
                         M1Op.movz64(X.x1, 0, nil),
                         M1Op.cmp(X.x0, X.x1)
                     )
@@ -3560,26 +3546,6 @@ class M1Compiler2 {
                 appendDebugPrintAligned4("TODO: ODynGet should check for failed cast result", builder: mem)
                 
                 if (dstType != .f32 && dstType != .f64) {
-                    
-                    // MARK: tmp
-                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
-                        oPtr in
-                        
-                        let x: vdynamicPointer = .init(oPtr)
-                        print(x)
-                        
-                        print("i64", x.pointee.i64)
-                        print("float", x.pointee.f)
-                        print("double", x.pointee.d)
-                        
-                        return oPtr
-                    }
-                    mem.append(
-                        PseudoOp.mov(X.x15, unsafeBitCast(_c, to: OpaquePointer.self)),
-                        M1Op.blr(X.x15))
-                    // MARK: tmp
-                    
-                    
                     appendDebugPrintRegisterAligned4(X.x0, prepend: "ODynGet result (non float)", builder: mem)
                     appendStore(0, into: dst, kinds: regs, mem: mem)
                 } else {

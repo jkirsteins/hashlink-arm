@@ -17,8 +17,8 @@ extension M1Compiler2 {
             // offset from obj address
             let fieldOffset = requireFieldOffset(fieldRef: fieldRef, objIx: objReg, regs: regs)
             appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
-            mem.append(M1Op.ldr(X.x1, .reg64offset(.x0, fieldOffset, nil)))
-            appendStore(1, into: dstReg, kinds: regs, mem: mem)
+            mem.append(M1Op.ldr(X.x0, .reg64offset(.x0, fieldOffset, nil)))
+            appendStore(0, into: dstReg, kinds: regs, mem: mem)
         case .virtual:
             let dstType = requireTypeKind(reg: dstReg, from: regs)
             let getFunc = get_dynget(to: dstType.kind)
@@ -116,6 +116,9 @@ extension M1Compiler2 {
         default:
             fatalError("OField not implemented for \(objRegKind)")
         }
+        
+        let dstKind = requireTypeKind(reg: dstReg, from: regs)
+        appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "OGetThis/OField result", builder: mem)
     }
     
     /// Reusable implem for OSetThis and OSetField

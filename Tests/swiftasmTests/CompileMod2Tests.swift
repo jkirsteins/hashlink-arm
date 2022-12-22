@@ -67,7 +67,6 @@ final class CompileMod2Tests: RealHLTestCase {
                 fallthrough
             case .OCall0(_, let depFun):
                 var realIgnore = ignore.union(Set(result))
-                print("\(fix) calls \(depFun)")
                 result = result.union(try extractDeps(fix: depFun, ignore: realIgnore))
             default:
                 break
@@ -154,7 +153,6 @@ final class CompileMod2Tests: RealHLTestCase {
             let mid = bindingBase.advanced(by: 1).pointee
             
             let objField = LibHl.hl_obj_field_fetch(mainGlobalType, fid)
-            print("Field", objField.pointee.nameProvider.stringValue)
             guard objField.pointee.nameProvider.stringValue == name else {
                 continue
             }
@@ -224,8 +222,9 @@ final class CompileMod2Tests: RealHLTestCase {
     func _compileDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), fix: RefFun, depHints: [RefFun] = []) throws -> (RefFun, CpuOpBuffer) {
         
         let compiler = try sut(strip: strip)
-        let deps = try extractDeps(fix: fix, depHints: depHints)
+        let deps = Array(try extractDeps(fix: fix, depHints: depHints)).sorted()
         
+        Self.logger.debug("Compile order: \(deps)")
         
         for depFix in deps {
             do {
@@ -814,7 +813,7 @@ final class CompileMod2Tests: RealHLTestCase {
         }
         
         try _withPatchedEntrypoint(
-            strip: true,
+            strip: false,
             name: "Main.testTrace",
             depHints: [
                 // these dependencies need to be manually determined

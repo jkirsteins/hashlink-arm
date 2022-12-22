@@ -406,8 +406,6 @@ extension HLOpCode {
             
             return .OCallMethod(dst: dst, obj: obj, proto: proto, args: args)
         case .OCallThis:
-            print(cop.p1, cop.p2, cop.p3)
-            
             let c = cop.p3
             let args: [Reg]
             if let extra = cop.extra {
