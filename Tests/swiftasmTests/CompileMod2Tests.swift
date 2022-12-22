@@ -699,7 +699,7 @@ final class CompileMod2Tests: RealHLTestCase {
             name: "Main.testTrapDifferentTypes",
             
             // can't reliably detect the OCallMethod dependencies
-            depHints: [378]
+            depHints: [382]
         ) {
             sutFix, mem in
             
@@ -820,7 +820,7 @@ final class CompileMod2Tests: RealHLTestCase {
                 12, 235,
                 
                 // these will be mentioned by the BufferMapper
-                234, 363, 46
+                367, 234, 46
             ]
         ) {
             sutFix, mem in
