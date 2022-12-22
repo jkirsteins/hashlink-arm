@@ -1053,7 +1053,7 @@ extension M1Compiler2 {
             let regIsArg = rix <= unfilteredArgs.count
             let needLoad = (isFpReg && fpIx >= ARG_REGISTER_COUNT) || (!isFpReg && gpIx >= ARG_REGISTER_COUNT) && regIsArg
             
-            let regToUse = needLoad ? (1) : (isFpReg ? fpIx : gpIx)
+            let regToUse = (!regIsArg || needLoad) ? (1) : (isFpReg ? fpIx : gpIx)
             defer {
                 if isFpReg {
                     fpIx+=1
