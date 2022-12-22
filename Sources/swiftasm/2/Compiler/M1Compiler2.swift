@@ -2243,40 +2243,50 @@ class M1Compiler2 {
                 mem.append(M1Op.cmp(X.x0, X.x1))
 
                 
-                // calculate what to skip
-                let jumpOffset_partA = try Immediate21(mem.byteSize)
-                let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
-                let jumpOffset = try DeferredImmediateSum(
-                    jumpOffset_partB,
-                    jumpOffset_partA,
-                    -1,
-                    -Int(0))
-                //
-
-
+                // prepare jump trampoline
+                var toTrampolineEnd = RelativeDeferredOffset()
+                toTrampolineEnd.start(at: mem.byteSize)
+                mem.append(
+                    M1Op.b(toTrampolineEnd),
+                    PseudoOp.deferred(16) {
+                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
+                    }
+                )
+                appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
+                mem.append(
+                    M1Op.br(X.x20)
+                )
+                
+                
+                toTrampolineEnd.stop(at: mem.byteSize)
+                let toTrampolineStart = toTrampolineEnd.value.flippedSign + 4
+                Swift.assert(toTrampolineStart.value < 0)   // 0 == loop, and positive => unexpected
+                // trampoline end
+                
+                
                 mem.append(
                     PseudoOp.deferred(4) {
                         switch(op.id) {
                         case .OJSGt:
-                            return M1Op.b_gt(try Immediate21(jumpOffset.immediate))
+                            return M1Op.b_gt(try Immediate21(toTrampolineStart.value))
                         case .OJSLt:
                             fallthrough
                         case .OJULt:
                             fallthrough
                         case .OJNotGte:
-                            return M1Op.b_lt(try Immediate21(jumpOffset.immediate))
+                            return M1Op.b_lt(try Immediate21(toTrampolineStart.value))
                         case .OJSLte:
-                            return M1Op.b_le(try Immediate21(jumpOffset.immediate))
+                            return M1Op.b_le(try Immediate21(toTrampolineStart.value))
                         case .OJSGte:
                             fallthrough
                         case .OJUGte:
                             fallthrough
                         case .OJNotLt:
-                            return M1Op.b_ge(try Immediate21(jumpOffset.immediate))
+                            return M1Op.b_ge(try Immediate21(toTrampolineStart.value))
                         case .OJEq:
-                            return M1Op.b_eq(try Immediate21(jumpOffset.immediate))
+                            return M1Op.b_eq(try Immediate21(toTrampolineStart.value))
                         case .OJNotEq:
-                            return M1Op.b_ne(try Immediate21(jumpOffset.immediate))
+                            return M1Op.b_ne(try Immediate21(toTrampolineStart.value))
                         default:
                             fatalError("Unsupported jump id \(op.id)")
                         }
@@ -2312,15 +2322,25 @@ class M1Compiler2 {
 
                 mem.append(M1Op.cmp(X.x0, X.x1))
 
-                // calculate what to skip
-                let jumpOffset_partA = try Immediate21(mem.byteSize)
-                let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
-                let jumpOffset = try DeferredImmediateSum(
-                    jumpOffset_partB,
-                    jumpOffset_partA,
-                    -1,
-                    -Int(0))
-                //
+                // prepare jump trampoline
+                var toTrampolineEnd = RelativeDeferredOffset()
+                toTrampolineEnd.start(at: mem.byteSize)
+                mem.append(
+                    M1Op.b(toTrampolineEnd),
+                    PseudoOp.deferred(16) {
+                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
+                    }
+                )
+                appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
+                mem.append(
+                    M1Op.br(X.x20)
+                )
+                
+                
+                toTrampolineEnd.stop(at: mem.byteSize)
+                let toTrampolineStart = toTrampolineEnd.value.flippedSign + 4
+                Swift.assert(toTrampolineStart.value < 0)   // 0 == loop, and positive => unexpected
+                // trampoline end
 
 
                 mem.append(
@@ -2329,11 +2349,11 @@ class M1Compiler2 {
                         case .OJFalse:
                             fallthrough
                         case .OJNull:
-                            return M1Op.b_eq(try Immediate21(jumpOffset.immediate))
+                            return M1Op.b_eq(try Immediate21(toTrampolineStart.value))
                         case .OJTrue:
                             fallthrough
                         case .OJNotNull:
-                            return M1Op.b_ne(try Immediate21(jumpOffset.immediate))
+                            return M1Op.b_ne(try Immediate21(toTrampolineStart.value))
                         default:
                             fatalError("Unsupported jump id \(op.id)")
                         }
@@ -2348,21 +2368,12 @@ class M1Compiler2 {
                     fatalError("Jump going to an invalid op (\(targetInstructionIx))")
                 }
 
-                // calculate what to skip
-                let jumpOffset_partA = try Immediate21(mem.byteSize)
-                let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
-                let jumpOffset = try DeferredImmediateSum(
-                    jumpOffset_partB,
-                    jumpOffset_partA,
-                    -1,
-                    -Int(0))
-                //
-
-
                 mem.append(
-                    PseudoOp.deferred(4) {
-                        return M1Op.b(jumpOffset.immediate)
-                    })
+                    PseudoOp.deferred(16) {
+                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
+                    },
+                    M1Op.br(X.x20)
+                )
             case .OGetGlobal(let dst, let globalRef):
                 let globalInstanceAddress = try ctx.requireGlobalData(globalRef)
                 assert(reg: dst, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct, HLTypeKind.abstract, HLTypeKind.enum])
@@ -2694,17 +2705,11 @@ class M1Compiler2 {
                 appendDebugPrintAligned4("Jumping from \(currentInstruction) to \(targetInstructionIx)", builder: mem)
                 appendDebugPrintAligned4("Preparing jump (words to skip \(wordsToSkip))...", builder: mem)
                 
-                let jumpOffset_partA = try Immediate21(mem.byteSize)
-                let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
-                let jumpOffset = try DeferredImmediateSum(
-                    jumpOffset_partB,
-                    jumpOffset_partA,
-                    -1,
-                    -Int(0))
                 mem.append(
-                    PseudoOp.deferred(4) {
-                        M1Op.b_v2(try Immediate26(jumpOffset.immediate))
-                    }
+                    PseudoOp.deferred(16) {
+                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
+                    },
+                    M1Op.br(X.x20)
                 )
                 
                 // marker for other branch after setjmp()
