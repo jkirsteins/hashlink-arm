@@ -147,6 +147,8 @@ extension M1Compiler2 {
                 reservedStackBytes: reservedStackBytes,
                 mem: mem)
         case .virtual:
+            // ASM for --> if( hl_vfields(o)[f] ) dst = *hl_vfields(o)[f](o->value,args...); else dst = hl_dyn_call_obj(o->value,field,args,&ret)
+                            
             fatalError("Not implemented")
         default:
             print("Target", objType.kind)

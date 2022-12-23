@@ -65,6 +65,8 @@ final class CompileMod2Tests: RealHLTestCase {
                 fallthrough
             case .OCallN(_, let depFun, _):
                 fallthrough
+            case .OStaticClosure(_, let depFun):
+                fallthrough
             case .OCall0(_, let depFun):
                 var realIgnore = ignore.union(Set(result))
                 result = result.union(try extractDeps(fix: depFun, ignore: realIgnore))
@@ -1359,6 +1361,29 @@ final class CompileMod2Tests: RealHLTestCase {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqual(entrypoint(), 2)
+            }
+        }
+    }
+    
+    func testCompile_testVirtualCallMethod() throws {
+        typealias _JitFunc =  (@convention(c) () -> Float64)
+        
+        let fix = try _findFindex_fieldNameUnset(className: "Main", name: "testVirtualCallMethod_inner", isStatic: true)!
+        ctx.patch(findex: fix, ops: [
+            .OCallMethod(dst: 2, obj: 1, proto: 0, args: [0]),
+            .ORet(ret: 2)
+        ])
+        
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testVirtualCallMethod"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualDouble(entrypoint(), 15241.38)
             }
         }
     }
