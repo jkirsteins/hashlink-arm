@@ -170,6 +170,7 @@ extension M1Compiler2 {
             appendLoad(reg: X.x1, from: objReg, kinds: regs, mem: mem)
             mem.append(M1Op.str(X.x0, .reg64offset(.x1, fieldOffset, nil)))
         case .virtual:
+            // TODO: deduplicate across ocallmethod
             /*
              typedef struct _vvirtual vvirtual;
              struct _vvirtual {
@@ -246,8 +247,8 @@ extension M1Compiler2 {
             // marker for other branch
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)
             
-            appendDebugPrintAligned4("osetfield/virtual HAS NO ADDRESS", builder: mem)
-            appendSystemExit(11, builder: mem)
+            appendDebugPrintAligned4("osetfield/virtual HAS NO ADDRESS - not implemented", builder: mem)
+            appendSystemExit(1, builder: mem)
             
             jmpTarget_postCheck.stop(at: mem.byteSize)
             appendDebugPrintAligned4("osetfield/virtual EXITING", builder: mem)

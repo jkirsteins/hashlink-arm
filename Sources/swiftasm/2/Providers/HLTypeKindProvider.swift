@@ -5,6 +5,18 @@ protocol HLTypeKindProvider : OverrideCustomDebugStringConvertible, Equatable, H
     var hlRegSize: ByteCount { get }
 }
 
+extension HLTypeKind {
+    var isPointer: Bool {
+        switch(self) {
+        case .i64, .i32, .u16, .u8: return false
+        case .f64, .f32: return false
+        case .bool: return false
+        case .void: return false
+        default: return true
+        }
+    }
+}
+
 extension HLTypeKindProvider {
     var debugDescription: String {
         self.kind.debugDescription

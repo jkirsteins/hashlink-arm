@@ -241,159 +241,6 @@ extension M1Compiler2 {
         return FP_TYPE_KINDS.contains( (kinds[Int(vreg)] as (any HLTypeKindProvider)).kind )
     }
     
-    /// Result:
-    ///     - Should return whatever the callee closure returns (if anything)
-    ///
-    /// C signature:
-    ///
-    ///     void *hlc_static_call( void *fun, hl_type *t, void **args, vdynamic *out ) {
-    static let hlc_static_call: (@convention(c) (_ fun: OpaquePointer, _ t: OpaquePointer, _ args: OpaquePointer, _ out: OpaquePointer)->(OpaquePointer?)) = {
-        funPtr, tPtr, argPtr, outPtr in
-        
-        let t: hlTypePointer = .init(tPtr)
-        let out: UnsafeMutablePointer<vdynamic> = .init(outPtr)
-
-        guard let funProvider = t.funProvider else {
-            fatal("hlc_static_call fails, invalid type passed", logger)
-        }
-
-        /* we'll JIT the call
-         *
-         * x20 will hold the arg offset
-         * x21 will hold the target func offset
-         */
-        let mem = CpuOpBuffer()
-        
-        // no-stack-prologue
-        mem.append(
-            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(16)),
-            M1Op.stp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 0, nil))
-        )
-        
-        // set x20/x21
-        mem.append(
-            PseudoOp.mov(X.x20, argPtr),
-            
-            // test
-            M1Op.ldr(X.x20, .reg(X.x20, .imm(0, nil))),
-            
-            PseudoOp.mov(X.x21, funPtr)
-        )
-
-        var offset: ByteCount = 0
-        var gpRegisterIx: Int = 0
-        var fpRegisterIx: Int = 0
-        for (argIx, arg) in funProvider.argsProvider.enumerated() {
-            guard !isFP(vreg: Reg(argIx), kinds: funProvider.argsProvider) else {
-                fatal("floating point arguments not implemented", logger)
-            }
-
-            // only general purpose registers from here on
-            guard gpRegisterIx < ARG_REGISTER_COUNT else {
-                fatal("hlc_static_call does not support more than \(ARG_REGISTER_COUNT) arguments", logger)
-            }
-            defer { gpRegisterIx += 1 }
-
-            let gpRegister = Register64(rawValue: UInt8(gpRegisterIx))!
-
-            M1Compiler2.appendLoad(
-                reg: gpRegister,
-                as: Reg(argIx),
-                fromAddressFrom: X.x20,
-                offsetFromAddress: offset,
-                kinds: funProvider.argsProvider,
-                mem: mem)
-
-            offset += arg.hlRegSize
-        }
-
-        mem.append(
-            M1Op.blr(X.x21)
-        )
-        
-        // no-stack-epilogue
-        mem.append(
-            M1Op.ldp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 0, nil)),
-            M1Op.addImm12(X.sp, X.sp, Imm12Lsl12(16)),
-            M1Op.ret
-        )
-
-        // JIT
-        let emittedBytes = try! mem.ops.flatMap { try $0.emit() }
-
-        let execMem = mmap(
-            nil,
-            Int(mem.byteSize),
-            PROT_WRITE | PROT_EXEC,
-            MAP_ANONYMOUS | MAP_PRIVATE | MAP_JIT,
-            -1,
-            0
-        )
-
-        guard let execMem = execMem else {
-            fatal("mmap returned nil: \(errno)", logger)
-        }
-
-        if execMem == MAP_FAILED {
-            fatal("mmap failed: \(errno)", logger)
-        }
-
-        Swift.assert(mem.byteSize == Int64(emittedBytes.count))
-
-        pthread_jit_write_protect_np(0)
-        memcpy(execMem, emittedBytes, emittedBytes.count)
-        pthread_jit_write_protect_np(1)
-        // End JIT
-
-        switch(funProvider.retProvider.kind) {
-        case .void:
-            return nil
-        case .f32:
-            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Float32).self)
-            let result = _jitFunc()
-            
-            vdynamic.set(f: result, in: out)
-            Swift.assert(out.pointee.f == result)
-        case .f64:
-            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Float64).self)
-            let result = _jitFunc()
-            
-            vdynamic.set(d: result, in: out)
-            Swift.assert(out.pointee.d == result)
-        case .u8:
-            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->UInt8).self)
-            let result = _jitFunc()
-            
-            vdynamic.set(ui8: result, in: out)
-            Swift.assert(out.pointee.ui8 == result)
-        case .u16:
-            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->UInt16).self)
-            let result = _jitFunc()
-            
-            vdynamic.set(ui16: result, in: out)
-            Swift.assert(out.pointee.ui16 == result)
-        case .i32:
-            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Int32).self)
-            let result = _jitFunc()
-            
-            vdynamic.set(i: result, in: out)
-            Swift.assert(out.pointee.i == result)
-        case .i64:
-            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Int64).self)
-            let result = _jitFunc()
-            
-            vdynamic.set(i64: result, in: out)
-            Swift.assert(out.pointee.i == result)
-        default:
-            fatal("hlc_static_call does not support return type \(funProvider.retProvider.kind)", logger)
-        }
-        
-        let res: OpaquePointer = withUnsafeMutablePointer(to: &out.pointee.union) { res in
-            return .init(res)
-        }
-        return res
-    }
-    
     func appendPrepareDoubleForStore(reg: RegisterFP64, to vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         switch(vregKind.hlRegSize) {
@@ -1312,6 +1159,80 @@ extension M1Compiler2 {
         }
     }
     
+    func appendFuncCall(
+        _ function: OpaquePointer,
+        via addrReg: Register64,
+        mem: CpuOpBuffer)
+    {
+        
+        mem.append(
+            PseudoOp.mov(addrReg, function),
+            M1Op.blr(addrReg)
+        )
+    }
+    
+    class _DeallocateBufferPointerCtx {
+        let dealloc: ()->()
+        
+        init<T>(v: UnsafeMutableBufferPointer<T>) {
+            self.dealloc = v.deallocate
+        }
+    }
+    
+    func appendDeallocateBufferPointer<T>(
+        _ ptr: UnsafeMutableBufferPointer<T>,
+        via addrReg: Register64 = X.x20,
+        mem: CpuOpBuffer)
+    {
+        let _c: (@convention(c) (UnsafeRawPointer)->()) = {
+            opPtr in
+            let ctx: _DeallocateBufferPointerCtx = Unmanaged.fromOpaque(opPtr).takeRetainedValue()
+            ctx.dealloc()
+        }
+        let context = _DeallocateBufferPointerCtx(v: ptr)
+        let opaque = Unmanaged.passRetained(context).toOpaque()
+        mem.append(PseudoOp.mov(X.x0, opaque))
+        appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: addrReg, mem: mem)
+    }
+    
+    func appendFatalError(
+        _ msg: String,
+        mem: CpuOpBuffer,
+        file: String = #file,
+        line: Int = #line
+    ) {
+        class StringWrapper {
+            let s: String
+            
+            init(s: String) {
+                self.s = s
+            }
+        }
+        
+        let _errorExit: (@convention(c) (UnsafeRawPointer, UnsafeRawPointer, Int)->()) = {
+            msgWrapper, fileWrapper, lineVal in
+            
+            let msgUnwrapped: StringWrapper = Unmanaged.fromOpaque(msgWrapper).takeRetainedValue()
+            let fileUnwrapped: StringWrapper = Unmanaged.fromOpaque(fileWrapper).takeRetainedValue()
+            
+            LibHl.hl_fatal_error(
+                msgUnwrapped.s,
+                fileUnwrapped.s,
+                lineVal)
+        }
+        
+        let msgWrapper = Unmanaged.passRetained(StringWrapper(s: msg)).toOpaque()
+        let fileWrapper = Unmanaged.passRetained(StringWrapper(s: file)).toOpaque()
+        
+        mem.append(
+            PseudoOp.mov(X.x0, msgWrapper),
+            PseudoOp.mov(X.x1, fileWrapper),
+            PseudoOp.mov(X.x2, line),
+            PseudoOp.mov(X.x20, unsafeBitCast(_errorExit, to: OpaquePointer.self)),
+            M1Op.blr(X.x20)
+        )
+    }
+    
     func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer) {
         var adr = RelativeDeferredOffset()
         var jmpTarget = RelativeDeferredOffset()
@@ -1956,6 +1877,9 @@ class M1Compiler2 {
                                  has this */
                         make_dyn_cast(dst, dst, regs, mem)
                     }
+                    
+                    // as last (after we've stored the results)
+                    appendDeallocateBufferPointer(dynArgs, mem: mem)
                 } else {
                     // ASM for  if( c->hasValue ) c->fun(value,args) else c->fun(args)
                     

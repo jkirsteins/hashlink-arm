@@ -35,7 +35,7 @@ class CCompatWriter_HLType {
             self.objPtr = nil
             self.objWriter = nil
             self.union = nil    // we can only set this in initialize() because the dependent tparam type might not be serialized yet
-        case .fun:
+        case .fun, .method:
             guard let funData = type.funProvider else {
                 fatalError("Invalid")
             }
@@ -71,7 +71,7 @@ class CCompatWriter_HLType {
         case .ref:
             print("Nothing to deinit for .ref")
             break
-        case .fun:
+        case .fun, .method:
             guard let funPtr = funPtr else { fatalError("Expected funPtr to be allocated") }
             funPtr.deinitialize(count: 1)
             funPtr.deallocate()

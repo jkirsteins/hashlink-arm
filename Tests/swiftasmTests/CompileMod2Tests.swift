@@ -1368,22 +1368,22 @@ final class CompileMod2Tests: RealHLTestCase {
     func testCompile_testVirtualCallMethod() throws {
         typealias _JitFunc =  (@convention(c) () -> Float64)
         
-        let fix = try _findFindex_fieldNameUnset(className: "Main", name: "testVirtualCallMethod_inner", isStatic: true)!
-        ctx.patch(findex: fix, ops: [
-            .OCallMethod(dst: 2, obj: 1, proto: 0, args: [0]),
-            .ORet(ret: 2)
-        ])
+        let iteratorFunc = try _findFindex_fieldNameUnset(className: "hl.types.ArrayBytes_Int", name: "iterator", isStatic: false)!
+        
+        let depsOfIterator = Array(try extractDeps(fix: iteratorFunc))
         
         try _compileAndLinkWithDeps(
-            strip: true,
-            name: "Main.testVirtualCallMethod"
+//        try _withPatchedEntrypoint(
+            strip: false,
+            name: "Main.testVirtualCallMethod",
+            depHints: [iteratorFunc] + depsOfIterator
         ) {
             sutFix, mem in
-            
+            print(sutFix)
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
-                XCTAssertEqualDouble(entrypoint(), 15241.38)
+                XCTAssertEqualDouble(entrypoint(), 21)
             }
         }
     }

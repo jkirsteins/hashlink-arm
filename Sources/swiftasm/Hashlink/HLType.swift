@@ -46,7 +46,9 @@ struct HLTypeVirtualData: Equatable, CustomDebugStringConvertible, Hashable {
     }
 }
 
-protocol HLRegisterSizeProvider: Equatable, Hashable { var hlRegSize: ByteCount { get } }
+protocol HLRegisterSizeProvider: Equatable, Hashable {
+    var hlRegSize: ByteCount { get }
+}
 
 
 /*
@@ -208,7 +210,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
     
     var funData: HLTypeFun_Depr? {
         switch(self) {
-        case .fun(let data): return data
+        case .fun(let data), .method(let data): return data
         default: return nil
         }
     }
@@ -271,7 +273,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
         switch self {
         case .obj(let data): return data.debugDescription
         case .virtual(let data): return data.debugDescription
-        case .fun(let data): return data.debugDescription
+        case .fun(let data), .method(let data): return data.debugDescription
         default: return self.debugName
         }
     }
@@ -294,6 +296,7 @@ enum HLType: Equatable, Hashable, CustomDebugStringConvertible {
         case .bytes: return .bytes
         case .dyn: return .dyn
         case .fun: return .fun(try readFunData(from: reader, types: types))
+        case .method: return .fun(try readFunData(from: reader, types: types))
         case .obj:
             return .obj(try readObjData(from: reader, strings: strings, types: types))
         case .array: return .array

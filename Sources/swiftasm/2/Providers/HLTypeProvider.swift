@@ -17,7 +17,7 @@ extension HLTypeProvider {
         switch(self.kind) {
         case .i32, .u8, .u16, .i64, .bool, .void, .dyn, .bytes, .type, .f64, .f32:
             break
-        case .fun:
+        case .fun, .method:
             guard let lhs = self.funProvider, let rhs = other.funProvider else {
                 fatalError("fun type must have funProvider set")
             }

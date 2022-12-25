@@ -4,7 +4,7 @@ extension UnsafePointer<HLType_CCompat> : HLTypeProvider, HLTypeKindProvider {
     var hlRegSize: ByteCount { kind.hlRegSize }
     var funProvider: (any HLTypeFunProvider)? {
         switch(self.kind) {
-        case .fun:
+        case .fun, .method:
             return self.pointee.fun
         default:
             return nil

@@ -437,14 +437,15 @@ class Main {
 		trace('testing testVirtualCallMethod: ${testVirtualCallMethod()}');
 	}
 
-	static public function testVirtualCallMethod(): F64 {
-		return testVirtualCallMethod_inner(123.456, {getNumber: (a) -> a * a});
+	public static function testVirtualCallMethod(): Int {
+		return testVirtualCallMethod_inner([1,2,3,4,5,6]);
 	}
 
-	static public function testVirtualCallMethod_inner(b: F32, a: { getNumber: (F32)->F64 }): F64 {
-		// Note: might need to be patched in a text, to use OCallMethod on the virtual,
-		// and not create a closure from the field ahead of time.
-		return a.getNumber(b);
+	public static function testVirtualCallMethod_inner(it:Iterable<Int>): Int {
+		var result = 0;
+		for (i in it)
+			result += i;
+		return result;
 	}
 
 	static public function testArrayBytes_Float(ix: Int): Float {

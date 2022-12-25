@@ -40,14 +40,14 @@ struct HLNative_CCompat__Resolved : NativeCallable {
 extension HLType {
     var _fun_ret: Resolvable<HLType> {
         switch(self) {
-        case .fun(let funData): return funData.ret
+        case .fun(let funData), .method(let funData): return funData.ret
         default: fatalError("_fun_ret only defined for .fun (got \(self))")
         }
     }
     
     var _fun_args: [Resolvable<HLType>] {
         switch(self) {
-        case .fun(let funData): return funData.args
+        case .fun(let funData), .method(let funData): return funData.args
         default: fatalError("_fun_args only defined for .fun (got \(self))")
         }
     }
@@ -95,7 +95,10 @@ extension HLCompiledFunction : Compilable {
     
     func getRet() -> HLType {
         guard case .fun(let funData) = self.function.type.value else {
-            fatalError("invalid type \(self.function.type)")
+            guard case .method(let funData) = self.function.type.value else {
+                fatalError("invalid type \(self.function.type)")
+            }
+            return funData.ret.value
         }
         return funData.ret.value
     }

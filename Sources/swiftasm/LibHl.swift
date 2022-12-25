@@ -404,4 +404,48 @@ struct LibHl {
     
     // HL_PRIM void hl_setup_callbacks( void *c, void *w ) {
     static let _hl_setup_callbacks: (@convention(c) (OpaquePointer, OpaquePointer)->()) = { load("hl_setup_callbacks") }()
+    
+    // HL_API void *hl_fatal_error( const char *msg, const char *file, int line );
+    static let _hl_fatal_error: (@convention(c) (OpaquePointer, OpaquePointer, Int32)->()) = { load("hl_fatal_error") }()
+    
+    static func hl_fatal_error(
+        _ msg: String,
+        _ file: String = #file,
+        _ line: Int = #line
+    ) -> Never {
+        msg.withCString {
+            msgPtr in
+            file.withCString {
+                filePtr in
+                
+                _hl_fatal_error(
+                    .init(msgPtr),
+                    .init(filePtr),
+                    Int32(line))
+            }
+        }
+        
+        fatalError()
+    }
+    
+    // HL_PRIM void *hl_dyn_call_obj( vdynamic *o, hl_type *ft, int hfield, void **args, vdynamic *ret )
+    static let _hl_dyn_call_obj: (@convention(c) (OpaquePointer, OpaquePointer, Int32, OpaquePointer, OpaquePointer)->(OpaquePointer)) = { load("hl_dyn_call_obj") }()
+    static func hl_dyn_call_obj(
+        _ o: vdynamicPointer,
+        _ ft: hlTypePointer,
+        _ hfield: Int32,
+        _ args: OpaquePointer,
+        _ ret: vdynamicPointer
+    ) -> (OpaquePointer) {
+        _hl_dyn_call_obj(
+            .init(o),
+            .init(ft),
+            hfield,
+            args,
+            .init(ret))
+    }
+    
+    // HL_PRIM void *hl_wrapper_call( void *_c, void **args, vdynamic *ret )
+    static let _hl_wrapper_call: (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer)->(OpaquePointer)) = { load("hl_wrapper_call") }()
+    
 }

@@ -11,7 +11,7 @@ extension HLTypeKind : HLTypeProvider {
     
     public var funProvider: (any HLTypeFunProvider)? {
         switch(self) {
-        case .fun:
+        case .fun, .method:
             fatalError("HLTypeKind can not be used as a function type")
         default:
             return nil

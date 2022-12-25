@@ -1,16 +1,7 @@
-// Global so it can be accessed from @convention(c)
-fileprivate let bootstrapLogger = LoggerFactory.create(Bootstrap.self)
-
 actor Bootstrap
 {
     private(set) static var _file: ContiguousArray<CChar> = []
     private(set) static var canStart = true
-    
-    // void *hlc_get_wrapper( hl_type *t )
-    static let hlc_get_wrapper: (@convention(c) (_ fun: OpaquePointer)->(OpaquePointer)) = {
-        _ in
-        fatal("hlc_get_wrapper not implemented", bootstrapLogger)
-    }
     
     static func start2(_ file: String, args: [String]) throws -> CCompatJitContext {
         guard canStart else {
@@ -22,7 +13,7 @@ actor Bootstrap
         LibHl.hl_sys_init(args: args, file: file)
         
         let hsc = unsafeBitCast(M1Compiler2.hlc_static_call, to: OpaquePointer.self)
-        let hgw = unsafeBitCast(hlc_get_wrapper, to: OpaquePointer.self)
+        let hgw = unsafeBitCast(M1Compiler2.hlc_get_wrapper, to: OpaquePointer.self)
         LibHl._hl_setup_callbacks(hsc, hgw)
         
         let ctx = try CCompatJitContext(file)
