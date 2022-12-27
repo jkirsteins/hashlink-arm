@@ -36,12 +36,14 @@ extension M1Compiler2 {
         mem.append(M1Op.movr64(X.x21, X.x0))
         
         appendDebugPrintAligned4("[hlc_get_wrapper] entered...", builder: mem)
+        appendDebugPrintRegisterAligned4(X.x0, prepend: "[hlc_get_wrapper] value...", builder: mem)
         
         var gpIX: RegisterRawValue = 1  // X.x0 is how we received *value
         var fpIX: RegisterRawValue = 0
+        print("[hlc_get_wrapper] \(t._overrideDebugDescription)")
         for (argIx, argType) in funProvider.argsProvider.enumerated() {
             let argKind = argType.kind
-            
+            fatalError("Not implemented/tested")
             guard fpIX < ARG_REGISTER_COUNT && gpIX < ARG_REGISTER_COUNT else {
                 fatal("hlc_get_wrapper does not support more than \(ARG_REGISTER_COUNT) arguments (i.e. stack args)", logger)
             }

@@ -60,13 +60,19 @@ extension M1Compiler2 {
 
             let gpRegister = Register64(rawValue: UInt8(gpRegisterIx))!
 
-            M1Compiler2.appendLoad(
-                reg: gpRegister,
-                as: Reg(argIx),
-                fromAddressFrom: X.x20,
-                offsetFromAddress: offset,
-                kinds: funProvider.argsProvider,
-                mem: mem)
+            // TODO: wrong
+//            M1Compiler2.appendLoad(
+//                reg: gpRegister,
+//                as: Reg(argIx),
+//                fromAddressFrom: X.x20,
+//                offsetFromAddress: offset,
+//                kinds: funProvider.argsProvider,
+//                mem: mem)
+            
+            // we need to load the address of the address, don't dereference it
+            mem.append(M1Op.add(gpRegister, X.x20, .imm(offset, nil)))
+            
+            appendDebugPrintRegisterAligned4(gpRegister, prepend: "hl_dyn_call_obj arg \(gpRegisterIx) in hlc_static_call (offset \(offset))", builder: mem)
 
             offset += arg.hlRegSize
         }
@@ -113,50 +119,51 @@ extension M1Compiler2 {
         pthread_jit_write_protect_np(1)
         // End JIT
 
-        switch(funProvider.retProvider.kind) {
-        case .void:
+        switch(funProvider.retProvider.kind, funProvider.retProvider.kind.isPointer) {
+        case (.void, false):
             return nil
-        case .f32:
+        case (.f32, false):
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Float32).self)
             let result = _jitFunc()
             
             vdynamic.set(f: result, in: out)
             Swift.assert(out.pointee.f == result)
-        case .f64:
+        case (.f64, false):
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Float64).self)
             let result = _jitFunc()
             
             vdynamic.set(d: result, in: out)
             Swift.assert(out.pointee.d == result)
-        case .u8, .bool:
+        case (.u8, false), (.bool, false):
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->UInt8).self)
             let result = _jitFunc()
             
             vdynamic.set(ui8: result, in: out)
             Swift.assert(out.pointee.ui8 == result)
-        case .u16:
+        case (.u16, false):
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->UInt16).self)
             let result = _jitFunc()
             
             vdynamic.set(ui16: result, in: out)
             Swift.assert(out.pointee.ui16 == result)
-        case .i32:
+        case (.i32, false):
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Int32).self)
             let result = _jitFunc()
             
             vdynamic.set(i: result, in: out)
             Swift.assert(out.pointee.i == result)
-        case .i64:
+        case (.i64, false):
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Int64).self)
             let result = _jitFunc()
             
             vdynamic.set(i64: result, in: out)
             Swift.assert(out.pointee.i == result)
-        case .obj:
+        case (_, true):
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->OpaquePointer).self)
             let result = _jitFunc()
             return result
         default:
+            print(t._overrideDebugDescription)
             fatal("hlc_static_call does not support return type \(funProvider.retProvider.kind)", logger)
         }
         

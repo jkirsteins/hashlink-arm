@@ -2114,6 +2114,22 @@ class M1Compiler2 {
                     fieldRef: fieldRef,
                     regs: regs,
                     mem: mem)
+                if compilable.findex == 436 && currentInstruction == 3 {
+                    appendLoad(0, from: 0, kinds: regs, mem: mem)
+//                    appendDebugPrintRegisterAligned4(0, kind: .i32, prepend: "TESTING", builder: mem)
+                    
+                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
+                        oPtr in
+                        
+                        let p: UnsafePointer<vdynamic> = .init(oPtr)
+                        
+                        print("OCallMethod value (smoke)", oPtr)
+//                        print(p.pointee.t._overrideDebugDescription)
+                        
+                        return oPtr
+                    }
+                    appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x20, mem: mem)
+                }
             case .OBytes(let dst, let ptr):
                 let bytesAddress = try ctx.getBytes(ptr).ccompatAddress
                 mem.append(PseudoOp.mov(X.x0, bytesAddress))
@@ -3522,24 +3538,12 @@ class M1Compiler2 {
                     regs: regs,
                     reservedStackBytes: stackInfo.total,
                     mem: mem)
-                if compilable.findex == 335 && currentInstruction == 2 {
+                if compilable.findex == 335 && currentInstruction == 7 {
                     let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
                         oPtr in
                         
                         let v: UnsafePointer<vvirtual> = .init(oPtr)
-                        print(v.pointee.t._overrideDebugDescription)
-                        print(v.pointee.value.pointee.t._overrideDebugDescription)
-                        return oPtr
-                    }
-                    appendLoad(0, from: dst, kinds: regs, mem: mem)
-                    appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x20, mem: mem)
-                }
-                if compilable.findex == 335 && currentInstruction == 5 {
-                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
-                        oPtr in
-                        
-                        let v: UnsafePointer<vvirtual> = .init(oPtr)
-                        print(v.pointee.t._overrideDebugDescription)
+//                        print(v.pointee.t._overrideDebugDescription)
 //                        print(v.pointee.value.pointee.t._overrideDebugDescription)
                         return oPtr
                     }

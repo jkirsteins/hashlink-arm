@@ -177,8 +177,8 @@ extension M1Compiler2 {
             
             // field source is pointer to a pointer, so we need to dereference it once before
             // we check if it is null or not (and if null - don't use)
-            mem.append(M1Op.movr64(X.x9, X.x1))    // store first in x9
             mem.append(M1Op.ldr(X.x1, .reg(X.x1, .imm(0, nil))))
+            mem.append(M1Op.movr64(X.x28, X.x1))    // store first in x28
             appendDebugPrintRegisterAligned4(X.x1, prepend: "ocallmethod/virtual dereferenced address", builder: mem)
             
             // compare x1 to 0
@@ -203,20 +203,25 @@ extension M1Compiler2 {
             
                 // THE RESULT IS ALL FUCKED FROM THE FIRST RETURN (HAD NO ADDR)
                 let v: UnsafePointer<vvirtual> = .init(oPtr)
-                let valAddr = OpaquePointer(UnsafeRawPointer(v).advanced(by: 8))
-                let vp: UnsafePointer<UnsafePointer<vdynamic>> = .init(valAddr)
+                let fieldBase = v.advanced(by: 1)
+                
+                let addrPtr: UnsafePointer<OpaquePointer> = .init(OpaquePointer(fieldBase))
+                
                 print("[ocallmethod swift] virtual", v)
                 print("[ocallmethod swift] field base", v.advanced(by: 1))
                 print("[ocallmethod swift] virtual value", v.pointee.value)
-                print("[ocallmethod swift] virtual value", valAddr)
-                print("[ocallmethod swift] virtual value", vp.pointee)
+                print("[ocallmethod swift] virtual value type", v.pointee.value.pointee.t._overrideDebugDescription)
+                
+                print("[ocallmethod swift] func address", addrPtr)
+                print("[ocallmethod swift] func *address", addrPtr.pointee)
+                
                 return oPtr
             }
             appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x25, mem: mem)
             // MARK: --end
             
             // load field value into x9
-//            mem.append(M1Op.ldr(X.x9, .reg(X.x9, .imm(0, nil))))
+            mem.append(M1Op.movr64(X.x9, X.x28)) // restore x28 to x9
             appendDebugPrintRegisterAligned4(X.x9, prepend: "ocallmethod/virtual address", builder: mem)
 
             appendDebugPrintAligned4("ocallmethod/virtual has \(args.count) args", builder: mem)
