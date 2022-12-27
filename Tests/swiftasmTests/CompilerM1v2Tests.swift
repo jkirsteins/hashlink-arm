@@ -46,7 +46,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             Test_HLObjField(nameProvider: "field1", typeProvider: HLTypeKind.u8),
             Test_HLObjField(nameProvider: "field2", typeProvider: HLTypeKind.i32),
             Test_HLObjField(nameProvider: "field3", typeProvider: HLTypeKind.u16)
-        ], nameProvider: "testObj")
+        ], protoProvider: [], nameProvider: "testObj")
         
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -82,7 +82,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
     }
     
     func testCompile_OJNotNull() throws {
-        let objType = Test_HLTypeObj(fieldsProvider: [], nameProvider: "testObject")
+        let objType = Test_HLTypeObj(fieldsProvider: [], protoProvider: [], nameProvider: "testObject")
         
         // constants
         let constI_3 = 1 // constant value 3
@@ -216,7 +216,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
     }
     
     func testCompile_OJNull() throws {
-        let objType = Test_HLTypeObj(fieldsProvider: [])
+        let objType = Test_HLTypeObj(fieldsProvider: [], protoProvider: [])
         
         // constants
         let constI_3 = 1 // constant value 3
@@ -2106,7 +2106,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         let stringType = Test_HLTypeObj(fieldsProvider: [
             Test_HLObjField(nameProvider: "bytes", typeProvider: HLTypeKind.bytes),
             Test_HLObjField(nameProvider: "length", typeProvider: HLTypeKind.i32)
-        ])
+        ], protoProvider: [])
         
         try _robj__bytes_i32(obj: stringType, ops: [
             .ONew(dst: 2),

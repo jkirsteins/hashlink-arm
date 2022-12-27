@@ -355,9 +355,13 @@ extension M1Compiler2 {
         appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
     }
     
-    func appendLoad(_ regRawValue: UInt8, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    static func appendLoad(_ regRawValue: UInt8, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let offset = getRegStackOffset(kinds, vreg)
-        appendLoad(regRawValue, from: vreg, kinds: kinds, offset: offset, mem: mem)
+        self.appendLoad(regRawValue, from: vreg, kinds: kinds, offset: offset, mem: mem)
+    }
+    
+    func appendLoad(_ regRawValue: UInt8, from vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        Self.appendLoad(regRawValue, from: vreg, kinds: kinds, mem: mem)
     }
     
     /// Load a FP value and (if needed) convert to double precision.
@@ -477,14 +481,28 @@ extension M1Compiler2 {
         }
     }
     
-    func appendLoad(_ regRawValue: UInt8, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
+    static func appendLoad(_ regRawValue: UInt8, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
         let reg = getRegister(regRawValue, kind: vregKind)
         appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
     }
     
+    func appendLoad(_ regRawValue: UInt8, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
+        Self.appendLoad(regRawValue, from: vreg, kinds: kinds, offset: offset, mem: mem)
+    }
+    
     func appendLoad(
+        _ regRawValue: UInt8,
+        as vreg: Reg,
+        addressRegister addrReg: Register64,
+        offset: Int64,
+        kinds: [any HLTypeKindProvider],
+        mem: CpuOpBuffer) {
+        Self.appendLoad(regRawValue, as: vreg, addressRegister: addrReg, offset: offset, kinds: kinds, mem: mem)
+    }
+    
+    static func appendLoad(
         _ regRawValue: UInt8,
         as vreg: Reg,
         addressRegister addrReg: Register64,
@@ -511,6 +529,17 @@ extension M1Compiler2 {
     }
     
     func appendLoad(
+        reg: any Register,
+        as vreg: Reg,
+        addressRegister addrRegCandidate: Register64,
+        offset offsetCandidate: Int64,
+        kinds: [any HLTypeKindProvider],
+        mem: CpuOpBuffer)
+    {
+        Self.appendLoad(reg: reg, as: vreg, addressRegister: addrRegCandidate, offset: offsetCandidate, kinds: kinds, mem: mem)
+    }
+    
+    static func appendLoad(
         reg: any Register,
         as vreg: Reg,
         addressRegister addrRegCandidate: Register64,
@@ -621,8 +650,12 @@ extension M1Compiler2 {
         }
     }
     
-    func appendLoad(reg: any Register, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
+    static func appendLoad(reg: any Register, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
         appendLoad(reg: reg, as: vreg, addressRegister: .sp, offset: offset, kinds: kinds, mem: mem)
+    }
+    
+    func appendLoad(reg: any Register, from vreg: Reg, kinds: [any HLTypeKindProvider], offset: ByteCount, mem: CpuOpBuffer) {
+        Self.appendLoad(reg: reg, from: vreg, kinds: kinds, offset: offset, mem: mem)
     }
     
     /// Store a GP or FP register (depending on the vreg type) into the specified location.
@@ -633,11 +666,15 @@ extension M1Compiler2 {
     ///   - offsetFromAddress: offset from address in `addrReg`
     ///   - kinds: register kinds for current context
     ///   - mem: op buffer
-    func appendStore(_ regRawValue: UInt8, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    static func appendStore(_ regRawValue: UInt8, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
         let reg = getRegister(regRawValue, kind: vregKind)
         appendStore(reg: reg, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
+    }
+    
+    func appendStore(_ regRawValue: UInt8, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        Self.appendStore(regRawValue, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
     }
     
     func appendStore(_ regRawValue: UInt8, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromRegister: Register64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
@@ -660,7 +697,7 @@ extension M1Compiler2 {
     ///   - offsetFromAddress: offset from address in `addrReg`
     ///   - kinds: register kinds for current context
     ///   - mem: op buffer
-    func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    static func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
         guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
@@ -702,6 +739,10 @@ extension M1Compiler2 {
         } else {
             fatalError("Size must be 8, 4, 2, 1, or 0")
         }
+    }
+    
+    func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+        Self.appendStore(reg: reg, as: vreg, intoAddressFrom: addrReg, offsetFromAddress: offsetFromAddress, kinds: kinds, mem: mem)
     }
     
     // TODO: deduplicate appendStore
@@ -978,6 +1019,10 @@ extension M1Compiler2 {
     }
     
     func getRegister(_ regRawValue: UInt8, kind: HLTypeKind) -> any Register {
+        Self.getRegister(regRawValue, kind: kind)
+    }
+    
+    static func getRegister(_ regRawValue: UInt8, kind: HLTypeKind) -> any Register {
         let reg: any Register
         switch(FP_TYPE_KINDS.contains(kind), kind.hlRegSize) {
         case (true, 8):
@@ -1164,6 +1209,14 @@ extension M1Compiler2 {
         via addrReg: Register64,
         mem: CpuOpBuffer)
     {
+        Self.appendFuncCall(function, via: addrReg, mem: mem)
+    }
+    
+    static func appendFuncCall(
+        _ function: OpaquePointer,
+        via addrReg: Register64,
+        mem: CpuOpBuffer)
+    {
         
         mem.append(
             PseudoOp.mov(addrReg, function),
@@ -1234,14 +1287,19 @@ extension M1Compiler2 {
     }
     
     func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer) {
-        var adr = RelativeDeferredOffset()
-        var jmpTarget = RelativeDeferredOffset()
-        let str = "[jitdebug] \(val)\n"
-        builder.append(PseudoOp.debugMarker("Printing debug message: \(val)"))
         guard stripDebugMessages == false else {
             builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
             return
         }
+        
+        Self.appendDebugPrintAligned4(val, builder: builder)
+    }
+    
+    static func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer) {
+        var adr = RelativeDeferredOffset()
+        var jmpTarget = RelativeDeferredOffset()
+        let str = "[jitdebug] \(val)\n"
+        builder.append(PseudoOp.debugMarker("Printing debug message: \(val)"))
         builder.append(
             // Stash registers we'll use (so we can reset)
             M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(240)),
@@ -1601,12 +1659,16 @@ class M1Compiler2 {
         }
     }
     
-    func getRegStackOffset(_ regs: [any HLTypeKindProvider], _ ix: Reg) -> ByteCount {
+    static func getRegStackOffset(_ regs: [any HLTypeKindProvider], _ ix: Reg) -> ByteCount {
         var result = ByteCount(0)
         for i in 0..<ix {
             result += regs[Int(i)].hlRegSize
         }
         return result
+    }
+    
+    func getRegStackOffset(_ regs: [any HLTypeKindProvider], _ ix: Reg) -> ByteCount {
+        Self.getRegStackOffset(regs, ix)
     }
     
     func getFieldOffset(_ objData: any HLTypeObjProvider, _ field: Int) -> ByteCount {
@@ -3460,6 +3522,30 @@ class M1Compiler2 {
                     regs: regs,
                     reservedStackBytes: stackInfo.total,
                     mem: mem)
+                if compilable.findex == 335 && currentInstruction == 2 {
+                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
+                        oPtr in
+                        
+                        let v: UnsafePointer<vvirtual> = .init(oPtr)
+                        print(v.pointee.t._overrideDebugDescription)
+                        print(v.pointee.value.pointee.t._overrideDebugDescription)
+                        return oPtr
+                    }
+                    appendLoad(0, from: dst, kinds: regs, mem: mem)
+                    appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x20, mem: mem)
+                }
+                if compilable.findex == 335 && currentInstruction == 5 {
+                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
+                        oPtr in
+                        
+                        let v: UnsafePointer<vvirtual> = .init(oPtr)
+                        print(v.pointee.t._overrideDebugDescription)
+//                        print(v.pointee.value.pointee.t._overrideDebugDescription)
+                        return oPtr
+                    }
+                    appendLoad(0, from: dst, kinds: regs, mem: mem)
+                    appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x20, mem: mem)
+                }
             case .ODynGet(let dst, let obj, let field):
                 let dstType = requireTypeKind(reg: dst, from: regs)
                 let dyngetFunc = get_dynget(to: dstType.kind)

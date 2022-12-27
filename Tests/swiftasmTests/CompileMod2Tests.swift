@@ -1365,18 +1365,61 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    func _extractTypeProtoDependencies(_ name: String, _ only: [String]? = nil) throws -> [RefFun] {
+        
+        var typeCandidate: (any HLTypeProvider)? = nil
+        for typeIx in 0..<ctx.ntypes {
+            let type = try ctx.getType(Int(typeIx))
+            if type.objProvider?.nameProvider.stringValue == name {
+                typeCandidate = type
+                print("Type \(name) == \(typeIx)")
+                break
+            }
+        }
+        guard let protos = typeCandidate?.objProvider?.protoProvider else {
+            throw TestError.unexpected("Type's '\(name)' protos not found")
+        }
+        
+        var result: Set<RefFun> = Set()
+        for p in protos {
+            guard only == nil || only!.contains(p.nameProvider.stringValue) else {
+                continue
+            }
+            
+            result.insert(RefFun(p.findex))
+            for dep in try self.extractDeps(fix: RefFun(p.findex), ignore: result) {
+                result.insert(dep)
+            }
+        }
+        return Array(result)
+    }
+    
     func testCompile_testVirtualCallMethod() throws {
         typealias _JitFunc =  (@convention(c) () -> Float64)
         
-        let iteratorFunc = try _findFindex_fieldNameUnset(className: "hl.types.ArrayBytes_Int", name: "iterator", isStatic: false)!
+        /* NOTE:
+         
+         if hlc_static_call tries to call 0x0, it's probably a missing dependency from
+         one of the array/iterator types.
+         */
         
-        let depsOfIterator = Array(try extractDeps(fix: iteratorFunc))
+        /* gather dependencies from protos from involved types */
+        let totalDeps = [] +
+            (try self._extractTypeProtoDependencies("hl.types.ArrayBytes_Int", ["iterator"])) +
+            (try self._extractTypeProtoDependencies("hl.types.BytesIterator_Int", ["hasNext", "next"]))
+        
+        // TODO: automatic gathering of dependencies based on type names (find global, and
+        // fetch the related bindings, which will include constructors)
+        
         
         try _compileAndLinkWithDeps(
 //        try _withPatchedEntrypoint(
             strip: false,
             name: "Main.testVirtualCallMethod",
-            depHints: [iteratorFunc] + depsOfIterator
+            depHints: totalDeps + [
+                // These can change if the mod2.hl file is regenerated
+                437, 397
+            ]
         ) {
             sutFix, mem in
             print(sutFix)

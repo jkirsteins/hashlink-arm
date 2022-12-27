@@ -22,6 +22,7 @@ struct Test_HLTypeObj : HLTypeProvider, HLTypeObjProvider, Equatable, Hashable, 
     var tenumProvider: (any HLTypeEnumProvider)? { nil }
     
     let fieldsProvider: [swiftasm.HLObjFieldProvider]
+    let protoProvider: [swiftasm.HLObjProtoProvider]
     let nameProvider: any StringProvider
     let superTypeProvider: (any HLTypeProvider)?
     
@@ -31,10 +32,12 @@ struct Test_HLTypeObj : HLTypeProvider, HLTypeObjProvider, Equatable, Hashable, 
     
     init(
         fieldsProvider: [swiftasm.HLObjFieldProvider],
+        protoProvider: [swiftasm.HLObjProtoProvider] = [],
         nameProvider: any StringProvider = "testObject",
         superTypeProvider: (any HLTypeProvider)? = nil
     ) {
         self.fieldsProvider = fieldsProvider
+        self.protoProvider = protoProvider
         self.nameProvider = nameProvider
         self.superTypeProvider = superTypeProvider
     }

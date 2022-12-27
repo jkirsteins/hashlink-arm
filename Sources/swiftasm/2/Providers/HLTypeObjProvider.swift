@@ -3,6 +3,7 @@ protocol HLTypeObjProvider: CustomDebugStringConvertible, Equatable, Hashable  {
     var nameProvider: any StringProvider { get }
     var superTypeProvider: (any HLTypeProvider)? { get }
     var fieldsProvider: [any HLObjFieldProvider] { get }
+    var protoProvider: [any HLObjProtoProvider] { get }
 }
 
 extension UnsafePointer<HLTypeObj_CCompat> : HLTypeObjProvider {
@@ -16,6 +17,10 @@ extension UnsafePointer<HLTypeObj_CCompat> : HLTypeObjProvider {
     
     var superTypeProvider: (any HLTypeProvider)? {
         self.pointee.superPtr
+    }
+    
+    var protoProvider: [HLObjProtoProvider] {
+        Array(UnsafeBufferPointer(start: self.pointee.protoPtr, count: Int(self.pointee.nproto)))
     }
 }
 

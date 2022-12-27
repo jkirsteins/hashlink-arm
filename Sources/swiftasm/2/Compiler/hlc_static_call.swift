@@ -30,6 +30,8 @@ extension M1Compiler2 {
             M1Op.stp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 0, nil))
         )
         
+        appendDebugPrintAligned4("[hlc_static_call] entering...", builder: mem)
+        
         // set x20/x21
         mem.append(
             PseudoOp.mov(X.x20, argPtr),
@@ -39,6 +41,8 @@ extension M1Compiler2 {
             
             PseudoOp.mov(X.x21, funPtr)
         )
+        
+        appendDebugPrintAligned4("[hlc_static_call] entering 2...", builder: mem)
 
         var offset: ByteCount = 0
         var gpRegisterIx: Int = 0
@@ -67,9 +71,13 @@ extension M1Compiler2 {
             offset += arg.hlRegSize
         }
 
+        appendDebugPrintRegisterAligned4(X.x21, prepend: "[hlc_static_call] jumping...", builder: mem)
+        
         mem.append(
             M1Op.blr(X.x21)
         )
+        
+        appendDebugPrintAligned4("[hlc_static_call] jumped...", builder: mem)
         
         // no-stack-epilogue
         mem.append(
@@ -120,7 +128,7 @@ extension M1Compiler2 {
             
             vdynamic.set(d: result, in: out)
             Swift.assert(out.pointee.d == result)
-        case .u8:
+        case .u8, .bool:
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->UInt8).self)
             let result = _jitFunc()
             
@@ -144,6 +152,10 @@ extension M1Compiler2 {
             
             vdynamic.set(i64: result, in: out)
             Swift.assert(out.pointee.i == result)
+        case .obj:
+            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->OpaquePointer).self)
+            let result = _jitFunc()
+            return result
         default:
             fatal("hlc_static_call does not support return type \(funProvider.retProvider.kind)", logger)
         }

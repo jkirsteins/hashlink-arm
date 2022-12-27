@@ -154,10 +154,12 @@ extension M1Compiler2 {
              else
                 dst = hl_dyn_call_obj(o->value,field,args,&ret)
              */
-                            
+            
+            let dstKind = requireTypeKind(reg: dst, from: regs)
+            
             // x0 -> points to ((*_vvirtual)(obj))+1
             appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
-            appendDebugPrintRegisterAligned4(X.x0, prepend: "ocallmethod/virtual", builder: mem)
+            appendDebugPrintRegisterAligned4(X.x0, prepend: "ocallmethod/virtual object", builder: mem)
             
             // x1 point to field base (right after the (vvirtual) content at x0
             mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<vvirtual>.stride), nil)))
@@ -166,15 +168,16 @@ extension M1Compiler2 {
             // x2 load field index multiplied by size of (void*)
             let fieldOffsetInBytes = funcProto * MemoryLayout<OpaquePointer>.stride
             mem.append(M1Op.movz64(X.x2, UInt16(fieldOffsetInBytes), nil))
-            appendDebugPrintAligned4("ofield/virtual func proto: \(funcProto)", builder: mem)
-            appendDebugPrintRegisterAligned4(X.x2, prepend: "ocallmethod/virtual func proto: \(fieldOffsetInBytes) bytes", builder: mem)
+            appendDebugPrintAligned4("ocallmethod/virtual func proto: \(funcProto)", builder: mem)
+ 
             
             // add field offset to base
             mem.append(M1Op.add(X.x1, X.x1, .r64shift(X.x2, .lsl(0))))
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "ocallmethod/virtual func proto \(funcProto)", builder: mem)
+            appendDebugPrintRegisterAligned4(X.x1, prepend: "ocallmethod/virtual addr of func#\(funcProto)", builder: mem)
             
             // field source is pointer to a pointer, so we need to dereference it once before
             // we check if it is null or not (and if null - don't use)
+            mem.append(M1Op.movr64(X.x9, X.x1))    // store first in x9
             mem.append(M1Op.ldr(X.x1, .reg(X.x1, .imm(0, nil))))
             appendDebugPrintRegisterAligned4(X.x1, prepend: "ocallmethod/virtual dereferenced address", builder: mem)
             
@@ -191,39 +194,56 @@ extension M1Compiler2 {
                     M1Op.b_eq(try! Immediate21(jmpTarget_hlvfieldNoAddress.value))
                 )
             )
-            appendFatalError("ocallmethod/virtual HAS ADDRESS - not implemented", mem: mem)
+            appendDebugPrintAligned4("ocallmethod/virtual HAS ADDRESS", builder: mem)
             
-//            appendDebugPrintRegisterAligned4(X.x1, prepend: "ocallmethod/virtual addr before deref", builder: mem)
-//
-////            mem.append(M1Op.ldr(X.x9, .reg(X.x1, .imm(0, nil))))
-//            mem.append(M1Op.movr64(X.x9, X.x1))
-//            mem.append(M1Op.ldr(X.x20, .reg(X.x9, .imm(0, nil))))
-//            appendDebugPrintRegisterAligned4(X.x20, prepend: "Testing x20?", builder: mem)
-//
-//
-//            try __ocallmethod_impl__addrInX9(
-//                dst: dst,
-//                regs: regs,
-//                preArgs: [
-//                    ({ (inmem, regIxForPreArg, regKind) in
-//                        Swift.assert(regKind.hlRegSize == 8)
-//                        guard let regI = Register64(rawValue: regIxForPreArg) else {
-//                            fatalError("Could not create GP register from raw value \(regIxForPreArg)")
-//                        }
-//                        guard let offsetToValue = MemoryLayout.offset(of: \vvirtual.value) else {
-//                            fatalError("Could not generate offset to vvirtual.value")
-//                        }
-//                        self.appendLoad(reg: regI, from: obj, kinds: regs, mem: inmem)
-//                        self.appendDebugPrintRegisterAligned4(regI, prepend: "ocallmethod/virtual obj", builder: mem)
-//                        inmem.append(
+            // MARK: --tmp
+            appendLoad(0, from: obj, kinds: regs, mem: mem)
+            let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
+                oPtr in
+            
+                // THE RESULT IS ALL FUCKED FROM THE FIRST RETURN (HAD NO ADDR)
+                let v: UnsafePointer<vvirtual> = .init(oPtr)
+                let valAddr = OpaquePointer(UnsafeRawPointer(v).advanced(by: 8))
+                let vp: UnsafePointer<UnsafePointer<vdynamic>> = .init(valAddr)
+                print("[ocallmethod swift] virtual", v)
+                print("[ocallmethod swift] field base", v.advanced(by: 1))
+                print("[ocallmethod swift] virtual value", v.pointee.value)
+                print("[ocallmethod swift] virtual value", valAddr)
+                print("[ocallmethod swift] virtual value", vp.pointee)
+                return oPtr
+            }
+            appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x25, mem: mem)
+            // MARK: --end
+            
+            // load field value into x9
+//            mem.append(M1Op.ldr(X.x9, .reg(X.x9, .imm(0, nil))))
+            appendDebugPrintRegisterAligned4(X.x9, prepend: "ocallmethod/virtual address", builder: mem)
+
+            appendDebugPrintAligned4("ocallmethod/virtual has \(args.count) args", builder: mem)
+            try __ocallmethod_impl__addrInX9(
+                dst: dst,
+                regs: regs,
+                preArgs: [
+                    ({ (inmem, regIxForPreArg, regKind) in
+                        Swift.assert(regKind.hlRegSize == 8)
+                        guard let regI = Register64(rawValue: regIxForPreArg) else {
+                            fatalError("Could not create GP register from raw value \(regIxForPreArg)")
+                        }
+                        guard let offsetToValue = MemoryLayout.offset(of: \vvirtual.value) else {
+                            fatalError("Could not generate offset to vvirtual.value")
+                        }
+                        self.appendLoad(reg: regI, from: obj, kinds: regs, mem: inmem)
+                        self.appendDebugPrintRegisterAligned4(regI, prepend: "ocallmethod/virtual obj", builder: inmem)
+                        inmem.append(
 //                            M1Op.add(regI, regI, .imm(Int64(offsetToValue), nil))
-//                        )
-//                        self.appendDebugPrintRegisterAligned4(regI, prepend: "ocallmethod/virtual obj->value", builder: mem)
-//                    }, HLTypeKind.dyn)
-//                ],
-//                args: args,
-//                reservedStackBytes: reservedStackBytes,
-//                mem: mem)
+                            M1Op.ldr(regI, .reg(regI, .imm(Int64(offsetToValue), nil)))
+                        )
+                        self.appendDebugPrintRegisterAligned4(regI, prepend: "ocallmethod/virtual obj->value", builder: inmem)
+                    }, HLTypeKind.dyn)
+                ],
+                args: args,
+                reservedStackBytes: reservedStackBytes,
+                mem: mem)
             
             // finish this branch
             mem.append(
@@ -237,11 +257,12 @@ extension M1Compiler2 {
             // marker for other branch
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)
             
+            appendDebugPrintAligned4("ocallmethod/virtual HAS NO ADDRESS", builder: mem)
+            
             // create pointer for holding output as x4
-            let dstKind = requireTypeKind(reg: dst, from: regs)
             let retBuffer: UnsafeMutablePointer<vdynamic>?
             let retReg = X.x4
-            if dstKind.isPointer {
+            if !dstKind.isPointer {
                 retBuffer = .allocate(capacity: 1)
                 mem.append(PseudoOp.mov(retReg, OpaquePointer(retBuffer!)))
             } else {
@@ -348,31 +369,40 @@ extension M1Compiler2 {
             
             // appendDeallocateBufferPointer(dynArgs, mem: mem)
             
-            let _outTest: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
-                oPtr in
+            // assuming dst will be a pointer and hl_call_dyn_obj returns a vvirtual
+            // and we need to store result->value
+            let _outConvert: (@convention(c) (OpaquePointer, OpaquePointer?)->(OpaquePointer)) = {
+                oPtr, retBufferPtr in
                 
-                print(oPtr)
-                let d: vdynamicPointer = .init(oPtr)
-                print(d.pointee.t.pointee.kind)
+                let v: UnsafePointer<vvirtual> = .init(oPtr)
+                print("[OCallMethod/virtual] v.pointee.value", v.pointee.value)
+                print("[OCallMethod/virtual] v type", v.pointee.t._overrideDebugDescription)
+                // TODO: wat
+                print("retBufferPtr", retBufferPtr)
+                if let rb = retBufferPtr {
+                    let ptrToDyn = UnsafePointer<vdynamic>(rb)
+                    let raw: UnsafeRawPointer = .init(rb)
+                    let offs = MemoryLayout<vdynamic>.offset(of: \vdynamic.union)!
+                    let res = OpaquePointer(raw.advanced(by: offs))
+                    print("Res", res, "from", rb)
+                    return res
+                }
                 return oPtr
+//                return .init(v.pointee.value)
             }
-            appendFuncCall(unsafeBitCast(_outTest, to: OpaquePointer.self), via: X.x20, mem: mem)
+            if let rb = retBuffer {
+                mem.append(PseudoOp.mov(X.x1, OpaquePointer(rb)))
+            } else {
+                mem.append(M1Op.movz64(X.x1, 0, nil))
+            }
+            appendFuncCall(unsafeBitCast(_outConvert, to: OpaquePointer.self), via: X.x20, mem: mem)
             
-//            if( dstType.kind != .void ) {
-//                // store result into dst (which is guaranteed HLTypeKind.dyn)
-//                appendStore(0, into: dst, kinds: regs, mem: mem)
-//
-//                /* TODO: not sure why this is needed? But @hashlink/jit.c
-//                         has this */
-//                make_dyn_cast(dst, dst, regs, mem)
-//            }
-            
-            appendFatalError(
-                "ocallmethod/virtual HAS NO ADDRESS - not implemented",
-                mem: mem)
+//            Swift.assert(dstKind.isPointer, "\(dstKind) must be a pointer")
+            appendStore(0, into: dst, kinds: regs, mem: mem)
+            appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "OCallMethod/virtual final stored result", builder: mem)
             
             jmpTarget_postCheck.stop(at: mem.byteSize)
-            appendDebugPrintAligned4("osetfield/virtual EXITING", builder: mem)
+            appendDebugPrintAligned4("OCallMethod/virtual EXITING", builder: mem)
         default:
             print("Target", objType.kind)
             fatalError("Invalid target for OCallMethod or OCallThis")
@@ -571,8 +601,9 @@ extension M1Compiler2 {
     ) throws {
         appendDebugPrintRegisterAligned4(X.x9, prepend: "__ocallmethod_impl__addrInX9 (start)", builder: mem)
         try __ocall_impl(dst: dst, appendCall: { buff in
-            appendDebugPrintRegisterAligned4(X.x9, prepend: "__ocallmethod_impl__addrInX9 (end)", builder: buff)
+            appendDebugPrintRegisterAligned4(X.x9, prepend: "__ocallmethod_impl__addrInX9 (pre-call)", builder: buff)
             buff.append(M1Op.blr(X.x9))
+            appendDebugPrintAligned4("__ocallmethod_impl__addrInX9 (post-call)", builder: buff)
         }, regs: regs, preArgs: preArgs, args: args, reservedStackBytes: reservedStackBytes, mem: mem)
     }
     

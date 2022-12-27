@@ -11,6 +11,8 @@ let _StringType = Test_HLTypeObj(
         Test_HLObjField(nameProvider: "bytes", typeProvider: HLTypeKind.bytes),
         Test_HLObjField(nameProvider: "length", typeProvider: HLTypeKind.i32)
     ],
+    
+    protoProvider: [],
 
     // don't change this as we need this type to compare (==) with the real type
     nameProvider: "String"

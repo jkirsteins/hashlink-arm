@@ -20,3 +20,25 @@ struct HLObjProto_CCompat: Equatable, CustomDebugStringConvertible, Hashable {
         "\(name): <fun>@\(findex) (\(pindex))"
     }
 }
+
+protocol HLObjProtoProvider {
+    var nameProvider: any StringProvider { get }
+    var findex: Int32 { get }
+    var pindex: Int32 { get }
+    var hashedName: Int32 { get }
+}
+
+extension HLObjProto_CCompat: HLObjProtoProvider {
+    var nameProvider: any StringProvider {
+        self.namePtr
+    }
+    
+    var hashedName: Int32 { self.hashed_name }
+}
+
+extension UnsafePointer<HLObjProto_CCompat> : HLObjProtoProvider {
+    var nameProvider: any StringProvider { self.pointee.nameProvider }
+    var findex: Int32 { self.pointee.findex }
+    var pindex: Int32 { self.pointee.pindex }
+    var hashedName: Int32 { self.pointee.hashedName }
+}
