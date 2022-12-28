@@ -2500,7 +2500,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
             ]
         )
         
-        try compileAndLink(ctx: ctx, 0, strip: false) {
+        try compileAndLink(ctx: ctx, 0) {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (entrypoint: _JitFunc) in
@@ -4653,7 +4653,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 ])
         ], floats: [123.456])
         
-        try compileAndLink(ctx: ctx, 0, 1, strip: false) {
+        try compileAndLink(ctx: ctx, 0, 1) {
             mappedMem in
             
             let callable = try ctx.getCallable(findex: 0)

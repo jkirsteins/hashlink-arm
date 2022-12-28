@@ -502,7 +502,7 @@ final class CompileMod2Tests: RealHLTestCase {
          
          Otherwise the output will be `String` (i.e. object name, not the actual value)*/
         
-        let expected = "haxesrc/Main.hx:240: Hello Trace\n"
+        let expected = "haxesrc/Main.hx:270: Hello Trace\n"
         patched_sys_print = []
         
         // Patch the print call to intercept
@@ -525,7 +525,7 @@ final class CompileMod2Tests: RealHLTestCase {
         let printlnDeps = try extractDeps(fix: println)
         
         try _withPatchedEntrypoint(
-            strip: false,
+            strip: true,
             name: "Main.testTrace",
             depHints: stringToString + logBindingDeps + arrayDynDeps + printlnDeps + [println]
         ) {
@@ -538,6 +538,7 @@ final class CompileMod2Tests: RealHLTestCase {
             }
         }
         
+        print(patched_sys_print.joined(separator: ""))
         XCTAssertEqual(patched_sys_print.joined(separator: ""), expected)
     }
     
@@ -1098,7 +1099,7 @@ final class CompileMod2Tests: RealHLTestCase {
         (try self._extractTypeBindingDependencies("haxe.iterators.$ArrayIterator", ["__constructor__"]))
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testVirtualCallMethod",
             depHints: totalDeps
         ) {
@@ -1108,6 +1109,49 @@ final class CompileMod2Tests: RealHLTestCase {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqual(entrypoint(), 21)
+            }
+        }
+    }
+    
+    func testCompile_testInterface_1() throws {
+        typealias _JitFunc =  (@convention(c) (Int32, Bool, Int32, Float32, Float64) -> Float64)
+        
+        /* gather dependencies from protos from involved types */
+        let totalDeps: [RefFun] =
+        (try self._extractTypeProtoDependencies("VirtualTest")) 
+        
+        try _compileAndLinkWithDeps(
+            strip: false,
+            name: "Main.testInterface_1",
+            depHints: totalDeps
+        ) {
+            sutFix, mem in
+            print(sutFix)
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualDouble(entrypoint(1, true, 2, 3.3, 4.4), 11.69)
+            }
+        }
+    }
+    
+    func testCompile_testInterface_2() throws {
+        typealias _JitFunc =  (@convention(c) (Int32, Bool, Int32, Float32, Float64) -> Float64)
+        
+        let totalDeps: [RefFun] =
+        (try self._extractTypeProtoDependencies("VirtualTest"))
+                
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testInterface_2",
+            depHints: totalDeps
+        ) {
+            sutFix, mem in
+            print(sutFix)
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualDouble(entrypoint(1, true, 2, 3.3, 4.4), 11.69)
             }
         }
     }

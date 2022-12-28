@@ -46,7 +46,17 @@ class CallTest {
 	}
 }
 
-class VirtualTest {
+interface VirtualInterface {
+    public function getTest(): Int;
+	public function getSecond(): Bool;
+	public function getThird(): Int;
+	public function getF32(): F32;
+	public function getF64(): F64;
+	public function getF64Modified(a: F32, b: F64): F64;
+	public function getAll(): { test: Int, second: Bool, third: Int, f64: F64, f32: F32 };
+}
+
+class VirtualTest implements VirtualInterface {
 	public var test:Int;
 	public var second:Bool;
 	public var third:Int;
@@ -59,6 +69,26 @@ class VirtualTest {
 		this.third = third;
 		this.f64 = f64;
 		this.f32 = f32;
+	}
+
+	public function getTest(): Int {
+		return test;
+	}
+
+	public function getSecond(): Bool {
+		return second;
+	}
+	
+	public function getThird(): Int { return third; }
+	public function getF32(): F32 { return f32; }
+	public function getF64(): F64 { return f64; }
+
+	public function getF64Modified(a: F32, b: F64): F64 {
+		return f64 + a + b;
+	}
+	
+	public function getAll(): { test: Int, second: Bool, third: Int, f64: F64, f32: F32 } {
+		return this;
 	}
 }
 
@@ -432,13 +462,14 @@ class Main {
 
 		trace('testing testArrayBytes_Float: ${testArrayBytes_Float(1)}');
 
-		trace('testing testGetType: ${testGetType_nonDynamicSrc()}');
-
 		trace('testing testVirtualCallMethod: ${testVirtualCallMethod()}');
+
+		trace('testing testInterface_1: ${testInterface_1(1, true, 2, 3.3, 4.4)}');
+		trace('testing testInterface_2: ${testInterface_2(1, true, 2, 3.3, 4.4))}');
 	}
 
 	public static function testVirtualCallMethod(): Int {
-		return testVirtualCallMethod_inner([1,2,3,4,5,6]);
+		return testVirtualCallMethod_inner([1,2,3]) + testVirtualCallMethod_inner([4,5,6]);
 	}
 
 	public static function testVirtualCallMethod_inner(it:Iterable<Int>): Int {
@@ -446,6 +477,20 @@ class Main {
 		for (i in it)
 			result += i;
 		return result;
+	}
+
+	public static function testInterface_1(test: Int, second: Bool, third: Int, f32: F32, f64: F64): F64 {
+		var x = new VirtualTest(test, second, third, f64, f32);
+		var v: VirtualInterface = x;
+		
+		return v.getF64() + v.getF32() + v.getThird() + v.getTest() + (v.getSecond() ? 1 : 0);
+	}
+
+	public static function testInterface_2(test: Int, second: Bool, third: Int, f32: F32, f64: F64): F64 {
+		var x = new VirtualTest(test, second, third, f64, f32);
+		var v: VirtualInterface = x;
+		var v2 = v.getAll();
+		return v2.test + (v2.second ? 1 : 0) + v2.third + v2.f64 + v2.f32;
 	}
 
 	static public function testArrayBytes_Float(ix: Int): Float {
