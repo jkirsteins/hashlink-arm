@@ -2107,15 +2107,15 @@ class M1Compiler2 {
                     fieldRef: fieldRef,
                     regs: regs,
                     mem: mem)
-            case .OField(let dstReg, let objReg, let fieldRef):
+            case .OField(let dst, let obj, let fieldRef):
                 try __ogetthis_ofield(
-                    dstReg: dstReg,
-                    objReg: objReg,
+                    dstReg: dst,
+                    objReg: obj,
                     fieldRef: fieldRef,
                     regs: regs,
                     mem: mem)
                 if compilable.findex == 436 && currentInstruction == 3 {
-                    appendLoad(0, from: 0, kinds: regs, mem: mem)
+                    appendLoad(0, from: dst, kinds: regs, mem: mem)
 //                    appendDebugPrintRegisterAligned4(0, kind: .i32, prepend: "TESTING", builder: mem)
                     
                     let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
@@ -3547,7 +3547,7 @@ class M1Compiler2 {
 //                        print(v.pointee.value.pointee.t._overrideDebugDescription)
                         return oPtr
                     }
-                    appendLoad(0, from: dst, kinds: regs, mem: mem)
+                    appendLoad(0, from: obj, kinds: regs, mem: mem)
                     appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x20, mem: mem)
                 }
             case .ODynGet(let dst, let obj, let field):

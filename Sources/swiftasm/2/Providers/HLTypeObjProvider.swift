@@ -4,11 +4,20 @@ protocol HLTypeObjProvider: CustomDebugStringConvertible, Equatable, Hashable  {
     var superTypeProvider: (any HLTypeProvider)? { get }
     var fieldsProvider: [any HLObjFieldProvider] { get }
     var protoProvider: [any HLObjProtoProvider] { get }
+    var bindingsProvider: [(Int32, Int32)] { get }
 }
 
 extension UnsafePointer<HLTypeObj_CCompat> : HLTypeObjProvider {
     var fieldsProvider: [HLObjFieldProvider] {
         Array(UnsafeBufferPointer(start: self.pointee.fieldsPtr, count: Int(self.pointee.nfields)))
+    }
+    
+    var bindingsProvider: [(Int32, Int32)] {
+        let arr = Array(UnsafeBufferPointer(start: self.pointee.bindingsPtr, count: Int(self.pointee.nbindings*2)))
+        return arr.chunked(into: 2).map { subarr in
+            Swift.assert(subarr.count == 2)
+            return (subarr[0], subarr[1])
+        }
     }
     
     var nameProvider: any StringProvider {

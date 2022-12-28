@@ -60,17 +60,20 @@ extension M1Compiler2 {
 
             let gpRegister = Register64(rawValue: UInt8(gpRegisterIx))!
 
-            // TODO: wrong
-//            M1Compiler2.appendLoad(
-//                reg: gpRegister,
-//                as: Reg(argIx),
-//                fromAddressFrom: X.x20,
-//                offsetFromAddress: offset,
-//                kinds: funProvider.argsProvider,
-//                mem: mem)
-            
-            // we need to load the address of the address, don't dereference it
-            mem.append(M1Op.add(gpRegister, X.x20, .imm(offset, nil)))
+            let argKind = M1Compiler2.requireTypeKind(reg: Reg(argIx), from: funProvider.argsProvider)
+            if argKind.isPointer {
+                // hold address
+                mem.append(M1Op.add(gpRegister, X.x20, .imm(offset, nil)))
+            } else {
+                // hold value
+                M1Compiler2.appendLoad(
+                    reg: gpRegister,
+                    as: Reg(argIx),
+                    fromAddressFrom: X.x20,
+                    offsetFromAddress: offset,
+                    kinds: funProvider.argsProvider,
+                    mem: mem)
+            }
             
             appendDebugPrintRegisterAligned4(gpRegister, prepend: "hl_dyn_call_obj arg \(gpRegisterIx) in hlc_static_call (offset \(offset))", builder: mem)
 

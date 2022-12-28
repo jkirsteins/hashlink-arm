@@ -101,6 +101,21 @@ struct HLTypeObj_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
         //        return self.superPtr!.pointee
     }
     
+    /// Each binding is a pair of Int32 (stored in continuous memory)
+    ///
+    /// First Int32 refers to the field index (which can be used to identify the name of the
+    /// binding), and the second Int32 is a `findex` function index.
+    ///
+    /// Example of determining field name
+    ///
+    ///
+    ///     let fid = bindingBase.pointee
+    ///     let findex: RefFun = RefFun(bindingBase.advanced(by: 1).pointee)
+    ///
+    ///     let objField = LibHl.hl_obj_field_fetch(mainGlobalType, fid)
+    ///     guard objField.pointee.nameProvider.stringValue == name else {
+    ///         continue
+    ///     }
     var bindings: [Int32] {
         // bindings consist of 2 int32 per 1 binding,
         // so number of values is nbindings*2

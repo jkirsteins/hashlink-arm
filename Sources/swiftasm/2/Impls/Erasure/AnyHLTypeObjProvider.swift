@@ -2,10 +2,12 @@
 class AnyHLTypeObjProvider : Equatable, Hashable, CustomDebugStringConvertible, HLTypeObjProvider {
     var debugDescription: String { _debugDescription() }
     var fieldsProvider: [any HLObjFieldProvider] { _fieldsProvider() }
+    var bindingsProvider: [(Int32, Int32)] { _bindingsProvider() }
     var protoProvider: [any HLObjProtoProvider] { _protoProvider() }
     var nameProvider: any StringProvider { _nameProvider() }
     var superTypeProvider: (any HLTypeProvider)? { _superTypeProvider() }
     
+    var _bindingsProvider: ()->[(Int32, Int32)]
     var _fieldsProvider: ()->[any HLObjFieldProvider]
     var _protoProvider: ()->[any HLObjProtoProvider]
     var _nameProvider: ()->any StringProvider
@@ -27,5 +29,6 @@ class AnyHLTypeObjProvider : Equatable, Hashable, CustomDebugStringConvertible, 
         self._protoProvider = { wrapped.protoProvider }
         self._nameProvider = { wrapped.nameProvider }
         self._superTypeProvider = { wrapped.superTypeProvider }
+        self._bindingsProvider = { wrapped.bindingsProvider }
     }
 }

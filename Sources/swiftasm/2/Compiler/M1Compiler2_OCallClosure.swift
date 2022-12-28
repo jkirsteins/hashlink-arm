@@ -376,22 +376,25 @@ extension M1Compiler2 {
             
             // assuming dst will be a pointer and hl_call_dyn_obj returns a vvirtual
             // and we need to store result->value
-            let _outConvert: (@convention(c) (OpaquePointer, OpaquePointer?)->(OpaquePointer)) = {
-                oPtr, retBufferPtr in
+            let _outConvert: (@convention(c) (OpaquePointer, OpaquePointer?, Int32)->(OpaquePointer)) = {
+                oPtr, retBufferPtr, dstKindRawVal in
                 
+                let dstKind: HLTypeKind = .init(rawValue: UInt32(dstKindRawVal))
                 let v: UnsafePointer<vvirtual> = .init(oPtr)
                 print("[OCallMethod/virtual] v.pointee.value", v.pointee.value)
                 print("[OCallMethod/virtual] v type", v.pointee.t._overrideDebugDescription)
                 // TODO: wat
                 print("retBufferPtr", retBufferPtr)
-                if let rb = retBufferPtr {
-                    let ptrToDyn = UnsafePointer<vdynamic>(rb)
-                    let raw: UnsafeRawPointer = .init(rb)
-                    let offs = MemoryLayout<vdynamic>.offset(of: \vdynamic.union)!
-                    let res = OpaquePointer(raw.advanced(by: offs))
-                    print("Res", res, "from", rb)
-                    return res
+                if !dstKind.isPointer {
+//                    let ptrToDyn = UnsafePointer<vdynamic>(rb)
+//                    let raw: UnsafeRawPointer = .init(rb)
+//                    let offs = MemoryLayout<vdynamic>.offset(of: \vdynamic.union)!
+//                    let res = OpaquePointer(raw.advanced(by: offs))
+                    return .init(v.pointee.value)
+//                    print("Res", res, "from", rb, "for", dstKind)
+//                    return res
                 }
+                print(v.pointee.value.pointee.t._overrideDebugDescription)
                 return oPtr
 //                return .init(v.pointee.value)
             }
@@ -400,6 +403,7 @@ extension M1Compiler2 {
             } else {
                 mem.append(M1Op.movz64(X.x1, 0, nil))
             }
+            mem.append(M1Op.movz64(X.x2, UInt16(dstKind.rawValue), nil))
             appendFuncCall(unsafeBitCast(_outConvert, to: OpaquePointer.self), via: X.x20, mem: mem)
             
 //            Swift.assert(dstKind.isPointer, "\(dstKind) must be a pointer")
