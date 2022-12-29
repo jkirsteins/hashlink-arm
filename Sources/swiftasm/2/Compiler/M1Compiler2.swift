@@ -249,6 +249,10 @@ extension M1Compiler2 {
         return FP_TYPE_KINDS.contains( (kinds[Int(vreg)] as (any HLTypeKindProvider)).kind )
     }
     
+    static func isVoid(vreg: Reg, kinds: [any HLTypeKindProvider]) -> Bool {
+        return HLTypeKind.void == requireTypeKind(reg: vreg, from: kinds)
+    }
+    
     func appendPrepareDoubleForStore(reg: RegisterFP64, to vreg: Reg, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         switch(vregKind.hlRegSize) {
@@ -714,6 +718,11 @@ extension M1Compiler2 {
     static func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrRegCandidate: Register64, offsetFromAddress offsetCandidate: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
+        guard vregKind != .void else {
+            Self.logger.warning("Don't call store on .void. Ignoring.")
+            return
+        }
+        
         guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
             fatalError("Can't convert \(reg) to 32-bit variant")
         }
@@ -798,6 +807,11 @@ extension M1Compiler2 {
     ///   - mem: op buffer
     func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromRegister: Register64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
+        
+        guard vregKind != .void else {
+            Self.logger.warning("Don't call store on .void. Ignoring.")
+            return
+        }
         
         guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
             fatalError("Can't convert \(reg) to 32-bit variant")
@@ -1847,9 +1861,10 @@ class M1Compiler2 {
             return DeferredImmediate()
         }
 
+        Self.logger.trace("Compiling f\(compilable.findex)")
         for (currentInstruction, op) in compilable.ops.enumerated() {
 
-            Self.logger.debug("f\(compilable.findex): #\(currentInstruction) (offset: \(mem.byteSize))")
+//            Self.logger.trace("f\(compilable.findex): #\(currentInstruction) (offset: \(mem.byteSize))")
             addrBetweenOps[currentInstruction].finalize(mem.byteSize)
 
             mem.append(

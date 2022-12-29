@@ -422,8 +422,12 @@ extension M1Compiler2 {
                     fatal("Unrecognized floating point register size: \(dstKind)", Self.logger)
                 }
             }
-            appendStore(0, into: dst, kinds: regs, mem: mem)
-            appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "OCallMethod/virtual final stored result", builder: mem)
+            if !Self.isVoid(vreg: dst, kinds: regs) {
+                appendStore(0, into: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "OCallMethod/virtual final stored result (\(dstKind))", builder: mem)
+            } else {
+                appendDebugPrintAligned4("OCallMethod/virtual void result", builder: mem)
+            }
             
             jmpTarget_postCheck.stop(at: mem.byteSize)
             appendDebugPrintAligned4("OCallMethod/virtual EXITING", builder: mem)
