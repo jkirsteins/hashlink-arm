@@ -88,18 +88,25 @@ struct HLOpCode_CCompat : Equatable, Hashable {
             extra = .allocate(capacity: args.count)
             _ = extra!.initialize(from: args)
             self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(fun), p3: Int32(args.count), extra: extra!.baseAddress!)
-        case .OCallMethod:
-            fatalError("wip")
-        case .OCallThis:
-            fatalError("wip")
-        case .OCallClosure:
-            fatalError("wip")
-        case .OStaticClosure:
-            fatalError("wip")
-        case .OInstanceClosure:
-            fatalError("wip")
+        case .OCallMethod(let dst, let obj, let proto, let args):
+            let realArgs = [obj] + args
+            extra = .allocate(capacity: realArgs.count)
+            _ = extra!.initialize(from: realArgs)
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(proto), p3: Int32(realArgs.count), extra: extra!.baseAddress!)
+        case .OCallThis(let dst, let field, let args):
+            extra = .allocate(capacity: args.count)
+            _ = extra!.initialize(from: args)
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(field), p3: Int32(args.count), extra: extra!.baseAddress!)
+        case .OCallClosure(let dst, let closure, let args):
+            extra = .allocate(capacity: args.count)
+            _ = extra!.initialize(from: args)
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: closure, p3: Int32(args.count), extra: extra!.baseAddress!)
+        case .OStaticClosure(let dst, let fun):
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(fun))
+        case .OInstanceClosure(let dst, let fun, let obj):
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(fun), p3: obj)
         case .OVirtualClosure(dst: let dst, obj: let obj, field: let field):
-            self = HLOpCode_CCompat(op: dst, p1: obj, p2: field)
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: obj, p3: field)
         case .OGetGlobal(dst: let dst, global: let global):
             self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(global))
         case .OSetGlobal(global: let global, src: let src):
@@ -210,8 +217,10 @@ struct HLOpCode_CCompat : Equatable, Hashable {
             self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: src)
         case .OSetref(dst: let dst, value: let value):
             self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: value, p3: 0, extra: nil)
-        case .OMakeEnum:
-            fatalError("wip")
+        case .OMakeEnum(let dst, let construct, let args):
+            extra = .allocate(capacity: args.count)
+            _ = extra!.initialize(from: args)
+            self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(construct), p3: Int32(args.count), extra: extra!.baseAddress!)
         case .OEnumAlloc(dst: let dst, construct: let construct):
             self = HLOpCode_CCompat(op: opc.id, p1: dst, p2: Int32(construct))
         case .OEnumIndex(dst: let dst, value: let value):

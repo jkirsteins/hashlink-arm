@@ -175,7 +175,6 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
         case .mov(let Rd, let val):
             
             guard val.hasUsableValue else {
-                print("Failing in \(self) At: \(Thread.callStackSymbols.joined(separator: "\n"))")
                 throw GlobalError.immediateMissingValue("Trying to emit PseudoOp.mov and val \(val) does not have a usable value.")
             }
             

@@ -594,7 +594,6 @@ extension M1Compiler2 {
                 fatalError("Can't convert \(reg) to 32-bit variant")
             }
             
-            appendDebugPrintAligned4("Loaded \(reg32)", builder: mem)
             mem.append(
                 M1Op.ldr(reg32, .reg64offset(addrReg, offset.immediate, nil))
             )
@@ -1497,16 +1496,20 @@ extension M1Compiler2 {
 
 // MARK: Compiler
 
+
+
 class M1Compiler2 {
     let emitter = EmitterM1()
     let ctx: CCompatJitContext
+    let cache: any CompilerCache
     let stripDebugMessages: Bool
     
     static let logger = LoggerFactory.create(M1Compiler2.self)
     
-    init(ctx: CCompatJitContext, stripDebugMessages: Bool = false) {
+    init(ctx: CCompatJitContext, stripDebugMessages: Bool = false, cache: any CompilerCache = NoopCache()) {
         self.stripDebugMessages = stripDebugMessages
         self.ctx = ctx
+        self.cache = cache
     }
     
     func assertEnoughRegisters(_ ix: Reg, regs: Registers2) {
@@ -1740,7 +1743,8 @@ class M1Compiler2 {
     ///   - findex:
     ///   - mem:
     /// - Returns:
-    func compile(findex fix: RefFun, into mem: CpuOpBuffer) throws
+    @discardableResult
+    func compile(findex fix: RefFun, into mem: CpuOpBuffer) throws -> any Compilable2
     {
         guard let compilable = try ctx.getCompilable(findex: fix) else {
             throw GlobalError.invalidValue("Function (findex=\(fix)) not found.")
@@ -1748,6 +1752,7 @@ class M1Compiler2 {
         
         // TODO: mark as compiled
         try compile(compilable: compilable, into: mem)
+        return compilable
     }
     
     // MARK: make_dyn_cast
@@ -1805,6 +1810,31 @@ class M1Compiler2 {
             ctx.funcTracker.compiled(compilable.findex)
         }
         
+        guard let cached = try self.cache.cached(offset: mem.byteSize, compilable: compilable) else {
+            let startPos = mem.byteSize
+            print("XX fun \(compilable.findex) at \(startPos)")
+            Self.logger.trace("Compiling f\(compilable.findex) at \(startPos)")
+            try _compile(compilable: compilable, into: mem)
+//            do {
+//                let compiledData = try mem.emitMachineCode(from: Int(startPos))
+//                Self.logger.warning("Caching f\(compilable.findex)")
+//                try cache.cache(offset: startPos, compilable: compilable, data: compiledData)
+//            } catch {
+//                Self.logger.warning("Couldn't cache f\(compilable.findex)")
+//            }
+            
+            return
+        }
+        
+        // TODO: deduplicate offset setting (and other processing when compiling)
+        print("XX fun \(compilable.findex) at \(mem.byteSize)")
+        compilable.linkableAddress.setOffset(mem.byteSize)
+        
+        mem.append(CachedOp(size: ByteCount(cached.count), data: cached))
+    }
+    
+    func _compile(compilable: any Compilable2, into mem: CpuOpBuffer) throws
+    {
         /* we need to allocate trap contexts on the stack
          
          Number of OTrap ops determines how many trap contexts we'll need.
@@ -1831,6 +1861,7 @@ class M1Compiler2 {
             throw GlobalError.functionAlreadyCompiled("Can not compile function (findex=\(fix)) because it already has been compiled and linked. \(compilable.address)")
         }
         
+        print("XX fun \(compilable.findex) at \(mem.byteSize)")
         compilable.linkableAddress.setOffset(mem.byteSize)
 
         // if we need to return early, we jump to these
@@ -1861,7 +1892,6 @@ class M1Compiler2 {
             return DeferredImmediate()
         }
 
-        Self.logger.trace("Compiling f\(compilable.findex)")
         for (currentInstruction, op) in compilable.ops.enumerated() {
 
 //            Self.logger.trace("f\(compilable.findex): #\(currentInstruction) (offset: \(mem.byteSize))")

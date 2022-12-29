@@ -76,16 +76,24 @@ struct SwiftAsm: ParsableCommand {
 //            305, 437, 350, 28, 14, 42, 240, 337, 303
 ]
 
+        let cache = DiskCache()
         let mod = try! Bootstrap.start2(hlFileIn, args: [])
-        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug)
+        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug, cache: cache)
         let buf = CpuOpBuffer()
+        
+        var offsetToCompilable: Dictionary<ByteCount, (ByteCount, any Compilable2)> = [:]
+        
         Self.logger.debug("Compiling...")
         for frix in (0..<mod.nfunctions) {
             let fix = mod.mainContext.pointee.code!.pointee.functions.advanced(by: Int(frix)).pointee.findex
             
             if !tmpDeps.isEmpty && !tmpDeps.contains(Int(fix)) { continue }
             
-            try sut.compile(findex: RefFun(fix), into: buf)
+            let startByteSize = buf.byteSize
+            let compilable = try sut.compile(findex: RefFun(fix), into: buf)
+            offsetToCompilable[startByteSize] = (buf.byteSize, compilable)
+            
+            print("compilingx", fix, "b", startByteSize)
         }
         
         let epIx = mod.mainContext.pointee.code!.pointee.entrypoint
@@ -93,6 +101,27 @@ struct SwiftAsm: ParsableCommand {
         Self.logger.debug("Linking...")
         let mapper = BufferMapper(ctx: mod, buffer: buf)
         let mem = try mapper.getMemory()
+        
+        if let cachedMachineCode = mapper.cachedMachineCode {
+            Self.logger.debug("Caching after linking...")
+            for offsetAndCompilable in offsetToCompilable {
+                let startOffset = offsetAndCompilable.key
+                let endOffset = offsetAndCompilable.value.0
+                let compilable = offsetAndCompilable.value.1
+                
+                guard try !cache.cacheExists(offset: startOffset, compilable: compilable) else {
+                    continue
+                }
+                
+                Self.logger.debug("... caching fun@\(String(describing: compilable.findex)) at \(startOffset)")
+                let compiled = Array(cachedMachineCode[Int(startOffset)..<Int(endOffset)])
+                do {
+                    try cache.cache(offset: startOffset, compilable: compilable, data: compiled)
+                } catch {
+                    Self.logger.error("       ERROR: \(String(describing: error))")
+                }
+            }
+        }
         
         Self.logger.debug("Executing entrypoint _@\(epIx)...")
         let addr = try mod.getCallable(findex: RefFun(epIx))!.address.value

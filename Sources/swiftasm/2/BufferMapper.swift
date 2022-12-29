@@ -5,6 +5,8 @@ class BufferMapper {
     let ctx: CCompatJitContext
     let buffer: CpuOpBuffer
     
+    var cachedMachineCode: [UInt8]? = nil
+    
     static let logger = LoggerFactory.create(BufferMapper.self)
     
     init(ctx: CCompatJitContext, buffer: CpuOpBuffer) {
@@ -27,7 +29,7 @@ class BufferMapper {
     }
     
     func emitMachineCode() throws -> [UInt8] {
-        return try buffer.ops.flatMap { try $0.emit() }
+        return try buffer.emitMachineCode()
     }
     
     deinit {
@@ -64,6 +66,7 @@ class BufferMapper {
         
         // this must happen after setting jitBase
         let mc = try emitMachineCode()
+        self.cachedMachineCode = mc
         assert(buffer.byteSize == Int64(mc.count))
         
         // we should make the function addresses available to CCompat

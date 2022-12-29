@@ -1,6 +1,24 @@
 import Darwin
 import Foundation
 
+struct CachedOp: CpuOp {
+    let size: ByteCount
+    let data: [UInt8]
+    
+    init(size: ByteCount, data: [UInt8]) {
+        self.size = size
+        self.data = data
+    }
+    
+    func emit() throws -> [UInt8] {
+        self.data
+    }
+    
+    var asmDescription: String {
+        ".cached(\(size))"
+    }
+}
+
 class CpuOpBuffer {
     var ops: [any CpuOp] = []
     var position: Int { ops.count }
@@ -68,6 +86,14 @@ class CpuOpBuffer {
         byteSize += increase
         ops.append(contentsOf: instructions)
         return self
+    }
+    
+    func emitMachineCode(from: Int = 0) throws -> [UInt8] {
+        try opSlice(from: 0, to: Int(position)).flatMap { try $0.emit() }
+    }
+    
+    func opSlice(from: Int, to: Int) -> ArraySlice<any CpuOp> {
+        ops[from..<position]
     }
 
     // print copy-pastable into a test
