@@ -2810,8 +2810,6 @@ class M1Compiler2 {
                     M1Op.movz64(X.x0, UInt16(value), nil),
                     M1Op.strb(W.w0, .imm64(.sp, dstOffset, nil))
                 )
-            case .OUnsafeCast(let dst, let src):
-                fallthrough
             case .OMov(let dst, let src) where isInteger(vreg: dst, kinds: regs) && isInteger(vreg: src, kinds: regs):
                 try assertNumeric(dst: dst, bigEnoughFor: src, from: regs)
                 
@@ -2822,6 +2820,14 @@ class M1Compiler2 {
                 
                 appendLoadFPToDouble(reg: D.d0, from: src, kinds: regs, mem: mem)
                 appendStoreDoubleToFP(reg: D.d0, into: dst, kinds: regs, mem: mem)
+            case .OUnsafeCast(let dst, let src):
+                let dstType = requireTypeKind(reg: dst, from: regs)
+                let srcType = requireTypeKind(reg: src, from: regs)
+                if (dstType != srcType) && (isFP(vreg: src, kinds: regs) || isFP(vreg: dst, kinds: regs)) {
+                    fatalError("TODO: test case when unsafe casting from/to floats")
+                }
+                appendLoad(0, from: src, kinds: regs, mem: mem)
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OMov(let dst, let src) where !isNumeric(vreg: dst, kinds: regs) && !isNumeric(vreg: src, kinds: regs):
                 let srcKind = requireTypeKind(reg: src, from: regs)
                 assert(reg: dst, from: regs, in: [srcKind, HLTypeKind.dyn])
