@@ -1235,6 +1235,36 @@ final class EmitterM1Tests: XCTestCase {
             "fmov x1, d3",
             0x61, 0x00, 0x66, 0x9e
         )
+        try XCTAssertM1Op(
+            .fmov(S.s1, W.w3),
+            "fmov s1, w3",
+            0x61, 0x00, 0x27, 0x1e
+        )
+        try XCTAssertM1Op(
+            .fmov(W.w1, S.s3),
+            "fmov w1, s3",
+            0x61, 0x00, 0x26, 0x1e
+        )
+        try XCTAssertM1Op(
+            .fmov(H.h1, W.w3),
+            "fmov h1, w3",
+            0x61, 0x00, 0xe7, 0x1e
+        )
+        try XCTAssertM1Op(
+            .fmov(W.w1, H.h3),
+            "fmov w1, h3",
+            0x61, 0x00, 0xe6, 0x1e
+        )
+        try XCTAssertM1Op(
+            .fmov(H.h1, X.x3),
+            "fmov h1, x3",
+            0x61, 0x00, 0xe7, 0x9e
+        )
+        try XCTAssertM1Op(
+            .fmov(X.x1, H.h3),
+            "fmov x1, h3",
+            0x61, 0x00, 0xe6, 0x9e
+        )
         
         // sizes should be the same
         XCTAssertThrowsError(

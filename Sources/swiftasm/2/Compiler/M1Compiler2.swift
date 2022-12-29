@@ -1831,7 +1831,7 @@ class M1Compiler2 {
                 
                 if dstKind.hlRegSize > 0 {
                     appendLoad(0, from: dst, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "ORet", builder: mem)
+                    appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "ORet (fun@\(compilable.findex))", builder: mem)
                 }
 
                 // jmp to end (NOTE: DO NOT ADD ANYTHING BETWEEN .start() and mem.append()
@@ -2106,30 +2106,16 @@ class M1Compiler2 {
                     objReg: 0,
                     fieldRef: fieldRef,
                     regs: regs,
-                    mem: mem)
+                    mem: mem,
+                    _callsite: (findex: compilable.findex, opnum: currentInstruction))
             case .OField(let dst, let obj, let fieldRef):
                 try __ogetthis_ofield(
                     dstReg: dst,
                     objReg: obj,
                     fieldRef: fieldRef,
                     regs: regs,
-                    mem: mem)
-                if compilable.findex == 436 && currentInstruction == 3 {
-                    appendLoad(0, from: dst, kinds: regs, mem: mem)
-//                    appendDebugPrintRegisterAligned4(0, kind: .i32, prepend: "TESTING", builder: mem)
-                    
-                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
-                        oPtr in
-                        
-                        let p: UnsafePointer<vdynamic> = .init(oPtr)
-                        
-                        print("OCallMethod value (smoke)", oPtr)
-//                        print(p.pointee.t._overrideDebugDescription)
-                        
-                        return oPtr
-                    }
-                    appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x20, mem: mem)
-                }
+                    mem: mem,
+                    _callsite: (findex: compilable.findex, opnum: currentInstruction))
             case .OBytes(let dst, let ptr):
                 let bytesAddress = try ctx.getBytes(ptr).ccompatAddress
                 mem.append(PseudoOp.mov(X.x0, bytesAddress))
@@ -2811,11 +2797,6 @@ class M1Compiler2 {
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSafeCast(let dst, let src):
                 make_dyn_cast(dst, src, regs, mem)
-                
-                // MARK: tmp
-                appendFPRegToDouble(reg: D.d0, from: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSafeCast return", builder: mem)
-                // MARK: tmp
             case .OLabel:
                 appendDebugPrintAligned4("OLabel", builder: mem)
             case .OSub(let dst, let a, let b):
@@ -3174,18 +3155,6 @@ class M1Compiler2 {
                 default:
                     fatalError("Don't know how to cast \(srcKind) to \(dstKind)")
                 }
-                
-                // MARK: tmp
-                if case .OToSFloat = op {
-                    appendLoad(5, from: src, kinds: regs, mem: mem)
-                    var srcKind = requireTypeKind(reg: src, from: regs)
-                    appendDebugPrintRegisterAligned4(5, kind: srcKind, prepend: "OToSFloat src (\(dst) <- \(src))", builder: mem)
-                    
-                    appendLoad(5, from: dst, kinds: regs, mem: mem)
-                    var dstKind = requireTypeKind(reg: dst, from: regs)
-                    appendDebugPrintRegisterAligned4(5, kind: dstKind, prepend: "OToSFloat dst (\(dst) <- \(src))", builder: mem)
-                }
-                // MARK: tmp
             case .OToDyn(let dst, let src):
                 let addr = unsafeBitCast(OToDyn_impl, to: UnsafeRawPointer.self)
                 let dstType = requireType(reg: dst, regs: regs)
@@ -3538,18 +3507,6 @@ class M1Compiler2 {
                     regs: regs,
                     reservedStackBytes: stackInfo.total,
                     mem: mem)
-                if compilable.findex == 335 && currentInstruction == 7 {
-                    let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
-                        oPtr in
-                        
-                        let v: UnsafePointer<vvirtual> = .init(oPtr)
-//                        print(v.pointee.t._overrideDebugDescription)
-//                        print(v.pointee.value.pointee.t._overrideDebugDescription)
-                        return oPtr
-                    }
-                    appendLoad(0, from: obj, kinds: regs, mem: mem)
-                    appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x20, mem: mem)
-                }
             case .ODynGet(let dst, let obj, let field):
                 let dstType = requireTypeKind(reg: dst, from: regs)
                 let dyngetFunc = get_dynget(to: dstType.kind)

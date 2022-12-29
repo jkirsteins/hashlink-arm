@@ -1905,15 +1905,35 @@ public class EmitterM1 {
             
             switch(Rt.bits, Rn.bits, i_to_fp) {
             case (32, 16, false):
-                fatalError("Unsupported .fmov: half-precision to 32-bit (sf == 0 && ftype == 11 && rmode == 00 && opcode == 110)")
+                sf_unshifted = 0
+                ftype_unshifted = 0b11
+                rmode_unshifted = 0b00
+                opcode_unshifted = 0b110
             case (64, 16, false):
-                fatalError("Unsupported .fmov: half-precision to 64-bit (sf == 1 && ftype == 11 && rmode == 00 && opcode == 110)")
+                sf_unshifted = 1
+                ftype_unshifted = 0b11
+                rmode_unshifted = 0b00
+                opcode_unshifted = 0b110
             case (16, 32, true):
-                fatalError("Unsupported .fmov: 32-bit to half-precision (sf == 0 && ftype == 11 && rmode == 00 && opcode == 111)")
+                sf_unshifted = 0
+                ftype_unshifted = 0b11
+                rmode_unshifted = 0b00
+                opcode_unshifted = 0b111
+            case (32, 32, false):
+                sf_unshifted = 0
+                ftype_unshifted = 0b00
+                rmode_unshifted = 0b00
+                opcode_unshifted = 0b110
             case (32, 32, true):
-                fatalError("Unsupported .fmov: single-precision to 32-bit (sf == 0 && ftype == 00 && rmode == 00 && opcode == 110)")
+                sf_unshifted = 0
+                ftype_unshifted = 0b00
+                rmode_unshifted = 0b00
+                opcode_unshifted = 0b111
             case (16, 64, true):
-                fatalError("Unsupported .fmov: 64-bit to half-precision (sf == 1 && ftype == 11 && rmode == 00 && opcode == 111)")
+                sf_unshifted = 1
+                ftype_unshifted = 0b11
+                rmode_unshifted = 0b00
+                opcode_unshifted = 0b111
             case (64, 64, true):
                 sf_unshifted = 1
                 ftype_unshifted = 0b01

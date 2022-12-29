@@ -1121,7 +1121,7 @@ final class CompileMod2Tests: RealHLTestCase {
         (try self._extractTypeProtoDependencies("VirtualTest")) 
         
         try _compileAndLinkWithDeps(
-            strip: false,
+            strip: true,
             name: "Main.testInterface_1",
             depHints: totalDeps
         ) {

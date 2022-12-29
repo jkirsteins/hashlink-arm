@@ -194,6 +194,8 @@ extension M1Compiler2 {
                     M1Op.b_eq(try! Immediate21(jmpTarget_hlvfieldNoAddress.value))
                 )
             )
+            
+            // MARK: OCallMethod/virtual has address
             appendDebugPrintAligned4("ocallmethod/virtual HAS ADDRESS", builder: mem)
             
             // MARK: --tmp
@@ -262,6 +264,7 @@ extension M1Compiler2 {
             // marker for other branch
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)
             
+            // MARK: OCallMethod/virtual has no address
             appendDebugPrintAligned4("ocallmethod/virtual HAS NO ADDRESS", builder: mem)
             
             // create pointer for holding output as x4
@@ -390,6 +393,9 @@ extension M1Compiler2 {
 //                    let raw: UnsafeRawPointer = .init(rb)
 //                    let offs = MemoryLayout<vdynamic>.offset(of: \vdynamic.union)!
 //                    let res = OpaquePointer(raw.advanced(by: offs))
+                    if FP_TYPE_KINDS.contains(dstKind) {
+                        fatalError("TODO: test coverage for OCallMethod/virtual when no address and returns FP")
+                    }
                     return .init(v.pointee.value)
 //                    print("Res", res, "from", rb, "for", dstKind)
 //                    return res
@@ -406,7 +412,16 @@ extension M1Compiler2 {
             mem.append(M1Op.movz64(X.x2, UInt16(dstKind.rawValue), nil))
             appendFuncCall(unsafeBitCast(_outConvert, to: OpaquePointer.self), via: X.x20, mem: mem)
             
-//            Swift.assert(dstKind.isPointer, "\(dstKind) must be a pointer")
+            if isFP(vreg: dst, kinds: regs) {
+                print(dstKind._overrideDebugDescription)
+                if dstKind.hlRegSize == 8 {
+                    mem.append(M1Op.fmov(D.d0, X.x0))
+                } else if dstKind.hlRegSize == 4 {
+                    mem.append(M1Op.fmov(S.s0, W.w0))
+                } else {
+                    fatal("Unrecognized floating point register size: \(dstKind)", Self.logger)
+                }
+            }
             appendStore(0, into: dst, kinds: regs, mem: mem)
             appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "OCallMethod/virtual final stored result", builder: mem)
             
@@ -583,6 +598,7 @@ extension M1Compiler2 {
         if dstKind != .void {
             self.appendStore(0, as: dst, intoAddressFrom: .sp, offsetFromAddress: dstStackOffset + Int64(additionalSize), kinds: regs, mem: mem)
             self.appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "__ocall_impl result", builder: mem)
+            self.appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "__ocall_impl result TESTING", builder: mem)
         } else {
             appendDebugPrintAligned4("[__ocall_impl] Ignoring .void return", builder: mem)
         }
