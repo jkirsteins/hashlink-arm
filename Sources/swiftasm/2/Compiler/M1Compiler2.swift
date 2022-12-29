@@ -2516,18 +2516,13 @@ class M1Compiler2 {
                 
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .ONullCheck(let dst):
-                let dstOffset = getRegStackOffset(regs, dst)
-                let size = requireTypeKind(reg: dst, from: regs).hlRegSize
-                if size == 4 {
-                    mem.append(M1Op.ldr(W.w0, .reg64offset(.sp, dstOffset, nil)))
-                } else if size == 8 {
-                    mem.append(M1Op.ldr(X.x0, .reg64offset(.sp, dstOffset, nil)))
-                } else if size == 2 {
-                    mem.append(M1Op.ldrh(W.w0, .imm64(.sp, dstOffset, nil)))
-                } else if size == 1 {
-                    mem.append(M1Op.ldrb(W.w0, .imm64(.sp, dstOffset, nil)))
+                let dstKind = requireTypeKind(reg: dst, from: regs)
+                
+                if FP_TYPE_KINDS.contains(dstKind) {
+                    appendLoadNumericAsDouble(reg: D.d0, from: dst, kinds: regs, mem: mem)
+                    mem.append(M1Op.fcvtzs(X.x0, D.d0))
                 } else {
-                    fatalError("Invalid size for null check")
+                    appendLoad(0, from: dst, kinds: regs, mem: mem)
                 }
 
                 mem.append(
@@ -2543,7 +2538,7 @@ class M1Compiler2 {
                 )
                 appendDebugPrintAligned4("Null access exception", builder: mem)
                 
-                // tmp crash on null access
+                // tmp crash on null access. TODO: add proper error here
                 appendSystemExit(1, builder: mem)
                 jumpOverDeath.stop(at: mem.byteSize)
             case .OAnd(let dst, let a, let b):
