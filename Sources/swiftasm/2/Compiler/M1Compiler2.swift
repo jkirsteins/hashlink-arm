@@ -2896,8 +2896,8 @@ class M1Compiler2 {
                         M1Op.blr(X.x1)
                 )
                 appendStore(0, into: dst, kinds: regs, mem: mem)
-            case .ONeg(let dst, let src):
-                assert(reg: dst, from: regs, in: [HLTypeKind.i32, HLTypeKind.i64, HLTypeKind.u8, HLTypeKind.u16])
+            case .ONeg(let dst, let src) where isInteger(vreg: dst, kinds: regs) && isInteger(vreg: src, kinds: regs):
+                assertNumeric(reg: dst, from: regs)
                 let _negger: (@convention(c) (UInt64)->(UInt64)) = {
                     inVal in
                     
@@ -2908,7 +2908,22 @@ class M1Compiler2 {
                     PseudoOp.mov(X.x1, unsafeBitCast(_negger, to: OpaquePointer.self)),
                         M1Op.blr(X.x1)
                 )
+                
                 appendStore(0, into: dst, kinds: regs, mem: mem)
+            case .ONeg(let dst, let src):
+                assertNumeric(reg: dst, from: regs)
+                let _negger: (@convention(c) (Float64)->(Float64)) = {
+                    inVal in
+                    
+                    return 0 - inVal
+                }
+                appendLoadNumericAsDouble(reg: D.d0, from: src, kinds: regs, mem: mem)
+                mem.append(
+                    PseudoOp.mov(X.x1, unsafeBitCast(_negger, to: OpaquePointer.self)),
+                        M1Op.blr(X.x1)
+                )
+                
+                appendStoreDoubleAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             case .OUShr(let dst, let a, let b):
                 fallthrough
             case .OSShr(let dst, let a, let b):

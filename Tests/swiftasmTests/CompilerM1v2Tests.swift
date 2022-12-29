@@ -623,39 +623,79 @@ final class CompilerM1v2Tests: CCompatTestCase {
             .ORet(ret: 0)
         ]) {
             entrypoint in
-            
+
             XCTAssertEqual(1245, entrypoint(-1245))
             XCTAssertEqual(-1245, entrypoint(1245))
         }
-        
+
         try _ri64__i64(ops: [
             .ONeg(dst: 0, src: 0),
             .ORet(ret: 0)
         ]) {
             entrypoint in
-            
+
             XCTAssertEqual(1245, entrypoint(-1245))
             XCTAssertEqual(-1245, entrypoint(1245))
         }
-        
+
         try _ru16__u16(ops: [
             .ONeg(dst: 0, src: 0),
             .ORet(ret: 0)
         ]) {
             entrypoint in
-            
+
             XCTAssertEqual(1245, entrypoint(UInt16(bitPattern: -1245)))
             XCTAssertEqual(UInt16(bitPattern: -1245), entrypoint(1245))
         }
-        
+
         try _ru8__u8(ops: [
             .ONeg(dst: 0, src: 0),
             .ORet(ret: 0)
         ]) {
             entrypoint in
-            
+
             XCTAssertEqual(12, entrypoint(UInt8(bitPattern: -12)))
             XCTAssertEqual(UInt8(bitPattern: -12), entrypoint(12))
+        }
+
+        try _rf64__f64(ops: [
+            .ONeg(dst: 0, src: 0),
+            .ORet(ret: 0)
+        ]) {
+            entrypoint in
+
+            XCTAssertEqualDouble(12, entrypoint(-12))
+            XCTAssertEqualDouble(-12, entrypoint(12))
+        }
+
+        try _rf32__f32(ops: [
+            .ONeg(dst: 0, src: 0),
+            .ORet(ret: 0)
+        ]) {
+            entrypoint in
+
+            XCTAssertEqualFloat(12, entrypoint(-12))
+            XCTAssertEqualFloat(-12, entrypoint(12))
+        }
+        
+        try _rf32__i32(ops: [
+            .ONeg(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+
+            XCTAssertEqual(entrypoint(-12), 12)
+            XCTAssertEqual(entrypoint(12), -12)
+        }
+
+        try _ri32__f64(ops: [
+            .ONeg(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+
+            XCTAssertEqual(entrypoint(-12), 12)
+            XCTAssertEqual(entrypoint(12), -12)
         }
     }
     
@@ -1209,7 +1249,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func _ri32__f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64, .i32], _ callback: @escaping ((Float64)->Int32)->()) throws {
+    func _ri32__f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64, .i32], strip: Bool = true, _ callback: @escaping ((Float64)->Int32)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
                 retType: HLTypeKind.i32,
@@ -1219,7 +1259,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
                 ops: ops)
         ])
         
-        try compileAndLink(ctx: ctx, 0) {
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float64) -> Int32)) in
@@ -1668,6 +1708,25 @@ final class CompilerM1v2Tests: CCompatTestCase {
             mappedMem in
             
             try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (UInt8) -> UInt8)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf64__f64(ops: [HLOpCode], regs: [HLTypeKind] = [.f64], _ callback: @escaping ((Float64)->Float64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f64],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float64) -> Float64)) in
                 callback(ep)
             }
         }
