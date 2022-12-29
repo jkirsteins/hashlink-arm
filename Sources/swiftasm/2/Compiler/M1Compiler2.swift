@@ -2124,8 +2124,6 @@ class M1Compiler2 {
                     )
                 }
 
-                let dstOffset = getRegStackOffset(regs, dst)
-
                 mem.append(
                     PseudoOp.debugMarker("Moving alloc address in x1"),
                     PseudoOp.mov(.x1, allocFunc_jumpTarget),
@@ -2133,10 +2131,9 @@ class M1Compiler2 {
                 )
                 appendDebugPrintAligned4("Jumping to alloc func and storing result", builder: mem)
                 mem.append(
-                    M1Op.blr(.x1),
-                    M1Op.str(X.x0, .reg64offset(X.sp, dstOffset, nil))
+                    M1Op.blr(.x1)
                 )
-
+                appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OGetThis(let dstReg, let fieldRef):
                 try __ogetthis_ofield(
                     dstReg: dstReg,
