@@ -45,6 +45,9 @@ Then run tests via:
 
 Quick and dirty task list:
 
+- [ ] appendLoad/appendStore should use an offset immediate when possible (when e.g. >256 but divisible by 4)
+- [ ] Remove non-static appendLoad/appendStore methods
 - [ ] Combine appendLoad() methods
 - [ ] deduplicate appendStore (offset immediate vs register)
-- [ ] deduplicate appendLoad (offset immediate vs register)    
+- [ ] deduplicate appendLoad (offset immediate vs register)
+- [ ] wrap entrypoint in safe call    

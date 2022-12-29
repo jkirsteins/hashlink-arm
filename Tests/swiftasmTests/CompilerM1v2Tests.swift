@@ -4731,4 +4731,36 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqualFloat(entrypoint(), 123.456)
         }
     }
+    
+    /// Regression test - test functions that require storing/loading stack in a non-divisible-by-4 position greater than 256 (e.g. 257)
+    ///
+    /// If offset is <=256, then `stur` can handle it.
+    /// If offset is >256, then it must be a power of 4 (if offset is provided as an immediate).
+    ///
+    /// So if offset is 257, we need to be smart about storing/loading.
+    ///
+    /// It is also important that the register is 4-bytes wide (as 2-byte and 1-byte registers use `strw`/`strh` instead of `str`)
+    func testCompile_stackLarger256() throws {
+        let regs: [HLTypeKind] = Array(repeating: HLTypeKind.i32, count: 64) + [HLTypeKind.u8 /* <- this ruins the divisibility */, HLTypeKind.i32]
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i32],
+                ops: [
+                    .OToInt(dst: 65, src: 0),
+                    .ORet(ret: 65)
+                ])
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            let callable = try ctx.getCallable(findex: 0)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: (@convention(c) (Int32) -> (Int32)).self)
+            
+            XCTAssertEqual(entrypoint(123), 123)
+        }
+    }
 }

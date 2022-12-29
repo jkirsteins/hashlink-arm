@@ -555,6 +555,13 @@ extension M1Compiler2 {
         kinds: [any HLTypeKindProvider],
         mem: CpuOpBuffer)
     {
+        
+        // NOTE: if offset is larger than 9 bits, we'll not use an immediate
+        // for the offset.
+        //
+        // This can be inefficient (we CAN use an immediate for larger values, if
+        // it is divisible by 4).
+        
         let offset: Immediate9
         let addrReg: Register64
         do {
@@ -569,8 +576,7 @@ extension M1Compiler2 {
                 PseudoOp.mov(X.x21, offsetCandidate),
                 M1Op.add(X.x20, X.x20, .r64shift(X.x21, .lsl(0)))
             )
-            self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendStackInit]", builder: mem)
-            self.appendDebugPrintRegisterAligned4(X.x21, prepend: "[appendStackInit]", builder: mem)
+            self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendLoad indirect]", builder: mem)
         }
         
         
@@ -705,24 +711,47 @@ extension M1Compiler2 {
     ///   - offsetFromAddress: offset from address in `addrReg`
     ///   - kinds: register kinds for current context
     ///   - mem: op buffer
-    static func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrReg: Register64, offsetFromAddress: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    static func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrRegCandidate: Register64, offsetFromAddress offsetCandidate: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
         guard let reg32: any Register = (reg.i?.to32 ?? reg.fp?.to32) else {
             fatalError("Can't convert \(reg) to 32-bit variant")
         }
         
+        // NOTE: if offset is larger than 9 bits, we'll not use an immediate
+        // for the offset.
+        //
+        // This can be inefficient (we CAN use an immediate for larger values, if
+        // it is divisible by 4).
+        
+        let offset: Immediate9
+        let addrReg: Register64
+        do {
+            offset = try Immediate9(offsetCandidate)
+            addrReg = addrRegCandidate
+        } catch {
+            offset = Immediate9(0) // offsetCandidate is added to X.x20 instead
+            addrReg = X.x20
+            
+            mem.append(
+                M1Op.movr64(X.x20, addrRegCandidate),
+                PseudoOp.mov(X.x21, offsetCandidate),
+                M1Op.add(X.x20, X.x20, .r64shift(X.x21, .lsl(0)))
+            )
+            self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendStore indirect]", builder: mem)
+        }
+        
         if vregKind.hlRegSize == 8 {
             Swift.assert(reg.is64)
             mem.append(
                 PseudoOp.debugMarker("Storing 8 bytes in vreg \(vreg)"),
-                M1Op.str(reg, .reg64offset(addrReg, offsetFromAddress, nil))
+                M1Op.str(reg, .reg64offset(addrReg, offset.immediate, nil))
             )
         } else if vregKind.hlRegSize == 4 {
             Swift.assert(reg.is32)
             mem.append(
                 PseudoOp.debugMarker("Storing 4 bytes in vreg \(vreg)"),
-                M1Op.str(reg32, .reg64offset(addrReg, offsetFromAddress, nil))
+                M1Op.str(reg32, .reg64offset(addrReg, offset.immediate, nil))
             )
         } else if vregKind.hlRegSize == 2 {
             Swift.assert(reg.is32)
@@ -731,7 +760,7 @@ extension M1Compiler2 {
             }
             mem.append(
                 PseudoOp.debugMarker("Storing 2 bytes in vreg \(vreg)"),
-                M1Op.strh(reg32gp, .imm64(addrReg, offsetFromAddress, nil))
+                M1Op.strh(reg32gp, .imm64(addrReg, offset.immediate, nil))
             )
         } else if vregKind.hlRegSize == 1 {
             Swift.assert(reg.is32)
@@ -740,7 +769,7 @@ extension M1Compiler2 {
             }
             mem.append(
                 PseudoOp.debugMarker("Storing 1 byte in vreg \(vreg)"),
-                M1Op.strb(reg32gp, .imm64(addrReg, offsetFromAddress, nil))
+                M1Op.strb(reg32gp, .imm64(addrReg, offset.immediate, nil))
             )
         } else if vregKind.hlRegSize == 0 {
             // nop
