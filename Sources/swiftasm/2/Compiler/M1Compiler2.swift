@@ -69,25 +69,29 @@ fileprivate func get_dyncast( to kind: HLTypeKind ) -> OpaquePointer {
 
 // MARK: Enum impl methods
 
-let OEnumField_impl: (@convention(c)(OpaquePointer, Int32, Int32)->(OpaquePointer)) = {
+let OEnumField_impl_getValueAddress: (@convention(c)(OpaquePointer, Int32, Int32)->(UnsafeRawPointer)) = {
     _enum, constructIndex, fieldIndex in
     
     let enumPtr: UnsafePointer<venum> = .init(_enum)
     let constructPtr = enumPtr.pointee.t.pointee.tenum.pointee.constructs.advanced(by: Int(constructIndex))
-    let result = constructPtr.pointee.offsets.advanced(by: Int(fieldIndex))
-    return .init(result)
+    let offset = constructPtr.pointee.offsets.advanced(by: Int(fieldIndex)).pointee
+    
+    
+    let rawPointerToField: UnsafeRawPointer = .init(_enum).advanced(by: Int(offset))
+    return rawPointerToField
 }
 
-let OSetEnumField_impl: (@convention(c) (
-    OpaquePointer,  // type
+let OSetEnumField_impl_getValueAddress: (@convention(c) (
+    OpaquePointer,  // value
     Int32,          // field index
     Int32           // source
-)->()) = {
-    (_type, fieldIndex, source) in
-    let type: UnsafePointer<venum> = .init(_type)
-    let fieldPtr = type.pointee.t.pointee.tenum.pointee.constructs.pointee.offsets.advanced(by: Int(fieldIndex))
-    let mFieldPtr: UnsafeMutablePointer<Int32> = .init(mutating: fieldPtr)
-    mFieldPtr.pointee = source
+)->(UnsafeRawPointer)) = {
+    (_enum, fieldIndex, source) in
+    let enumPtr: UnsafePointer<venum> = .init(_enum)
+    let offset = enumPtr.pointee.t.pointee.tenum.pointee.constructs.pointee.offsets.advanced(by: Int(fieldIndex)).pointee
+    
+    let rawPointerToField: UnsafeRawPointer = .init(_enum).advanced(by: Int(offset))
+    return rawPointerToField
 }
 
 let OEnumAlloc_impl: (@convention(c) (
@@ -125,11 +129,15 @@ let OMakeEnum_impl: (@convention(c) (
     assert(cPtr.pointee.nparams == argCount)
     
     let mutatingConstruct: UnsafeMutablePointer<HLEnumConstruct_CCompat> = .init(mutating: cPtr)
+    var offset: ByteCount = 0
     for paramIx in (0..<Int(cPtr.pointee.nparams)) {
-        let argValueInt32 = Int32(argValues[paramIx])
-        let offsetPtr = cPtr.pointee.offsets.advanced(by: paramIx)
-        let mutatingOffsetPtr: UnsafeMutablePointer<Int32> = .init(mutating: offsetPtr)
-        mutatingOffsetPtr.pointee = argValueInt32
+        let argValue = argValues[paramIx]
+        let offset = cPtr.pointee.offsets.advanced(by: paramIx).pointee
+        
+        let rawEnumBase: UnsafeMutableRawPointer = .init(OpaquePointer(result))
+        let mutatingOffsetPtr: UnsafeMutablePointer<Int64> = .init(OpaquePointer(rawEnumBase.advanced(by: Int(offset))))
+        mutatingOffsetPtr.pointee = argValue
+        print("Set val at", offset, "to", argValue)
     }
     
     return .init(result)
@@ -3144,6 +3152,13 @@ class M1Compiler2 {
                 case (.i32, .f64):
                     mem.append(M1Op.scvtf(D.d0, W.w0))
                     appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
+                // MARK: cast i64 to floating points
+                case (.i64, .f32):
+                    mem.append(M1Op.scvtf(S.s0, X.x0))
+                    appendStore(reg: S.s0, into: dst, kinds: regs, mem: mem)
+                case (.i64, .f64):
+                    mem.append(M1Op.scvtf(D.d0, X.x0))
+                    appendStore(reg: D.d0, into: dst, kinds: regs, mem: mem)
                 // MARK: cast f64 to smaller size
                 case (.f64, .f32):
                     appendPrepareDoubleForStore(reg: D.d0, to: dst, kinds: regs, mem: mem)
@@ -3350,10 +3365,7 @@ class M1Compiler2 {
                 assert(reg: dst, from: regs, is: HLTypeKind.i32)
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OEnumField(let dst, let value, let construct, let field):
-                let _implTarget = unsafeBitCast(OEnumField_impl, to: UnsafeRawPointer.self)
-                
-                // TODO: can enums have other types of assoc data? Need a test
-                assert(reg: dst, from: regs, is: HLTypeKind.i32)
+                let _implTarget = unsafeBitCast(OEnumField_impl_getValueAddress, to: UnsafeRawPointer.self)
                 
                 appendLoad(reg: X.x0, from: value, kinds: regs, mem: mem)
                 
@@ -3362,11 +3374,13 @@ class M1Compiler2 {
                     M1Op.movz64(X.x2, UInt16(field), nil),
                     
                     PseudoOp.mov(.x19, _implTarget),
-                    M1Op.blr(.x19),
-                    M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil))
+                    M1Op.blr(.x19)
                 )
-//                assert(reg: dst, from: regs, is: HLTypeKind.i32)
+                appendLoad(0, as: dst, addressRegister: X.x0, offset: 0, kinds: regs, mem: mem)
                 appendStore(0, into: dst, kinds: regs, mem: mem)
+                
+                let dstKind = requireTypeKind(reg: dst, from: regs)
+                appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "OEnumField fetched", builder: mem)
             case .OEnumAlloc(let dst, let construct):
                 assert(reg: dst, from: regs, is: HLTypeKind.enum)
                 let type = requireType(reg: dst, regs: regs)
@@ -3384,9 +3398,7 @@ class M1Compiler2 {
                 )
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSetEnumField(let value, let field, let src):
-                assert(reg: src, from: regs, is: HLTypeKind.i32)
-                
-                let _implTarget = unsafeBitCast(OSetEnumField_impl, to: UnsafeRawPointer.self)
+                let _implTarget = unsafeBitCast(OSetEnumField_impl_getValueAddress, to: UnsafeRawPointer.self)
                 
                 appendLoad(reg: X.x2, from: src, kinds: regs, mem: mem)
                 appendLoad(reg: X.x0, from: value, kinds: regs, mem: mem)
@@ -3395,6 +3407,8 @@ class M1Compiler2 {
                     PseudoOp.mov(.x19, _implTarget),
                     M1Op.blr(.x19)
                 )
+                appendLoad(1, from: src, kinds: regs, mem: mem)
+                appendStore(1, as: src, intoAddressFrom: X.x0, offsetFromAddress: 0, kinds: regs, mem: mem)
             case .OInstanceClosure(let dst, let fun, let obj):
                 
                 guard let funIndex = ctx.mainContext.pointee.m?.pointee.functions_indexes.advanced(by: fun).pointee else {

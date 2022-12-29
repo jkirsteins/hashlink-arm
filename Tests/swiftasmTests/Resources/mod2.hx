@@ -18,7 +18,13 @@ enum Color {
 	Red;
 	Green;
 	Blue;
-	Rgb(r:Int, g:Int, b:Int);
+	Rgb(r:UI8, g:I64, b:Int);
+	Rgbf(r:F32, g:F64, b:F32);
+}
+
+enum Optional<T> {
+	None;
+	Some(r:T);
 }
 
 class Path {
@@ -285,8 +291,12 @@ class Main {
         return inst.closure(mul);
 	}
 
-	static private function testEnum(): Int {
+	static private function testEnum_int(): Int {
 		return testEnum2(Color.Rgb(0, 4, 2));
+	}
+
+	static private function testEnum_float(): Int {
+		return testEnum2(Color.Rgbf(0.0, 4.0, 2.0));
 	}
 
 	static private function testEnum2(en: Color): Int {
@@ -294,7 +304,8 @@ class Main {
 			case Color.Red: return 1;
 			case Color.Green: return 2;
 			case Color.Blue: return 3;
-			case Rgb(r, g, b): return r*100 + g*10 + b;
+			case Rgb(r, g, b): return cast(r*100 + g*10 + b);
+			case Rgbf(r, g, b): return cast(r*100 + g*10 + b);
 		}
 		return -1;
 	}
@@ -466,6 +477,10 @@ class Main {
 
 		trace('testing testInterface_1: ${testInterface_1(1, true, 2, 3.3, 4.4)}');
 		trace('testing testInterface_2: ${testInterface_2(1, true, 2, 3.3, 4.4))}');
+
+		trace('testing testEnum_int: ${testEnum_int())}');
+		trace('testing testEnum_float: ${testEnum_float())}');
+		trace('testing testEnumAssocData: ${testEnumAssocData(123.456))}');
 	}
 
 	public static function testVirtualCallMethod(): Int {
@@ -501,5 +516,19 @@ class Main {
 	// test OGetType when src register is not .dyn
 	static inline public function testGetType_nonDynamicSrc(): Int {
 		return hl.Type.Type.getDynamic("a") == hl.Type.Type.getDynamic(5) ? 1 : 2;
+	}
+
+	static public function testEnumAssocData(f64: F64): F64 {
+		var x = new VirtualTest(0, false, 0, f64*2, 0.0);
+		return testEnumAssocData_internal(Optional.Some(x));
+	}
+
+	static public function testEnumAssocData_internal<T: VirtualInterface>(value: Optional<T>): F64 {
+		switch (value) {
+			// matches any Leaf
+			case Some(wrappedValue):
+				return wrappedValue.getF64();
+			default: return -1.0;
+		  }
 	}
 }

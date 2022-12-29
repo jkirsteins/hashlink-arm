@@ -502,7 +502,7 @@ final class CompileMod2Tests: RealHLTestCase {
          
          Otherwise the output will be `String` (i.e. object name, not the actual value)*/
         
-        let expected = "haxesrc/Main.hx:270: Hello Trace\n"
+        let expected = "haxesrc/Main.hx:276: Hello Trace\n"
         patched_sys_print = []
         
         // Patch the print call to intercept
@@ -1029,12 +1029,29 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
-    func testCompile__testEnum() throws {
+    func testCompile__testEnum_int() throws {
         typealias _JitFunc =  (@convention(c) () -> Int32)
         
         try _compileAndLinkWithDeps(
             strip: true,
-            name: "Main.testEnum"
+            name: "Main.testEnum_int"
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(42, entrypoint())
+            }
+        }
+    }
+    
+    func testCompile__testEnum_float() throws {
+        typealias _JitFunc =  (@convention(c) () -> Int32)
+        
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testEnum_float"
         ) {
             sutFix, mem in
             
@@ -1147,11 +1164,31 @@ final class CompileMod2Tests: RealHLTestCase {
             depHints: totalDeps
         ) {
             sutFix, mem in
-            print(sutFix)
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqualDouble(entrypoint(1, true, 2, 3.3, 4.4), 11.69)
+            }
+        }
+    }
+    
+    func testCompile_testEnumAssocData() throws {
+        typealias _JitFunc =  (@convention(c) (Float64) -> Float64)
+        
+        let totalDeps: [RefFun] =
+        (try self._extractTypeProtoDependencies("VirtualTest"))
+                
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testEnumAssocData",
+            depHints: totalDeps
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualDouble(entrypoint(123.456), 246.912)
             }
         }
     }

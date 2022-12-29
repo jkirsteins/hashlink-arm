@@ -1019,6 +1019,44 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _rf64__i64(ops: [HLOpCode], regs: [HLTypeKind] = [.i64, .f64], _ callback: @escaping ((Int64)->Float64)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f64,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i64],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int64) -> Float64)) in
+                callback(ep)
+            }
+        }
+    }
+    
+    func _rf32__i64(ops: [HLOpCode], regs: [HLTypeKind] = [.i64, .f32], _ callback: @escaping ((Int64)->Float32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.f32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.i64],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Int64) -> Float32)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _rf64__u8(ops: [HLOpCode], regs: [HLTypeKind] = [.u8, .f64], _ callback: @escaping ((UInt8)->Float64)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -4275,6 +4313,24 @@ final class CompilerM1v2Tests: CCompatTestCase {
             entrypoint in
             
             XCTAssertEqualDouble(entrypoint(123), 123.0)
+        }
+        
+        try _rf64__i64(ops: [
+            .OToSFloat(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqualDouble(entrypoint(123), 123.0)
+        }
+        
+        try _rf32__i64(ops: [
+            .OToSFloat(dst: 1, src: 0),
+            .ORet(ret: 1)
+        ]) {
+            entrypoint in
+            
+            XCTAssertEqualFloat(entrypoint(123), 123.0)
         }
     }
     
