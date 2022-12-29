@@ -183,7 +183,11 @@ extension M1Compiler2 {
 
             appendLoad(reg: X.x0, from: srcReg, kinds: regs, mem: mem)
             appendLoad(reg: X.x1, from: objReg, kinds: regs, mem: mem)
-            mem.append(M1Op.str(X.x0, .reg64offset(.x1, fieldOffset, nil)))
+            
+            // force HLTypeKind.dyn to always store the full 8 bytes
+            // (technically not needed, but appendStore will complain if we
+            // specify X.x0 when register expects W.w0)
+            appendStore(reg: X.x0, as: 0, intoAddressFrom: X.x1, offsetFromAddress: fieldOffset, kinds: [HLTypeKind.dyn], mem: mem)
         case .virtual:
             // TODO: deduplicate across ocallmethod
             /*
