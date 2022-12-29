@@ -10,9 +10,8 @@ It is [made by Jānis Kiršteins](https://mastodon.gamedev.place/@jki)
 
 ## Current status
 
-Most of the opcodes are implemented. Currently missing support for:
+Most of the opcodes are implemented. Currently (ignoring bugs) missing support for:
 
-- 🔴 OVirtualClosure
 - 🔴 OToUFloat
 - 🔴 ORefData
 - 🔴 ORefOffset 

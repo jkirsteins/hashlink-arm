@@ -104,13 +104,30 @@ class VirtualTestChild extends VirtualTest {
 
 class _MethodTester {
 	public var closure:(Int)->Int;
+	private var value: Int;
 
 	public function new(test) {
+		this.value = test;
 		this.closure = (mul) -> { test * mul; };
 	}
 
 	public function mul(multiplier: Int): Int {
 		return this.closure(multiplier);
+	}
+
+	public function getval(): Int {
+		throw new haxe.exceptions.NotImplementedException();
+	}
+}
+
+class _MethodTester_Child extends _MethodTester {
+	public function new(test) {
+		super(test);
+		this.value = test;
+	}
+
+	public override function getval(): Int {
+		return this.value;
 	}
 }
 
@@ -286,6 +303,16 @@ class Main {
         return inst.mul(mul);
 	}
 
+	static private function testVirtualClosure(v: Int): Int {
+		return testVirtualClosure_inner(new _MethodTester_Child(v));
+	}
+
+	static private function testVirtualClosure_inner(inst: _MethodTester): Int {
+		var cl: Void->Int;
+		cl = inst.getval;
+        return cl();
+	}
+
 	static private function testFieldClosure(mul: Int): Int {
 		var inst = new _MethodTester(2);
         return inst.closure(mul);
@@ -299,6 +326,18 @@ class Main {
 		return testEnum2(Color.Rgbf(0.0, 4.0, 2.0));
 	}
 
+	static private function testEnum_float__setField(): Int {
+		var val: Color = Color.Rgbf(0.0, 4.0, 2.0);
+		switch(val) {
+			case Rgbf(r, g, b): 
+				val = Color.Rgbf(0.0, 2.0, 2.0);
+			default: 
+				return -1;
+		}
+		
+		return testEnum2(val);
+	}
+	
 	static private function testEnum2(en: Color): Int {
 		switch(en) {
 			case Color.Red: return 1;
@@ -480,7 +519,10 @@ class Main {
 
 		trace('testing testEnum_int: ${testEnum_int())}');
 		trace('testing testEnum_float: ${testEnum_float())}');
+		trace('testing testEnum_float__setField: ${testEnum_float__setField())}');
 		trace('testing testEnumAssocData: ${testEnumAssocData(123.456))}');
+
+		trace('testing testVirtualClosure: ${testVirtualClosure(5))}');
 	}
 
 	public static function testVirtualCallMethod(): Int {

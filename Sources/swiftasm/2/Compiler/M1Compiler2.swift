@@ -3434,11 +3434,65 @@ class M1Compiler2 {
                 )
                 appendLoad(1, from: src, kinds: regs, mem: mem)
                 appendStore(1, as: src, intoAddressFrom: X.x0, offsetFromAddress: 0, kinds: regs, mem: mem)
+            case .OVirtualClosure(let dst, let obj, let field):
+                class _PassCtx {
+                    let ctx: CCompatJitContext
+                    
+                    init(ctx: CCompatJitContext) {
+                        self.ctx = ctx
+                    }
+                }
+                
+                let passCtx = Unmanaged.passRetained(_PassCtx(ctx: ctx)).toOpaque()
+                
+                let _impl: (@convention(c) (OpaquePointer, UnsafeRawPointer)->(OpaquePointer)) = {
+                    oPtr, mCtxOpaque in
+                    
+                    let p: UnsafePointer<vdynamic> = .init(oPtr)
+                    let mctx: _PassCtx = Unmanaged.fromOpaque(mCtxOpaque).takeRetainedValue()
+                    
+                    guard let proto = p.pointee.t.pointee.obj.pointee.protoPtr else {
+                        fatalError("Object proto not found \(p.pointee.t._overrideDebugDescription)")
+                    }
+                    
+                    let findex = RefFun(proto.pointee.findex)
+                    
+                    guard let funIndex = mctx.ctx.mainContext.pointee.m?.pointee.functions_indexes.advanced(by: findex).pointee else {
+                        fatalError("No real fun index")
+                    }
+                    
+                    guard let funType = mctx.ctx.mainContext.pointee.code?.pointee.functions.advanced(by: Int(funIndex)).pointee.typePtr else {
+                        fatalError("No fun type in virtual closure")
+                    }
+                    Swift.assert(funType.kind == .fun || funType.kind == .method)
+                    
+                    guard let funAddr = mctx.ctx.mainContext.pointee.m?.pointee.functions_ptrs.advanced(by: Int(findex)).pointee else {
+                        /* NOTE: If this happens in a test, you might need to specify depHints
+                           properly */
+                        fatalError("OVirtualClosure encountered a missing function address (findex: \(findex))")
+                    }
+                    
+                    let callTargetOpaque = OpaquePointer(funAddr)
+                    return .init(LibHl.hl_alloc_closure_ptr(
+                        funType,
+                        callTargetOpaque,
+                        oPtr))
+                }
+                appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
+                mem.append(PseudoOp.mov(X.x1, passCtx))
+                
+                appendFuncCall(unsafeBitCast(_impl, to: OpaquePointer.self), via: X.x20, mem: mem)
+                
+                appendStore(0, into: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "(fun@\(compilable.findex); op: \(currentInstruction)) OVirtualClosure result", builder: mem)
+                
+                
             case .OInstanceClosure(let dst, let fun, let obj):
                 
                 guard let funIndex = ctx.mainContext.pointee.m?.pointee.functions_indexes.advanced(by: fun).pointee else {
                     fatalError("No real fun index")
                 }
+                
                 guard let funType = ctx.mainContext.pointee.code?.pointee.functions.advanced(by: Int(funIndex)).pointee.typePtr else {
                     fatalError("No fun type")
                 }

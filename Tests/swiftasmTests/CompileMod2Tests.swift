@@ -502,7 +502,7 @@ final class CompileMod2Tests: RealHLTestCase {
          
          Otherwise the output will be `String` (i.e. object name, not the actual value)*/
         
-        let expected = "haxesrc/Main.hx:276: Hello Trace\n"
+        let expected = "haxesrc/Main.hx:293: Hello Trace\n"
         patched_sys_print = []
         
         // Patch the print call to intercept
@@ -588,6 +588,27 @@ final class CompileMod2Tests: RealHLTestCase {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqual(28, entrypoint(14))
+            }
+        }
+    }
+    
+    func testCompile__testVirtualClosure() throws {
+        typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
+        
+        let totalDeps =
+        (try self._extractTypeProtoDependencies("_MethodTester_Child")) 
+        
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testVirtualClosure",
+            depHints: totalDeps
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(14, entrypoint(14))
             }
         }
     }
