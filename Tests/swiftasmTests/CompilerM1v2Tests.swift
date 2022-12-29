@@ -3887,7 +3887,10 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    /// Test OSDiv. Remember: Haxe division result is always a float.
+    /// Test OSDiv.
+    ///
+    /// Haxe division result is always a float, but OSDiv might still store
+    /// the result in an integer register (in which case it needs to be implicitly cast).
     func testCompile__OSDiv() throws {
         try _rf32__u8_u8(ops: [
             .OSDiv(dst: 2, a: 0, b: 1),
@@ -3923,6 +3926,16 @@ final class CompilerM1v2Tests: CCompatTestCase {
             
             XCTAssertEqual(entrypoint(4.0, 2), 2.0)
             XCTAssertEqual(entrypoint(-4.0, 2), -2.0)
+        }
+        
+        // Test implicit conversion to integer result
+        try _ri32__i32_i32(ops: [
+            .OSDiv(dst: 0, a: 0, b: 1),
+            .ORet(ret: 0),
+        ], strip: true) { entrypoint in
+            
+            XCTAssertEqual(entrypoint(4, 2), 2)
+            XCTAssertEqual(entrypoint(-4, 2), -2)
         }
     }
     

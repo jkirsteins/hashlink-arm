@@ -1814,14 +1814,14 @@ class M1Compiler2 {
          
          But the absolute offsets can be stored with more bits (in case the relative
          offset is smaller). */
-        let addrBetweenOps: [DeferredImmediate<Immediate26>] = (0..<compilable.ops.count).map { _ in
+        let addrBetweenOps: [DeferredImmediate<ByteCount>] = (0..<compilable.ops.count).map { _ in
             return DeferredImmediate()
         }
 
         for (currentInstruction, op) in compilable.ops.enumerated() {
 
             Self.logger.debug("f\(compilable.findex): #\(currentInstruction) (offset: \(mem.byteSize))")
-            addrBetweenOps[currentInstruction].finalize(try Immediate26(mem.byteSize))
+            addrBetweenOps[currentInstruction].finalize(mem.byteSize)
 
             mem.append(
                 PseudoOp.debugMarker("Marking position for \(currentInstruction) at \(mem.byteSize)")
@@ -2996,7 +2996,7 @@ class M1Compiler2 {
                 // See: https://haxe.org/blog/hashlink-in-depth-p2/
                 fallthrough
             case .OSDiv(let dst, let a, let b) where isInteger(vreg: a, kinds: regs) && isInteger(vreg: b, kinds: regs):
-                assertFP(reg: dst, from: regs)
+                assertNumeric(reg: dst, from: regs)
                 assertInteger(reg: a, from: regs)
                 assertInteger(reg: b, from: regs)
                 
@@ -3019,16 +3019,17 @@ class M1Compiler2 {
                 
                 appendDebugPrintRegisterAligned4(X.x0, prepend: "\(op.id) res (before float)", builder: mem)
                 
-                if case .OUDiv = op {
-                    appendUcvtf(reg: X.x0, to: D.d0, target: dst, kinds: regs, mem: mem)
-                } else if case .OSDiv = op {
-                    appendScvtf(reg: X.x0, to: D.d0, target: dst, kinds: regs, mem: mem)
-                } else {
-                    fatalError("Invalid op for div (to determine how to convert to float)")
+                if isFP(vreg: dst, kinds: regs) {
+                    // Ensure the result is in a FP register
+                    if case .OUDiv = op {
+                        appendUcvtf(reg: X.x0, to: D.d0, target: dst, kinds: regs, mem: mem)
+                    } else if case .OSDiv = op {
+                        appendScvtf(reg: X.x0, to: D.d0, target: dst, kinds: regs, mem: mem)
+                    } else {
+                        fatalError("Invalid op for div (to determine how to convert to float)")
+                    }
                 }
-                
                 appendStore(0, into: dst, kinds: regs, mem: mem)
-                
             case .OSDiv(let dst, let a, let b) where isFP(vreg: a, kinds: regs) && isFP(vreg: b, kinds: regs):
                 assertFP(reg: dst, from: regs)
                 appendLoad(reg: D.d0, from: a, kinds: regs, mem: mem)
@@ -3203,7 +3204,7 @@ class M1Compiler2 {
                     let wordsToSkip = Int(jmpOffset) + 1
                     let targetInstructionIx = currentInstruction + wordsToSkip
                     
-                    let jumpOffset_partA = try Immediate21(mem.byteSize)
+                    let jumpOffset_partA = mem.byteSize
                     let jumpOffset_partB = addrBetweenOps[targetInstructionIx]
                     let jumpOffset = try DeferredImmediateSum(
                         jumpOffset_partB,
