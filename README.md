@@ -44,6 +44,7 @@ Then run tests via:
 
 Quick and dirty task list:
 
+- [ ] Finish caching support (fails when caching invalid ccompat addresses) 
 - [ ] appendLoad/appendStore should use an offset immediate when possible (when e.g. >256 but divisible by 4)
 - [ ] Remove non-static appendLoad/appendStore methods
 - [ ] Combine appendLoad() methods

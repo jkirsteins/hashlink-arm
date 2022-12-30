@@ -205,10 +205,10 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
         case .debugMarker: return []
         case .movRelative(let Rd, let jitBase, let val):
             guard val.hasUsableValue else {
-                throw GlobalError.immediateMissingValue("Trying to emit PseudoOp.movAbsoluteAddress and val \(val) does not have a usable value.")
+                throw GlobalError.immediateMissingValue("Trying to emit PseudoOp.movRelative and val \(val) does not have a usable value.")
             }
             guard jitBase.hasUsableValue else {
-                throw GlobalError.immediateMissingValue("Trying to emit PseudoOp.movAbsoluteAddress and jitBase does not have a usable value.")
+                throw GlobalError.immediateMissingValue("Trying to emit PseudoOp.movRelative and jitBase does not have a usable value.")
             }
             
             let imm = jitBase.immediate + val.immediate

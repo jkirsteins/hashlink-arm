@@ -1501,12 +1501,12 @@ extension M1Compiler2 {
 class M1Compiler2 {
     let emitter = EmitterM1()
     let ctx: CCompatJitContext
-    let cache: any CompilerCache
+    let cache: (any CompilerCache)?
     let stripDebugMessages: Bool
     
     static let logger = LoggerFactory.create(M1Compiler2.self)
     
-    init(ctx: CCompatJitContext, stripDebugMessages: Bool = false, cache: any CompilerCache = NoopCache()) {
+    init(ctx: CCompatJitContext, stripDebugMessages: Bool = false, cache: (any CompilerCache)? = nil) {
         self.stripDebugMessages = stripDebugMessages
         self.ctx = ctx
         self.cache = cache
@@ -1744,14 +1744,14 @@ class M1Compiler2 {
     ///   - mem:
     /// - Returns:
     @discardableResult
-    func compile(findex fix: RefFun, into mem: CpuOpBuffer) throws -> any Compilable2
+    func compile(findex fix: RefFun, into mem: CpuOpBuffer, requireCache: Bool = false) throws -> any Compilable2
     {
         guard let compilable = try ctx.getCompilable(findex: fix) else {
             throw GlobalError.invalidValue("Function (findex=\(fix)) not found.")
         }
         
         // TODO: mark as compiled
-        try compile(compilable: compilable, into: mem)
+        try compile(compilable: compilable, into: mem, requireCache: requireCache)
         return compilable
     }
     
@@ -1804,35 +1804,45 @@ class M1Compiler2 {
     }
     
     // MARK: compile
-    func compile(compilable: any Compilable2, into mem: CpuOpBuffer) throws
+    func compile(compilable: any Compilable2, into mem: CpuOpBuffer, requireCache: Bool = false) throws
     {
         defer {
             ctx.funcTracker.compiled(compilable.findex)
         }
         
-        guard let cached = try self.cache.cached(offset: mem.byteSize, compilable: compilable) else {
+        guard let cache = self.cache, let cached = try cache.cached(offset: mem.byteSize, compilable: compilable) else {
+            
+            // `requireCache` only exists so we can test caching
+            guard !requireCache else {
+                throw GlobalError.invalidOperation("Function \(compilable.findex) at \(mem.byteSize) not cached, but cache is required.")
+            }
+            
             let startPos = mem.byteSize
             let startOpPos = mem.position
             
-            Self.logger.trace("Compiling f\(compilable.findex) at \(startPos)")
+            Self.logger.trace("[cache decision] Compiling f\(compilable.findex) at \(startPos)")
             try _compile(compilable: compilable, into: mem)
+            
+            guard let cache = self.cache else {
+                Self.logger.debug("Cache is not provided, so skipping f\(compilable.findex)")
+                return
+            }
+            
             do {
                 let compiledData = mem.opSlice(from: Int(startOpPos), to: mem.position)
                 Self.logger.warning("Caching f\(compilable.findex)")
                 try cache.cache(offset: startPos, compilable: compilable, data: compiledData)
             } catch {
                 Self.logger.warning("Couldn't cache f\(compilable.findex)")
-                throw error
             }
             
             return
         }
         
         // TODO: deduplicate offset setting (and other processing when compiling)
-        print("XX fun \(compilable.findex) at \(mem.byteSize)")
+        Self.logger.trace("[cache decision] Reusing f\(compilable.findex) at \(mem.byteSize)")
         compilable.linkableAddress.setOffset(mem.byteSize)
-        
-//        mem.append(CachedOp(size: ByteCount(cached.count), data: cached))
+        mem.append(cached)
     }
     
     func _compile(compilable: any Compilable2, into mem: CpuOpBuffer) throws
@@ -1863,7 +1873,6 @@ class M1Compiler2 {
             throw GlobalError.functionAlreadyCompiled("Can not compile function (findex=\(fix)) because it already has been compiled and linked. \(compilable.address)")
         }
         
-        print("XX fun \(compilable.findex) at \(mem.byteSize)")
         compilable.linkableAddress.setOffset(mem.byteSize)
 
         // if we need to return early, we jump to these
