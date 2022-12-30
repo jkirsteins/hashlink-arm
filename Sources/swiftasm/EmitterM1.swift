@@ -507,9 +507,25 @@ public enum EmitterM1Error: Error, Equatable {
     case invalidValue(_ reason: String)
 }
 
+extension Int64 {
+    public func getBytes() -> [UInt8] {
+        let length: Int = 8 * MemoryLayout<UInt8>.stride
+        let result = withUnsafeBytes(of: self) { bytes in Array(bytes.prefix(length)) }
+        return result
+    }
+    
+    public static func recombine(_ from: [UInt8]) -> Int64 {
+        from.withUnsafeBufferPointer {
+            bufIn in
+            
+            return UnsafePointer<Int64>(OpaquePointer(bufIn.baseAddress!)).pointee
+        }
+    }
+}
+
 public class EmitterM1 {
     private static func returnAsArray(_ val: Int64) -> [UInt8] {
-        let length: Int = 4 * MemoryLayout<UInt8>.size
+        let length: Int = 4 * MemoryLayout<UInt8>.stride
         let result = withUnsafeBytes(of: val) { bytes in Array(bytes.prefix(length)) }
 //         print(
 //             "Returning \(result.map { String($0, radix: 16).leftPadding(toLength: 2, withPad: "0") })"
@@ -1010,18 +1026,30 @@ public class EmitterM1 {
                 encodedRt1 | encodedRt2 | encodedRn | (opc << opcOffset) | mask | imm
             return returnAsArray(encoded)
         case .b_v2(let imm26):
+            guard imm26.immediate != 0 else {
+                throw GlobalError.invalidValue("Jumping to 0 is an error")
+            }
+            
             //                         imm26
             let mask: Int64 = 0b000101_00000000000000000000000000
             let encoded = mask | imm26.signedShiftedRight(2) // divisor 4
             
             return returnAsArray(encoded)
         case .b(let imm26):
+            guard imm26.value != 0 else {
+                throw GlobalError.invalidValue("Jumping to 0 is an error")
+            }
+            
             let imm = try truncateOffset(Int64(imm26.value), divisor: 4, bits: 26)
             //                         imm26
             let mask: Int64 = 0b000101_00000000000000000000000000
             let encoded = mask | imm
             return returnAsArray(encoded)
         case .bl(let imm26):
+            guard imm26.immediate != 0 else {
+                throw GlobalError.invalidValue("Jumping to 0 is an error")
+            }
+            
             guard (imm26.immediate & 0x3FFFFFF) == imm26.immediate else {
                 throw EmitterM1Error.invalidValue(
                     "BL requires the immediate to fit in 26 bits"
@@ -1265,36 +1293,60 @@ public class EmitterM1 {
             let encoded: Int64 = mask | size | shift | encodedRm | imm6 | encodedRn | encodedRd
             return returnAsArray(encoded)
         case .b_lt(let imm):
+            guard imm.immediate != 0 else {
+                throw GlobalError.invalidValue("Jumping to 0 is an error")
+            }
+            
             //                           imm19                 cond
             let mask: Int64 = 0b01010100_0000000000000000000_0_1011
             let imm16: Int64 = (imm.signedTruncate(lsr: 2, capBits: 19)) << 5
             let encoded = mask | imm16
             return returnAsArray(encoded)
         case .b_eq(let imm):
+            guard imm.immediate != 0 else {
+                throw GlobalError.invalidValue("Jumping to 0 is an error")
+            }
+            
             //                           imm19                 cond
             let mask: Int64 = 0b01010100_0000000000000000000_0_0000
             let imm16: Int64 = (imm.signedTruncate(lsr: 2, capBits: 19)) << 5
             let encoded = mask | imm16
             return returnAsArray(encoded)
         case .b_ne(let imm):
+            guard imm.immediate != 0 else {
+                throw GlobalError.invalidValue("Jumping to 0 is an error")
+            }
+            
             //                           imm19                 cond
             let mask: Int64 = 0b01010100_0000000000000000000_0_0001
             let imm16: Int64 = (imm.signedTruncate(lsr: 2, capBits: 19)) << 5
             let encoded = mask | imm16
             return returnAsArray(encoded)
         case .b_gt(let imm):
+            guard imm.immediate != 0 else {
+                throw GlobalError.invalidValue("Jumping to 0 is an error")
+            }
+            
             //                           imm19                 cond
             let mask: Int64 = 0b01010100_0000000000000000000_0_1100
             let imm16: Int64 = (imm.signedTruncate(lsr: 2, capBits: 19)) << 5
             let encoded = mask | imm16
             return returnAsArray(encoded)
         case .b_ge(let imm):
+            guard imm.immediate != 0 else {
+                throw GlobalError.invalidValue("Jumping to 0 is an error")
+            }
+            
             //                           imm19                 cond
             let mask: Int64 = 0b01010100_0000000000000000000_0_1010
             let imm16: Int64 = (imm.signedTruncate(lsr: 2, capBits: 19)) << 5
             let encoded = mask | imm16
             return returnAsArray(encoded)
         case .b_le(let imm):
+            guard imm.immediate != 0 else {
+                throw GlobalError.invalidValue("Jumping to 0 is an error")
+            }
+            
             //                           imm19                 cond
             let mask: Int64 = 0b01010100_0000000000000000000_0_1101
             let imm16: Int64 = (imm.signedTruncate(lsr: 2, capBits: 19)) << 5

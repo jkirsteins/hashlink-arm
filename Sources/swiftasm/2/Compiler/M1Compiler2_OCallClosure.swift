@@ -187,14 +187,7 @@ extension M1Compiler2 {
             mem.append(M1Op.movz64(X.x2, 0, nil))
             mem.append(M1Op.cmp(X.x1, X.x2))
             
-            mem.append(
-                PseudoOp.withOffset(
-                    offset: &jmpTarget_hlvfieldNoAddress,
-                    mem: mem,
-                    M1Op.b_eq(try! Immediate21(jmpTarget_hlvfieldNoAddress.value))
-                )
-            )
-            
+            mem.appendWithOffset(offset: &jmpTarget_hlvfieldNoAddress, PseudoOp.b_eq_deferred(jmpTarget_hlvfieldNoAddress))
             // MARK: OCallMethod/virtual has address
             appendDebugPrintAligned4("ocallmethod/virtual HAS ADDRESS", builder: mem)
             
@@ -253,14 +246,7 @@ extension M1Compiler2 {
                 mem: mem)
             
             // finish this branch
-            mem.append(
-                PseudoOp.withOffset(
-                    offset: &jmpTarget_postCheck,
-                    mem: mem,
-                    M1Op.b(jmpTarget_postCheck)
-                )
-            )
-            
+            mem.appendWithOffset(offset: &jmpTarget_postCheck, M1Op.b(jmpTarget_postCheck))            
             // marker for other branch
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)
             
@@ -451,7 +437,7 @@ extension M1Compiler2 {
     ///   - mem: operation buffer
     func __ocall_impl(
         dst: Reg,
-        appendCall: (CpuOpBuffer)->(),
+        appendCall: (CpuOpBuffer) throws->(),
         regs: [any HLTypeProvider],
         preArgs: [((CpuOpBuffer, RegisterRawValue, HLTypeKind)->(), HLTypeKind)],
         args: [Reg],
@@ -596,7 +582,7 @@ extension M1Compiler2 {
         
         // PERFORM BLR
         appendDebugPrintAligned4("[__ocall_impl] Appending call...", builder: mem)
-        appendCall(mem)
+        try appendCall(mem)
         appendDebugPrintAligned4("[__ocall_impl] Finished call...", builder: mem)
         
         if dstKind != .void {
@@ -655,7 +641,7 @@ extension M1Compiler2 {
             dst: dst,
             appendCall: { buff in
                 buff.append(
-                    PseudoOp.mov(.x19, callTarget.address),
+                    PseudoOp.movCallableAddress(X.x19, ctx.jitBase, callTarget.address),
                     M1Op.blr(.x19)
                 )
             },

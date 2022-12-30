@@ -76,16 +76,22 @@ struct SwiftAsm: ParsableCommand {
 //            305, 437, 350, 28, 14, 42, 240, 337, 303
 ]
 
+        let cache = DiskCache()
         let mod = try! Bootstrap.start2(hlFileIn, args: [])
-        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug)
+        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug, cache: cache)
         let buf = CpuOpBuffer()
+        
+        var offsetToCompilable: Dictionary<ByteCount, (ByteCount, any Compilable2)> = [:]
+        
         Self.logger.debug("Compiling...")
         for frix in (0..<mod.nfunctions) {
             let fix = mod.mainContext.pointee.code!.pointee.functions.advanced(by: Int(frix)).pointee.findex
             
             if !tmpDeps.isEmpty && !tmpDeps.contains(Int(fix)) { continue }
             
-            try sut.compile(findex: RefFun(fix), into: buf)
+            let startByteSize = buf.byteSize
+            let compilable = try sut.compile(findex: RefFun(fix), into: buf)
+            offsetToCompilable[startByteSize] = (buf.byteSize, compilable)
         }
         
         let epIx = mod.mainContext.pointee.code!.pointee.entrypoint

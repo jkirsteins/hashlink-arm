@@ -58,6 +58,10 @@ class ByteReader {
     init(_ data: Data) { self.data = data }
 
     func readIndex() throws -> TableIndex { return TableIndex(try readVarInt()) }
+    
+    var isAtEnd: Bool {
+        pointer >= data.count
+    }
 
     func readVarInt() throws -> Int32 {
         let b = try readOctetAsInt32()
@@ -441,6 +445,19 @@ class ByteReader {
             0,
             { soFar, new in (soFar << 8) | Result(new) }
         )
+    }
+    
+    func readNUInt8(_ expected: Int, advance: Bool = true) throws -> [UInt8] {
+        guard data.count >= pointer + expected else {
+            fatalError("Not enough data before seeking")
+        }
+        let result = self.data[
+            self.data.startIndex.advanced(
+                by: pointer
+            )..<self.data.startIndex.advanced(by: pointer + expected)
+        ]
+        defer { if advance { pointer += expected } }
+        return Array(result)
     }
 
     func readOctetAsInt32() throws -> Int32 { return Int32(try readUInt8()) }

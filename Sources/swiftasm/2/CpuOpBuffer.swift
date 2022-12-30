@@ -1,6 +1,24 @@
 import Darwin
 import Foundation
 
+struct CachedOp: CpuOp {
+    let size: ByteCount
+    let data: [UInt8]
+    
+    init(size: ByteCount, data: [UInt8]) {
+        self.size = size
+        self.data = data
+    }
+    
+    func emit() throws -> [UInt8] {
+        self.data
+    }
+    
+    var asmDescription: String {
+        ".cached(\(size))"
+    }
+}
+
 class CpuOpBuffer {
     var ops: [any CpuOp] = []
     var position: Int { ops.count }
@@ -24,7 +42,12 @@ class CpuOpBuffer {
 
         return self
     }
-
+    
+    @discardableResult func appendWithOffset(offset: inout RelativeDeferredOffset, _ ops: any CpuOp...) -> CpuOpBuffer {
+        offset.start(at: self.byteSize)
+        return self.append(ops)
+    }
+    
     @discardableResult func append(_ instructions: any CpuOp...) -> CpuOpBuffer {
         try! _internalAppend(instructions)
     }
@@ -41,13 +64,14 @@ class CpuOpBuffer {
         // as opposed to later (when we lose context of where they originate from)
         for op in instructions {
             switch(op) {
-            case M1Op.blr, M1Op.b, M1Op.bl, M1Op.b_ge, M1Op.b_gt, M1Op.b_le, M1Op.b_lt, M1Op.b_v2, M1Op.br, M1Op.b_eq, M1Op.b_ne:
-                // Don't validate jumps as they might not be emittable until addresses are known
+//            case M1Op.blr, M1Op.b, M1Op.bl, M1Op.b_ge, M1Op.b_gt, M1Op.b_le, M1Op.b_lt, M1Op.b_v2, M1Op.br, M1Op.b_eq, M1Op.b_ne:
+            case M1Op.b:
+//                // Don't validate jumps as they might not be emittable until addresses are known
                 break
-            case PseudoOp.deferred:
+            case PseudoOp.b_ne_deferred, PseudoOp.b_eq_deferred:
                 // deferred likely contains a jump, so skip validation for now
                 break
-            case PseudoOp.mov:
+            case PseudoOp.mov, PseudoOp.movRelative, PseudoOp.movCallableAddress:
                 // can contain a function address (which might be unavailable at this time)
                 break
             default:
@@ -68,6 +92,14 @@ class CpuOpBuffer {
         byteSize += increase
         ops.append(contentsOf: instructions)
         return self
+    }
+    
+    func emitMachineCode(from: Int = 0) throws -> [UInt8] {
+        try opSlice(from: 0, to: Int(position)).flatMap { try $0.emit() }
+    }
+    
+    func opSlice(from: Int, to: Int) -> ArraySlice<any CpuOp> {
+        ops[from..<position]
     }
 
     // print copy-pastable into a test

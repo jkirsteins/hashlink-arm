@@ -594,7 +594,6 @@ extension M1Compiler2 {
                 fatalError("Can't convert \(reg) to 32-bit variant")
             }
             
-            appendDebugPrintAligned4("Loaded \(reg32)", builder: mem)
             mem.append(
                 M1Op.ldr(reg32, .reg64offset(addrReg, offset.immediate, nil))
             )
@@ -1497,16 +1496,20 @@ extension M1Compiler2 {
 
 // MARK: Compiler
 
+
+
 class M1Compiler2 {
     let emitter = EmitterM1()
     let ctx: CCompatJitContext
+    let cache: (any CompilerCache)?
     let stripDebugMessages: Bool
     
     static let logger = LoggerFactory.create(M1Compiler2.self)
     
-    init(ctx: CCompatJitContext, stripDebugMessages: Bool = false) {
+    init(ctx: CCompatJitContext, stripDebugMessages: Bool = false, cache: (any CompilerCache)? = nil) {
         self.stripDebugMessages = stripDebugMessages
         self.ctx = ctx
+        self.cache = cache
     }
     
     func assertEnoughRegisters(_ ix: Reg, regs: Registers2) {
@@ -1740,14 +1743,16 @@ class M1Compiler2 {
     ///   - findex:
     ///   - mem:
     /// - Returns:
-    func compile(findex fix: RefFun, into mem: CpuOpBuffer) throws
+    @discardableResult
+    func compile(findex fix: RefFun, into mem: CpuOpBuffer, requireCache: Bool = false) throws -> any Compilable2
     {
         guard let compilable = try ctx.getCompilable(findex: fix) else {
             throw GlobalError.invalidValue("Function (findex=\(fix)) not found.")
         }
         
         // TODO: mark as compiled
-        try compile(compilable: compilable, into: mem)
+        try compile(compilable: compilable, into: mem, requireCache: requireCache)
+        return compilable
     }
     
     // MARK: make_dyn_cast
@@ -1799,12 +1804,49 @@ class M1Compiler2 {
     }
     
     // MARK: compile
-    func compile(compilable: any Compilable2, into mem: CpuOpBuffer) throws
+    func compile(compilable: any Compilable2, into mem: CpuOpBuffer, requireCache: Bool = false) throws
     {
         defer {
             ctx.funcTracker.compiled(compilable.findex)
         }
         
+        guard let cache = self.cache, let cached = try cache.cached(offset: mem.byteSize, compilable: compilable) else {
+            
+            // `requireCache` only exists so we can test caching
+            guard !requireCache else {
+                throw GlobalError.invalidOperation("Function \(compilable.findex) at \(mem.byteSize) not cached, but cache is required.")
+            }
+            
+            let startPos = mem.byteSize
+            let startOpPos = mem.position
+            
+            Self.logger.trace("[cache decision] Compiling f\(compilable.findex) at \(startPos)")
+            try _compile(compilable: compilable, into: mem)
+            
+            guard let cache = self.cache else {
+                Self.logger.debug("Cache is not provided, so skipping f\(compilable.findex)")
+                return
+            }
+            
+            do {
+                let compiledData = mem.opSlice(from: Int(startOpPos), to: mem.position)
+                Self.logger.warning("Caching f\(compilable.findex)")
+                try cache.cache(offset: startPos, compilable: compilable, data: compiledData)
+            } catch {
+                Self.logger.warning("Couldn't cache f\(compilable.findex)")
+            }
+            
+            return
+        }
+        
+        // TODO: deduplicate offset setting (and other processing when compiling)
+        Self.logger.trace("[cache decision] Reusing f\(compilable.findex) at \(mem.byteSize)")
+        compilable.linkableAddress.setOffset(mem.byteSize)
+        mem.append(cached)
+    }
+    
+    func _compile(compilable: any Compilable2, into mem: CpuOpBuffer) throws
+    {
         /* we need to allocate trap contexts on the stack
          
          Number of OTrap ops determines how many trap contexts we'll need.
@@ -1861,7 +1903,6 @@ class M1Compiler2 {
             return DeferredImmediate()
         }
 
-        Self.logger.trace("Compiling f\(compilable.findex)")
         for (currentInstruction, op) in compilable.ops.enumerated() {
 
 //            Self.logger.trace("f\(compilable.findex): #\(currentInstruction) (offset: \(mem.byteSize))")
@@ -2015,13 +2056,7 @@ class M1Compiler2 {
                     )
 
                     appendDebugPrintAligned4("OCallClosure CHECKING TARGET VALUE", builder: mem)
-                    mem.append(
-                        PseudoOp.withOffset(
-                            offset: &jmpTargetHasValue,
-                            mem: mem,
-                            M1Op.b_ne(try! Immediate21(jmpTargetHasValue.value))
-                        )
-                    )
+                    mem.appendWithOffset(offset: &jmpTargetHasValue, PseudoOp.b_ne_deferred(jmpTargetHasValue))
                     appendDebugPrintAligned4("OCallClosure TARGET HAS NO VALUE", builder: mem)
                     // MARK: no target value
                     try __ocall_impl(
@@ -2044,14 +2079,7 @@ class M1Compiler2 {
                         mem: mem
                     )
                     
-                    mem.append(
-                        PseudoOp.withOffset(
-                            offset: &jmpTargetFinish,
-                            mem: mem,
-                            M1Op.b(jmpTargetFinish)
-                        )
-                    )
-
+                    mem.appendWithOffset(offset: &jmpTargetFinish, M1Op.b(jmpTargetFinish))
                     jmpTargetHasValue.stop(at: mem.byteSize)
                     appendDebugPrintAligned4("OCallClosure TARGET HAS VALUE", builder: mem)
                     try __ocall_impl(
@@ -2237,9 +2265,6 @@ class M1Compiler2 {
                 let kindA = requireTypeKind(reg: a, from: regs)
                 let kindB = requireTypeKind(reg: b, from: regs)
 
-                let sizeA = kindA.hlRegSize
-                let sizeB = kindB.hlRegSize
-
                 appendDebugPrintAligned4("\(op.id) <\(a)@\(regOffsetA), \(b)@\(regOffsetB)> --> \(offset) (target instruction: \(targetInstructionIx))", builder: mem)
                 
                 appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
@@ -2288,9 +2313,7 @@ class M1Compiler2 {
                 toTrampolineEnd.start(at: mem.byteSize)
                 mem.append(
                     M1Op.b(toTrampolineEnd),
-                    PseudoOp.deferred(16) {
-                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
-                    }
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
                 )
                 appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
                 mem.append(
@@ -2305,7 +2328,7 @@ class M1Compiler2 {
                 
                 
                 mem.append(
-                    PseudoOp.deferred(4) {
+                    try {
                         switch(op.id) {
                         case .OJSGt:
                             return M1Op.b_gt(try Immediate21(toTrampolineStart.value))
@@ -2330,7 +2353,8 @@ class M1Compiler2 {
                         default:
                             fatalError("Unsupported jump id \(op.id)")
                         }
-                    })
+                    }()
+                )
                 
                 appendDebugPrintAligned4("NOT JUMPING", builder: mem)
 
@@ -2367,9 +2391,7 @@ class M1Compiler2 {
                 toTrampolineEnd.start(at: mem.byteSize)
                 mem.append(
                     M1Op.b(toTrampolineEnd),
-                    PseudoOp.deferred(16) {
-                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
-                    }
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
                 )
                 appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
                 mem.append(
@@ -2384,7 +2406,7 @@ class M1Compiler2 {
 
 
                 mem.append(
-                    PseudoOp.deferred(4) {
+                    try {
                         switch(op.id) {
                         case .OJFalse:
                             fallthrough
@@ -2397,7 +2419,8 @@ class M1Compiler2 {
                         default:
                             fatalError("Unsupported jump id \(op.id)")
                         }
-                    })
+                    }()
+                )
                 
                 appendDebugPrintAligned4("NOT JUMPING", builder: mem)
             // TODO: combine with above jumps
@@ -2409,9 +2432,7 @@ class M1Compiler2 {
                 }
 
                 mem.append(
-                    PseudoOp.deferred(16) {
-                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
-                    },
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
                     M1Op.br(X.x20)
                 )
             case .OGetGlobal(let dst, let globalRef):
@@ -2544,9 +2565,7 @@ class M1Compiler2 {
                 var jumpOverDeath = RelativeDeferredOffset()
                 jumpOverDeath.start(at: mem.byteSize)
                 mem.append(
-                    PseudoOp.deferred(4) {
-                        return M1Op.b_ne(try Immediate21(jumpOverDeath.value))
-                    }
+                    PseudoOp.b_ne_deferred(jumpOverDeath)
                 )
                 appendDebugPrintAligned4("Null access exception", builder: mem)
                 
@@ -2693,13 +2712,7 @@ class M1Compiler2 {
                 )
                 
                 var setJmpEq0Target = RelativeDeferredOffset()
-                mem.append(
-                    PseudoOp.withOffset(
-                        offset: &setJmpEq0Target,
-                        mem: mem,
-                        M1Op.b_eq(try! Immediate21(setJmpEq0Target.value))
-                    )
-                )
+                mem.appendWithOffset(offset: &setJmpEq0Target, PseudoOp.b_eq_deferred(setJmpEq0Target))
                 
                 appendDebugPrintAligned4("[traptest] SETJMP RETURNED !0", builder: mem)
                 
@@ -2741,9 +2754,7 @@ class M1Compiler2 {
                 appendDebugPrintAligned4("Preparing jump (words to skip \(wordsToSkip))...", builder: mem)
                 
                 mem.append(
-                    PseudoOp.deferred(16) {
-                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
-                    },
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
                     M1Op.br(X.x20)
                 )
                 
@@ -3271,9 +3282,7 @@ class M1Compiler2 {
                     //
                     
                     mem.append(
-                        PseudoOp.deferred(4) {
-                            M1Op.b_eq(try Immediate21(jumpOffset.immediate))
-                        }
+                        PseudoOp.b_eq_deferred(jumpOffset)
                     )
                     
                     appendDebugPrintAligned4("Didn't jump from case \(expectedValue)", builder: mem)
@@ -3542,7 +3551,7 @@ class M1Compiler2 {
                 appendLoad(reg: X.x2, from: obj, kinds: regs, mem: mem)
                 mem.append(
                     PseudoOp.mov(X.x0, funType.ccompatAddress),
-                    PseudoOp.mov(X.x1, callTarget.address),
+                    PseudoOp.movCallableAddress(X.x1, ctx.jitBase, callTarget.address),
                     
                     PseudoOp.mov(X.x3, allocClosure_jumpTarget),
                     M1Op.blr(X.x3)
@@ -3570,7 +3579,7 @@ class M1Compiler2 {
                      
                      This is equivalent to: `c.pointee.fun = .init(callTarget.address.value)` except via assembly.
                      */
-                    mem.append(PseudoOp.mov(X.x0, callTarget.address))
+                    mem.append(PseudoOp.movCallableAddress(X.x0, ctx.jitBase, callTarget.address))
                     mem.append(PseudoOp.mov(X.x1, OpaquePointer(c)))
                     mem.append(M1Op.str(X.x0, .reg64offset(X.x1, 8 /* offset to `fun` in vclosure */, nil)))
                     

@@ -81,7 +81,11 @@ struct VariableImmediate: Immediate {
     }
 }
 
-struct DeferredImmediateSum : Immediate, Equatable, Hashable {
+struct DeferredImmediateSum : Immediate, RelativeOffset, Equatable, Hashable {
+    var debugDescription: String {
+        "DeferredImmediateSum<\(a), \(b)>"
+    }
+    
     static func == (lhs: DeferredImmediateSum, rhs: DeferredImmediateSum) -> Bool {
         lhs.immediate == rhs.immediate
     }
@@ -101,6 +105,8 @@ struct DeferredImmediateSum : Immediate, Equatable, Hashable {
         a.immediate + b.immediate*Int64(bMul)+Int64(bAdd)
     }
     
+    var value: Int64 { immediate }
+    
     init(_ a: any Immediate, _ b: any Immediate, _ bMul: Int = 1, _ bAdd: Int = 0) throws {
         self.a = a
         self.b = b
@@ -118,7 +124,7 @@ struct DeferredImmediateSum : Immediate, Equatable, Hashable {
 }
 
 struct DeferredImmediate<T: Immediate> : Immediate {
-    let ptr: SharedStorage<T?> = SharedStorage(wrappedValue: nil)
+    let ptr: SharedStorage<T?>
 
     func finalize(_ val: T) {
         guard ptr.wrappedValue == nil else { fatalError("Can't finalize DeferredImmediate twice") }
@@ -134,7 +140,6 @@ struct DeferredImmediate<T: Immediate> : Immediate {
 
     func `try`<R>(_ c: (T)->R) throws -> R {
         guard let val = self.ptr.wrappedValue else {
-            print("Failing in \(self) At: \(Thread.callStackSymbols.joined(separator: "\n"))")
             throw GlobalError.immediateMissingValue("Trying to access DeferredImmediate value \(ptr)")
         }
         return c(val)
@@ -162,8 +167,12 @@ struct DeferredImmediate<T: Immediate> : Immediate {
         }
     }
 
-    init() {
+    init(_ ptr: SharedStorage<T?>) {
+        self.ptr = ptr
+    }
     
+    init() {
+        self.init(SharedStorage(wrappedValue: nil))
     }
 
     init(_ val: Int64, bits: Int64) throws {

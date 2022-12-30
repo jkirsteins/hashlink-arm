@@ -5,4 +5,5 @@ struct TestDummyLinkableAddress : LinkableAddress {
     var hasOffset: Bool { fatalError("Don't use the test dummy") }
     var value: UnsafeMutableRawPointer { fatalError("Don't use the test dummy") }
     func isEqual(_ to: any swiftasm.MemoryAddress) -> Bool { fatalError("Don't use the test dummy") }
+    var offsetFromBase: SharedStorage<ByteCount?> { fatalError("Don't use the test dummy") }
 }

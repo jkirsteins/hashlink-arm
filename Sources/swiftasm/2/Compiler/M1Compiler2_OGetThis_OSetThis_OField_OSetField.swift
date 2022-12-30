@@ -60,13 +60,7 @@ extension M1Compiler2 {
             mem.append(M1Op.movz64(X.x2, 0, nil))
             mem.append(M1Op.cmp(X.x1, X.x2))
             
-            mem.append(
-                PseudoOp.withOffset(
-                    offset: &jmpTarget_hlvfieldNoAddress,
-                    mem: mem,
-                    M1Op.b_eq(try! Immediate21(jmpTarget_hlvfieldNoAddress.value))
-                )
-            )
+            mem.appendWithOffset(offset: &jmpTarget_hlvfieldNoAddress, PseudoOp.b_eq_deferred(jmpTarget_hlvfieldNoAddress))
             appendDebugPrintAligned4("\(prependHeader) HAS ADDRESS", builder: mem)
             
             // load field value into x2
@@ -75,13 +69,7 @@ extension M1Compiler2 {
             appendDebugPrintRegisterAligned4(2, kind: dstType, prepend: "\(prependHeader) result", builder: mem)
             
             // finish this branch
-            mem.append(
-                PseudoOp.withOffset(
-                    offset: &jmpTarget_postCheck,
-                    mem: mem,
-                    M1Op.b(jmpTarget_postCheck)
-                )
-            )
+            mem.appendWithOffset(offset: &jmpTarget_postCheck, M1Op.b(jmpTarget_postCheck))
             
             // marker for other branch
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)
@@ -239,13 +227,7 @@ extension M1Compiler2 {
             mem.append(M1Op.movz64(X.x2, 0, nil))
             mem.append(M1Op.cmp(X.x1, X.x2))
             
-            mem.append(
-                PseudoOp.withOffset(
-                    offset: &jmpTarget_hlvfieldNoAddress,
-                    mem: mem,
-                    M1Op.b_eq(try! Immediate21(jmpTarget_hlvfieldNoAddress.value))
-                )
-            )
+            mem.appendWithOffset(offset: &jmpTarget_hlvfieldNoAddress, PseudoOp.b_eq_deferred(jmpTarget_hlvfieldNoAddress))
             appendDebugPrintAligned4("osetfield/virtual HAS ADDRESS", builder: mem)
             
             // load field value into x2 and store at x1
@@ -255,13 +237,7 @@ extension M1Compiler2 {
             appendDebugPrintRegisterAligned4(1, kind: srcType, prepend: "osetfield/virtual target", builder: mem)
             
             // finish this branch
-            mem.append(
-                PseudoOp.withOffset(
-                    offset: &jmpTarget_postCheck,
-                    mem: mem,
-                    M1Op.b(jmpTarget_postCheck)
-                )
-            )
+            mem.appendWithOffset(offset: &jmpTarget_postCheck, M1Op.b(jmpTarget_postCheck))
             
             // marker for other branch
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)

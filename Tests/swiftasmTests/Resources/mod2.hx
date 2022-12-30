@@ -573,4 +573,15 @@ class Main {
 			default: return -1.0;
 		  }
 	}
+
+	// two functions that should be the same for purposes of caching
+	static public function testCache_funcA(a: F32, b: UI8): F64 {
+		return testCache_targetFunc(a, b);
+	}
+	static public function testCache_funcB(a: F32, b: UI8): F64 {
+		return testCache_targetFunc(a, b);
+	}
+	static public function testCache_targetFunc(a: F32, b: UI8): F64 {
+		return a + b;
+	}
 }
