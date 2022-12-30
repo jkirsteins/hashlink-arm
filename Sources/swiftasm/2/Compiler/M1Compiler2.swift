@@ -2515,16 +2515,13 @@ class M1Compiler2 {
                     )
                 }
 
-                let dstOffset = getRegStackOffset(regs, dst)
                 let byteOffset = getRegStackOffset(regs, bytes)
                 let indexOffset = getRegStackOffset(regs, index)
 
-                mem.append(
-                    // Load byte address (base) in X.x0. It is 8 bytes
-                    M1Op.ldr(X.x0, .reg64offset(.sp, byteOffset, nil)),
-                    // Load index into X.x1. It is 4 bytes
-                    M1Op.ldr(W.w1, .reg64offset(.sp, indexOffset, nil))
-                )
+                // Load byte address (base) in X.x0. It is 8 bytes, so force kind .bytes
+                appendLoad(reg: X.x0, as: 0, addressRegister: X.sp, offset: byteOffset, kinds: [HLTypeKind.bytes], mem: mem)
+                // Load index into X.x1. It is 4 bytes, so force kind .i32
+                appendLoad(reg: W.w1, as: 0, addressRegister: .sp, offset: indexOffset, kinds: [HLTypeKind.i32], mem: mem)
                 
                 appendDebugPrintRegisterAligned4(X.x1, prepend: "\(_name) index", builder: mem, format: "%d")
                 
