@@ -395,7 +395,6 @@ final class CompileMod2Tests: RealHLTestCase {
     
     func testCompile__testTrapDifferentTypes() throws {
         typealias _JitFunc =  (@convention(c) (Bool, Bool) -> Int32)
-        
         let valueExcDeps = try _extractTypeProtoDependencies("haxe.ValueException", ["unwrap"])
         
         try _withPatchedEntrypoint(

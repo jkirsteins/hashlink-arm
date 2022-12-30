@@ -1,15 +1,15 @@
 import Foundation
 
 protocol CompilerCache {
-    func cache(offset: ByteCount, compilable: any Compilable2, data: [UInt8]) throws
-    func cached(offset: ByteCount, compilable: any Compilable2) throws -> [UInt8]?
+    func cache(offset: ByteCount, compilable: any Compilable2, data: [CpuOp]) throws
+    func cached(offset: ByteCount, compilable: any Compilable2) throws -> [CpuOp]?
 }
 
 class NoopCache : CompilerCache {
-    func cache(offset: ByteCount, compilable: any Compilable2, data: [UInt8]) throws {
+    func cache(offset: ByteCount, compilable: any Compilable2, data: [CpuOp]) throws {
         
     }
-    func cached(offset: ByteCount, compilable: any Compilable2) throws -> [UInt8]? {
+    func cached(offset: ByteCount, compilable: any Compilable2) throws -> [CpuOp]? {
         return nil
     }
 }
@@ -28,13 +28,24 @@ class DiskCache : CompilerCache {
             self.dir = dir
     }
     
-    func cache(offset: ByteCount, compilable: any Compilable2, data: [UInt8]) throws {
+    func cache(offset: ByteCount, compilable: any Compilable2, data: [CpuOp]) throws {
         let cacheFile = getPath(offset, compilable)
-        let convertedData = Data(data)
         
-        Self.logger.debug("Writing cache to \(cacheFile.absoluteString)")
+        let bytes: [UInt8] = data.reduce(into: []) {
+            res, op in
+            
+            if case PseudoOp.mov(let reg, let im) = op {
+                
+            } else if case PseudoOp.deferred(4, let cl) = op {
+                
+            }
+        }
         
-        try convertedData.write(to: cacheFile, options: .atomic)
+//        let convertedData = Data(data)
+//
+//        Self.logger.debug("Writing cache to \(cacheFile.absoluteString)")
+//
+//        try convertedData.write(to: cacheFile, options: .atomic)
     }
     
     func cacheExists(offset: ByteCount, compilable: any Compilable2) throws -> Bool {
@@ -52,15 +63,16 @@ class DiskCache : CompilerCache {
         try FileManager.default.removeItem(at: cacheFile)
     }
     
-    func cached(offset: ByteCount, compilable: any Compilable2) throws -> [UInt8]? {
-        let cacheFile = getPath(offset, compilable)
-        guard try cacheExists(offset: offset, compilable: compilable) else {
-            Self.logger.debug("Cache does not exist at \(cacheFile.path) for \(compilable.findex) at \(offset)")
-            return nil
-        }
-        
-        let loaded = try Data(contentsOf: cacheFile)
-        return Array(loaded)
+    func cached(offset: ByteCount, compilable: any Compilable2) throws -> [CpuOp]? {
+        return nil
+//        let cacheFile = getPath(offset, compilable)
+//        guard try cacheExists(offset: offset, compilable: compilable) else {
+//            Self.logger.debug("Cache does not exist at \(cacheFile.path) for \(compilable.findex) at \(offset)")
+//            return nil
+//        }
+//        
+//        let loaded = try Data(contentsOf: cacheFile)
+//        return Array(loaded)
     }
 }
 

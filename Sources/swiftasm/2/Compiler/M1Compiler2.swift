@@ -1830,7 +1830,7 @@ class M1Compiler2 {
         print("XX fun \(compilable.findex) at \(mem.byteSize)")
         compilable.linkableAddress.setOffset(mem.byteSize)
         
-        mem.append(CachedOp(size: ByteCount(cached.count), data: cached))
+//        mem.append(CachedOp(size: ByteCount(cached.count), data: cached))
     }
     
     func _compile(compilable: any Compilable2, into mem: CpuOpBuffer) throws
@@ -2045,13 +2045,7 @@ class M1Compiler2 {
                     )
 
                     appendDebugPrintAligned4("OCallClosure CHECKING TARGET VALUE", builder: mem)
-                    mem.append(
-                        PseudoOp.withOffset(
-                            offset: &jmpTargetHasValue,
-                            mem: mem,
-                            M1Op.b_ne(try! Immediate21(jmpTargetHasValue.value))
-                        )
-                    )
+                    mem.appendWithOffset(offset: &jmpTargetHasValue, PseudoOp.b_ne_deferred(jmpTargetHasValue))
                     appendDebugPrintAligned4("OCallClosure TARGET HAS NO VALUE", builder: mem)
                     // MARK: no target value
                     try __ocall_impl(
@@ -2074,14 +2068,7 @@ class M1Compiler2 {
                         mem: mem
                     )
                     
-                    mem.append(
-                        PseudoOp.withOffset(
-                            offset: &jmpTargetFinish,
-                            mem: mem,
-                            M1Op.b(jmpTargetFinish)
-                        )
-                    )
-
+                    mem.appendWithOffset(offset: &jmpTargetFinish, M1Op.b(jmpTargetFinish))
                     jmpTargetHasValue.stop(at: mem.byteSize)
                     appendDebugPrintAligned4("OCallClosure TARGET HAS VALUE", builder: mem)
                     try __ocall_impl(
@@ -2723,13 +2710,7 @@ class M1Compiler2 {
                 )
                 
                 var setJmpEq0Target = RelativeDeferredOffset()
-                mem.append(
-                    PseudoOp.withOffset(
-                        offset: &setJmpEq0Target,
-                        mem: mem,
-                        M1Op.b_eq(try! Immediate21(setJmpEq0Target.value))
-                    )
-                )
+                mem.appendWithOffset(offset: &setJmpEq0Target, PseudoOp.b_eq_deferred(setJmpEq0Target))
                 
                 appendDebugPrintAligned4("[traptest] SETJMP RETURNED !0", builder: mem)
                 

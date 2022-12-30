@@ -23,18 +23,18 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
     // into a register over multiple steps
     case mov(Register64, any Immediate)
     
+    case b_ne_deferred(RelativeDeferredOffset)
+    case b_eq_deferred(RelativeDeferredOffset)
+    
     static func withPrep(_ prep: ()->(), _ op: any CpuOp) -> any CpuOp {
         prep()
         return op
     }
     
-    static func withOffset(offset: inout RelativeDeferredOffset, mem: CpuOpBuffer, _ op: @escaping @autoclosure ()->any CpuOp) -> any CpuOp {
-        offset.start(at: mem.byteSize)
-        return PseudoOp.deferred(4) { op() }
-    }
-    
     var size: ByteCount {
         switch(self) {
+        case .b_ne_deferred, .b_eq_deferred:
+            return 4
         case .ldrVreg(let reg, let off, let s):
             return Self._ldrVreg(reg, off, s).reduce(0) { $0 + $1.size }
         case .ldrVregFP(let reg, let regOffset, let off, let s):
@@ -56,6 +56,10 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
     
     var asmDescription: String {
         switch(self) {
+        case .b_ne_deferred(_):
+            return "b.ne<deferred>"
+        case .b_eq_deferred:
+            return "b.eq<deferred>"
         case .deferred(_, let c):
             return "deferred:\(try! c().asmDescription)"
         case .debugMarker(let message):
@@ -157,6 +161,16 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
     
     func emit() throws -> [UInt8] {
         switch(self) {
+        case .b_ne_deferred(let off):
+            guard off.value != 0 else {
+                throw GlobalError.invalidOperation("Can not emit b_ne_deferred before offset is finalized")
+            }
+            return try M1Op.b_ne(try Immediate21(off.value)).emit()
+        case .b_eq_deferred(let off):
+            guard off.value != 0 else {
+                throw GlobalError.invalidOperation("Can not emit b_ne_deferred before offset is finalized")
+            }
+            return try M1Op.b_eq(try Immediate21(off.value)).emit()
         case .strVreg(let reg, let offsetReg, let offset, let regSize):
             let res = try Self._strVreg(reg, offsetReg, offset, regSize).reduce([]) { return $0 + (try $1.emit()) }
             return res

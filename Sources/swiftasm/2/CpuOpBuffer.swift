@@ -42,7 +42,12 @@ class CpuOpBuffer {
 
         return self
     }
-
+    
+    @discardableResult func appendWithOffset(offset: inout RelativeDeferredOffset, _ ops: any CpuOp...) -> CpuOpBuffer {
+        offset.start(at: self.byteSize)
+        return self.append(ops)
+    }
+    
     @discardableResult func append(_ instructions: any CpuOp...) -> CpuOpBuffer {
         try! _internalAppend(instructions)
     }
@@ -59,10 +64,11 @@ class CpuOpBuffer {
         // as opposed to later (when we lose context of where they originate from)
         for op in instructions {
             switch(op) {
-            case M1Op.blr, M1Op.b, M1Op.bl, M1Op.b_ge, M1Op.b_gt, M1Op.b_le, M1Op.b_lt, M1Op.b_v2, M1Op.br, M1Op.b_eq, M1Op.b_ne:
-                // Don't validate jumps as they might not be emittable until addresses are known
+//            case M1Op.blr, M1Op.b, M1Op.bl, M1Op.b_ge, M1Op.b_gt, M1Op.b_le, M1Op.b_lt, M1Op.b_v2, M1Op.br, M1Op.b_eq, M1Op.b_ne:
+            case M1Op.b:
+//                // Don't validate jumps as they might not be emittable until addresses are known
                 break
-            case PseudoOp.deferred:
+            case PseudoOp.deferred, PseudoOp.b_ne_deferred, PseudoOp.b_eq_deferred:
                 // deferred likely contains a jump, so skip validation for now
                 break
             case PseudoOp.mov:

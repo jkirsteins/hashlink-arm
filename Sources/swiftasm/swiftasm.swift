@@ -113,13 +113,13 @@ struct SwiftAsm: ParsableCommand {
                     continue
                 }
                 
-                Self.logger.debug("... caching fun@\(String(describing: compilable.findex)) at \(startOffset)")
-                let compiled = Array(cachedMachineCode[Int(startOffset)..<Int(endOffset)])
-                do {
-                    try cache.cache(offset: startOffset, compilable: compilable, data: compiled)
-                } catch {
-                    Self.logger.error("       ERROR: \(String(describing: error))")
-                }
+//                Self.logger.debug("... caching fun@\(String(describing: compilable.findex)) at \(startOffset)")
+//                let compiled = Array(cachedMachineCode[Int(startOffset)..<Int(endOffset)])
+//                do {
+//                    try cache.cache(offset: startOffset, compilable: compilable, data: compiled)
+//                } catch {
+//                    Self.logger.error("       ERROR: \(String(describing: error))")
+//                }
             }
         }
         
