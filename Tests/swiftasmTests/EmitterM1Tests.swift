@@ -579,7 +579,7 @@ final class EmitterM1Tests: XCTestCase {
         try XCTAssertM1OpBytes(.b_eq(-8), 0xc0, 0xff, 0xff, 0x54)
         try XCTAssertM1OpBytes(.b_eq(-12), 0xa0, 0xff, 0xff, 0x54)
         try XCTAssertM1OpBytes(.b_eq(-16), 0x80, 0xff, 0xff, 0x54)
-        try XCTAssertM1OpBytes(.b_eq(0), 0x00, 0x00, 0x00, 0x54)
+        XCTAssertThrowsError(try M1Op.b_eq(0).emit())
     }
     
     func testB_gt() throws {
@@ -592,7 +592,8 @@ final class EmitterM1Tests: XCTestCase {
         try XCTAssertM1OpBytes(.b_gt(-8), 0xcc, 0xff, 0xff, 0x54)
         try XCTAssertM1OpBytes(.b_gt(-12), 0xac, 0xff, 0xff, 0x54)
         try XCTAssertM1OpBytes(.b_gt(-16), 0x8c, 0xff, 0xff, 0x54)
-        try XCTAssertM1OpBytes(.b_gt(0), 0x0c, 0x00, 0x00, 0x54)
+        
+        XCTAssertThrowsError(try M1Op.b_gt(0).emit())
     }
     
     func testB_lt() throws {
@@ -601,7 +602,7 @@ final class EmitterM1Tests: XCTestCase {
         try XCTAssertM1OpBytes(.b_lt(0x10), 0x8b, 0x00, 0x00, 0x54)
         try XCTAssertM1OpBytes(.b_lt(-4), 0xeb, 0xff, 0xff, 0x54)
         try XCTAssertM1OpBytes(.b_lt(-16), 0x8b, 0xff, 0xff, 0x54)
-        try XCTAssertM1OpBytes(.b_lt(0), 0x0b, 0x00, 0x00, 0x54)
+        XCTAssertThrowsError(try M1Op.b_lt(0).emit())
     }
     func testCmp() throws {
         try XCTAssertM1Op(

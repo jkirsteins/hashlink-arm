@@ -36,9 +36,7 @@ class DiskCache : CompilerCache {
             
             if case PseudoOp.mov(let reg, let im) = op {
                 
-            } else if case PseudoOp.deferred(4, let cl) = op {
-                
-            }
+            } 
         }
         
 //        let convertedData = Data(data)
@@ -70,7 +68,7 @@ class DiskCache : CompilerCache {
 //            Self.logger.debug("Cache does not exist at \(cacheFile.path) for \(compilable.findex) at \(offset)")
 //            return nil
 //        }
-//        
+//
 //        let loaded = try Data(contentsOf: cacheFile)
 //        return Array(loaded)
     }

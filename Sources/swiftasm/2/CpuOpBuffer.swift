@@ -68,10 +68,10 @@ class CpuOpBuffer {
             case M1Op.b:
 //                // Don't validate jumps as they might not be emittable until addresses are known
                 break
-            case PseudoOp.deferred, PseudoOp.b_ne_deferred, PseudoOp.b_eq_deferred:
+            case PseudoOp.b_ne_deferred, PseudoOp.b_eq_deferred:
                 // deferred likely contains a jump, so skip validation for now
                 break
-            case PseudoOp.mov:
+            case PseudoOp.mov, PseudoOp.movAbsoluteAddress:
                 // can contain a function address (which might be unavailable at this time)
                 break
             default:

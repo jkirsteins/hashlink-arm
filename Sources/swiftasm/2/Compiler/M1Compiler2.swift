@@ -2254,9 +2254,6 @@ class M1Compiler2 {
                 let kindA = requireTypeKind(reg: a, from: regs)
                 let kindB = requireTypeKind(reg: b, from: regs)
 
-                let sizeA = kindA.hlRegSize
-                let sizeB = kindB.hlRegSize
-
                 appendDebugPrintAligned4("\(op.id) <\(a)@\(regOffsetA), \(b)@\(regOffsetB)> --> \(offset) (target instruction: \(targetInstructionIx))", builder: mem)
                 
                 appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
@@ -2305,9 +2302,7 @@ class M1Compiler2 {
                 toTrampolineEnd.start(at: mem.byteSize)
                 mem.append(
                     M1Op.b(toTrampolineEnd),
-                    PseudoOp.deferred(16) {
-                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
-                    }
+                    PseudoOp.movAbsoluteAddress(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
                 )
                 appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
                 mem.append(
@@ -2322,7 +2317,7 @@ class M1Compiler2 {
                 
                 
                 mem.append(
-                    PseudoOp.deferred(4) {
+                    try {
                         switch(op.id) {
                         case .OJSGt:
                             return M1Op.b_gt(try Immediate21(toTrampolineStart.value))
@@ -2347,7 +2342,8 @@ class M1Compiler2 {
                         default:
                             fatalError("Unsupported jump id \(op.id)")
                         }
-                    })
+                    }()
+                )
                 
                 appendDebugPrintAligned4("NOT JUMPING", builder: mem)
 
@@ -2384,9 +2380,7 @@ class M1Compiler2 {
                 toTrampolineEnd.start(at: mem.byteSize)
                 mem.append(
                     M1Op.b(toTrampolineEnd),
-                    PseudoOp.deferred(16) {
-                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
-                    }
+                    PseudoOp.movAbsoluteAddress(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
                 )
                 appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
                 mem.append(
@@ -2401,7 +2395,7 @@ class M1Compiler2 {
 
 
                 mem.append(
-                    PseudoOp.deferred(4) {
+                    try {
                         switch(op.id) {
                         case .OJFalse:
                             fallthrough
@@ -2414,7 +2408,8 @@ class M1Compiler2 {
                         default:
                             fatalError("Unsupported jump id \(op.id)")
                         }
-                    })
+                    }()
+                )
                 
                 appendDebugPrintAligned4("NOT JUMPING", builder: mem)
             // TODO: combine with above jumps
@@ -2426,9 +2421,7 @@ class M1Compiler2 {
                 }
 
                 mem.append(
-                    PseudoOp.deferred(16) {
-                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
-                    },
+                    PseudoOp.movAbsoluteAddress(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
                     M1Op.br(X.x20)
                 )
             case .OGetGlobal(let dst, let globalRef):
@@ -2561,9 +2554,7 @@ class M1Compiler2 {
                 var jumpOverDeath = RelativeDeferredOffset()
                 jumpOverDeath.start(at: mem.byteSize)
                 mem.append(
-                    PseudoOp.deferred(4) {
-                        return M1Op.b_ne(try Immediate21(jumpOverDeath.value))
-                    }
+                    PseudoOp.b_ne_deferred(jumpOverDeath)
                 )
                 appendDebugPrintAligned4("Null access exception", builder: mem)
                 
@@ -2752,9 +2743,7 @@ class M1Compiler2 {
                 appendDebugPrintAligned4("Preparing jump (words to skip \(wordsToSkip))...", builder: mem)
                 
                 mem.append(
-                    PseudoOp.deferred(16) {
-                        PseudoOp.mov(X.x20, self.ctx.jitBase.immediate + addrBetweenOps[targetInstructionIx].immediate)
-                    },
+                    PseudoOp.movAbsoluteAddress(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
                     M1Op.br(X.x20)
                 )
                 
@@ -3282,9 +3271,7 @@ class M1Compiler2 {
                     //
                     
                     mem.append(
-                        PseudoOp.deferred(4) {
-                            M1Op.b_eq(try Immediate21(jumpOffset.immediate))
-                        }
+                        PseudoOp.b_eq_deferred(jumpOffset)
                     )
                     
                     appendDebugPrintAligned4("Didn't jump from case \(expectedValue)", builder: mem)

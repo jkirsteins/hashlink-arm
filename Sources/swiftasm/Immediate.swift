@@ -81,7 +81,11 @@ struct VariableImmediate: Immediate {
     }
 }
 
-struct DeferredImmediateSum : Immediate, Equatable, Hashable {
+struct DeferredImmediateSum : Immediate, RelativeOffset, Equatable, Hashable {
+    var debugDescription: String {
+        "DeferredImmediateSum<\(a), \(b)>"
+    }
+    
     static func == (lhs: DeferredImmediateSum, rhs: DeferredImmediateSum) -> Bool {
         lhs.immediate == rhs.immediate
     }
@@ -100,6 +104,8 @@ struct DeferredImmediateSum : Immediate, Equatable, Hashable {
     var immediate: Int64 {
         a.immediate + b.immediate*Int64(bMul)+Int64(bAdd)
     }
+    
+    var value: Int64 { immediate }
     
     init(_ a: any Immediate, _ b: any Immediate, _ bMul: Int = 1, _ bAdd: Int = 0) throws {
         self.a = a
