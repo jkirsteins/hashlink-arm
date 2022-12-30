@@ -191,30 +191,6 @@ extension M1Compiler2 {
             // MARK: OCallMethod/virtual has address
             appendDebugPrintAligned4("ocallmethod/virtual HAS ADDRESS", builder: mem)
             
-            // MARK: --tmp
-            appendLoad(0, from: obj, kinds: regs, mem: mem)
-            let _c: (@convention(c) (OpaquePointer)->(OpaquePointer)) = {
-                oPtr in
-            
-                // THE RESULT IS ALL FUCKED FROM THE FIRST RETURN (HAD NO ADDR)
-                let v: UnsafePointer<vvirtual> = .init(oPtr)
-                let fieldBase = v.advanced(by: 1)
-                
-                let addrPtr: UnsafePointer<OpaquePointer> = .init(OpaquePointer(fieldBase))
-                
-                print("[ocallmethod swift] virtual", v)
-                print("[ocallmethod swift] field base", v.advanced(by: 1))
-                print("[ocallmethod swift] virtual value", v.pointee.value)
-                print("[ocallmethod swift] virtual value type", v.pointee.value.pointee.t._overrideDebugDescription)
-                
-                print("[ocallmethod swift] func address", addrPtr)
-                print("[ocallmethod swift] func *address", addrPtr.pointee)
-                
-                return oPtr
-            }
-            appendFuncCall(unsafeBitCast(_c, to: OpaquePointer.self), via: X.x25, mem: mem)
-            // MARK: --end
-            
             // load field value into x9
             mem.append(M1Op.movr64(X.x9, X.x28)) // restore x28 to x9
             appendDebugPrintRegisterAligned4(X.x9, prepend: "ocallmethod/virtual address", builder: mem)
@@ -270,21 +246,27 @@ extension M1Compiler2 {
             let nargs = args.count
             let dynArgs: UnsafeMutableBufferPointer<OpaquePointer> = .allocate(capacity: nargs)
             mem.append(PseudoOp.mov(X.x0, OpaquePointer(dynArgs.baseAddress!)))
+            appendDebugPrintAligned4("ocallmethod/virtual HAS NO ADDRESS - with \(args.count) args", builder: mem)
             for (ix, argRegister) in args.enumerated() {
-                /* Every arg must be a dyn, see jit.c:
-                       if( !hl_is_dynamic(a->t) ) ASSERT(0);
-                */
                 let argKind = requireTypeKind(reg: argRegister, from: regs)
-                Swift.assert(argKind.isPointer) // TODO: non-pointers need a test-case
-                
-                appendLoad(reg: X.x1, from: argRegister, kinds: regs, mem: mem)
                 let offset: Int64 = Int64(ix * MemoryLayout<UnsafePointer<vdynamic>>.stride)
-                appendStore(1, as: argRegister, intoAddressFrom: X.x0, offsetFromAddress: offset, kinds: regs, mem: mem)
+                
+                if argKind.isPointer {
+                    // if pointer -> we store the address directly
+                    appendLoad(reg: X.x1, from: argRegister, kinds: regs, mem: mem)
+                } else {
+                    // if not a pointer, we need to get the address of the arg, and store that
+                    let offsetToVreg = getRegStackOffset(regs, argRegister)
+                    mem.append(
+                        M1Op.movr64(X.x1, .sp),
+                        M1Op.add(X.x1, X.x1, .imm(offsetToVreg, nil))
+                    )
+                }
+                
+                // force storage as address (-> force the kind)
+                appendStore(reg: X.x1, as: 0, intoAddressFrom: X.x0, offsetFromAddress: offset, kinds: [HLTypeKind.dyn], mem: mem)
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "ocallmethod/virtual/no address/arg \(ix)/\(argKind)", builder: mem)
             }
-            // as last (after we've stored the results)
-            print("OCallMethod dynargs", dynArgs)
-            print("OCallMethod ret buffer", retBuffer)
-            
             
             // load x2: obj->t->virt->fields[o->p2].hashed_name
             //          where o->p2 is funcProto
@@ -370,6 +352,7 @@ extension M1Compiler2 {
                 
                 let dstKind: HLTypeKind = .init(rawValue: UInt32(dstKindRawVal))
                 let v: UnsafePointer<vvirtual> = .init(oPtr)
+                print("[OCallMethod/virtual] v", v)
                 print("[OCallMethod/virtual] v.pointee.value", v.pointee.value)
                 print("[OCallMethod/virtual] v type", v.pointee.t._overrideDebugDescription)
                 // TODO: wat
@@ -386,7 +369,11 @@ extension M1Compiler2 {
 //                    print("Res", res, "from", rb, "for", dstKind)
 //                    return res
                 }
-                print(v.pointee.value.pointee.t._overrideDebugDescription)
+                if dstKind == .virtual {
+                    print(v.pointee.value.pointee.t._overrideDebugDescription)
+                } else {
+                    print(v.pointee.t._overrideDebugDescription)
+                }
                 return oPtr
 //                return .init(v.pointee.value)
             }

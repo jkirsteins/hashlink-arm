@@ -1093,7 +1093,16 @@ extension M1Compiler2 {
         return reg
     }
     
-    func appendDebugPrintRegisterAligned4(_ regRawValue: UInt8, kind: HLTypeKind, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil)
+    func appendDebugPrintRegisterAligned4(_ regRawValue: UInt8, kind: HLTypeKind, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil) {
+        guard stripDebugMessages == false else {
+            builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
+            return
+        }
+        
+        Self.appendDebugPrintRegisterAligned4(regRawValue, kind: kind, prepend: prepend, builder: builder, format: format)
+    }
+    
+    static func appendDebugPrintRegisterAligned4(_ regRawValue: UInt8, kind: HLTypeKind, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil)
     {
         appendDebugPrintRegisterAligned4(getRegister(regRawValue, kind: kind), prepend: prepend, builder: builder, format: format, kind: kind)
     }
@@ -1413,6 +1422,10 @@ extension M1Compiler2 {
     }
     
     func appendSystemExit(_ code: UInt8, builder: CpuOpBuffer) {
+        Self.appendSystemExit(code, builder: builder)
+    }
+    
+    static func appendSystemExit(_ code: UInt8, builder: CpuOpBuffer) {
         builder.append(
             M1Op.movz64(.x0, UInt16(code), nil),
             M1Op.movz64(.x16, 1, nil),

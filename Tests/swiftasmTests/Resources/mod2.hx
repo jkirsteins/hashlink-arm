@@ -52,6 +52,12 @@ class CallTest {
 	}
 }
 
+typedef GetterInterface = { 
+	// Note: adding I64 to the param list here causes a segfault in HL/C and HL.intel
+	public function get(a: F32, b: F64, c: Int, d: UI8, e: UI16, f: Dynamic): Array<Int>;
+	public function get2(): Array<Int>;
+}
+
 interface VirtualInterface {
     public function getTest(): Int;
 	public function getSecond(): Bool;
@@ -60,6 +66,8 @@ interface VirtualInterface {
 	public function getF64(): F64;
 	public function getF64Modified(a: F32, b: F64): F64;
 	public function getAll(): { test: Int, second: Bool, third: Int, f64: F64, f32: F32 };
+
+	public function getVal(a: Dynamic, b: F32, c: F64, d: UI8, e: UI16, f: Int, g: I64): F64;
 }
 
 class VirtualTest implements VirtualInterface {
@@ -75,6 +83,18 @@ class VirtualTest implements VirtualInterface {
 		this.third = third;
 		this.f64 = f64;
 		this.f32 = f32;
+	}
+
+	public function getVal(a: Dynamic, b: F32, c: F64, d: UI8, e: UI16, f: Int, g: I64): F64 {
+		var result: F64 = 0.0;
+		result += cast(a.test);
+		result += b;
+		result += c;
+		result += d;
+		result += e;
+		result += f;
+		result += g;
+		return result;
 	}
 
 	public function getTest(): Int {
@@ -513,9 +533,11 @@ class Main {
 		trace('testing testArrayBytes_Float: ${testArrayBytes_Float(1)}');
 
 		trace('testing testVirtualCallMethod: ${testVirtualCallMethod()}');
+		trace('testing testVirtualCallMethod2: ${testVirtualCallMethod2()}');
 
 		trace('testing testInterface_1: ${testInterface_1(1, true, 2, 3.3, 4.4)}');
 		trace('testing testInterface_2: ${testInterface_2(1, true, 2, 3.3, 4.4))}');
+		trace('testing testInterface_3: ${testInterface_3(1, true, 2, 3.3, 4.4))}');
 
 		trace('testing testEnum_int: ${testEnum_int())}');
 		trace('testing testEnum_float: ${testEnum_float())}');
@@ -523,6 +545,26 @@ class Main {
 		trace('testing testEnumAssocData: ${testEnumAssocData(123.456))}');
 
 		trace('testing testVirtualClosure: ${testVirtualClosure(5))}');
+	}
+
+	public static function testVirtualCallMethod2(): Int {
+		var getter: GetterInterface = { 
+			get: (a: F32, b: F64, c: Int, d: UI8, e: UI16, f: Dynamic)->{ 
+				return [cast(a), cast(b), c, d, e, cast(f)];
+			},
+			get2: ()->{ 
+				return [cast(1.2)];
+			} 
+		};
+		return testVirtualCallMethod2_inner(getter);
+	}
+
+	public static function testVirtualCallMethod2_inner(obj: GetterInterface): Int {
+		var result = 0;
+		var dynamicInt: Int = 6;
+		for (i in obj.get(1, 2, 3, 4, 5, dynamicInt))
+			result += i;
+		return result;
 	}
 
 	public static function testVirtualCallMethod(): Int {
@@ -548,6 +590,12 @@ class Main {
 		var v: VirtualInterface = x;
 		var v2 = v.getAll();
 		return v2.test + (v2.second ? 1 : 0) + v2.third + v2.f64 + v2.f32;
+	}
+
+	public static function testInterface_3(test: Int, second: Bool, third: Int, f32: F32, f64: F64): F64 {
+		var x = new VirtualTest(test, second, third, f64, f32);
+		var v: VirtualInterface = x;
+		return v.getVal(x, x.f32, x.f64, 1, 2, x.test, 123);
 	}
 
 	static public function testArrayBytes_Float(ix: Int): Float {

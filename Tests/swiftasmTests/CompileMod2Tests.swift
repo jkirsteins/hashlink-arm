@@ -501,7 +501,7 @@ final class CompileMod2Tests: RealHLTestCase {
          
          Otherwise the output will be `String` (i.e. object name, not the actual value)*/
         
-        let expected = "haxesrc/Main.hx:293: Hello Trace\n"
+        let expected = "haxesrc/Main.hx:313: Hello Trace\n"
         patched_sys_print = []
         
         // Patch the print call to intercept
@@ -595,7 +595,7 @@ final class CompileMod2Tests: RealHLTestCase {
         typealias _JitFunc =  (@convention(c) (Int32) -> (Int32))
         
         let totalDeps =
-        (try self._extractTypeProtoDependencies("_MethodTester_Child")) 
+        (try self._extractTypeProtoDependencies("_MethodTester_Child"))
         
         try _compileAndLinkWithDeps(
             strip: true,
@@ -1117,6 +1117,7 @@ final class CompileMod2Tests: RealHLTestCase {
         }
     }
     
+    /// Tests the OCallMethod/virtual path that doesn't go via `hl_wrapper_call`
     func testCompile_testVirtualCallMethod() throws {
         typealias _JitFunc =  (@convention(c) () -> Int32)
         
@@ -1141,7 +1142,25 @@ final class CompileMod2Tests: RealHLTestCase {
             depHints: totalDeps
         ) {
             sutFix, mem in
-            print(sutFix)
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqual(entrypoint(), 21)
+            }
+        }
+    }
+    
+    /// Tests a different OCallMethod/virtual path (going via `hl_wrapper_call`)
+    func testCompile_testVirtualCallMethod2() throws {
+        typealias _JitFunc =  (@convention(c) () -> Int32)
+        
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testVirtualCallMethod2"
+        ) {
+            sutFix, mem in
+            
             try mem.jit(ctx: ctx, fix: sutFix) {
                 (entrypoint: _JitFunc) in
                 
@@ -1188,6 +1207,26 @@ final class CompileMod2Tests: RealHLTestCase {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqualDouble(entrypoint(1, true, 2, 3.3, 4.4), 11.69)
+            }
+        }
+    }
+    
+    func testCompile_testInterface_3() throws {
+        typealias _JitFunc =  (@convention(c) (Int32, Bool, Int32, Float32, Float64) -> Float64)
+        
+        let totalDeps: [RefFun] =
+        (try self._extractTypeProtoDependencies("VirtualTest"))
+                
+        try _compileAndLinkWithDeps(
+            strip: true,
+            name: "Main.testInterface_3",
+            depHints: totalDeps
+        ) {
+            sutFix, mem in
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualDouble(entrypoint(1, true, 2, 3.3, 4.4), 135.699)
             }
         }
     }

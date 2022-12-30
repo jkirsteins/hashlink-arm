@@ -34,50 +34,76 @@ extension M1Compiler2 {
         
         // set x20/x21
         mem.append(
+            // argPtr is `void *vargs[10]` from hl_wrapper_call (i.e. `void**`)
+            // for non-pointer values, we need to advance, then dereference
+            // for pointer values, we need to advance, then use that address
             PseudoOp.mov(X.x20, argPtr),
-            
-            // test
-            M1Op.ldr(X.x20, .reg(X.x20, .imm(0, nil))),
             
             PseudoOp.mov(X.x21, funPtr)
         )
         
         appendDebugPrintAligned4("[hlc_static_call] entering 2...", builder: mem)
+        
+        appendDebugPrintRegisterAligned4(X.x20, prepend: "TESTREG base in hlc_static_call", builder: mem)
 
         var offset: ByteCount = 0
-        var gpRegisterIx: Int = 0
-        var fpRegisterIx: Int = 0
+        var gpRegisterIx: RegisterRawValue = 0
+        var fpRegisterIx: RegisterRawValue = 0
+        
+        // args are memory addresses, see `hl_wrapper_call` which prepares these
         for (argIx, arg) in funProvider.argsProvider.enumerated() {
-            guard !isFP(vreg: Reg(argIx), kinds: funProvider.argsProvider) else {
-                fatal("floating point arguments not implemented", logger)
+            let regToUseIx: RegisterRawValue
+            if isFP(vreg: Reg(argIx), kinds: funProvider.argsProvider) {
+                regToUseIx = fpRegisterIx
+            } else {
+                regToUseIx = gpRegisterIx
             }
-
+            
             // only general purpose registers from here on
-            guard gpRegisterIx < ARG_REGISTER_COUNT else {
-                fatal("hlc_static_call does not support more than \(ARG_REGISTER_COUNT) arguments", logger)
+            guard regToUseIx < ARG_REGISTER_COUNT else {
+                fatal("hlc_static_call does not support more than \(ARG_REGISTER_COUNT) arguments of a single register type", logger)
             }
-            defer { gpRegisterIx += 1 }
-
-            let gpRegister = Register64(rawValue: UInt8(gpRegisterIx))!
-
+            defer {
+                if isFP(vreg: Reg(argIx), kinds: funProvider.argsProvider) {
+                    fpRegisterIx += 1
+                } else {
+                    gpRegisterIx += 1
+                }
+            }
+            
             let argKind = M1Compiler2.requireTypeKind(reg: Reg(argIx), from: funProvider.argsProvider)
+            let reg = getRegister(regToUseIx, kind: argKind)
+
             if argKind.isPointer {
                 // hold address
-                mem.append(M1Op.add(gpRegister, X.x20, .imm(offset, nil)))
+                guard let regGP = reg.i else {
+                    fatalError("Pointer values must use GP registers")
+                }
+                mem.append(
+                    M1Op.add(regGP, X.x20, .imm(offset, nil)),
+                    M1Op.ldr(regGP, .reg(regGP, .imm(0, nil)))
+                )
             } else {
                 // hold value
                 M1Compiler2.appendLoad(
-                    reg: gpRegister,
+                    reg: X.x23,
+                    as: 0,
+                    addressRegister: X.x20,
+                    offset: offset,
+                    kinds: [HLTypeKind.dyn],    // force an address load
+                    mem: mem)
+                M1Compiler2.appendLoad(
+                    regToUseIx,
                     as: Reg(argIx),
-                    fromAddressFrom: X.x20,
-                    offsetFromAddress: offset,
+                    addressRegister: X.x23,
+                    offset: 0,
                     kinds: funProvider.argsProvider,
                     mem: mem)
             }
             
-            appendDebugPrintRegisterAligned4(gpRegister, prepend: "hl_dyn_call_obj arg \(gpRegisterIx) in hlc_static_call (offset \(offset))", builder: mem)
-
-            offset += arg.hlRegSize
+            M1Compiler2.appendDebugPrintRegisterAligned4(regToUseIx, kind: argKind, prepend: "hl_dyn_call_obj arg \(reg) in hlc_static_call (offset \(offset))", builder: mem)
+            
+            offset += Int64(MemoryLayout<OpaquePointer>.stride)    // args are memory addresses
         }
 
         appendDebugPrintRegisterAligned4(X.x21, prepend: "[hlc_static_call] jumping...", builder: mem)

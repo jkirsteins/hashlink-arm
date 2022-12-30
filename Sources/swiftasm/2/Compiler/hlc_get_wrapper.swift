@@ -26,6 +26,9 @@ extension M1Compiler2 {
         // TODO: reuse the same JIT for multiple invocations?
         let mem = CpuOpBuffer()
         
+        // TODO: is this ever called? Placing this exit to spot if so, and add test coverage
+        appendSystemExit(19, builder: mem)
+        
         // 8 byte stack prologue (rounded to 32) for storing result
         mem.append(
             M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(32)),
@@ -43,7 +46,8 @@ extension M1Compiler2 {
         print("[hlc_get_wrapper] \(t._overrideDebugDescription)")
         for (argIx, argType) in funProvider.argsProvider.enumerated() {
             let argKind = argType.kind
-            fatalError("Not implemented/tested")
+            appendDebugPrintAligned4("Not implemented/tested", builder: mem)
+            appendSystemExit(10, builder: mem)
             guard fpIX < ARG_REGISTER_COUNT && gpIX < ARG_REGISTER_COUNT else {
                 fatal("hlc_get_wrapper does not support more than \(ARG_REGISTER_COUNT) arguments (i.e. stack args)", logger)
             }
@@ -65,8 +69,36 @@ extension M1Compiler2 {
             }
             
             let argPointer: OpaquePointer
-            switch(argKind) {
-            case .i32:
+            switch(argKind, argKind.isPointer) {
+            case (.u8, false):
+                let u8Pointer: UnsafeMutablePointer<UInt8> = .allocate(capacity: 1)
+                mem.append(PseudoOp.mov(X.x20, OpaquePointer(u8Pointer)))
+                appendStore(regIX, as: 0, intoAddressFrom: X.x20, offsetFromAddress: 0, kinds: [argKind], mem: mem)
+                argPointer = .init(u8Pointer)
+                // TODO: dealloc these
+            case (.u16, false):
+                let u16Pointer: UnsafeMutablePointer<UInt16> = .allocate(capacity: 1)
+                mem.append(PseudoOp.mov(X.x20, OpaquePointer(u16Pointer)))
+                appendStore(regIX, as: 0, intoAddressFrom: X.x20, offsetFromAddress: 0, kinds: [argKind], mem: mem)
+                argPointer = .init(u16Pointer)
+            case (.i32, false):
+                let i32Pointer: UnsafeMutablePointer<Int32> = .allocate(capacity: 1)
+                mem.append(PseudoOp.mov(X.x20, OpaquePointer(i32Pointer)))
+                appendStore(regIX, as: 0, intoAddressFrom: X.x20, offsetFromAddress: 0, kinds: [argKind], mem: mem)
+                argPointer = .init(i32Pointer)
+            case (_, true):
+                let opPointer: UnsafeMutablePointer<OpaquePointer> = .allocate(capacity: 1)
+                mem.append(PseudoOp.mov(X.x20, OpaquePointer(opPointer)))
+                appendStore(regIX, as: 0, intoAddressFrom: X.x20, offsetFromAddress: 0, kinds: [argKind], mem: mem)
+                argPointer = .init(opPointer)
+            case(.f32, false):
+                appendSystemExit(11, builder: mem)
+                let i32Pointer: UnsafeMutablePointer<Int32> = .allocate(capacity: 1)
+                mem.append(PseudoOp.mov(X.x20, OpaquePointer(i32Pointer)))
+                appendStore(regIX, as: 0, intoAddressFrom: X.x20, offsetFromAddress: 0, kinds: [argKind], mem: mem)
+                argPointer = .init(i32Pointer)
+            case (.f64, false):
+                appendSystemExit(11, builder: mem)
                 let i32Pointer: UnsafeMutablePointer<Int32> = .allocate(capacity: 1)
                 mem.append(PseudoOp.mov(X.x20, OpaquePointer(i32Pointer)))
                 appendStore(regIX, as: 0, intoAddressFrom: X.x20, offsetFromAddress: 0, kinds: [argKind], mem: mem)
