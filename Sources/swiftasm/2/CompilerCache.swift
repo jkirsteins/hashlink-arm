@@ -1,12 +1,12 @@
 import Foundation
 
 protocol CompilerCache {
-    func cache(offset: ByteCount, compilable: any Compilable2, data: [CpuOp]) throws
+    func cache(offset: ByteCount, compilable: any Compilable2, data: ArraySlice<CpuOp>) throws
     func cached(offset: ByteCount, compilable: any Compilable2) throws -> [CpuOp]?
 }
 
 class NoopCache : CompilerCache {
-    func cache(offset: ByteCount, compilable: any Compilable2, data: [CpuOp]) throws {
+    func cache(offset: ByteCount, compilable: any Compilable2, data: ArraySlice<CpuOp>) throws {
         
     }
     func cached(offset: ByteCount, compilable: any Compilable2) throws -> [CpuOp]? {
@@ -28,22 +28,37 @@ class DiskCache : CompilerCache {
             self.dir = dir
     }
     
-    func cache(offset: ByteCount, compilable: any Compilable2, data: [CpuOp]) throws {
+    func cache(offset: ByteCount, compilable: any Compilable2, data: ArraySlice<CpuOp>) throws {
         let cacheFile = getPath(offset, compilable)
         
-        let bytes: [UInt8] = data.reduce(into: []) {
-            res, op in
+        print("Caching", data)
+        let bytes: [UInt8] = try data.reduce([]) {
+            res, opCandidate in
             
-            if case PseudoOp.mov(let reg, let im) = op {
-                
-            } 
+            let op: any CpuOp
+            if let pseudoOpResolved = (opCandidate as? PseudoOp)?.resolve() {
+                op = pseudoOpResolved
+            } else {
+                op = opCandidate
+            }
+            
+            if case PseudoOp.movCallableAddress = op {
+                fatalError("Fatal error, .movCallableAddress should have been resolved to .mov or .movRelative")
+            }
+            
+            if case PseudoOp.movRelative = op {
+                print("TODO: skipping this")
+                return res
+            }
+            
+            
+            
+            return res + (try op.emit())
         }
         
-//        let convertedData = Data(data)
-//
-//        Self.logger.debug("Writing cache to \(cacheFile.absoluteString)")
-//
-//        try convertedData.write(to: cacheFile, options: .atomic)
+        let convertedData = Data(bytes)
+        Self.logger.debug("Writing cache to \(cacheFile.absoluteString)")
+        try convertedData.write(to: cacheFile, options: .atomic)
     }
     
     func cacheExists(offset: ByteCount, compilable: any Compilable2) throws -> Bool {

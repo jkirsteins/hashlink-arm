@@ -147,7 +147,7 @@ struct FullyDeferredRelativeAddress: Equatable, DeferredMemoryAddress, LinkableA
         self.offsetFromBase.wrappedValue = offset
     }
     
-    
+    var offset: ByteCount? { self.offsetFromBase.wrappedValue }
 }
 
 // base is deferred, but offset is known

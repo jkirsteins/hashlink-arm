@@ -1812,16 +1812,18 @@ class M1Compiler2 {
         
         guard let cached = try self.cache.cached(offset: mem.byteSize, compilable: compilable) else {
             let startPos = mem.byteSize
-            print("XX fun \(compilable.findex) at \(startPos)")
+            let startOpPos = mem.position
+            
             Self.logger.trace("Compiling f\(compilable.findex) at \(startPos)")
             try _compile(compilable: compilable, into: mem)
-//            do {
-//                let compiledData = try mem.emitMachineCode(from: Int(startPos))
-//                Self.logger.warning("Caching f\(compilable.findex)")
-//                try cache.cache(offset: startPos, compilable: compilable, data: compiledData)
-//            } catch {
-//                Self.logger.warning("Couldn't cache f\(compilable.findex)")
-//            }
+            do {
+                let compiledData = mem.opSlice(from: Int(startOpPos), to: mem.position)
+                Self.logger.warning("Caching f\(compilable.findex)")
+                try cache.cache(offset: startPos, compilable: compilable, data: compiledData)
+            } catch {
+                Self.logger.warning("Couldn't cache f\(compilable.findex)")
+                throw error
+            }
             
             return
         }
@@ -2302,7 +2304,7 @@ class M1Compiler2 {
                 toTrampolineEnd.start(at: mem.byteSize)
                 mem.append(
                     M1Op.b(toTrampolineEnd),
-                    PseudoOp.movAbsoluteAddress(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
                 )
                 appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
                 mem.append(
@@ -2380,7 +2382,7 @@ class M1Compiler2 {
                 toTrampolineEnd.start(at: mem.byteSize)
                 mem.append(
                     M1Op.b(toTrampolineEnd),
-                    PseudoOp.movAbsoluteAddress(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
                 )
                 appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
                 mem.append(
@@ -2421,7 +2423,7 @@ class M1Compiler2 {
                 }
 
                 mem.append(
-                    PseudoOp.movAbsoluteAddress(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
                     M1Op.br(X.x20)
                 )
             case .OGetGlobal(let dst, let globalRef):
@@ -2743,7 +2745,7 @@ class M1Compiler2 {
                 appendDebugPrintAligned4("Preparing jump (words to skip \(wordsToSkip))...", builder: mem)
                 
                 mem.append(
-                    PseudoOp.movAbsoluteAddress(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
                     M1Op.br(X.x20)
                 )
                 
@@ -3540,7 +3542,7 @@ class M1Compiler2 {
                 appendLoad(reg: X.x2, from: obj, kinds: regs, mem: mem)
                 mem.append(
                     PseudoOp.mov(X.x0, funType.ccompatAddress),
-                    PseudoOp.mov(X.x1, callTarget.address),
+                    PseudoOp.movCallableAddress(X.x1, ctx.jitBase, callTarget.address),
                     
                     PseudoOp.mov(X.x3, allocClosure_jumpTarget),
                     M1Op.blr(X.x3)
@@ -3568,7 +3570,7 @@ class M1Compiler2 {
                      
                      This is equivalent to: `c.pointee.fun = .init(callTarget.address.value)` except via assembly.
                      */
-                    mem.append(PseudoOp.mov(X.x0, callTarget.address))
+                    mem.append(PseudoOp.movCallableAddress(X.x0, ctx.jitBase, callTarget.address))
                     mem.append(PseudoOp.mov(X.x1, OpaquePointer(c)))
                     mem.append(M1Op.str(X.x0, .reg64offset(X.x1, 8 /* offset to `fun` in vclosure */, nil)))
                     

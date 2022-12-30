@@ -23,7 +23,11 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
     
     // Combine the relative offset with JIT base, and move the absolute
     // address into the target register.
-    case movAbsoluteAddress(Register64, JitBase, any Immediate)
+    case movRelative(Register64, JitBase, any Immediate)
+    
+    // Resolves to either `mov` (if absolute address, known already) or `movRelative` otherwise for a linkable
+    // address for which the absolute value is only known at link time
+    case movCallableAddress(Register64, JitBase, any MemoryAddress)
     
     case b_ne_deferred(RelativeOffset)
     case b_eq_deferred(RelativeOffset)
@@ -47,22 +51,35 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
             return Self._strVregFP(reg, regOffset, off, s).reduce(0) { $0 + $1.size }
         case .debugMarker:
             return 0
-        case .mov, .movAbsoluteAddress: return 16
+        case .mov, .movRelative, .movCallableAddress: return 16
         case .zero: return 1
         case .ascii(let v):
             return ByteCount(v.utf8.count)
         }
     }
     
-    var asmDescription: String {
+    func resolve() -> PseudoOp {
         switch(self) {
+        case PseudoOp.movCallableAddress(let Rd, let jitBase, let address):
+            if let linkableAddress = address as? any LinkableAddress {
+                return PseudoOp.movRelative(Rd, jitBase, DeferredImmediate(linkableAddress.offsetFromBase))
+            } else {
+                return PseudoOp.mov(Rd, address)
+            }
+        default:
+            return self
+        }
+    }
+    
+    var asmDescription: String {
+        switch(self.resolve()) {
         case .b_ne_deferred(_):
             return "b.ne<deferred>"
         case .b_eq_deferred:
             return "b.eq<deferred>"
         case .debugMarker(let message):
             return message
-        case .movAbsoluteAddress(let Rd, _, let off):
+        case .movRelative(let Rd, _, let off):
             return ".mov \(Rd), <jitbase> + #\(off)"
         case .mov(let Rd, let val):
             return ".mov \(Rd), #\(val)"
@@ -77,6 +94,8 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
             return Self._strVregFP(reg, regOffset, offset, regSize).map { $0.asmDescription }.joined(separator: "\n")
         case .ascii(let val):
             return ".ascii(\(val))"
+        default:
+            fatalError("Unknown `asmDescription` for \(self)")
         }
     }
     
@@ -160,7 +179,7 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
     }
     
     func emit() throws -> [UInt8] {
-        switch(self) {
+        switch(self.resolve()) {
         case .b_ne_deferred(let off):
             guard off.value != 0 else {
                 throw GlobalError.invalidOperation("Can not emit b_ne_deferred before offset is finalized")
@@ -184,7 +203,7 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
             let res = try Self._ldrVregFP(reg, offsetReg, offset, regSize).reduce([]) { return $0 + (try $1.emit()) }
             return res
         case .debugMarker: return []
-        case .movAbsoluteAddress(let Rd, let jitBase, let val):
+        case .movRelative(let Rd, let jitBase, let val):
             guard val.hasUsableValue else {
                 throw GlobalError.immediateMissingValue("Trying to emit PseudoOp.movAbsoluteAddress and val \(val) does not have a usable value.")
             }
@@ -222,6 +241,8 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
         case .zero: return [0]
         case .ascii(let val):
             return Array(val.utf8)
+        default:
+            throw GlobalError.invalidValue("Unknown how to emit \(self)")
         }
     }
 }

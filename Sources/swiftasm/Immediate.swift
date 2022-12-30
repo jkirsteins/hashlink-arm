@@ -124,7 +124,7 @@ struct DeferredImmediateSum : Immediate, RelativeOffset, Equatable, Hashable {
 }
 
 struct DeferredImmediate<T: Immediate> : Immediate {
-    let ptr: SharedStorage<T?> = SharedStorage(wrappedValue: nil)
+    let ptr: SharedStorage<T?>
 
     func finalize(_ val: T) {
         guard ptr.wrappedValue == nil else { fatalError("Can't finalize DeferredImmediate twice") }
@@ -167,8 +167,12 @@ struct DeferredImmediate<T: Immediate> : Immediate {
         }
     }
 
-    init() {
+    init(_ ptr: SharedStorage<T?>) {
+        self.ptr = ptr
+    }
     
+    init() {
+        self.init(SharedStorage(wrappedValue: nil))
     }
 
     init(_ val: Int64, bits: Int64) throws {
