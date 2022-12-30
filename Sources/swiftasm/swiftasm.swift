@@ -76,9 +76,8 @@ struct SwiftAsm: ParsableCommand {
 //            305, 437, 350, 28, 14, 42, 240, 337, 303
 ]
 
-        let cache = DiskCache()
         let mod = try! Bootstrap.start2(hlFileIn, args: [])
-        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug, cache: cache)
+        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug, cache: nil)
         let buf = CpuOpBuffer()
         
         var offsetToCompilable: Dictionary<ByteCount, (ByteCount, any Compilable2)> = [:]
