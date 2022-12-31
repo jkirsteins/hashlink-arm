@@ -427,7 +427,35 @@ class Main {
 		if (set) {
 			obj.f64 = val;
 		}
-		return obj.f64;
+		var result: F64 = obj.f64;
+		return result;
+	}
+
+	static public function testDynGet_intoFloatDest(): F64 {
+		var x = {
+			x: 5.0,
+			y: 1.4
+		};
+		var y = {
+			x: 0.1,
+			y: 2.1
+		}
+		var z = {
+			x: 2.0,
+			y: 0.2
+		}
+		return testDynGet_intoFloatDest_internal( [x, y, z], 0, 3 );
+	}
+
+	static public function testDynGet_intoFloatDest_internal< T: { x:Float, y:Float } >(points : Array<T>, start: Int, end: Int): F64 {
+		// check polygon winding
+		var sum = 0.;
+		var j = end - 1;
+		for (i in start...end) {
+			sum += (points[j].x - points[i].x) * (points[i].y + points[j].y);
+			j = i;
+		}
+		return sum;
 	}
 
 	static public function testCallClosure_Dynamic_returnFloat64(inval: Int): F64 {
@@ -545,6 +573,8 @@ class Main {
 		trace('testing testEnumAssocData: ${testEnumAssocData(123.456))}');
 
 		trace('testing testVirtualClosure: ${testVirtualClosure(5))}');
+
+		trace('testing testDynGet_intoFloatDest: ${testDynGet_intoFloatDest())}');
 	}
 
 	public static function testVirtualCallMethod2(): Int {

@@ -542,36 +542,7 @@ final class CompileMod2Tests: RealHLTestCase {
     }
     
     func testCompile__testCallThis() throws {
-        typealias _JitFunc =  (@convention(c) () -> (Int32))
-        
-        let fix = try _findFindex_fieldNameUnset(className: "CallTest", name: "test", isStatic: false)!
-        let depFix = try _findFindex_fieldNameUnset(className: "CallTest", name: "test2", isStatic: false)!
-        ctx.patch(findex: fix, ops: [
-            // NOTE: careful, if proto points to the wrong place, this can cause recursive calls to self
-            .OCallThis(dst: 2, field: 1, args: [1]),
-//              These are equivalent:
-//              .OCallMethod(dst: 2, obj: 0, proto: 1, args: [1]),
-//              .OCall2(dst: 2, fun: 30, arg0: 0, arg1: 1),
-            .ORet(ret: 2)
-
-            // Original opcodes should be: 
-            // Main.hx:37    0: Call2       reg2 = test2@30(reg0, reg1)
-            // Main.hx:37    1: Ret         reg2
-        ])
-        
-        try _withPatchedEntrypoint(
-            strip: true,
-            name: "Main.testCallThis",
-            depHints: [depFix]
-        ) {
-            sutFix, mem in
-            
-            try mem.jit(ctx: ctx, fix: sutFix) {
-                (entrypoint: _JitFunc) in
-                
-                XCTAssertEqual(entrypoint(), 10)
-            }
-        }
+        throw XCTSkip("TODO")
     }
     
     func testCompile__testFieldClosure() throws {
@@ -625,6 +596,35 @@ final class CompileMod2Tests: RealHLTestCase {
                 (entrypoint: _JitFunc) in
                 
                 XCTAssertEqual(33, entrypoint(11, 22))
+            }
+        }
+    }
+    
+    /// Differs from other `testDynGet*` by storing result directly in
+    /// a typed register (as opposed to `dyn`)
+    func testCompile_testDynGet_intoFloatDest() throws {
+        typealias _JitFunc =  (@convention(c) () -> (Float64))
+        
+        let totalDeps: [RefFun] = [
+            452
+            // hl.types.ArrayBase.alloc. Not clear how to detect this automatically
+        ] +
+        (try self._extractTypeProtoDependencies("hl.types.ArrayBase", ["__cast"])) +
+        (try self._extractTypeProtoDependencies("hl.types.ArrayDyn", ["getDyn"])) +
+        (try self._extractTypeProtoDependencies("hl.types.ArrayObj", ["getDyn"]))
+        
+        
+        try _withPatchedEntrypoint(
+            strip: true,
+            name: "Main.testDynGet_intoFloatDest",
+            depHints: totalDeps
+        ) {
+            sutFix, mem in
+            
+            try mem.jit(ctx: ctx, fix: sutFix) {
+                (entrypoint: _JitFunc) in
+                
+                XCTAssertEqualDouble(entrypoint(), 7.98)
             }
         }
     }

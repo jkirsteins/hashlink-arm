@@ -15,6 +15,15 @@ extension HLTypeKind {
         default: return true
         }
     }
+    
+    var isSigned: Bool? {
+        switch(self) {
+        case .i64, .i32: return true
+        case .u16, .u8: return false
+        case .f64, .f32: return true
+        default: return nil
+        }
+    }
 }
 
 extension HLTypeKindProvider {
