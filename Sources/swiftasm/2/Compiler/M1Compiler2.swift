@@ -313,15 +313,19 @@ extension M1Compiler2 {
         if INTEGER_TYPE_KINDS.contains(vregKind) {
             let regGP = Register64(rawValue: reg.rawValue)!
             appendLoad(reg: regGP, from: vreg, kinds: kinds, mem: mem)
-            appendDebugPrintRegisterAligned4(regGP, prepend: "appendLoadNumericAsFP", builder: mem)
+            appendDebugPrintRegisterAligned4(regGP, prepend: "appendLoadNumericAsFP", builder: mem, format: "%lld")
             
             // sign-extend -> convert to FP? -> convert FP? to FP64
-            appendSignMode(true, reg: regGP, from: vreg, kinds: kinds, mem: mem)
-            appendScvtf(reg: regGP, to: reg, target: vreg, kinds: kinds, mem: mem)
-            appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
+            if let signMode = vregKind.isSigned {
+                appendSignMode(signMode, reg: regGP, from: vreg, kinds: kinds, mem: mem)
+                if signMode {
+                    mem.append(M1Op.scvtf(reg, regGP))
+                } else {
+                    mem.append(M1Op.ucvtf(reg, regGP))
+                }
+            }
             
             appendDebugPrintRegisterAligned4(reg, prepend: "appendLoadNumericAsFP", builder: mem)
-            
         } else if FP_TYPE_KINDS.contains(vregKind) {
             appendLoad(reg: reg, from: vreg, kinds: kinds, mem: mem)
             appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
@@ -1769,7 +1773,7 @@ class M1Compiler2 {
     }
     
     // MARK: make_dyn_cast
-    func make_dyn_cast(_ dst: Reg, _ src: Reg, _ regs: [any HLTypeProvider], _ mem: CpuOpBuffer) {
+    func make_dyn_cast(_ dst: Reg, _ src: Reg, _ regs: [any HLTypeProvider], _ mem: CpuOpBuffer, _callsite: (findex: RefFun, opnum: Int)? = nil) {
         /*
          safecast [dst], [r] cast register r into register dst, throw an exception if there is no way to perform such operation
          */
@@ -1782,7 +1786,6 @@ class M1Compiler2 {
         let castFunc = get_dyncast(to: dstType.kind)
         appendDebugPrintAligned4("Determined cast function", builder: mem)
         
-            
         mem.append(
             // load &src into x.0
             M1Op.movr64(X.x0, .sp),
@@ -2043,7 +2046,7 @@ class M1Compiler2 {
                         
                         /* TODO: not sure why this is needed? But @hashlink/jit.c
                                  has this */
-                        make_dyn_cast(dst, dst, regs, mem)
+                        make_dyn_cast(dst, dst, regs, mem, _callsite: (findex: compilable.findex, opnum: currentInstruction))
                     }
                     
                     // as last (after we've stored the results)
@@ -2867,59 +2870,75 @@ class M1Compiler2 {
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSafeCast(let dst, let src):
-                make_dyn_cast(dst, src, regs, mem)
+                make_dyn_cast(dst, src, regs, mem, _callsite: (findex: compilable.findex, opnum: currentInstruction))
             case .OLabel:
                 appendDebugPrintAligned4("OLabel", builder: mem)
             case .OSub(let dst, let a, let b):
-                appendLoad(reg: .x0, from: a, kinds: regs, mem: mem)
-                appendLoad(reg: .x1, from: b, kinds: regs, mem: mem)
-
-                mem.append(
-                    M1Op.sub(X.x2, X.x0, .r64shift(X.x1, .lsl(0)))
-                )
-
-                appendStore(2, into: dst, kinds: regs, mem: mem)
+                // mixed registers - convert integers to FP for the operation
+                assertNumeric(reg: dst, from: regs)
+                
+                let prependHeader = "f\(compilable.findex): #\(currentInstruction): #mix: OSub"
+                
+                appendLoadNumericAsDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
+                appendLoadNumericAsDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
+                
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) a", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d1, prepend: "\(prependHeader) b", builder: mem)
+                
+                mem.append(M1Op.fsub(D.d0, D.d0, D.d1))
+                
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) res", builder: mem)
+                
+                appendStoreDoubleAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             case .OAdd(let dst, let a, let b) where isInteger(vreg: a, kinds: regs) && isInteger(vreg: b, kinds: regs) && isInteger(vreg: dst, kinds: regs):
+                
+                let prependHeader = "f\(compilable.findex): #\(currentInstruction): #gp: OAdd"
+                
                 // all vregs are integers
                 assertInteger(reg: dst, from: regs)
                 
                 appendLoad(0, from: a, kinds: regs, mem: mem)
                 appendLoad(1, from: b, kinds: regs, mem: mem)
                 
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "OAdd#i a", builder: mem, format: "%d")
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "OAdd#i b", builder: mem, format: "%d")
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) a", builder: mem, format: "%d")
+                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(prependHeader) b", builder: mem, format: "%d")
                 mem.append(M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))))
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "OAdd#i res", builder: mem, format: "%d")
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) result", builder: mem, format: "%d")
                 
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OAdd(let dst, let a, let b) where isFP(vreg: a, kinds: regs) && isFP(vreg: b, kinds: regs) && isFP(vreg: dst, kinds: regs):
+                
+                let prependHeader = "f\(compilable.findex): #\(currentInstruction): #fp: OAdd"
+                
                 // all vregs are floating points
                 assertFP(reg: dst, from: regs)
                 
                 appendLoadFPToDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
                 appendLoadFPToDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
                 
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OAdd#fp a", builder: mem)
-                appendDebugPrintRegisterAligned4(D.d1, prepend: "OAdd#fp b", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) a", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d1, prepend: "\(prependHeader) b", builder: mem)
                 
                 mem.append(M1Op.fadd(D.d0, D.d0, D.d1))
                 
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OAdd#fp res", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) res", builder: mem)
                 
                 appendStoreDoubleToFP(reg: D.d0, into: dst, kinds: regs, mem: mem)
             case .OAdd(let dst, let a, let b):
                 // mixed registers - convert integers to FP for the operation
                 assertNumeric(reg: dst, from: regs)
                 
+                let prependHeader = "f\(compilable.findex): #\(currentInstruction): #mix: OAdd"
+                
                 appendLoadNumericAsDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
                 appendLoadNumericAsDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
                 
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OAdd#m a", builder: mem)
-                appendDebugPrintRegisterAligned4(D.d1, prepend: "OAdd#m b", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) a", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d1, prepend: "\(prependHeader) b", builder: mem)
                 
                 mem.append(M1Op.fadd(D.d0, D.d0, D.d1))
                 
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OAdd#m res", builder: mem)
+                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) res", builder: mem)
                 
                 appendStoreDoubleAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             case .ONot(let dst, let src):
@@ -3642,7 +3661,9 @@ class M1Compiler2 {
                     args: args,
                     regs: regs,
                     reservedStackBytes: stackInfo.total,
-                    mem: mem)
+                    mem: mem,
+                    _name: "OCallThis",
+                    _callsite: (findex: compilable.findex, opnum: currentInstruction))
             case .OCallMethod(let dst, let obj, let field, let args):
                 try __ocallmethod__ocallthis(
                     dst: dst,
@@ -3651,13 +3672,17 @@ class M1Compiler2 {
                     args: args,
                     regs: regs,
                     reservedStackBytes: stackInfo.total,
-                    mem: mem)
+                    mem: mem,
+                    _name: "OCallMethod",
+                    _callsite: (findex: compilable.findex, opnum: currentInstruction))
             case .ODynGet(let dst, let obj, let field):
+                let prependHeader = "f\(compilable.findex): #\(currentInstruction): ODynGet"
                 let dstType = requireTypeKind(reg: dst, from: regs)
                 let dyngetFunc = get_dynget(to: dstType.kind)
                 
                 // load obj into x0
                 appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) o", builder: mem)
                 
                 // load field name hash into x1
                 // note: different from ODynSet
@@ -3672,22 +3697,16 @@ class M1Compiler2 {
                     mem.append(PseudoOp.mov(X.x2, requireTypeMemory(reg: dst, regs: regs)))
                 }
                 
-                appendDebugPrintAligned4("Jumping to dynget function", builder: mem)
+                appendDebugPrintAligned4("\(prependHeader): jumping to dynget function", builder: mem)
                 mem.append(
                     PseudoOp.mov(X.x15, dyngetFunc),
                     M1Op.blr(X.x15)
                 )
                 // TODO: check for failed cast result
-                appendDebugPrintAligned4("TODO: ODynGet should check for failed cast result", builder: mem)
+                appendDebugPrintAligned4("\(prependHeader): TODO: ODynGet should check for failed cast result", builder: mem)
                 
-                if (dstType != .f32 && dstType != .f64) {
-                    appendDebugPrintRegisterAligned4(X.x0, prepend: "ODynGet result (non float)", builder: mem)
-                    appendStore(0, into: dst, kinds: regs, mem: mem)
-                } else {
-                    // TODO: test coverage
-                    appendDebugPrintAligned4("TODO: ODynGet test for returning floats", builder: mem)
-                    fatalError("TODO: test coverage")
-                }
+                appendStore(0, into: dst, kinds: regs, mem: mem)
+                appendDebugPrintRegisterAligned4(0, kind: dstType.kind, prepend: "\(prependHeader) result", builder: mem)
             case .ODynSet(let obj, let field, let src):
                 let srcType = requireTypeKind(reg: src, from: regs)
                 let dynsetFunc = get_dynset(from: srcType.kind)

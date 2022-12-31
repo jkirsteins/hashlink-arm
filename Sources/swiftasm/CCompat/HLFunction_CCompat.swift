@@ -74,7 +74,11 @@ extension HLFunction_CCompat : Compilable {
     
     var ops: [HLOpCode] {
         let bufPtr = UnsafeBufferPointer(start: self.opsPtr!, count: Int(nops))
-        return bufPtr.map { HLOpCode.parseCCompat($0) }
+        let res = bufPtr.map { HLOpCode.parseCCompat($0) }
+        if self.findex == 29 {
+            print(res, "for", self.findex)
+        }
+        return res
 //        let res = (0..<nops).map { ix in
 //            let ptr: UnsafePointer<HLOpCode_CCompat> = self.opsPtr!.advanced(by: Int(ix))
 //            print("Parsing from \(ptr)")

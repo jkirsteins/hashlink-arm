@@ -2131,6 +2131,25 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
+    func _ri32__f32_u16(ops: [HLOpCode], regs: [HLTypeKind] = [.f32, .u16, .i32], strip: Bool = true, _ callback: @escaping ((Float32, UInt16)->Int32)->()) throws {
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.i32,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.f32, HLTypeKind.u16, HLTypeKind.i32],
+                ops: ops)
+        ])
+        
+        try compileAndLink(ctx: ctx, 0, strip: strip) {
+            mappedMem in
+            
+            try mappedMem.jit(ctx: ctx, fix: 0) { (ep: (@convention(c) (Float32, UInt16) -> Int32)) in
+                callback(ep)
+            }
+        }
+    }
+    
     func _dyn__dyn(ops: [HLOpCode], _ callback: @escaping ((UnsafeRawPointer?)->UnsafeRawPointer?)->()) throws {
         let ctx = try prepareContext(compilables: [
             prepareFunction(
@@ -2175,15 +2194,66 @@ final class CompilerM1v2Tests: CCompatTestCase {
         }
     }
     
-    func testCompile_OSub() throws {
+    func testCompile__OSub() throws {
+        
+        try _ru8__u8_u8(ops: [
+            .OSub(dst: 1, a: 0, b: 1),
+            .ORet(ret: 1),
+        ]) { entrypoint in
+            XCTAssertEqual(2, entrypoint(6, 4))
+        }
+        
         try _ri32__i32_i32(ops: [
+            .OSub(dst: 1, a: 0, b: 1),
+            .ORet(ret: 1),
+        ]) { entrypoint in
+            XCTAssertEqual(2, entrypoint(6, 4))
+        }
+        
+        try _ri32__i32_u16(ops: [
             .OSub(dst: 0, a: 0, b: 1),
-            .ORet(ret: 0)
-        ]) {
-            entrypoint in
-            
-            XCTAssertEqual(11, entrypoint(12, 1))
-            XCTAssertEqual(1000, entrypoint(1252, 252))
+            .ORet(ret: 0),
+        ], strip: true) { entrypoint in
+            XCTAssertEqual(65535, entrypoint(131070, 65535))
+        }
+    }
+    
+    func testCompile__OSub_fp() throws {
+        try _rf32__f32_f32(ops: [
+            .OSub(dst: 1, a: 0, b: 1),
+            .ORet(ret: 1),
+        ]) { entrypoint in
+            XCTAssertEqualFloat(entrypoint(6.0, 4.0), 2.0)
+        }
+        
+        try _rf32__f64_f32(ops: [
+            .OSub(dst: 1, a: 0, b: 1),
+            .ORet(ret: 1),
+        ]) { entrypoint in
+            XCTAssertEqualFloat(entrypoint(6.0, 4.0), 2.0)
+        }
+    }
+    
+    func testCompile__OSub_mixed() throws {
+        try _rf32__f32_i32(ops: [
+            .OSub(dst: 0, a: 0, b: 1),
+            .ORet(ret: 0),
+        ], strip: true) { entrypoint in
+            XCTAssertEqualFloat(entrypoint(6.0, 4), 2.0)
+        }
+        
+        try _ri32__f32_i32(ops: [
+            .OSub(dst: 1, a: 0, b: 1),
+            .ORet(ret: 1),
+        ], strip: true) { entrypoint in
+            XCTAssertEqual(entrypoint(6.0, 4), 2)
+        }
+        
+        try _ri32__f32_u16(ops: [
+            .OSub(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2),
+        ], strip: true) { entrypoint in
+            XCTAssertEqual(65535, entrypoint(131070, 65535))
         }
     }
     
@@ -2727,8 +2797,15 @@ final class CompilerM1v2Tests: CCompatTestCase {
         try _ri32__f32_i32(ops: [
             .OAdd(dst: 1, a: 0, b: 1),
             .ORet(ret: 1),
-        ]) { entrypoint in
+        ], strip: true) { entrypoint in
             XCTAssertEqual(entrypoint(2, 4), 6)
+        }
+        
+        try _ri32__f32_u16(ops: [
+            .OAdd(dst: 2, a: 0, b: 1),
+            .ORet(ret: 2),
+        ], strip: true) { entrypoint in
+            XCTAssertEqual(131070, entrypoint(65535, 65535))
         }
     }
     
