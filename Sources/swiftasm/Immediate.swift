@@ -6,6 +6,8 @@ protocol Immediate : Equatable, Hashable {
 
     // deferred immediates might not have a value set
     var hasUsableValue: Bool { get }
+    
+    var signed: Bool { get }
 
     init(_ val: Int64, bits: Int64) throws
 }
@@ -61,11 +63,14 @@ struct VariableImmediate: Immediate {
     let value: Int64 
 
     var immediate: Int64 { value }
+    
+    private(set) var signed: Bool
 
     init(_ val: Int64, bits: Int64, divisor: Int64, signed: Bool) throws {
         // ensure
         self.value = try truncateOffset(val, divisor: divisor, bits: bits, signed: signed)
         self.bits = bits
+        self.signed = signed
     }
     
     init(_ val: Int64, bits: Int64, divisor: Int64) throws {
@@ -95,6 +100,7 @@ struct DeferredImmediateSum : Immediate, RelativeOffset, Equatable, Hashable {
     }
     
     var bits: Int64 { a.bits }
+    var signed: Bool { a.signed }
     
     let a: any Immediate
     let b: any Immediate
@@ -108,6 +114,7 @@ struct DeferredImmediateSum : Immediate, RelativeOffset, Equatable, Hashable {
     var value: Int64 { immediate }
     
     init(_ a: any Immediate, _ b: any Immediate, _ bMul: Int = 1, _ bAdd: Int = 0) throws {
+        
         self.a = a
         self.b = b
         self.bMul = bMul
@@ -155,10 +162,16 @@ struct DeferredImmediate<T: Immediate> : Immediate {
         ptr.wrappedValue != nil
     }
 
+    var signed: Bool {
+        require {
+            return $0.signed
+        }
+    }
+    
     var bits: Int64 {
         require {
             return $0.bits
-        } 
+        }
     }
 
     var immediate: Int64 {
@@ -203,11 +216,13 @@ extension Immediate {
     }
 
     var isNegative: Bool {
+        guard signed else { return false }
+        
         return (self.immediate & signMask) > 0
     }
 
     var isPositive: Bool {
-        !isNegative
+        return !isNegative
     }
 
     var flippedSign: Self {
@@ -223,9 +238,9 @@ extension Immediate {
 
 struct Immediate26: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64 = 26
-
     let wrapped: VariableImmediate
 
+    var signed: Bool { wrapped.signed }
     var immediate: Int64 { wrapped.immediate }
 
     init(integerLiteral: Int32) {
@@ -244,11 +259,11 @@ struct Immediate26: Immediate, ExpressibleByIntegerLiteral {
 
 struct Immediate12: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64 = 12
-
     let wrapped: VariableImmediate
 
     var immediate: Int64 { wrapped.immediate }
-
+    var signed: Bool { wrapped.signed }
+    
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
     }
@@ -257,19 +272,19 @@ struct Immediate12: Immediate, ExpressibleByIntegerLiteral {
         self.wrapped = try VariableImmediate(val, bits: bits)
     }
 
-    init(_ val: any BinaryInteger) throws {
+    init(_ val: any BinaryInteger, signed: Bool = true) throws {
         let i = Int(val)
-        self.wrapped = try VariableImmediate(Int64(i), bits: bits)
+        self.wrapped = try VariableImmediate(Int64(i), bits: bits, signed: signed)
     }
 }
 
 struct Immediate9: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64 = 9
-
     let wrapped: VariableImmediate
 
     var immediate: Int64 { wrapped.immediate }
-
+    var signed: Bool { wrapped.signed }
+    
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
     }
@@ -286,11 +301,11 @@ struct Immediate9: Immediate, ExpressibleByIntegerLiteral {
 
 struct Immediate16: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64 = 16
-
     let wrapped: VariableImmediate
 
     var immediate: Int64 { wrapped.immediate }
-
+    var signed: Bool { wrapped.signed }
+    
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
     }
@@ -307,10 +322,10 @@ struct Immediate16: Immediate, ExpressibleByIntegerLiteral {
 
 struct Immediate6: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64 = 6
-
     let wrapped: VariableImmediate
 
     var immediate: Int64 { wrapped.immediate }
+    var signed: Bool { wrapped.signed }
 
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
@@ -332,10 +347,10 @@ struct Immediate6: Immediate, ExpressibleByIntegerLiteral {
 
 struct UImmediate6: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64 = 6
-
     let wrapped: VariableImmediate
 
     var immediate: Int64 { wrapped.immediate }
+    var signed: Bool { wrapped.signed }
 
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits, signed: false)
@@ -365,11 +380,11 @@ extension Immediate {
 
 struct Immediate21: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64 = 21
-
     let wrapped: VariableImmediate
 
     var immediate: Int64 { wrapped.immediate }
-    
+    var signed: Bool { wrapped.signed }
+
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
     }
@@ -386,11 +401,11 @@ struct Immediate21: Immediate, ExpressibleByIntegerLiteral {
 
 struct Immediate19: Immediate, ExpressibleByIntegerLiteral {
     let bits: Int64 = 19
-
     let wrapped: VariableImmediate
 
     var immediate: Int64 { wrapped.immediate }
-    
+    var signed: Bool { wrapped.signed }
+
     init(integerLiteral: Int32) {
         self.wrapped = try! VariableImmediate(Int64(integerLiteral), bits: bits)
     }
@@ -413,6 +428,7 @@ extension Int: Immediate {
         return 64
     }
     var immediate: Int64 { Int64(self) }
+    var signed: Bool { true }
 
     init(_ val: Int64, bits: Int64) throws {
         self = Self(val)
@@ -423,7 +439,8 @@ extension Int: Immediate {
 extension Int64: Immediate {
     var bits: Int64 { 64 }
     var immediate: Int64 { self }
-
+    var signed: Bool { true }
+    
     init(_ val: Int64, bits: Int64) throws {
         self = Self(val)
         guard bits == self.bits else { fatalError("\(type(of: self)) can only be initialized with \(self.bits) bits") }
@@ -433,7 +450,8 @@ extension Int64: Immediate {
 extension UInt64: Immediate {
     var bits: Int64 { 64 }
     var immediate: Int64 { Int64(bitPattern: self) }
-
+    var signed: Bool { false }
+    
     init(_ val: Int64, bits: Int64) throws {
         self = Self(val)
         guard bits == self.bits else { fatalError("\(type(of: self)) can only be initialized with \(self.bits) bits") }
@@ -443,7 +461,8 @@ extension UInt64: Immediate {
 extension Int32: Immediate {
     var bits: Int64 { 32 }
     var immediate: Int64 { Int64(self) }
-
+    var signed: Bool { true }
+    
     init(_ val: Int64, bits: Int64) throws {
         self = Self(val)
         guard bits == self.bits else { fatalError("\(type(of: self)) can only be initialized with \(self.bits) bits") }
@@ -453,7 +472,8 @@ extension Int32: Immediate {
 extension Int16: Immediate {
     var bits: Int64 { 16 }
     var immediate: Int64 { Int64(self) }
-
+    var signed: Bool { true }
+    
     init(_ val: Int64, bits: Int64) throws {
         self = Self(val)
         guard bits == self.bits else { fatalError("\(type(of: self)) can only be initialized with \(self.bits) bits") }
@@ -469,6 +489,7 @@ struct Imm12Lsl12 : Immediate, CustomAsmStringConvertible, ExpressibleByIntegerL
 
     var bits: Int64 { imm.bits }
     var immediate: Int64 { imm.immediate }
+    var signed: Bool { imm.signed }
     
     let imm: Immediate12
     let lsl: Lsl12
@@ -501,12 +522,12 @@ struct Imm12Lsl12 : Immediate, CustomAsmStringConvertible, ExpressibleByIntegerL
         self.lsl = lsl
     }
 
-    init(_ val: any BinaryInteger) throws {
-        try self.init(try Immediate12(val))
+    init(_ val: any BinaryInteger, signed: Bool = true) throws {
+        try self.init(try Immediate12(val, signed: signed))
     }
 
-    static func i(_ val: any BinaryInteger) throws -> Self {
-        try Self(val)
+    static func i(_ val: any BinaryInteger, signed: Bool = true) throws -> Self {
+        try Self(val, signed: signed)
     }
 
     init(_ val: Int64, bits: Int64) throws {

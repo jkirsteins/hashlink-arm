@@ -43,6 +43,7 @@ extension UnsafeMutableRawPointer: ExpressibleByIntegerLiteral {
 }
 
 extension SharedStorage<UnsafeMutableRawPointer?>: Immediate, DeferredMemoryAddress, MemoryAddress {
+    
     var value: UnsafeMutableRawPointer {
         guard let res = self.wrappedValue else {
             fatalError("Deferred absolute address not available")
@@ -64,6 +65,7 @@ extension SharedStorage<UnsafeMutableRawPointer?>: Immediate, DeferredMemoryAddr
     var hasUsableValue: Bool { self.wrappedValue != nil }
 
     var bits: Int64 { 64 }
+    var signed: Bool { false }
     var immediate: Int64 {Int64(Int(bitPattern: self.value)) }
 
     init(_ val: Int64, bits: Int64) {
@@ -90,6 +92,7 @@ protocol DeferredMemoryAddress: MemoryAddress, Immediate {
 
 extension MemoryAddress {
     var bits: Int64 { 64 }
+    var signed: Bool { false }
     var immediate: Int64 {Int64(Int(bitPattern: self.value)) }
 
     init(_ val: Int64, bits: Int64) {

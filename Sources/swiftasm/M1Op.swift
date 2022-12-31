@@ -387,8 +387,8 @@ enum M1Op : CpuOp {
         }
     }
     
-    static func _add(_ r1: any RegisterI, _ r2: any RegisterI, _ offs: ByteCount) throws -> M1Op {
-        .addImm12(r1, r2, try Imm12Lsl12(Immediate12(offs), lsl: ._0))
+    static func _add(_ r1: any RegisterI, _ r2: any RegisterI, _ offs: ByteCount, signed: Bool = false) throws -> M1Op {
+        .addImm12(r1, r2, try Imm12Lsl12(Immediate12(offs, signed: signed), lsl: ._0))
     }
     
     func emit() throws -> [UInt8] {

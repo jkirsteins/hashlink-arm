@@ -42,13 +42,25 @@ final class ImmediateTests: XCTestCase {
     func testImmediate12() throws {
         let x: Immediate12 = -14
         // value will not match -14 cause truncated
-        XCTAssertEqual(x.immediate, 4082)   
+        XCTAssertEqual(x.immediate, 4082)
         // but if we flip, it should come back to the right one
-        XCTAssertEqual(x.flippedSign.immediate, 14) 
+        XCTAssertEqual(x.flippedSign.immediate, 14)
 
-        XCTAssert(x.isNegative) 
-        XCTAssert(x.flippedSign.isPositive) 
-        XCTAssertFalse(x.flippedSign.isNegative) 
-        XCTAssertFalse(x.isPositive) 
+        XCTAssert(x.isNegative)
+        XCTAssert(x.flippedSign.isPositive)
+        XCTAssertFalse(x.flippedSign.isNegative)
+        XCTAssertFalse(x.isPositive)
+    }
+    
+    /// Regression
+    func testImm12Lsl12_signage() throws {
+        
+        let w: VariableImmediate = try VariableImmediate(2400, bits: 12, signed: false)
+        XCTAssertTrue(w.isPositive)
+        XCTAssertFalse(w.isNegative)
+        
+        let x = try Imm12Lsl12(2400, signed: false)
+        XCTAssertTrue(x.isPositive)
+        XCTAssertFalse(x.isNegative)
     }
 }

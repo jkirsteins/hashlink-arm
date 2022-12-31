@@ -750,7 +750,7 @@ extension M1Compiler2 {
                 PseudoOp.mov(X.x21, offsetCandidate),
                 M1Op.add(X.x20, X.x20, .r64shift(X.x21, .lsl(0)))
             )
-            self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendStore indirect]", builder: mem)
+            self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendStore indirect offset:\(offsetCandidate)]", builder: mem)
         }
         
         if vregKind.hlRegSize == 8 {
@@ -971,7 +971,7 @@ extension M1Compiler2 {
         
         builder.append(
             PseudoOp.debugMarker("Reserving \(stackInfo.total) bytes for entire stack"),
-            M1Op.subImm12(X.sp, X.sp, try .i(stackInfo.total))
+            M1Op.subImm12(X.sp, X.sp, try .i(stackInfo.total, signed: false))
         )
         
         var offset: ByteCount = 0
@@ -993,14 +993,19 @@ extension M1Compiler2 {
             
             let isFpReg = FP_TYPE_KINDS.contains(reg.kind)
             let regIsArg = rix <= unfilteredArgs.count
-            let needLoad = (isFpReg && fpIx >= ARG_REGISTER_COUNT) || (!isFpReg && gpIx >= ARG_REGISTER_COUNT) && regIsArg
             
-            let regToUse = (!regIsArg || needLoad) ? (1) : (isFpReg ? fpIx : gpIx)
+            // `needLoad` means the value is on the stack, and not in one of the
+            // x0-x8 or d0-d8 etc. registers.
+            let doesntFit = ((isFpReg && fpIx >= ARG_REGISTER_COUNT) || (!isFpReg && gpIx >= ARG_REGISTER_COUNT))
+            let needLoad = doesntFit && regIsArg
+            let regToUse = (doesntFit || needLoad) ? (1) : (isFpReg ? fpIx : gpIx)
             defer {
-                if isFpReg {
-                    fpIx+=1
-                } else {
-                    gpIx+=1
+                if !doesntFit {
+                    if isFpReg {
+                        fpIx+=1
+                    } else {
+                        gpIx+=1
+                    }
                 }
             }
             
@@ -1453,7 +1458,7 @@ extension M1Compiler2 {
         // Storing all non-corruptible registers so we don't have to keep track of them
         // during the execution. Potential optimization here.
         builder.append(
-            M1Op.subImm12(X.sp, X.sp, try! Imm12Lsl12(stackReservation)),
+            M1Op.subImm12(X.sp, X.sp, try! Imm12Lsl12(stackReservation, signed: false)),
             
             M1Op.stp((X.x15, X.x16), .reg64offset(.sp, 0, nil)),
             M1Op.stp((X.x17, X.x18), .reg64offset(.sp, 16, nil)),
@@ -1898,13 +1903,19 @@ class M1Compiler2 {
         
         mem.append(PseudoOp.debugMarker("==> STARTING FUNCTION \(fix)"))
         let prologueSize = appendPrologue(builder: mem)
-        let stackInfo = try appendStackInit(
-            regs,
-            args: compilable.argsProvider,
-            builder: mem,
-            prologueSize: prologueSize,
-            trapContextsNeeded: trapCount
-        )
+        
+        let stackInfo: StackInfo
+        do {
+            stackInfo = try appendStackInit(
+                regs,
+                args: compilable.argsProvider,
+                builder: mem,
+                prologueSize: prologueSize,
+                trapContextsNeeded: trapCount)
+        } catch {
+            Self.logger.critical("Could not initialize the stack for fun@\(compilable.findex)")
+            throw error
+        }
 
         appendDebugPrintAligned4(
             "Entering function \(fix)@\(compilable.address)",

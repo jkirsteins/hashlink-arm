@@ -4899,4 +4899,38 @@ final class CompilerM1v2Tests: CCompatTestCase {
             XCTAssertEqual(entrypoint(123), 123)
         }
     }
+    
+    /// Regression test - `sub` (which is used for stack initialization) takes an unsigned
+    /// immediate that must fit in 12 bits.
+    ///
+    /// Stack size of e.g. 2336 fits in unsigned 12 bits, but doesn't fit in 12 bits.
+    ///
+    /// It should not fail on a stack of this size.
+    func testCompile_stackLargerThanSigned12Bits() throws {
+        let regs: [HLTypeKind] = Array(repeating: HLTypeKind.dyn, count: 300)
+        let ctx = try prepareContext(compilables: [
+            prepareFunction(
+                retType: HLTypeKind.dyn,
+                findex: 0,
+                regs: regs,
+                args: [HLTypeKind.dyn],
+                ops: [
+                    .OMov(dst: 299, src: 0),
+                    .ORet(ret: 299)
+                ])
+        ])
+        
+        // should not crash on compile
+        try compileAndLink(ctx: ctx, 0, strip: false) {
+            mappedMem in
+            
+            let callable = try ctx.getCallable(findex: 0)
+            let entrypoint = unsafeBitCast(callable!.address.value, to: (@convention(c) (OpaquePointer) -> (OpaquePointer)).self)
+            
+            let fun = entrypoint(.init(bitPattern: 123)!)
+            
+            // dummy smoke test that the compiled function works
+            XCTAssertEqual(fun, .init(bitPattern: 123)!)
+        }
+    }
 }
