@@ -137,7 +137,6 @@ let OMakeEnum_impl: (@convention(c) (
         let rawEnumBase: UnsafeMutableRawPointer = .init(OpaquePointer(result))
         let mutatingOffsetPtr: UnsafeMutablePointer<Int64> = .init(OpaquePointer(rawEnumBase.advanced(by: Int(offset))))
         mutatingOffsetPtr.pointee = argValue
-        print("Set val at", offset, "to", argValue)
     }
     
     return .init(result)
@@ -553,6 +552,14 @@ extension M1Compiler2 {
         mem: CpuOpBuffer)
     {
         Self.appendLoad(reg: reg, as: vreg, addressRegister: addrRegCandidate, offset: offsetCandidate, kinds: kinds, mem: mem)
+    }
+    
+    static func appendLoadTypeMemory(_ creg: Register64, reg vreg: Reg, regs: [any HLTypeProvider], mem: CpuOpBuffer, ctx: CCompatJitContext) throws
+    {
+        let type = requireType(reg: vreg, regs: regs)
+        let ix = try ctx.getTypeIndex(type)
+        let addr = type.ccompatAddress
+        mem.append(PseudoOp.movType(creg, ix, addr))
     }
     
     static func appendLoad(
@@ -1543,22 +1550,23 @@ class M1Compiler2 {
     }
     
     func assertEnoughRegisters(_ ix: Reg, regs: Registers2) {
+        Self.assertEnoughRegisters(ix, regs: regs)
+    }
+    
+    static func assertEnoughRegisters(_ ix: Reg, regs: Registers2) {
         guard ix < regs.count else {
             fatalError("Not enough registers. Expected \(ix) to be available. Got: \(regs)")
         }
     }
     
-    func requireTypeMemory(reg: Reg, regs: Registers2) -> UnsafeRawPointer /*UnsafePointer<HLType_CCompat>*/ {
-        assertEnoughRegisters(reg, regs: regs)
-        
-        let reg = regs[Int(reg)]
-        return reg.ccompatAddress
-    }
-    
-    func requireType(reg: Reg, regs: Registers2) -> any HLTypeProvider {
+    static func requireType(reg: Reg, regs: Registers2) -> any HLTypeProvider {
         assertEnoughRegisters(reg, regs: regs)
         
         return regs[Int(reg)]
+    }
+    
+    func requireType(reg: Reg, regs: Registers2) -> any HLTypeProvider {
+        Self.requireType(reg: reg, regs: regs)
     }
     
     func requireFieldOffset(fieldRef: Int, objIx: Reg, regs: Registers2) -> Int64 {
@@ -1786,7 +1794,7 @@ class M1Compiler2 {
     }
     
     // MARK: make_dyn_cast
-    func make_dyn_cast(_ dst: Reg, _ src: Reg, _ regs: [any HLTypeProvider], _ mem: CpuOpBuffer, _callsite: (findex: RefFun, opnum: Int)? = nil) {
+    func make_dyn_cast(_ dst: Reg, _ src: Reg, _ regs: [any HLTypeProvider], _ mem: CpuOpBuffer, _callsite: (findex: RefFun, opnum: Int)? = nil) throws {
         /*
          safecast [dst], [r] cast register r into register dst, throw an exception if there is no way to perform such operation
          */
@@ -1805,11 +1813,12 @@ class M1Compiler2 {
             M1Op.movz64(X.x1, UInt16(srcOffset), nil),
             M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0)))
         )
-        mem.append(PseudoOp.mov(X.x1, requireTypeMemory(reg: src, regs: regs)))
+        try Self.appendLoadTypeMemory(X.x1, reg: src, regs: regs, mem: mem, ctx: ctx)
+        
         
         if (dstType != .f32 && dstType != .f64) {
             // float/double casts are the only ones that don't require the third "to" arg
-            mem.append(PseudoOp.mov(X.x2, requireTypeMemory(reg: dst, regs: regs)))
+            try Self.appendLoadTypeMemory(X.x2, reg: dst, regs: regs, mem: mem, ctx: ctx)
         }
         appendDebugPrintAligned4("Jumping to cast function", builder: mem)
         mem.append(
@@ -1839,7 +1848,7 @@ class M1Compiler2 {
             ctx.funcTracker.compiled(compilable.findex)
         }
         
-        guard let cache = self.cache, let cached = try cache.cached(offset: mem.byteSize, compilable: compilable) else {
+        guard let cache = self.cache, let cached = try cache.cached(offset: mem.byteSize, compilable: compilable, ctx: ctx) else {
             
             // `requireCache` only exists so we can test caching
             guard !requireCache else {
@@ -2065,7 +2074,7 @@ class M1Compiler2 {
                         
                         /* TODO: not sure why this is needed? But @hashlink/jit.c
                                  has this */
-                        make_dyn_cast(dst, dst, regs, mem, _callsite: (findex: compilable.findex, opnum: currentInstruction))
+                        try make_dyn_cast(dst, dst, regs, mem, _callsite: (findex: compilable.findex, opnum: currentInstruction))
                     }
                     
                     // as last (after we've stored the results)
@@ -2191,11 +2200,10 @@ class M1Compiler2 {
                 }
 
                 if needX0 {
-                    let dstTypeAddr = requireTypeAddress(reg: dst, from: regs)
                     mem.append(
-                        PseudoOp.debugMarker("Moving reg address \(dstTypeAddr) in .x0"),
-                        PseudoOp.mov(.x0, dstTypeAddr)
+                        PseudoOp.debugMarker("Moving reg #\(dst) address into .x0")
                     )
+                    try Self.appendLoadTypeMemory(X.x0, reg: dst, regs: regs, mem: mem, ctx: ctx)
                 } else {
                     mem.append(
                         PseudoOp.debugMarker("Not moving reg \(dst) in x0 b/c alloc func doesn't need it")
@@ -2889,7 +2897,7 @@ class M1Compiler2 {
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSafeCast(let dst, let src):
-                make_dyn_cast(dst, src, regs, mem, _callsite: (findex: compilable.findex, opnum: currentInstruction))
+                try make_dyn_cast(dst, src, regs, mem, _callsite: (findex: compilable.findex, opnum: currentInstruction))
             case .OLabel:
                 appendDebugPrintAligned4("OLabel", builder: mem)
             case .OSub(let dst, let a, let b):
@@ -3029,16 +3037,8 @@ class M1Compiler2 {
             case .OType(let dst, let ty):
                 let typeMemory = try ctx.getType(ty)
                 let typeMemoryVal = Int(bitPattern: typeMemory.ccompatAddress)
-                mem.append(PseudoOp.mov(.x0, typeMemoryVal))
+                mem.append(PseudoOp.movType(.x0, ty, typeMemoryVal))
                 appendStore(0, into: dst, kinds: regs, mem: mem)
-
-                let _test: (@convention(c) (UnsafeRawPointer) -> ()) = { (_ ptr: UnsafeRawPointer) in
-                    let p = UnsafePointer<HLType_CCompat>(OpaquePointer(ptr))
-                }
-                let _testAddress = unsafeBitCast(_test, to: UnsafeMutableRawPointer.self)
-                mem.append(
-                    PseudoOp.mov(X.x1, _testAddress),
-                    M1Op.blr(X.x1))
             case .OIncr(let dst):
                 appendLoad(reg: .x0, from: dst, kinds: regs, mem: mem)
                 mem.append(M1Op.add(X.x0, X.x0, .imm(1, nil)))
@@ -3656,7 +3656,6 @@ class M1Compiler2 {
                         _ = dynPtr.pointee.t.pointee.obj.pointee.getRt(dynPtr.pointee.t)
                     }
                 }
-                let dstType = requireTypeMemory(reg: dst, regs: regs)
                 
                 appendLoad(reg: X.x0, from: src, kinds: regs, mem: mem)
                 // ensure src is initialized (if obj)
@@ -3665,7 +3664,7 @@ class M1Compiler2 {
                     M1Op.blr(X.x1)
                 )
                 // hl_to_virtual
-                mem.append(PseudoOp.mov(X.x0, dstType))
+                try Self.appendLoadTypeMemory(X.x0, reg: dst, regs: regs, mem: mem, ctx: ctx)
                 appendLoad(reg: X.x1, from: src, kinds: regs, mem: mem)
                 mem.append(
                     PseudoOp.mov(X.x2, unsafeBitCast(LibHl._hl_to_virtual, to: OpaquePointer.self)),
@@ -3713,7 +3712,7 @@ class M1Compiler2 {
                 
                 // load type into x2 (for non-f32 and non-f64 arguments)
                 if (dstType != .f32 && dstType != .f64) {
-                    mem.append(PseudoOp.mov(X.x2, requireTypeMemory(reg: dst, regs: regs)))
+                    try Self.appendLoadTypeMemory(X.x2, reg: dst, regs: regs, mem: mem, ctx: ctx)
                 }
                 
                 appendDebugPrintAligned4("\(prependHeader): jumping to dynget function", builder: mem)
@@ -3753,7 +3752,7 @@ class M1Compiler2 {
                 // b/c the f* arguments don't need the type
                 if (srcType != .f32 && srcType != .f64) {
                     // load type into x2
-                    mem.append(PseudoOp.mov(X.x2, requireTypeMemory(reg: src, regs: regs)))
+                    try Self.appendLoadTypeMemory(X.x2, reg: src, regs: regs, mem: mem, ctx: ctx)
                     
                     // load value into x3
                     appendLoad(reg: X.x3, from: src, kinds: regs, mem: mem)

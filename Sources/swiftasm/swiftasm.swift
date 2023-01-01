@@ -16,6 +16,9 @@ struct SwiftAsm: ParsableCommand {
     
     @Flag(help: "Insert debugging messages in the compiled code.")
     var jitdebug: Bool = false
+    
+    @Flag(help: "Display compilation progress.")
+    var progress: Bool = false
 
 
     // func testrun() throws {
@@ -76,8 +79,10 @@ struct SwiftAsm: ParsableCommand {
 //            305, 437, 350, 28, 14, 42, 240, 337, 303
 ]
 
+        let cache: (any CompilerCache)? = nil
         let mod = try! Bootstrap.start2(hlFileIn, args: [])
-        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug, cache: nil)
+        
+        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug, cache: cache)
         let buf = CpuOpBuffer()
         
         var offsetToCompilable: Dictionary<ByteCount, (ByteCount, any Compilable2)> = [:]
@@ -99,7 +104,10 @@ struct SwiftAsm: ParsableCommand {
             let progress = Float(frix+1)/Float(mod.nfunctions)
             if (progress-progressLastReport) > progressChunkSize {
                 progressLastReport = progress
-                print("Progress", String(format: "%.2f%%", progress * 100))
+                
+                if self.progress {
+                    print("Progress", String(format: "%.2f%%", progress * 100))
+                }
             }
         }
         

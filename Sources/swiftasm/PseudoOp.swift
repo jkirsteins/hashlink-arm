@@ -25,6 +25,10 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
     // address into the target register.
     case movRelative(Register64, JitBase, any Immediate)
     
+    // Move the address of a type in a register. This can be achieved
+    // with `mov` but a specific op allows us to avoid caching this value.
+    case movType(Register64, Int /*type index*/, any Immediate /*ccompat address - not cachable*/)
+    
     // Resolves to either `mov` (if absolute address, known already) or `movRelative` otherwise for a linkable
     // address for which the absolute value is only known at link time
     case movCallableAddress(Register64, JitBase, any MemoryAddress)
@@ -51,13 +55,15 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
             return Self._strVregFP(reg, regOffset, off, s).reduce(0) { $0 + $1.size }
         case .debugMarker:
             return 0
-        case .mov, .movRelative, .movCallableAddress: return 16
+        case .mov, .movRelative, .movType, .movCallableAddress: return 16
         case .zero: return 1
         case .ascii(let v):
             return ByteCount(v.utf8.count)
         }
     }
     
+    /// NOTE: do not resolve PseudoOp.movType to anything here,
+    /// otherwise caches won't see it.
     func resolve() -> PseudoOp {
         switch(self) {
         case PseudoOp.movCallableAddress(let Rd, let jitBase, let address):
@@ -83,6 +89,8 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
             return ".mov \(Rd), <jitbase> + #\(off)"
         case .mov(let Rd, let val):
             return ".mov \(Rd), #\(val)"
+        case .movType(let Rd, let tix, let val):
+            return ".mov \(Rd), <type: \(tix)>#\(val)"
         case .zero: return ".zero"
         case .ldrVreg(let reg, let offset, let regSize):
             return Self._ldrVreg(reg, offset, regSize).map { $0.asmDescription }.joined(separator: "\n")
@@ -222,6 +230,8 @@ enum PseudoOp: CpuOp, CustomAsmStringConvertible {
             (try M1Op.movk64(Rd, v2, ._16).emit()) +
             (try M1Op.movk64(Rd, v3, ._32).emit()) +
             (try M1Op.movk64(Rd, v4, ._48).emit())
+        case .movType(let Rd, _, let val):
+            return try PseudoOp.mov(Rd, val).emit()
         case .mov(let Rd, let val):
             
             guard val.hasUsableValue else {

@@ -38,16 +38,21 @@ extension M1Compiler2 {
         // move *value into X.x21 for safe keeping
         mem.append(M1Op.movr64(X.x21, X.x0))
         
+        #if DEBUG
         appendDebugPrintAligned4("[hlc_get_wrapper] entered...", builder: mem)
         appendDebugPrintRegisterAligned4(X.x0, prepend: "[hlc_get_wrapper] value...", builder: mem)
+        #endif
         
         var gpIX: RegisterRawValue = 1  // X.x0 is how we received *value
         var fpIX: RegisterRawValue = 0
-        print("[hlc_get_wrapper] \(t._overrideDebugDescription)")
+        
         for (argIx, argType) in funProvider.argsProvider.enumerated() {
             let argKind = argType.kind
-            appendDebugPrintAligned4("Not implemented/tested", builder: mem)
-            appendSystemExit(10, builder: mem)
+            
+#if DEBUG
+            appendSystemExit(10, builder: mem, message: "Not implemented/tested")
+#endif
+            
             guard fpIX < ARG_REGISTER_COUNT && gpIX < ARG_REGISTER_COUNT else {
                 fatal("hlc_get_wrapper does not support more than \(ARG_REGISTER_COUNT) arguments (i.e. stack args)", logger)
             }
@@ -155,10 +160,10 @@ extension M1Compiler2 {
             let ctxDeserialized: _Ctx = Unmanaged.fromOpaque(ctxRawPtr).takeRetainedValue()
             for item in ctxDeserialized.v {
                 let mbp: UnsafeMutableRawPointer = .init(item)
-                print("[hlc_get_wrapper] Deallocating arg as \(item)")
+                
                 mbp.deallocate()
             }
-            print("[hlc_get_wrapper] Deallocating buff pointer \(ctxDeserialized.v)")
+            
             ctxDeserialized.v.deallocate()
         }
         

@@ -30,7 +30,9 @@ extension M1Compiler2 {
             M1Op.stp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 0, nil))
         )
         
+        #if DEBUG
         appendDebugPrintAligned4("[hlc_static_call] entering...", builder: mem)
+        #endif
         
         // set x20/x21
         mem.append(
@@ -42,9 +44,9 @@ extension M1Compiler2 {
             PseudoOp.mov(X.x21, funPtr)
         )
         
-        appendDebugPrintAligned4("[hlc_static_call] entering 2...", builder: mem)
-        
-        appendDebugPrintRegisterAligned4(X.x20, prepend: "TESTREG base in hlc_static_call", builder: mem)
+        #if DEBUG
+        appendDebugPrintRegisterAligned4(X.x20, prepend: "base in hlc_static_call", builder: mem)
+        #endif
 
         var offset: ByteCount = 0
         var gpRegisterIx: RegisterRawValue = 0
@@ -101,18 +103,24 @@ extension M1Compiler2 {
                     mem: mem)
             }
             
+            #if DEBUG
             M1Compiler2.appendDebugPrintRegisterAligned4(regToUseIx, kind: argKind, prepend: "hl_dyn_call_obj arg \(reg) in hlc_static_call (offset \(offset))", builder: mem)
+            #endif
             
             offset += Int64(MemoryLayout<OpaquePointer>.stride)    // args are memory addresses
         }
 
+#if DEBUG
         appendDebugPrintRegisterAligned4(X.x21, prepend: "[hlc_static_call] jumping...", builder: mem)
+#endif
         
         mem.append(
             M1Op.blr(X.x21)
         )
         
+#if DEBUG
         appendDebugPrintAligned4("[hlc_static_call] jumped...", builder: mem)
+#endif
         
         // no-stack-epilogue
         mem.append(

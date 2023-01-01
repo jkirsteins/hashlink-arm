@@ -2,21 +2,24 @@ import Foundation
 
 protocol CompilerCache {
     func cache(offset: ByteCount, compilable: any Compilable2, data: ArraySlice<CpuOp>) throws
-    func cached(offset: ByteCount, compilable: any Compilable2) throws -> [CpuOp]?
+    func cached(offset: ByteCount, compilable: any Compilable2, ctx: CCompatJitContext) throws -> [CpuOp]?
 }
 
-typealias HashFunc = (ByteCount, any Compilable2)->UInt64
+typealias HashFunc = (ByteCount, any Compilable2, Int)->UInt64
 
 class DiskCache : CompilerCache {
     let hashfunc: HashFunc
     let dir: URL
+    let rnd: Int
     static let logger = LoggerFactory.create(DiskCache.self)
     
     init(
         dir: URL = URL(fileURLWithPath: "/tmp", isDirectory: true),
-        hashfunc: @escaping HashFunc = hash_hasher) {
+        hashfunc: @escaping HashFunc = hash_hasher,
+        rnd: Int = 0) {
             self.hashfunc = hashfunc
             self.dir = dir
+            self.rnd = rnd
     }
     
     func cache(offset: ByteCount, compilable: any Compilable2, data: ArraySlice<CpuOp>) throws {
@@ -34,6 +37,11 @@ class DiskCache : CompilerCache {
             
             if case PseudoOp.movCallableAddress = op {
                 fatalError("Fatal error, .movCallableAddress should have been resolved to .mov or .movRelative")
+            }
+            
+            if case PseudoOp.movType(let Rd, let tix, _) = op {
+                let b: [UInt8] = Int32(tix).getBytes()
+                return res + [2, Rd.rawValue, 4] + b
             }
             
             if case PseudoOp.movRelative(let Rd, _, let imm) = op {
@@ -69,7 +77,7 @@ class DiskCache : CompilerCache {
     }
     
     func getPath(_ offset: ByteCount, _ compilable: any Compilable2) -> URL {
-        let key = hashfunc(offset, compilable)
+        let key = hashfunc(offset, compilable, self.rnd)
         return dir.appendingPathComponent("\(key).hashlink-arm.cache")
     }
     
@@ -78,7 +86,7 @@ class DiskCache : CompilerCache {
         try FileManager.default.removeItem(at: cacheFile)
     }
     
-    func cached(offset: ByteCount, compilable: any Compilable2) throws -> [CpuOp]? {
+    func cached(offset: ByteCount, compilable: any Compilable2, ctx: CCompatJitContext) throws -> [CpuOp]? {
         let cacheFile = getPath(offset, compilable)
         guard try cacheExists(offset: offset, compilable: compilable) else {
             Self.logger.debug("Cache does not exist at \(cacheFile.path) for \(compilable.findex) at \(offset)")
@@ -107,6 +115,16 @@ class DiskCache : CompilerCache {
 //                let reg64 = Register64(rawValue: regRawValue)!
 //                result.append(PseudoOp.movRelative(reg64, ctx.jitBase, offset))
                 return nil
+            case (2, let rdRawValue):
+                let c = try reader.readUInt8()
+                Swift.assert(c == 4)    // 4 bytes for tix
+                let tixb = try reader.readNUInt8(Int(c))
+                let tix = Int32.recombine(tixb)
+                let rd = Register64(rawValue: rdRawValue)!
+                let type = try ctx.getType(Int(tix))
+                
+                Self.logger.debug("Loading type #\(tix) into \(String(describing: rd)) (memory: \(String(describing: type.ccompatAddress))")
+                result.append(PseudoOp.movType(rd, Int(tix), type.ccompatAddress))
             default:
                 fatalError("Invalid cache marker (must be 0 or 1, got \(x[0]))")
             }
@@ -117,8 +135,13 @@ class DiskCache : CompilerCache {
     }
 }
 
-func hash_hasher(offset: ByteCount, compilable: any Compilable2) -> UInt64 {
+func hash_hasher(offset: ByteCount, compilable: any Compilable2, rnd: Int = 0) -> UInt64 {
+    
+    // TODO: hash should also change if the dependent types change (because we e.g. load field offsets)
+    
     var hash: Int64 = 17
+    
+    hash = hash &* 37 &+ Int64(rnd);
     
     hash = hash &* 37 &+ Int64(compilable.retProvider.kind.rawValue);
     hash = hash &* 37 &+ Int64(offset);

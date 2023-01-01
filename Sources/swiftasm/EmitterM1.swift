@@ -507,6 +507,22 @@ public enum EmitterM1Error: Error, Equatable {
     case invalidValue(_ reason: String)
 }
 
+extension Int32 {
+    public func getBytes() -> [UInt8] {
+        let length: Int = 4 * MemoryLayout<UInt8>.stride
+        let result = withUnsafeBytes(of: self) { bytes in Array(bytes.prefix(length)) }
+        return result
+    }
+    
+    public static func recombine(_ from: [UInt8]) -> Int32 {
+        from.withUnsafeBufferPointer {
+            bufIn in
+            
+            return UnsafePointer<Int32>(OpaquePointer(bufIn.baseAddress!)).pointee
+        }
+    }
+}
+
 extension Int64 {
     public func getBytes() -> [UInt8] {
         let length: Int = 8 * MemoryLayout<UInt8>.stride

@@ -182,6 +182,21 @@ class CCompatJitContext : JitContext2 {
         }
     }
     
+    lazy var typeIndexes: [UnsafeRawPointer:Int] = {
+        var result: [UnsafeRawPointer:Int] = [:]
+        try! withModule { m in
+            for ix in 0..<ntypes {
+                let t = m.pointee.code.pointee.getType(Int(ix))
+                result[t.ccompatAddress] = Int(ix)
+            }
+        }
+        return result
+    }()
+    
+    func getTypeIndex(_ type: any HLTypeProvider) throws -> Int {
+        return typeIndexes[type.ccompatAddress]!
+    }
+    
     func getInt(_ ix: Int) throws -> Int32 {
         try withModule {
             return $0.pointee.code.pointee.getInt(ix)

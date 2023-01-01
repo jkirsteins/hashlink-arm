@@ -78,10 +78,6 @@ extension M1Compiler2 {
                 return rightProto
             }
             
-            // Fetch proto function index
-            appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
-            mem.append(PseudoOp.mov(X.x1, funcProto))
-            
             // Fetch proto function address
             appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
             mem.append(PseudoOp.mov(X.x1, funcProto))
@@ -236,15 +232,6 @@ extension M1Compiler2 {
                 let v: UnsafePointer<vvirtual> = .init(virtPtr)
                 let field = v.pointee.t.pointee.virt.pointee.fields.advanced(by: Int(funcProto)).pointee
                 let fid = field.hashedName
-                
-                
-                let lookup: UnsafePointer<HLFieldLookup_CCompat>? = v.pointee.t.pointee.virt.pointee.lookup
-                
-                
-                
-                print("OCallMethod name: \(field.tPtr._overrideDebugDescription)")
-                print("OCallMethod field: \(field.name)")
-                print("OCallMethod v->fid (from native): \(fid) (or \(Int32(truncatingIfNeeded: fid)))")
                 return .init(fid)
             }
             appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
@@ -260,9 +247,6 @@ extension M1Compiler2 {
                 let v: UnsafePointer<vvirtual> = .init(virtPtr)
                 let ft = v.pointee.t.pointee.virt.pointee.fields.advanced(by: Int(funcProto)).pointee.tPtr
                 
-                print("OCallMethod v (from native): \(virtPtr)")
-                print("OCallMethod v->value (from native): \(v.pointee.value)")
-                print("OCallMethod v->ft (from native): \(ft)")
                 return .init(ft)
             }
             appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
@@ -312,30 +296,15 @@ extension M1Compiler2 {
                 
                 let dstKind: HLTypeKind = .init(rawValue: UInt32(dstKindRawVal))
                 let v: UnsafePointer<vvirtual> = .init(oPtr)
-                print("[OCallMethod/virtual] v", v)
-                print("[OCallMethod/virtual] v.pointee.value", v.pointee.value)
-                print("[OCallMethod/virtual] v type", v.pointee.t._overrideDebugDescription)
-                // TODO: wat
-                print("retBufferPtr", retBufferPtr)
+                
                 if !dstKind.isPointer {
-//                    let ptrToDyn = UnsafePointer<vdynamic>(rb)
-//                    let raw: UnsafeRawPointer = .init(rb)
-//                    let offs = MemoryLayout<vdynamic>.offset(of: \vdynamic.union)!
-//                    let res = OpaquePointer(raw.advanced(by: offs))
                     if FP_TYPE_KINDS.contains(dstKind) {
                         fatalError("TODO: test coverage for OCallMethod/virtual when no address and returns FP")
                     }
                     return .init(v.pointee.value)
-//                    print("Res", res, "from", rb, "for", dstKind)
-//                    return res
                 }
-                if dstKind == .virtual {
-                    print(v.pointee.value.pointee.t._overrideDebugDescription)
-                } else {
-                    print(v.pointee.t._overrideDebugDescription)
-                }
+                
                 return oPtr
-//                return .init(v.pointee.value)
             }
             if let rb = retBuffer {
                 mem.append(PseudoOp.mov(X.x1, OpaquePointer(rb)))

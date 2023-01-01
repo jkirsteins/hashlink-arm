@@ -9,6 +9,7 @@ extension M1Compiler2 {
         _callsite: (findex: RefFun, opnum: Int)? = nil
     ) throws {
         let objRegKind = requireTypeKind(reg: objReg, from: regs)
+        let dstType = requireType(reg: dstReg, regs: regs)
         
         /* See comments on `OSetField` for notes on accessing field indexes */
         
@@ -28,7 +29,6 @@ extension M1Compiler2 {
                 prependHeader = "OField/virtual"
             }
             
-            let dstType = requireTypeKind(reg: dstReg, from: regs)
             let getFunc = get_dynget(to: dstType.kind)
                 
             // x0 -> points to ((*_vvirtual)(obj))+1
@@ -66,7 +66,7 @@ extension M1Compiler2 {
             // load field value into x2
             appendLoad(2, as: dstReg, addressRegister: X.x1, offset: 0, kinds: regs, mem: mem)
             appendStore(2, into: dstReg, kinds: regs, mem: mem)
-            appendDebugPrintRegisterAligned4(2, kind: dstType, prepend: "\(prependHeader) result", builder: mem)
+            appendDebugPrintRegisterAligned4(2, kind: dstType.kind, prepend: "\(prependHeader) result", builder: mem)
             
             // finish this branch
             mem.appendWithOffset(offset: &jmpTarget_postCheck, M1Op.b(jmpTarget_postCheck))
@@ -91,14 +91,16 @@ extension M1Compiler2 {
                 PseudoOp.mov(X.x2, unsafeBitCast(_fieldHashGetter, to: OpaquePointer.self)),
                 M1Op.blr(X.x2)
             )
-            let dstTypeAddr = requireType(reg: dstReg, regs: regs).ccompatAddress
             
             // x1 = field hash name
             mem.append(M1Op.movr64(X.x0, X.x1))
             // x0 = obj
             appendLoad(reg: X.x0, from: objReg, kinds: regs, mem: mem)
             // x2 = dst type (only needed for f32/f64)
-            mem.append(PseudoOp.mov(X.x2, dstTypeAddr))
+            if FP_TYPE_KINDS.contains(dstType.kind) {
+                // TODO: missing test coverage here (if you switch X.x2 to anything else, it should fail tests)
+                try Self.appendLoadTypeMemory(X.x2, reg: dstReg, regs: regs, mem: mem, ctx: ctx)
+            }
             
             mem.append(
                 PseudoOp.mov(X.x10, getFunc),
