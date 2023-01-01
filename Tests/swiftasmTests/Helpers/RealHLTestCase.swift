@@ -13,8 +13,8 @@ class RealHLTestCase : XCTestCase {
         self.ctx!.mainContext.pointee.code!
     }
     
-    func sut(strip: Bool) throws -> M1Compiler2 {
-        M1Compiler2(ctx: self.ctx!, stripDebugMessages: strip)
+    func sut(jitDebugFunctions: [RefFun] = []) throws -> M1Compiler2 {
+        M1Compiler2(ctx: self.ctx!, jitDebugFunctions: jitDebugFunctions)
     }
     
     override func setUp() {
@@ -278,8 +278,8 @@ class RealHLTestCase : XCTestCase {
     
     func _compileDeps(strip: Bool, mem: CpuOpBuffer = CpuOpBuffer(), fix: RefFun, depHints: [RefFun] = []) throws -> (RefFun, CpuOpBuffer) {
         
-        let compiler = try sut(strip: strip)
         let deps = Array(try extractDeps(fix: fix, depHints: depHints)).sorted()
+        let compiler = try sut(jitDebugFunctions: strip ? [] : (deps + [fix]))
         
         Self.logger.debug("Compile order: \(deps)")
         

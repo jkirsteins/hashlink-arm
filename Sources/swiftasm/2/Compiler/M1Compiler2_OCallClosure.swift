@@ -32,7 +32,6 @@ extension M1Compiler2 {
             dst: dst,
             appendCall: {
                 appendLoad(reg: .x15, from: fun, kinds: regs, mem: $0)
-                appendDebugPrintRegisterAligned4(X.x15, builder: mem)
                 $0.append(M1Op.blr(X.x15))
             },
             regs: regs,
@@ -115,27 +114,22 @@ extension M1Compiler2 {
             
             // x0 -> points to ((*_vvirtual)(obj))+1
             appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
-            appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) object", builder: mem)
             
             // x1 point to field base (right after the (vvirtual) content at x0
             mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<vvirtual>.stride), nil)))
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "\(prependHeader) field base", builder: mem)
             
             // x2 load field index multiplied by size of (void*)
             let fieldOffsetInBytes = funcProto * MemoryLayout<OpaquePointer>.stride
             mem.append(M1Op.movz64(X.x2, UInt16(fieldOffsetInBytes), nil))
-            appendDebugPrintAligned4("\(prependHeader) func proto: \(funcProto)", builder: mem)
- 
+            
             
             // add field offset to base
             mem.append(M1Op.add(X.x1, X.x1, .r64shift(X.x2, .lsl(0))))
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "\(prependHeader) addr of func#\(funcProto)", builder: mem)
             
             // field source is pointer to a pointer, so we need to dereference it once before
             // we check if it is null or not (and if null - don't use)
             mem.append(M1Op.ldr(X.x1, .reg(X.x1, .imm(0, nil))))
             mem.append(M1Op.movr64(X.x28, X.x1))    // store first in x28
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "\(prependHeader) dereferenced address", builder: mem)
             
             // compare x1 to 0
             var jmpTarget_hlvfieldNoAddress = RelativeDeferredOffset()
@@ -145,13 +139,11 @@ extension M1Compiler2 {
             
             mem.appendWithOffset(offset: &jmpTarget_hlvfieldNoAddress, PseudoOp.b_eq_deferred(jmpTarget_hlvfieldNoAddress))
             // MARK: OCallMethod/virtual has address
-            appendDebugPrintAligned4("\(prependHeader) HAS ADDRESS", builder: mem)
+            appendDebugPrintAligned4("\(prependHeader) HAS ADDRESS", fix: _callsite?.findex, builder: mem)
             
             // load field value into x9
             mem.append(M1Op.movr64(X.x9, X.x28)) // restore x28 to x9
-            appendDebugPrintRegisterAligned4(X.x9, prepend: "\(prependHeader) address", builder: mem)
-
-            appendDebugPrintAligned4("\(prependHeader) has \(args.count) args", builder: mem)
+            
             try __ocallmethod_impl__addrInX9(
                 dst: dst,
                 regs: regs,
@@ -165,12 +157,10 @@ extension M1Compiler2 {
                             fatalError("Could not generate offset to vvirtual.value")
                         }
                         self.appendLoad(reg: regI, from: obj, kinds: regs, mem: inmem)
-                        self.appendDebugPrintRegisterAligned4(regI, prepend: "\(prependHeader) obj", builder: inmem)
                         inmem.append(
 //                            M1Op.add(regI, regI, .imm(Int64(offsetToValue), nil))
                             M1Op.ldr(regI, .reg(regI, .imm(Int64(offsetToValue), nil)))
                         )
-                        self.appendDebugPrintRegisterAligned4(regI, prepend: "\(prependHeader) obj->value", builder: inmem)
                     }, HLTypeKind.dyn)
                 ],
                 args: args,
@@ -183,7 +173,7 @@ extension M1Compiler2 {
             jmpTarget_hlvfieldNoAddress.stop(at: mem.byteSize)
             
             // MARK: OCallMethod/virtual has no address
-            appendDebugPrintAligned4("\(prependHeader) HAS NO ADDRESS", builder: mem)
+            appendDebugPrintAligned4("\(prependHeader) HAS NO ADDRESS", fix: _callsite?.findex, builder: mem)
             
             // create pointer for holding output as x4
             let retBuffer: UnsafeMutablePointer<vdynamic>?
@@ -202,7 +192,7 @@ extension M1Compiler2 {
             let nargs = args.count
             let dynArgs: UnsafeMutableBufferPointer<OpaquePointer> = .allocate(capacity: nargs)
             mem.append(PseudoOp.mov(X.x0, OpaquePointer(dynArgs.baseAddress!)))
-            appendDebugPrintAligned4("\(prependHeader) HAS NO ADDRESS - with \(args.count) args", builder: mem)
+            appendDebugPrintAligned4("\(prependHeader) HAS NO ADDRESS - with \(args.count) args", fix: _callsite?.findex, builder: mem)
             for (ix, argRegister) in args.enumerated() {
                 let argKind = requireTypeKind(reg: argRegister, from: regs)
                 let offset: Int64 = Int64(ix * MemoryLayout<UnsafePointer<vdynamic>>.stride)
@@ -221,7 +211,7 @@ extension M1Compiler2 {
                 
                 // force storage as address (-> force the kind)
                 appendStore(reg: X.x1, as: 0, intoAddressFrom: X.x0, offsetFromAddress: offset, kinds: [HLTypeKind.dyn], mem: mem)
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(prependHeader)/no address/arg \(ix)/\(argKind)", builder: mem)
+                appendDebugPrintRegisterAligned4(X.x1, fix: _callsite?.findex, prepend: "\(prependHeader)/no address/arg \(ix)/\(argKind)", builder: mem)
             }
             
             // load x2: obj->t->virt->fields[o->p2].hashed_name
@@ -253,33 +243,25 @@ extension M1Compiler2 {
             mem.append(M1Op.movz64(X.x1, UInt16(funcProto), nil))
             appendFuncCall(unsafeBitCast(_getFtFromObj, to: OpaquePointer.self), via: X.x20, mem: mem)
             mem.append(M1Op.movr64(X.x1, X.x0))
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "\(prependHeader) ft", builder: mem)
             
             // load x0: obj->value
             let valueOffset: Int64 = Int64(MemoryLayout<vvirtual>.offset(of: \vvirtual.value)!)
             appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
-            appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) value (pre)", builder: mem)
             mem.append(M1Op.ldr(X.x0, .reg(X.x0, .imm(valueOffset, nil))))
-            appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) value", builder: mem)
             
             
             // load previously stashed, and print values
             mem.append(
                 M1Op.movr64(X.x2, X.x21)
             )
-            appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) obj->value (final)", builder: mem, format: "%p")
-            appendDebugPrintRegisterAligned4(X.x1, prepend: "\(prependHeader) ft (final)", builder: mem, format: "%p")
-            appendDebugPrintRegisterAligned4(W.w2, prepend: "\(prependHeader) fid (final)", builder: mem, format: "%d")
             
             mem.append(PseudoOp.mov(X.x3, OpaquePointer(dynArgs.baseAddress!)))
-            appendDebugPrintRegisterAligned4(X.x3, prepend: "\(prependHeader) args (final)", builder: mem, format: "%d")
             
             if let rb = retBuffer {
                 mem.append(PseudoOp.mov(X.x4, OpaquePointer(rb)))
             } else {
                 mem.append(M1Op.movz64(X.x4, 0, nil))
             }
-            appendDebugPrintRegisterAligned4(X.x4, prepend: "\(prependHeader) ret (final)", builder: mem, format: "%d")
             
             
             appendFuncCall(
@@ -325,15 +307,10 @@ extension M1Compiler2 {
             }
             if !Self.isVoid(vreg: dst, kinds: regs) {
                 appendStore(0, into: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "\(prependHeader) final stored result (\(dstKind))", builder: mem)
-            } else {
-                appendDebugPrintAligned4("\(prependHeader) void result", builder: mem)
             }
             
             jmpTarget_postCheck.stop(at: mem.byteSize)
-            appendDebugPrintAligned4("\(prependHeader) EXITING", builder: mem)
         default:
-            print("Target", objType.kind)
             fatalError("Invalid target for OCallMethod or OCallThis")
         }
     }
@@ -360,8 +337,6 @@ extension M1Compiler2 {
         mem: CpuOpBuffer
     ) throws {
         
-        appendDebugPrintAligned4("__ocall_impl", builder: mem)
-        
         let dstStackOffset = getRegStackOffset(regs, dst)
         let dstKind = requireTypeKind(reg: dst, from: regs)
         
@@ -373,7 +348,6 @@ extension M1Compiler2 {
         let additionalSize = StackInfo.roundUpStackReservation(Int16(additionalSizeUnrounded))
         
         if additionalSize > 0 {
-            appendDebugPrintAligned4("Reserving \(additionalSize) bytes for stack (OCallN)", builder: mem)
             mem.append(
                 M1Op.subImm12(X.sp, X.sp, try .i(additionalSize))
             )
@@ -387,22 +361,8 @@ extension M1Compiler2 {
             
             load = { memIn, regRVIn, regKindIn in
                 let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
-                self.appendDebugPrintAligned4("[__ocall_impl] loading arg \(argReg) into \(regRVIn) from \(offset) (\(self.getRegStackOffset(regs, argReg)) + \(Int64(additionalSize)))", builder: mem)
                 self.appendLoad(regRVIn, from: argReg, kinds: regs, offset: offset, mem: mem)
             }
-            
-//            if position >= ARG_REGISTER_COUNT {
-//                load = { memIn, regRVIn, regKindIn in
-//                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
-//                    self.appendLoad(regRVIn, as: argReg, addressRegister: .sp, offset: offset, kinds: regs, mem: memIn)
-//                }
-//            } else {
-//                load = { memIn, regRVIn, regKindIn in
-//                    let offset = self.getRegStackOffset(regs, argReg) + Int64(additionalSize)
-//
-//                    self.appendLoad(regRVIn, from: argReg, kinds: regs, offset: offset, mem: mem)
-//                }
-//            }
             
             return (
                 load, argTypeKind
@@ -463,7 +423,6 @@ extension M1Compiler2 {
                 load(mem, 0, regKind)
                 
                 appendStore(0, as: 0, intoAddressFrom: .sp, offsetFromAddress: stackArgOffset, kinds: [regKind], mem: mem)
-                appendDebugPrintRegisterAligned4(0, kind: regKind, prepend: "[__ocall_impl] stored stack arg \(regKind) at offset \(stackArgOffset)", builder: mem)
             }
         }()
         
@@ -475,9 +434,7 @@ extension M1Compiler2 {
                 guard !FP_TYPE_KINDS.contains(regKind) else { continue }
                 defer { gpIx += 1 }
                 
-                appendDebugPrintAligned4("[__ocall_impl] loading GP \(gpIx) as \(regKind) from vreg \(vregIx)", builder: mem)
                 load(mem, gpIx, regKind)
-                appendDebugPrintRegisterAligned4(gpIx, kind: regKind, prepend: "[__ocall_impl] loaded GP \(gpIx) as \(regKind) from vreg \(vregIx)", builder: mem)
             }
         }()
         
@@ -489,26 +446,18 @@ extension M1Compiler2 {
                 guard FP_TYPE_KINDS.contains(regKind) else { continue }
                 defer { fpIx += 1 }
                 
-                appendDebugPrintAligned4("[__ocall_impl] loading FP \(fpIx) as \(regKind) from vreg \(vregIx)", builder: mem)
                 load(mem, fpIx, regKind)
-                appendDebugPrintRegisterAligned4(fpIx, kind: regKind, prepend: "[__ocall_impl] loaded FP \(fpIx) as \(regKind) from vreg \(vregIx)", builder: mem)
             }
         }()
         
         // PERFORM BLR
-        appendDebugPrintAligned4("[__ocall_impl] Appending call...", builder: mem)
         try appendCall(mem)
-        appendDebugPrintAligned4("[__ocall_impl] Finished call...", builder: mem)
         
         if dstKind != .void {
             self.appendStore(0, as: dst, intoAddressFrom: .sp, offsetFromAddress: dstStackOffset + Int64(additionalSize), kinds: regs, mem: mem)
-            self.appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "__ocall_impl result", builder: mem)
-        } else {
-            appendDebugPrintAligned4("[__ocall_impl] Ignoring .void return", builder: mem)
         }
                          
         if additionalSize > 0 {
-            appendDebugPrintAligned4("Free \(additionalSize) bytes (OCallN)", builder: mem)
             mem.append(
                 (try M1Op._add(X.sp, X.sp, ByteCount(additionalSize)))
             )
@@ -528,11 +477,8 @@ extension M1Compiler2 {
         reservedStackBytes: ByteCount,
         mem: CpuOpBuffer
     ) throws {
-        appendDebugPrintRegisterAligned4(X.x9, prepend: "__ocallmethod_impl__addrInX9 (start)", builder: mem)
         try __ocall_impl(dst: dst, appendCall: { buff in
-            appendDebugPrintRegisterAligned4(X.x9, prepend: "__ocallmethod_impl__addrInX9 (pre-call)", builder: buff)
             buff.append(M1Op.blr(X.x9))
-            appendDebugPrintAligned4("__ocallmethod_impl__addrInX9 (post-call)", builder: buff)
         }, regs: regs, preArgs: preArgs, args: args, reservedStackBytes: reservedStackBytes, mem: mem)
     }
     
@@ -548,8 +494,6 @@ extension M1Compiler2 {
     {
         let callTarget = try ctx.requireCallable(findex: funIndex)
         ctx.funcTracker.referenced2(callTarget)
-        
-        appendDebugPrintAligned4("CallN fn@\(funIndex)(\(args)) -> \(dst)", builder: mem)
         
         try __ocall_impl(
             dst: dst,

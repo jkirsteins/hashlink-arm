@@ -1,3 +1,5 @@
+import Darwin
+
 actor Bootstrap
 {
     private(set) static var _file: ContiguousArray<CChar> = []
@@ -9,7 +11,20 @@ actor Bootstrap
         }
         canStart = false
         
+        let _hlc_resolve_symbol: (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer)->()) = { _, _, _ in
+            
+            print("TODO: hlc_resolve_symbol does nothing")
+        }
+        
+        let _hlc_capture_stack: (@convention(c) (OpaquePointer, OpaquePointer)->()) = { _, _ in
+            
+            print("TODO: hlc_capture_stack does nothing")
+        }
+        
         LibHl.hl_global_init()
+        LibHl._hl_setup_exception(
+            unsafeBitCast(_hlc_resolve_symbol, to: OpaquePointer.self),
+            unsafeBitCast(_hlc_capture_stack, to: OpaquePointer.self));
         LibHl.hl_sys_init(args: args, file: file)
         
         let hsc = unsafeBitCast(M1Compiler2.hlc_static_call, to: OpaquePointer.self)
@@ -20,6 +35,71 @@ actor Bootstrap
         LibHl.hl_register_thread(ctx: ctx.mainContext)
         
         return ctx
+    }
+    
+    static func wrap_entrypoint(ctx: CCompatJitContext, fix: RefFun) throws {
+        var voidType: UnsafePointer<HLType_CCompat>? = nil
+        for t in 0..<ctx.ntypes {
+            let voidCandidate = try ctx.getType(Int(t))
+            if voidCandidate.kind == .void {
+                voidType = .init(OpaquePointer(voidCandidate.ccompatAddress))
+                break
+            }
+        }
+        
+        guard let voidType = voidType else {
+            fatalError("Failed to find .void type in the module")
+        }
+        
+        let tf: UnsafeMutablePointer<HLTypeFun_CCompat> = .allocate(capacity: 1)
+        let tfbytes: UnsafeMutableBufferPointer<UInt8> = .init(start: .init(OpaquePointer(tf)), count: MemoryLayout<HLTypeFun_CCompat>.stride)
+        tfbytes.initialize(repeating: 0)
+        defer { tf.deallocate() }
+        
+        let clt: UnsafeMutablePointer<HLType_CCompat> = .allocate(capacity: 1)
+        let cltbytes: UnsafeMutableBufferPointer<UInt8> = .init(start: .init(OpaquePointer(clt)), count: MemoryLayout<HLType_CCompat>.stride)
+        cltbytes.initialize(repeating: 0)
+        defer { clt.deallocate() }
+        
+        let cl: UnsafeMutablePointer<vclosure> = .allocate(capacity: 1)
+        let clbytes: UnsafeMutableBufferPointer<UInt8> = .init(start: .init(OpaquePointer(cl)), count: MemoryLayout<vclosure>.stride)
+        clbytes.initialize(repeating: 0)
+        defer { cl.deallocate() }
+        
+        // tf.ret = &hlt_void;
+        tf.pointee.retPtr = voidType
+        
+        // clt.kind = HFUN;
+        clt.pointee.kind = .fun
+        
+        // clt.fun = &tf;
+        clt.pointee.union = .init(tf);
+        
+        // cl.t = &clt;
+        cl.pointee.t = .init(clt)
+        
+        // cl.fun = hl_entry_point;
+        guard let hl_entry_point = try ctx.getCallable(findex: fix) else {
+            fatalError("Couldn't find entrypoint address for fun@\(fix)")
+        }
+        cl.pointee.fun = .init(hl_entry_point.address.value)
+        
+        //
+        let isExc: UnsafeMutablePointer<Bool> = .allocate(capacity: 1)
+        defer { isExc.deallocate() }
+                
+        let ret = LibHl.hl_dyn_call_safe(cl, nil, 0, isExc)
+        if( isExc.pointee ) {
+            let a = LibHl.hl_exception_stack()
+            let msg = LibHl.hl_to_string(ret)
+            print("Uncaught exception: \(msg.stringValue)")
+            
+            for i in (0..<a.pointee.size) {
+//                uprintf(USTR("Called from %s\n"), hl_aptr(a, uchar*)[i]);
+                print("TODO: \(i): print stack trace")
+            }
+            exit(1)
+        }
     }
     
     static func stop(ctx: CCompatJitContext) {

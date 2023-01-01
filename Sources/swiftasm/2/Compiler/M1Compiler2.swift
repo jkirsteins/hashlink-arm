@@ -15,7 +15,7 @@ let INTEGER_TYPE_KINDS = [HLTypeKind.u8, HLTypeKind.u16, HLTypeKind.i32, HLTypeK
 let NUMERIC_TYPE_KINDS = FP_TYPE_KINDS + INTEGER_TYPE_KINDS
 
 protocol CompilerUtilities2 {
-    func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer);
+    func appendDebugPrintAligned4(_ val: String, fix: RefFun?, builder: CpuOpBuffer);
 }
 
 typealias Registers2 = [any HLTypeProvider]
@@ -312,7 +312,6 @@ extension M1Compiler2 {
         if INTEGER_TYPE_KINDS.contains(vregKind) {
             let regGP = Register64(rawValue: reg.rawValue)!
             appendLoad(reg: regGP, from: vreg, kinds: kinds, mem: mem)
-            appendDebugPrintRegisterAligned4(regGP, prepend: "appendLoadNumericAsFP", builder: mem, format: "%lld")
             
             // sign-extend -> convert to FP? -> convert FP? to FP64
             if let signMode = vregKind.isSigned {
@@ -324,7 +323,6 @@ extension M1Compiler2 {
                 }
             }
             
-            appendDebugPrintRegisterAligned4(reg, prepend: "appendLoadNumericAsFP", builder: mem)
         } else if FP_TYPE_KINDS.contains(vregKind) {
             appendLoad(reg: reg, from: vreg, kinds: kinds, mem: mem)
             appendFPRegToDouble(reg: reg, from: vreg, kinds: kinds, mem: mem)
@@ -654,7 +652,6 @@ extension M1Compiler2 {
                 fatalError("Can't convert \(reg) to 32-bit variant")
             }
             
-            appendDebugPrintAligned4("Loaded \(reg32)", builder: mem)
             mem.append(
                 M1Op.ldr(reg32, .reg(addrReg, .r64ext(offsetRegister, .sxtx(0))))
             )
@@ -954,7 +951,8 @@ extension M1Compiler2 {
         args unfilteredArgs: [any HLTypeKindProvider],
         builder: CpuOpBuffer,
         prologueSize: ByteCount,
-        trapContextsNeeded: Int = 0
+        trapContextsNeeded: Int = 0,
+        fix: RefFun? = nil
     ) throws -> StackInfo {
         // test mismatched before filtering
         let unfilteredArgRegCount = min(unfilteredArgs.count, ARG_REGISTER_COUNT)
@@ -988,8 +986,6 @@ extension M1Compiler2 {
         
         var offset: ByteCount = 0
         let overflowOffset: ByteCount = stackInfo.total + prologueSize // for regs passed in via stack
-        appendDebugPrintAligned4("[appendStackInit] stack total: \(stackInfo.total)", builder: builder)
-        appendDebugPrintAligned4("[appendStackInit] prologue size: \(prologueSize)", builder: builder)
         
         // Now move all data from (stack/registers) to (stack) in the expected layout
         // Keep track of general-purpose and floating-point registers separately
@@ -1057,7 +1053,7 @@ extension M1Compiler2 {
                 }
                 
                 appendLoad(regToUse, as: 0, addressRegister: .sp, offset: overflowOffset + stackArgOffset, kinds: [reg], mem: builder)
-                appendDebugPrintRegisterAligned4(regToUse, kind: reg.kind, prepend: "[appendStackInit] loaded stack \(regIsArg ? "argument" : "register") \(reg.kind) from \(overflowOffset)", builder: builder)
+                appendDebugPrintRegisterAligned4(regToUse, fix: fix, kind: reg.kind, prepend: "[appendStackInit] loaded stack \(regIsArg ? "argument" : "register") \(reg.kind) from \(overflowOffset)", builder: builder)
                 
                 /*
                 NOTE: careful to get the alignment correct here.
@@ -1081,7 +1077,7 @@ extension M1Compiler2 {
                 */
             }
             
-            appendDebugPrintRegisterAligned4(regToUse, kind: reg.kind, prepend: "[appendStackInit] storing \(regIsArg ? "argument" : "register") \(reg.kind) at \(offset)", builder: builder)
+            appendDebugPrintRegisterAligned4(regToUse, fix: fix, kind: reg.kind, prepend: "[appendStackInit] storing \(regIsArg ? "argument" : "register") \(reg.kind) at \(offset)", builder: builder)
             appendStore(regToUse, as: 0, intoAddressFrom: .sp, offsetFromAddress: offset, kinds: [reg], mem: builder)
             offset += reg.hlRegSize
         }
@@ -1114,8 +1110,8 @@ extension M1Compiler2 {
         return reg
     }
     
-    func appendDebugPrintRegisterAligned4(_ regRawValue: UInt8, kind: HLTypeKind, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil) {
-        guard stripDebugMessages == false else {
+    func appendDebugPrintRegisterAligned4(_ regRawValue: UInt8, fix: RefFun?, kind: HLTypeKind, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil) {
+        guard fix != nil && allowJitDebug(fix!) else {
             builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
             return
         }
@@ -1128,8 +1124,8 @@ extension M1Compiler2 {
         appendDebugPrintRegisterAligned4(getRegister(regRawValue, kind: kind), prepend: prepend, builder: builder, format: format, kind: kind)
     }
     
-    func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil, kind: HLTypeKind? = nil) {
-        guard stripDebugMessages == false else {
+    func appendDebugPrintRegisterAligned4(_ reg: any Register, fix: RefFun?, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil, kind: HLTypeKind? = nil) {
+        guard fix != nil && allowJitDebug(fix!) else {
             builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
             return
         }
@@ -1367,8 +1363,8 @@ extension M1Compiler2 {
         )
     }
     
-    func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer) {
-        guard stripDebugMessages == false else {
+    func appendDebugPrintAligned4(_ val: String, fix: RefFun?, builder: CpuOpBuffer) {
+        guard fix != nil && allowJitDebug(fix!) else {
             builder.append(PseudoOp.debugMarker("(debug message printing stripped)"))
             return
         }
@@ -1466,8 +1462,6 @@ extension M1Compiler2 {
     
     /// Returns the amount of change for SP
     func appendPrologue(builder: CpuOpBuffer) -> ByteCount {
-        appendDebugPrintAligned4("Starting prologue", builder: builder)
-
         let stackReservation: ByteCount = 304
         
         // Storing all non-corruptible registers so we don't have to keep track of them
@@ -1502,7 +1496,6 @@ extension M1Compiler2 {
     }
     
     func appendEpilogue(builder: CpuOpBuffer) {
-        appendDebugPrintAligned4("Starting epilogue", builder: builder)
         builder.append(
             M1Op.ldp((X.x15, X.x16), .reg64offset(.sp, 0, nil)),
             M1Op.ldp((X.x17, X.x18), .reg64offset(.sp, 16, nil)),
@@ -1527,7 +1520,6 @@ extension M1Compiler2 {
             
             try! M1Op._add(X.sp, X.sp, 304)
         )
-        appendDebugPrintAligned4("Finished epilogue", builder: builder)
     }
 }
 
@@ -1539,14 +1531,15 @@ class M1Compiler2 {
     let emitter = EmitterM1()
     let ctx: CCompatJitContext
     let cache: (any CompilerCache)?
-    let stripDebugMessages: Bool
     
     static let logger = LoggerFactory.create(M1Compiler2.self)
     
-    init(ctx: CCompatJitContext, stripDebugMessages: Bool = false, cache: (any CompilerCache)? = nil) {
-        self.stripDebugMessages = stripDebugMessages
+    let jitDebugFunctions: [RefFun]
+    
+    init(ctx: CCompatJitContext, jitDebugFunctions: [RefFun] = [], cache: (any CompilerCache)? = nil) {
         self.ctx = ctx
         self.cache = cache
+        self.jitDebugFunctions = jitDebugFunctions
     }
     
     func assertEnoughRegisters(_ ix: Reg, regs: Registers2) {
@@ -1805,7 +1798,6 @@ class M1Compiler2 {
         let srcOffset = getRegStackOffset(regs, src)
         
         let castFunc = get_dyncast(to: dstType.kind)
-        appendDebugPrintAligned4("Determined cast function", builder: mem)
         
         mem.append(
             // load &src into x.0
@@ -1820,25 +1812,21 @@ class M1Compiler2 {
             // float/double casts are the only ones that don't require the third "to" arg
             try Self.appendLoadTypeMemory(X.x2, reg: dst, regs: regs, mem: mem, ctx: ctx)
         }
-        appendDebugPrintAligned4("Jumping to cast function", builder: mem)
+        
         mem.append(
             PseudoOp.mov(X.x15, castFunc),
             M1Op.blr(X.x15)
         )
         
         // TODO: check for failed cast result
-        appendDebugPrintAligned4("TODO: OSafeCast should check for failed cast result", builder: mem)
+        appendDebugPrintAligned4("TODO: OSafeCast should check for failed cast result", fix: _callsite?.findex, builder: mem)
         
-        appendDebugPrintRegisterAligned4(0, kind: dstType, prepend: "OSafeCast result (agnostic)", builder: mem)
-        if (dstType != .f32 && dstType != .f64) {
-//            appendDebugPrintRegisterAligned4(X.x0, prepend: "OSafeCast result (gp)", builder: mem)
-            appendStore(0, into: dst, kinds: regs, mem: mem)
-        } else {
-//            appendDebugPrintRegisterAligned4(0, kind: dstType, prepend: "OSafeCast result (float)", builder: mem)
-//            appendStore(0, into: dst, kinds: regs, mem: mem)
-//            appendStore(0, into: dst, kinds: regs, mem: mem)
-            appendStore(0, into: dst, kinds: regs, mem: mem)
-        }
+        appendDebugPrintRegisterAligned4(0, fix: _callsite?.findex, kind: dstType, prepend: "OSafeCast result (agnostic)", builder: mem)
+        appendStore(0, into: dst, kinds: regs, mem: mem)
+    }
+    
+    func allowJitDebug(_ fix: RefFun) -> Bool {
+        jitDebugFunctions.contains(fix)
     }
     
     // MARK: compile
@@ -1916,9 +1904,6 @@ class M1Compiler2 {
         // if we need to return early, we jump to these
         var retTargets: [RelativeDeferredOffset] = []
 
-        appendDebugPrintAligned4("Entering fix \(fix)", builder: mem)
-        
-        mem.append(PseudoOp.debugMarker("==> STARTING FUNCTION \(fix)"))
         let prologueSize = appendPrologue(builder: mem)
         
         let stackInfo: StackInfo
@@ -1936,6 +1921,7 @@ class M1Compiler2 {
 
         appendDebugPrintAligned4(
             "Entering function \(fix)@\(compilable.address)",
+            fix: compilable.findex,
             builder: mem
         )
         
@@ -1952,15 +1938,11 @@ class M1Compiler2 {
 //            Self.logger.trace("f\(compilable.findex): #\(currentInstruction) (offset: \(mem.byteSize))")
             addrBetweenOps[currentInstruction].finalize(mem.byteSize)
 
-            mem.append(
-                PseudoOp.debugMarker("Marking position for \(currentInstruction) at \(mem.byteSize)")
-            )
-
-            appendDebugPrintAligned4("f\(compilable.findex): #\(currentInstruction): \(op.debugDescription)", builder: mem)
+            appendDebugPrintAligned4("f\(compilable.findex): #\(currentInstruction): \(op.debugDescription)", fix: compilable.findex, builder: mem)
             
             switch op {
             case .OAssert:
-                appendDebugPrintAligned4("OAssert is a no-op?", builder: mem)
+                break
             case .ORet(let dst):
                 // store
                 let dstStackOffset = getRegStackOffset(regs, dst)
@@ -1968,7 +1950,7 @@ class M1Compiler2 {
                 
                 if dstKind.hlRegSize > 0 {
                     appendLoad(0, from: dst, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "ORet (fun@\(compilable.findex))", builder: mem)
+                    appendDebugPrintRegisterAligned4(0, fix: compilable.findex, kind: dstKind, prepend: "ORet (fun@\(compilable.findex))", builder: mem)
                 }
 
                 // jmp to end (NOTE: DO NOT ADD ANYTHING BETWEEN .start() and mem.append()
@@ -2027,7 +2009,7 @@ class M1Compiler2 {
                 for arg in args {
                     appendLoad(5, from: arg, kinds: regs, mem: mem)
                     let argKind = requireTypeKind(reg: arg, from: regs)
-                    appendDebugPrintRegisterAligned4(5, kind: argKind, prepend: "OCallClosure arg#\(arg)(\(argKind))", builder: mem)
+                    appendDebugPrintRegisterAligned4(5, fix: compilable.findex, kind: argKind, prepend: "OCallClosure arg#\(arg)(\(argKind))", builder: mem)
                 }
                 
                 // vclosure offsets
@@ -2083,7 +2065,6 @@ class M1Compiler2 {
                     // ASM for  if( c->hasValue ) c->fun(value,args) else c->fun(args)
                     
                     appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(X.x10, prepend: "OCallClosure obj", builder: mem)
                     
                     var jmpTargetHasValue = RelativeDeferredOffset()
                     var jmpTargetFinish = RelativeDeferredOffset()
@@ -2093,25 +2074,22 @@ class M1Compiler2 {
                     mem.append(
                         M1Op.ldr(W.w0, .reg64offset(X.x10, hasValueOffset, nil))
                         )
-                    appendDebugPrintRegisterAligned4(W.w0, prepend: "OCallClosure value check", builder: mem)
+                    appendDebugPrintRegisterAligned4(W.w0, fix: compilable.findex, prepend: "OCallClosure value check", builder: mem)
                     mem.append(
                         M1Op.movz64(X.x1, 0, nil),
                         M1Op.cmp(X.x0, X.x1)
                     )
 
-                    appendDebugPrintAligned4("OCallClosure CHECKING TARGET VALUE", builder: mem)
                     mem.appendWithOffset(offset: &jmpTargetHasValue, PseudoOp.b_ne_deferred(jmpTargetHasValue))
-                    appendDebugPrintAligned4("OCallClosure TARGET HAS NO VALUE", builder: mem)
+                    appendDebugPrintAligned4("OCallClosure TARGET HAS NO VALUE", fix: compilable.findex, builder: mem)
                     // MARK: no target value
                     try __ocall_impl(
                         dst: dst,
                         appendCall: { buff in
                             appendLoad(reg: X.x10, from: closureObject, kinds: regs, mem: buff)
-                            appendDebugPrintAligned4("[__ocall_impl] Call", builder: buff)
                             buff.append(
                                 M1Op.ldr(X.x15, .reg64offset(X.x10, funOffset, nil))
                                 )
-                            appendDebugPrintRegisterAligned4(X.x15, prepend: "__ocall_impl loaded fun", builder: buff)
                             buff.append(
                                 M1Op.blr(X.x15)
                             )
@@ -2125,7 +2103,7 @@ class M1Compiler2 {
                     
                     mem.appendWithOffset(offset: &jmpTargetFinish, M1Op.b(jmpTargetFinish))
                     jmpTargetHasValue.stop(at: mem.byteSize)
-                    appendDebugPrintAligned4("OCallClosure TARGET HAS VALUE", builder: mem)
+                    appendDebugPrintAligned4("OCallClosure TARGET HAS VALUE", fix: compilable.findex, builder: mem)
                     try __ocall_impl(
                         dst: dst,
                         appendCall: { buff in
@@ -2155,7 +2133,6 @@ class M1Compiler2 {
                     )
                     
                     jmpTargetFinish.stop(at: mem.byteSize)
-                    appendDebugPrintAligned4("Exiting OCallClosure", builder: mem)
                 }
             case .OCallN(let dst, let fun, let args):
                 try __ocalln(
@@ -2166,7 +2143,6 @@ class M1Compiler2 {
                     reservedStackBytes: stackInfo.total,
                     mem: mem)
             case .ONew(let dst):
-                appendDebugPrintAligned4("Entering ONew", builder: mem)
                 // LOOK AT: https://github.com/HaxeFoundation/hashlink/blob/284301f11ea23d635271a6ecc604fa5cd902553c/src/jit.c#L3263
                 let typeToAllocate = requireTypeKind(reg: dst, from: regs)
 
@@ -2200,23 +2176,11 @@ class M1Compiler2 {
                 }
 
                 if needX0 {
-                    mem.append(
-                        PseudoOp.debugMarker("Moving reg #\(dst) address into .x0")
-                    )
                     try Self.appendLoadTypeMemory(X.x0, reg: dst, regs: regs, mem: mem, ctx: ctx)
-                } else {
-                    mem.append(
-                        PseudoOp.debugMarker("Not moving reg \(dst) in x0 b/c alloc func doesn't need it")
-                    )
                 }
 
                 mem.append(
-                    PseudoOp.debugMarker("Moving alloc address in x1"),
                     PseudoOp.mov(.x1, allocFunc_jumpTarget),
-                    PseudoOp.debugMarker("Jumping to the alloc func")
-                )
-                appendDebugPrintAligned4("Jumping to alloc func and storing result", builder: mem)
-                mem.append(
                     M1Op.blr(.x1)
                 )
                 appendStore(0, into: dst, kinds: regs, mem: mem)
@@ -2263,10 +2227,7 @@ class M1Compiler2 {
                 // then convert double to the expected register, and store-load again
                 mem.append(M1Op.fmov(D.d0, X.x0))
                 
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OFloat result (1st pass)", builder: mem)
-                
                 appendStoreDoubleToFP(reg: D.d0, into: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(0, kind: dstType, prepend: "OFloat result", builder: mem)
             case .OInt(let dst, let iRef):
                 assert(reg: dst, from: regs, in: [HLTypeKind.i64, HLTypeKind.i32, HLTypeKind.u8, HLTypeKind.u16])
                 let c = try ctx.requireInt(iRef)
@@ -2308,8 +2269,6 @@ class M1Compiler2 {
                 let kindA = requireTypeKind(reg: a, from: regs)
                 let kindB = requireTypeKind(reg: b, from: regs)
 
-                appendDebugPrintAligned4("\(op.id) <\(a)@\(regOffsetA), \(b)@\(regOffsetB)> --> \(offset) (target instruction: \(targetInstructionIx))", builder: mem)
-                
                 appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: b, kinds: regs, mem: mem)
 
@@ -2345,24 +2304,16 @@ class M1Compiler2 {
                     break
                 }
 
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(op.id)", builder: mem)
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(op.id)", builder: mem)
-
                 mem.append(M1Op.cmp(X.x0, X.x1))
 
-                
                 // prepare jump trampoline
                 var toTrampolineEnd = RelativeDeferredOffset()
                 toTrampolineEnd.start(at: mem.byteSize)
                 mem.append(
                     M1Op.b(toTrampolineEnd),
-                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
-                )
-                appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
-                mem.append(
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
                     M1Op.br(X.x20)
                 )
-                
                 
                 toTrampolineEnd.stop(at: mem.byteSize)
                 let toTrampolineStart = toTrampolineEnd.value.flippedSign + 4
@@ -2398,8 +2349,6 @@ class M1Compiler2 {
                         }
                     }()
                 )
-                
-                appendDebugPrintAligned4("NOT JUMPING", builder: mem)
 
             // TODO: somehow combine all the jumps with fallthroughs?
             case .OJNotNull(let reg, let offset):
@@ -2423,10 +2372,6 @@ class M1Compiler2 {
                 mem.append(M1Op.movz64(X.x0, 0, nil))
                 appendLoad(reg: X.x1, from: reg, kinds: regs, mem: mem)
                 
-                appendDebugPrintAligned4("Jump comparing x0 and x1", builder: mem)
-                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
-                appendDebugPrintRegisterAligned4(X.x1, builder: mem)
-
                 mem.append(M1Op.cmp(X.x0, X.x1))
 
                 // prepare jump trampoline
@@ -2434,10 +2379,7 @@ class M1Compiler2 {
                 toTrampolineEnd.start(at: mem.byteSize)
                 mem.append(
                     M1Op.b(toTrampolineEnd),
-                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx])
-                )
-                appendDebugPrintRegisterAligned4(X.x20, prepend: "Jumping (\(op.id) to instruction \(targetInstructionIx)", builder: mem)
-                mem.append(
+                    PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
                     M1Op.br(X.x20)
                 )
                 
@@ -2446,7 +2388,6 @@ class M1Compiler2 {
                 let toTrampolineStart = toTrampolineEnd.value.flippedSign + 4
                 Swift.assert(toTrampolineStart.value < 0)   // 0 == loop, and positive => unexpected
                 // trampoline end
-
 
                 mem.append(
                     try {
@@ -2465,7 +2406,6 @@ class M1Compiler2 {
                     }()
                 )
                 
-                appendDebugPrintAligned4("NOT JUMPING", builder: mem)
             // TODO: combine with above jumps
             case .OJAlways(let offset):
                 let wordsToSkip = Int(offset) + 1
@@ -2484,7 +2424,6 @@ class M1Compiler2 {
                 mem.append(PseudoOp.mov(.x0, UnsafeRawPointer(globalInstanceAddress)))
                 mem.append(M1Op.ldr(X.x0, .reg64offset(X.x0, 0, nil)))
                 appendStore(0, into: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "OGetGlobal result", builder: mem)
             case .OSetGlobal(let globalRef, let src):
                 let globalInstanceAddress = try ctx.requireGlobalData(globalRef)
                 assert(reg: src, from: regs, in: [HLTypeKind.dyn, HLTypeKind.obj, HLTypeKind.struct, HLTypeKind.abstract, HLTypeKind.enum])
@@ -2521,11 +2460,9 @@ class M1Compiler2 {
                 
                 appendLoad(reg: X.x0, from: bytes, kinds: regs, mem: mem)
                 appendLoad(reg: X.x1, from: index, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(_name) index", builder: mem, format: "%d")
                 
                 appendLoad(2, from: src, kinds: regs, mem: mem)
                 let srck = requireTypeKind(reg: src, from: regs)
-                appendDebugPrintRegisterAligned4(2, kind: srck, prepend: "\(_name) src value", builder: mem)
                 
                 if op.id == .OSetI8 {
                     appendStore(2, as: 0, intoAddressFrom: X.x0, offsetFromRegister: X.x1, kinds: [HLTypeKind.u8], mem: mem)
@@ -2566,16 +2503,10 @@ class M1Compiler2 {
                 // Load index into X.x1. It is 4 bytes, so force kind .i32
                 appendLoad(reg: W.w1, as: 0, addressRegister: .sp, offset: indexOffset, kinds: [HLTypeKind.i32], mem: mem)
                 
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(_name) index", builder: mem, format: "%d")
-                
                 if op.id == .OGetI8 {
-                    appendDebugPrintAligned4("about to load from bytes (off: \(byteOffset))", builder: mem)
-                    appendDebugPrintRegisterAligned4(X.x0, builder: mem)
-                    
                     mem.append(
                         M1Op.ldrb(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
                     )
-                    appendDebugPrintAligned4("loaded", builder: mem)
                 } else if op.id == .OGetI16 {
                     mem.append(
                         M1Op.ldrh(W.w0, .reg(X.x0, .r64shift(X.x1, .lsl(0))))
@@ -2583,9 +2514,6 @@ class M1Compiler2 {
                 } else if op.id == .OGetMem {
                     appendLoad(0, as: dst, addressRegister: X.x0, offsetRegister: X.x1, kinds: regs, mem: mem)
                 }
-                
-                let dstKind = requireTypeKind(reg: dst, from: regs)
-                appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "\(_name) retrieved value", builder: mem)
                 
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .ONullCheck(let dst):
@@ -2607,8 +2535,6 @@ class M1Compiler2 {
                 mem.append(
                     PseudoOp.b_ne_deferred(jumpOverDeath)
                 )
-                appendDebugPrintAligned4("Null access exception", builder: mem)
-                
                 // tmp crash on null access. TODO: add proper error here
                 appendSystemExit(1, builder: mem, message: "ONullCheck failed in fun@\(compilable.findex) op#\(currentInstruction)")
                 jumpOverDeath.stop(at: mem.byteSize)
@@ -2669,9 +2595,6 @@ class M1Compiler2 {
                 let trapOffsetInStack = stackInfo.reservedForVreg + currentTrapIx * Int64(MemoryLayout<HLTrapCtx_CCompat>.stride)
                 
                 // hl_thread_info *__tinf = hl_get_thread();
-                appendDebugPrintAligned4(
-                    "// hl_thread_info *__tinf = hl_get_thread();", builder: mem
-                )
                 mem.append(
                     PseudoOp.mov(
                         X.x0,
@@ -2681,9 +2604,6 @@ class M1Compiler2 {
                     M1Op.movr64(X.x9, X.x0) // x9 = __tinf
                 )
                 
-                appendDebugPrintAligned4(
-                    "// ctx.tcheck = NULL;", builder: mem
-                )
                 mem.append(
                     M1Op.movz64(X.x1, 0, nil),
                     M1Op.movz64(X.x14, UInt16(trapOffsetInStack + tcheckOffset), nil),
@@ -2691,35 +2611,23 @@ class M1Compiler2 {
                 )
                 
                 // ctx.prev = __tinf->trap_current;
-                appendDebugPrintAligned4(
-                    "ctx.prev = __tinf->trap_current;", builder: mem
-                )
                 
-                appendDebugPrintAligned4("[traptest] In findex \(compilable.findex); trapoff: \(trapOffsetInStack)", builder: mem)
-
                 // fetch trap_current
                 mem.append(M1Op.ldr(X.x2, .reg64offset(X.x9, tinf__trapCurrent, nil)))
-                appendDebugPrintRegisterAligned4(X.x2, prepend: "[traptest] Loaded current", builder: mem)
                 // store ctx.prev
                 let testOff: Int64 = trapOffsetInStack + prevOffset
                 mem.append(
                     M1Op.movz64(X.x14, UInt16(testOff), nil),
                     M1Op.str(X.x2, .reg(X.sp, .r64ext(X.x14, .sxtx(0))))
                 )
-                appendDebugPrintAligned4("[traptest] Offset: \(testOff)", builder: mem)
                 //
                 
                 // __tinf->trap_current = &ctx;
-                appendDebugPrintAligned4(
-                    "__tinf->trap_current = &ctx;", builder: mem
-                )
                 mem.append(
                     PseudoOp.debugMarker("x3 = &ctx"),
                     M1Op.movr64(X.x3, .sp),
                     M1Op.add(X.x3, X.x3, .imm(trapOffsetInStack, nil))
                 )
-                
-                appendDebugPrintAligned4("__tinf->trap_current = x3", builder: mem)
                 
                 mem.append(
                     PseudoOp.debugMarker("__tinf->trap_current = x3"),
@@ -2754,44 +2662,29 @@ class M1Compiler2 {
                 var setJmpEq0Target = RelativeDeferredOffset()
                 mem.appendWithOffset(offset: &setJmpEq0Target, PseudoOp.b_eq_deferred(setJmpEq0Target))
                 
-                appendDebugPrintAligned4("[traptest] SETJMP RETURNED !0", builder: mem)
-                
                 assert(reg: exc, from: regs, is: HLTypeKind.dyn)
                 
                 // r = __tinf->exc_value;
-                appendDebugPrintAligned4("x0 (__tinf) = hl_get_thread()", builder: mem)
                 mem.append(
-                    PseudoOp.debugMarker("x0 (__tinf) = hl_get_thread()"),
                     PseudoOp.mov(
                         X.x0,
                         unsafeBitCast(LibHl._hl_get_thread, to: OpaquePointer.self)
                     ),
                     M1Op.blr(X.x0)
                 )
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "__tinf", builder: mem)
-                
-                appendDebugPrintAligned4("r = __tinf->exc_value;", builder: mem)
-                appendDebugPrintAligned4("loading", builder: mem)
                 mem.append(
                     PseudoOp.debugMarker("r = __tinf->exc_value;"),
                     M1Op.ldr(X.x1, .reg64offset(X.x0, tinf__excValue, nil))
                 )
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "exc_value", builder: mem)
                 appendLoad(reg: X.x2, from: exc, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x2, prepend: "EXC (after)", builder: mem)
                 
                 mem.append(M1Op.movr64(X.x12, .sp))
-                appendDebugPrintRegisterAligned4(X.x12, prepend: "SP (after)", builder: mem)
                 
                 appendStore(2, into: exc, kinds: regs, mem: mem)
-                appendDebugPrintAligned4("Stored x2 in x1", builder: mem)
                 
                 // goto label;
                 let wordsToSkip = Int(offset) + 1
                 let targetInstructionIx = currentInstruction + wordsToSkip
-                
-                appendDebugPrintAligned4("Jumping from \(currentInstruction) to \(targetInstructionIx)", builder: mem)
-                appendDebugPrintAligned4("Preparing jump (words to skip \(wordsToSkip))...", builder: mem)
                 
                 mem.append(
                     PseudoOp.movRelative(X.x20, self.ctx.jitBase, addrBetweenOps[targetInstructionIx]),
@@ -2800,39 +2693,11 @@ class M1Compiler2 {
                 
                 // marker for other branch after setjmp()
                 setJmpEq0Target.stop(at: mem.byteSize)
-                appendDebugPrintAligned4("[traptest] SETJMP RETURNED 0", builder: mem)
-                
-                // call longjump
-//                mem.append(
-//                    PseudoOp.debugMarker("x0 = &ctx.buf"),
-//                    M1Op.movr64(X.x0, .sp),
-//                    M1Op.movz64(X.x1, UInt16(trapOffsetInStack) + UInt16(bufOffset), nil),
-//                    M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))),
-//
-//                    PseudoOp.debugMarker("x1 = 10"),
-//                    M1Op.movz64(X.x1, 14, nil),
-//
-//                    PseudoOp.debugMarker("longjmp"),
-//                    PseudoOp.mov(X.x10, unsafeBitCast(LibSystem.longjmp, to: OpaquePointer.self)),
-//                    M1Op.blr(X.x10)
-//                )
-//
-//                appendSystemExit(15, builder: mem)
-                
-//
-//                if( setjmp(ctx.buf) ) {
-//                    r = __tinf->exc_value;
-//                    goto label;
-//                }
-                
-                
             case .OEndTrap(let exc):
                 availableTrapIx -= 1
                 
                 let currentTrapIx: Int64 = availableTrapIx
                 let trapOffsetInStack = stackInfo.reservedForVreg + currentTrapIx * Int64(MemoryLayout<HLTrapCtx_CCompat>.stride)
-                
-                appendDebugPrintAligned4("[OEndTrap] hl_get_thread()->trap_current = ctx.prev", builder: mem)
                 
                 // Offsets into HLThreadInfo_CCompat
                 let tinf__trapCurrent: Int64 = Int64(MemoryLayout.offset(of: \HLThreadInfo_CCompat.trap_current)!)
@@ -2899,7 +2764,7 @@ class M1Compiler2 {
             case .OSafeCast(let dst, let src):
                 try make_dyn_cast(dst, src, regs, mem, _callsite: (findex: compilable.findex, opnum: currentInstruction))
             case .OLabel:
-                appendDebugPrintAligned4("OLabel", builder: mem)
+                break
             case .OSub(let dst, let a, let b):
                 // mixed registers - convert integers to FP for the operation
                 assertNumeric(reg: dst, from: regs)
@@ -2909,13 +2774,7 @@ class M1Compiler2 {
                 appendLoadNumericAsDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
                 appendLoadNumericAsDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
                 
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) a", builder: mem)
-                appendDebugPrintRegisterAligned4(D.d1, prepend: "\(prependHeader) b", builder: mem)
-                
                 mem.append(M1Op.fsub(D.d0, D.d0, D.d1))
-                
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) res", builder: mem)
-                
                 appendStoreDoubleAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             case .OAdd(let dst, let a, let b) where isInteger(vreg: a, kinds: regs) && isInteger(vreg: b, kinds: regs) && isInteger(vreg: dst, kinds: regs):
                 
@@ -2927,10 +2786,7 @@ class M1Compiler2 {
                 appendLoad(0, from: a, kinds: regs, mem: mem)
                 appendLoad(1, from: b, kinds: regs, mem: mem)
                 
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) a", builder: mem, format: "%d")
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(prependHeader) b", builder: mem, format: "%d")
                 mem.append(M1Op.add(X.x0, X.x0, .r64shift(X.x1, .lsl(0))))
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) result", builder: mem, format: "%d")
                 
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OAdd(let dst, let a, let b) where isFP(vreg: a, kinds: regs) && isFP(vreg: b, kinds: regs) && isFP(vreg: dst, kinds: regs):
@@ -2943,12 +2799,7 @@ class M1Compiler2 {
                 appendLoadFPToDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
                 appendLoadFPToDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
                 
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) a", builder: mem)
-                appendDebugPrintRegisterAligned4(D.d1, prepend: "\(prependHeader) b", builder: mem)
-                
                 mem.append(M1Op.fadd(D.d0, D.d0, D.d1))
-                
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) res", builder: mem)
                 
                 appendStoreDoubleToFP(reg: D.d0, into: dst, kinds: regs, mem: mem)
             case .OAdd(let dst, let a, let b):
@@ -2960,12 +2811,7 @@ class M1Compiler2 {
                 appendLoadNumericAsDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
                 appendLoadNumericAsDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
                 
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) a", builder: mem)
-                appendDebugPrintRegisterAligned4(D.d1, prepend: "\(prependHeader) b", builder: mem)
-                
                 mem.append(M1Op.fadd(D.d0, D.d0, D.d1))
-                
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "\(prependHeader) res", builder: mem)
                 
                 appendStoreDoubleAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             case .ONot(let dst, let src):
@@ -3050,18 +2896,14 @@ class M1Compiler2 {
             case .OSetArray(let array, let index, let src):
                 // x0 -> points to ((*_varray)(array))+1
                 appendLoad(reg: X.x0, from: array, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "OSetArray array", builder: mem)
                 
                 // x1 point to field base (right after the (varray) content at x0
                 mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<varray>.stride), nil)))
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "OSetArray before deref", builder: mem)
                 
                 // x2 load index and shift by field size multiplier
                 let lsl = requireTypeSizeLsl(reg: src, from: regs)
                 appendLoad(reg: X.x2, from: index, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x2, prepend: "OSetArray index before mul", builder: mem)
                 mem.append(M1Op.lsl_i(X.x2, X.x2, try UImmediate6(lsl)))
-                appendDebugPrintRegisterAligned4(X.x2, prepend: "OSetArray index after mul", builder: mem)
                 
                 // x3 load value to store
                 appendLoad(reg: X.x3, from: src, kinds: regs, mem: mem)
@@ -3071,25 +2913,20 @@ class M1Compiler2 {
             case .OGetArray(let dst, let array, let index):
                 // x0 -> points to ((*_varray)(array))+1
                 appendLoad(reg: X.x0, from: array, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "OGetArray array", builder: mem)
                 
                 // x1 point to field base (right after the (varray) content at x0
                 mem.append(M1Op.add(X.x1, X.x0, .imm(Int64(MemoryLayout<varray>.stride), nil)))
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "OGetArray before deref", builder: mem)
                 
                 // x2 load index and shift by field size multiplier
                 let lsl = requireTypeSizeLsl(reg: dst, from: regs)
                 appendLoad(reg: X.x2, from: index, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x2, prepend: "OGetArray index before mul", builder: mem)
                 mem.append(M1Op.lsl_i(X.x2, X.x2, try UImmediate6(lsl)))
-                appendDebugPrintRegisterAligned4(X.x2, prepend: "OGetArray index after mul", builder: mem)
                 
                 // dereference [x1/*field base*/ + x2/*offset from index*/]
                 mem.append(M1Op.ldr(X.x1, .reg(X.x1, .r64shift(X.x2, .lsl(0)))))
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "OGetArray fieldbase after deref", builder: mem)
                 
                 appendStore(1, into: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "OGetArray fetched item", builder: mem)
+                
             case .ONop:
                 mem.append(M1Op.nop)
             case .OXor(let dst, let a, let b):
@@ -3100,9 +2937,6 @@ class M1Compiler2 {
             case .OMul(let dst, let a, let b):
                 appendLoadNumericAsDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
                 appendLoadNumericAsDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
-                
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OMul(a)", builder: mem)
-                appendDebugPrintRegisterAligned4(D.d1, prepend: "OMul(b)", builder: mem)
                 
                 mem.append(M1Op.fmul(D.d0, D.d0, D.d1))
                 
@@ -3118,8 +2952,6 @@ class M1Compiler2 {
                 
                 appendLoadNumeric(reg: 0, from: a, kinds: regs, mem: mem)
                 appendLoadNumeric(reg: 1, from: b, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(op.id)", builder: mem)
-                appendDebugPrintRegisterAligned4(X.x1, prepend: "\(op.id)", builder: mem)
                 
                 if case .OUDiv = op {
                     appendSignMode(false, reg: X.x0, from: a, kinds: regs, mem: mem)
@@ -3132,8 +2964,6 @@ class M1Compiler2 {
                 } else {
                     fatalError("Invalid op for div (to determine udiv/sdiv)")
                 }
-                
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(op.id) res (before float)", builder: mem)
                 
                 if isFP(vreg: dst, kinds: regs) {
                     // Ensure the result is in a FP register
@@ -3153,11 +2983,8 @@ class M1Compiler2 {
                 
                 appendFPRegToDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
                 appendFPRegToDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSDiv a", builder: mem)
-                appendDebugPrintRegisterAligned4(D.d1, prepend: "OSDiv b", builder: mem)
                 mem.append(M1Op.fdiv(D.d0, D.d0, D.d1))
                 appendPrepareDoubleForStore(reg: D.d0, to: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSDiv result", builder: mem)
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .OSDiv(let dst, let a, let b):
                 assertFP(reg: dst, from: regs)
@@ -3310,7 +3137,6 @@ class M1Compiler2 {
                 appendLoad(reg: X.x0, from: reg, kinds: regs, mem: mem)
                 
                 for (expectedValue, jmpOffset) in offsets.enumerated() {
-                    appendDebugPrintAligned4("Comparing reg \(reg) against \(expectedValue)", builder: mem)
                     mem.append(
                         PseudoOp.mov(X.x1, expectedValue),
                         M1Op.cmp(X.x0, X.x1)
@@ -3332,8 +3158,6 @@ class M1Compiler2 {
                     mem.append(
                         PseudoOp.b_eq_deferred(jumpOffset)
                     )
-                    
-                    appendDebugPrintAligned4("Didn't jump from case \(expectedValue)", builder: mem)
                 }
             case .OGetTID(let dst, let src):
                 let srcType = requireType(reg: src, regs: regs)
@@ -3359,8 +3183,6 @@ class M1Compiler2 {
                 default:
                     fatal("OGetType not supported for src \(srcType.kind)", Self.logger)
                 }
-                appendDebugPrintAligned4("INTTYPE test", builder: mem)
-                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .ORef(let dst, let src):
                 let dstType = requireType(reg: dst, regs: regs)
@@ -3370,10 +3192,8 @@ class M1Compiler2 {
                 
                 if srcType.kind == .f32 {
                     appendLoad(5, from: src, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(5, kind: srcType.kind, prepend: "Ref_f32", builder: mem)
                 } else if srcType.kind == .f64 {
                     appendLoad(5, from: src, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(5, kind: srcType.kind, prepend: "Ref_f64", builder: mem)
                 }
                 
                 let srcOffset = getRegStackOffset(regs, src)
@@ -3427,10 +3247,8 @@ class M1Compiler2 {
                 
                 if HLTypeKind.f64 == srcType.kind {
                     appendLoad(5, from: src, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(5, kind: srcType.kind, prepend: "setref_f?64", builder: mem)
                 } else if HLTypeKind.f32 == srcType.kind {
                     appendLoad(5, from: src, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(5, kind: srcType.kind, prepend: "setref_f?32", builder: mem)
                 }
                 
                 appendStoreGPRightSize(1, as: src, intoAddressFrom: X.x0, offsetFromAddress: 0, kinds: regs, mem: mem)
@@ -3495,7 +3313,6 @@ class M1Compiler2 {
                 appendStore(0, into: dst, kinds: regs, mem: mem)
                 
                 let dstKind = requireTypeKind(reg: dst, from: regs)
-                appendDebugPrintRegisterAligned4(0, kind: dstKind, prepend: "OEnumField fetched", builder: mem)
             case .OEnumAlloc(let dst, let construct):
                 assert(reg: dst, from: regs, is: HLTypeKind.enum)
                 let type = requireType(reg: dst, regs: regs)
@@ -3574,8 +3391,6 @@ class M1Compiler2 {
                 appendFuncCall(unsafeBitCast(_impl, to: OpaquePointer.self), via: X.x20, mem: mem)
                 
                 appendStore(0, into: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "(fun@\(compilable.findex); op: \(currentInstruction)) OVirtualClosure result", builder: mem)
-                
                 
             case .OInstanceClosure(let dst, let fun, let obj):
                 
@@ -3605,7 +3420,6 @@ class M1Compiler2 {
                     M1Op.blr(X.x3)
                 )
                 appendStore(0, into: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x0, builder: mem)
             case .OStaticClosure(let dst, let fun):
                 let mutatingMod = UnsafeMutablePointer(mutating: ctx.mainContext.pointee.m!)
                 let callTarget = try ctx.requireCallable(findex: fun)
@@ -3700,7 +3514,6 @@ class M1Compiler2 {
                 
                 // load obj into x0
                 appendLoad(reg: X.x0, from: obj, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(X.x0, prepend: "\(prependHeader) o", builder: mem)
                 
                 // load field name hash into x1
                 // note: different from ODynSet
@@ -3715,16 +3528,14 @@ class M1Compiler2 {
                     try Self.appendLoadTypeMemory(X.x2, reg: dst, regs: regs, mem: mem, ctx: ctx)
                 }
                 
-                appendDebugPrintAligned4("\(prependHeader): jumping to dynget function", builder: mem)
                 mem.append(
                     PseudoOp.mov(X.x15, dyngetFunc),
                     M1Op.blr(X.x15)
                 )
                 // TODO: check for failed cast result
-                appendDebugPrintAligned4("\(prependHeader): TODO: ODynGet should check for failed cast result", builder: mem)
+                appendDebugPrintAligned4("\(prependHeader): TODO: ODynGet should check for failed cast result", fix: compilable.findex, builder: mem)
                 
                 appendStore(0, into: dst, kinds: regs, mem: mem)
-                appendDebugPrintRegisterAligned4(0, kind: dstType.kind, prepend: "\(prependHeader) result", builder: mem)
             case .ODynSet(let obj, let field, let src):
                 let srcType = requireTypeKind(reg: src, from: regs)
                 let dynsetFunc = get_dynset(from: srcType.kind)
@@ -3756,23 +3567,21 @@ class M1Compiler2 {
                     
                     // load value into x3
                     appendLoad(reg: X.x3, from: src, kinds: regs, mem: mem)
-                    
-                    appendDebugPrintRegisterAligned4(X.x3, prepend: "ODynSet value (gp)", builder: mem)
+
                 } else {
                     // load value into d0 (for f32 and f64 arguments)
                     // as it's the first floating point arg)
                     appendLoad(reg: D.d0, from: src, kinds: regs, mem: mem)
                     appendFPRegToDouble(reg: D.d0, from: src, kinds: regs, mem: mem)
-                    appendDebugPrintRegisterAligned4(D.d0, prepend: "ODynSet value (float)", builder: mem)
+                    
                 }
                 
-                appendDebugPrintAligned4("Jumping to dynset function", builder: mem)
                 mem.append(
                     PseudoOp.mov(X.x15, dynsetFunc),
                     M1Op.blr(X.x15)
                 )
                 // TODO: check for failed cast result
-                appendDebugPrintAligned4("TODO: ODynSet should check for failed cast result", builder: mem)
+                appendDebugPrintAligned4("TODO: ODynSet should check for failed cast result", fix: compilable.findex, builder: mem)
             case .OUMod(let dst, let a, let b) where isInteger(vreg: dst, kinds: regs) && isInteger(vreg: a, kinds: regs) && isInteger(vreg: b, kinds: regs):
                 
                 self.__omod_integer(dst: dst, a: a, b: b, signed: false, regs: regs, mem: mem)
@@ -3784,17 +3593,12 @@ class M1Compiler2 {
                 appendLoadNumericAsDouble(reg: D.d0, from: a, kinds: regs, mem: mem)
                 appendLoadNumericAsDouble(reg: D.d1, from: b, kinds: regs, mem: mem)
                 
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSMod a#fp", builder: mem)
-                appendDebugPrintRegisterAligned4(D.d1, prepend: "OSMod b#fp", builder: mem)
-                
                 mem.append(
                     M1Op.fdiv(D.d3, D.d0, D.d1),
                     M1Op.frintz(D.d3, D.d3),
                     M1Op.fmul(D.d3, D.d3, D.d1),
                     M1Op.fsub(D.d0, D.d0, D.d3)
                 )
-                
-                appendDebugPrintRegisterAligned4(D.d0, prepend: "OSMod ret#fp", builder: mem, format: "%f")
                 
                 appendStoreDoubleAsNumeric(reg: D.d0, as: dst, kinds: regs, mem: mem)
             default:
@@ -3808,18 +3612,13 @@ class M1Compiler2 {
         }
 
         if stackInfo.total > 0 {
-            appendDebugPrintAligned4("Free \(stackInfo.total) bytes (pre-epilogue)", builder: mem)
             mem.append(
                 (try M1Op._add(X.sp, X.sp, stackInfo.total))
             )
         }
-        else {
-            appendDebugPrintAligned4("Skipping freeing stack because \(stackInfo.total) bytes were needed", builder: mem)
-        }
-
+        
         appendEpilogue(builder: mem)
-        appendDebugPrintAligned4("Returning", builder: mem)
+        appendDebugPrintAligned4("Returning", fix: compilable.findex, builder: mem)
         mem.append(M1Op.ret)
-        appendDebugPrintAligned4("Returned", builder: mem)
     }
 }

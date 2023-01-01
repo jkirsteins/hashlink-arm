@@ -33,8 +33,8 @@ struct HLType_CCompat_Fun_Closure : Equatable, Hashable {
 
 struct HLTypeFun_CCompat : Equatable, Hashable {
     let argsPtr: UnsafePointer<UnsafePointer<HLType_CCompat>>
-    let retPtr: UnsafePointer<HLType_CCompat>
-    let nargs: UInt32
+    var retPtr: UnsafePointer<HLType_CCompat>
+    var nargs: UInt32
     let parent: UnsafePointer<HLType_CCompat>?
     let closure_type: HLType_CCompat_Fun_ClosureType
     let closure: HLType_CCompat_Fun_Closure

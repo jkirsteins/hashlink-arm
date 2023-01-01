@@ -41,10 +41,6 @@ extension M1Compiler2 {
         )
         
         
-        #if DEBUG
-        appendDebugPrintRegisterAligned4(X.x11, prepend: "base in hlc_static_call", builder: mem)
-        #endif
-
         var offset: ByteCount = 0
         var gpRegisterIx: RegisterRawValue = 0
         var fpRegisterIx: RegisterRawValue = 0
@@ -114,18 +110,10 @@ extension M1Compiler2 {
             offset += Int64(MemoryLayout<OpaquePointer>.stride)    // args are memory addresses
         }
 
-#if DEBUG
-        appendDebugPrintRegisterAligned4(X.x10, prepend: "[hlc_static_call] jumping...", builder: mem)
-#endif
-        
         mem.append(
             M1Op.blr(X.x10)
         )
-        
-#if DEBUG
-        appendDebugPrintAligned4("[hlc_static_call] jumped...", builder: mem)
-#endif
-        
+                
         // no-stack-epilogue
         mem.append(
             M1Op.ldp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 0, nil)),
@@ -162,7 +150,8 @@ extension M1Compiler2 {
 
         switch(funProvider.retProvider.kind, funProvider.retProvider.kind.isPointer) {
         case (.void, false):
-            return nil
+            let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->(OpaquePointer)).self)
+            return _jitFunc()
         case (.f32, false):
             let _jitFunc = unsafeBitCast(execMem, to: (@convention(c) ()->Float32).self)
             let result = _jitFunc()

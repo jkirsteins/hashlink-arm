@@ -405,6 +405,9 @@ struct LibHl {
     // HL_PRIM void hl_setup_callbacks( void *c, void *w ) {
     static let _hl_setup_callbacks: (@convention(c) (OpaquePointer, OpaquePointer)->()) = { load("hl_setup_callbacks") }()
     
+//    HL_PRIM void hl_setup_exception( void *resolve_symbol, void *capture_stack )
+    static let _hl_setup_exception: (@convention(c) (OpaquePointer, OpaquePointer)->()) = { load("hl_setup_exception") }()
+    
     // HL_API void *hl_fatal_error( const char *msg, const char *file, int line );
     static let _hl_fatal_error: (@convention(c) (OpaquePointer, OpaquePointer, Int32)->()) = { load("hl_fatal_error") }()
     
@@ -447,5 +450,31 @@ struct LibHl {
     
     // HL_PRIM void *hl_wrapper_call( void *_c, void **args, vdynamic *ret )
     static let _hl_wrapper_call: (@convention(c) (OpaquePointer, OpaquePointer, OpaquePointer)->(OpaquePointer)) = { load("hl_wrapper_call") }()
+ 
+    // HL_PRIM vdynamic *hl_dyn_call_safe( vclosure *c, vdynamic **args, int nargs, bool *isException )
+    static let _hl_dyn_call_safe: (@convention(c) (OpaquePointer, OpaquePointer?, Int32, OpaquePointer)->(OpaquePointer)) = { load("hl_dyn_call_safe") }()
+    static func hl_dyn_call_safe(
+        _ c: vclosurePointer,
+        _ args: UnsafePointer<vdynamicPointer>?,
+        _ nargs: Int32,
+        _ isException: UnsafeMutablePointer<Bool>
+    ) -> (vdynamicPointer) {
+        .init(_hl_dyn_call_safe(
+            .init(c),
+            .init(args),
+            nargs,
+            .init(isException)))
+    }
     
+    // HL_PRIM varray *hl_exception_stack()
+    static let _hl_exception_stack: (@convention(c) ()->(OpaquePointer)) = { load("hl_exception_stack") }()
+    static func hl_exception_stack() -> (UnsafePointer<varray>) {
+        .init(_hl_exception_stack())
+    }
+    
+    // HL_PRIM uchar *hl_to_string( vdynamic *v )
+    static let _hl_to_string: (@convention(c) (OpaquePointer)->(OpaquePointer)) = { load("hl_to_string") }()
+    static func hl_to_string(_ v: UnsafePointer<vdynamic>) -> (UnsafePointer<CChar16>) {
+        .init(_hl_to_string(.init(v)))
+    }
 }

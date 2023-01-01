@@ -2,7 +2,7 @@ fileprivate var _obj2: UnsafePointer<HLTypeObj_CCompat>? = nil
 
 struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
     // hl_type_kind kind
-    let kind: HLTypeKind
+    var kind: HLTypeKind
 
     /*
     union {
@@ -14,8 +14,7 @@ struct HLType_CCompat : Equatable, Hashable, CustomDebugStringConvertible {
 		hl_type	*tparam;
 	};
     */
-    /// NOTE: important to not be optional. See `getUnion()` comments.
-    let union: UnsafeMutableRawPointer?
+    var union: UnsafeMutableRawPointer?
     
     /// NOTENOTE: should not be an optional! Testing....
     ///

@@ -82,7 +82,7 @@ struct SwiftAsm: ParsableCommand {
         let cache: (any CompilerCache)? = nil
         let mod = try! Bootstrap.start2(hlFileIn, args: [])
         
-        let sut = M1Compiler2(ctx: mod, stripDebugMessages: !jitdebug, cache: cache)
+        let sut = M1Compiler2(ctx: mod, jitDebugFunctions: [], cache: cache)
         let buf = CpuOpBuffer()
         
         var offsetToCompilable: Dictionary<ByteCount, (ByteCount, any Compilable2)> = [:]
@@ -118,9 +118,6 @@ struct SwiftAsm: ParsableCommand {
         let mem = try mapper.getMemory()
         
         Self.logger.debug("Executing entrypoint _@\(epIx)...")
-        let addr = try mod.getCallable(findex: RefFun(epIx))!.address.value
-        
-        let _cc = unsafeBitCast(addr, to: (@convention(c) ()->()).self)
-        _cc()
+        try Bootstrap.wrap_entrypoint(ctx: mod, fix: RefFun(epIx))
     }
 }

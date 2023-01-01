@@ -26,7 +26,7 @@ fileprivate func prepareContext(compilables: [any Compilable2], natives: [any Na
 
 fileprivate func compileAndLink(ctx: CCompatJitContext, _ fix: Int..., strip: Bool = true, callback: (UnsafeMutableRawPointer)throws->()) throws {
     let mem = CpuOpBuffer()
-    let sut = M1Compiler2(ctx: ctx, stripDebugMessages: strip)
+    let sut = M1Compiler2(ctx: ctx, jitDebugFunctions: strip ? [] : Array(fix))
     
     try fix.forEach { try sut.compile(findex: $0, into: mem) }
     
@@ -38,7 +38,9 @@ fileprivate func compileAndLink(ctx: CCompatJitContext, _ fix: Int..., strip: Bo
 
 final class CompilerM1v2Tests: CCompatTestCase {
     
-    func sut(ctx: CCompatJitContext, strip: Bool = true) -> M1Compiler2 { M1Compiler2(ctx: ctx, stripDebugMessages: strip) }
+    func sut(ctx: CCompatJitContext) -> M1Compiler2 {
+        M1Compiler2(ctx: ctx, jitDebugFunctions: [])
+    }
     
     func testCompile_OGetThis() throws {
         
@@ -69,7 +71,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         let obj = _TestMemory(field1: 0b10000001, field2: Int32.max, field3: UInt16.max)
         
         let mem = CpuOpBuffer()
-        let sut = M1Compiler2(ctx: ctx, stripDebugMessages: true)
+        let sut = M1Compiler2(ctx: ctx, jitDebugFunctions: [0])
         try sut.compile(findex: 0, into: mem)
         
         //
@@ -109,7 +111,7 @@ final class CompilerM1v2Tests: CCompatTestCase {
         ], ints: [0, 3, 57005])
         
         let mem = CpuOpBuffer()
-        let sut = M1Compiler2(ctx: ctx, stripDebugMessages: true)
+        let sut = M1Compiler2(ctx: ctx)
         try sut.compile(findex: 0, into: mem)
         
         //
@@ -3721,82 +3723,6 @@ final class CompilerM1v2Tests: CCompatTestCase {
         
         XCTAssertThrowsError(
             try sut.appendStackInit([HLTypeKind.i32], args: [HLTypeKind.void], builder: mem, prologueSize: 0)
-        )
-    }
-    
-    func testAppendDebugPrintAligned4() throws {
-        let ctx = try prepareContext(compilables: [])
-        let sutWith = sut(ctx: ctx, strip: false)
-        let sutWithout = sut(ctx: ctx, strip: true)
-        let memWith = CpuOpBuffer()
-        let memWithout = CpuOpBuffer()
-        
-        sutWith.appendDebugPrintAligned4(
-            "Hello World",
-            builder: memWith
-        )
-        sutWithout.appendDebugPrintAligned4(
-            "Hello World",
-            builder: memWithout
-        )
-        
-        XCTAssertEqual(
-            [],
-            try BufferMapper(ctx: ctx, buffer: memWithout).emitMachineCode()
-        )
-        
-        XCTAssertEqual(
-            [
-                // Printing debug message: Hello World
-                0xff, 0xc3, 0x03, 0xd1, // sub sp, sp, #240
-                0xe0, 0x83, 0x00, 0xf8, // str x0, [sp, #8]
-                0xf3, 0x03, 0x00, 0xf8, // str x19, [sp, #0]
-                0xe1, 0x0b, 0x01, 0xa9, // stp x1, x2, [sp, #16]
-                0xe3, 0x13, 0x02, 0xa9, // stp x3, x4, [sp, #32]
-                0xe5, 0x1b, 0x03, 0xa9, // stp x5, x6, [sp, #48]
-                0xe7, 0x23, 0x04, 0xa9, // stp x7, x8, [sp, #64]
-                0xe9, 0x2b, 0x05, 0xa9, // stp x9, x10, [sp, #80]
-                0xeb, 0x33, 0x06, 0xa9, // stp x11, x12, [sp, #96]
-                0xed, 0x3b, 0x07, 0xa9, // stp x13, x14, [sp, #112]
-                0xef, 0x43, 0x08, 0xa9, // stp x15, x16, [sp, #128]
-                0xf1, 0x4b, 0x09, 0xa9, // stp x17, x18, [sp, #144]
-                0xe0, 0x07, 0x0a, 0x6d, // stp d0, d1, [sp, #160]
-                0xe2, 0x0f, 0x0b, 0x6d, // stp d2, d3, [sp, #176]
-                0xe4, 0x17, 0x0c, 0x6d, // stp d4, d5, [sp, #192]
-                0xe6, 0x1f, 0x0d, 0x6d, // stp d6, d7, [sp, #208]
-                0xe8, 0x27, 0x0e, 0x6d, // stp d8, d9, [sp, #224]
-                0x20, 0x00, 0x80, 0xd2, // movz x0, #1
-                0xc1, 0x02, 0x00, 0x10, // adr x1, #88
-                0xe2, 0x02, 0x80, 0xd2, // movz x2, #23
-                0x90, 0x00, 0x80, 0xd2, // movz x16, #4
-                0x01, 0x10, 0x00, 0xd4, // svc 0x0080
-                0xe0, 0x07, 0x40, 0xf9, // ldr x0, [sp, #8]
-                0xf3, 0x03, 0x40, 0xf9, // ldr x19, [sp, #0]
-                0xe1, 0x0b, 0x41, 0xa9, // ldp x1, x2, [sp, #16]
-                0xe3, 0x13, 0x42, 0xa9, // ldp x3, x4, [sp, #32]
-                0xe5, 0x1b, 0x43, 0xa9, // ldp x5, x6, [sp, #48]
-                0xe7, 0x23, 0x44, 0xa9, // ldp x7, x8, [sp, #64]
-                0xe9, 0x2b, 0x45, 0xa9, // ldp x9, x10, [sp, #80]
-                0xeb, 0x33, 0x46, 0xa9, // ldp x11, x12, [sp, #96]
-                0xed, 0x3b, 0x47, 0xa9, // ldp x13, x14, [sp, #112]
-                0xef, 0x43, 0x48, 0xa9, // ldp x15, x16, [sp, #128]
-                0xf1, 0x4b, 0x49, 0xa9, // ldp x17, x18, [sp, #144]
-                0xe0, 0x07, 0x4a, 0x6d, // ldp d0, d1, [sp, #160]
-                0xe2, 0x0f, 0x4b, 0x6d, // ldp d2, d3, [sp, #176]
-                0xe4, 0x17, 0x4c, 0x6d, // ldp d4, d5, [sp, #192]
-                0xe6, 0x1f, 0x4d, 0x6d, // ldp d6, d7, [sp, #208]
-                0xe8, 0x27, 0x4e, 0x6d, // ldp d8, d9, [sp, #224]
-                0xff, 0xc3, 0x03, 0x91, // add sp, sp, #240
-                0x07, 0x00, 0x00, 0x14, // b #28
-                0x5b, 0x6a, 0x69, 0x74, // [jit
-                0x64, 0x65, 0x62, 0x75, // debu
-                0x67, 0x5d, 0x20, 0x48, // g].H
-                0x65, 0x6c, 0x6c, 0x6f, // ello
-                0x20, 0x57, 0x6f, 0x72, // .Wor
-                0x6c, 0x64, 0x0a, // ld\n
-                0x00, // .zero
-            ],
-            try BufferMapper(ctx: ctx, buffer: memWith).emitMachineCode()
         )
     }
     
