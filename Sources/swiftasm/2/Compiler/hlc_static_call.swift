@@ -87,10 +87,6 @@ extension M1Compiler2 {
                     offset: offset,
                     kinds: [HLTypeKind.dyn],    // force an address load
                     mem: mem)
-#if DEBUG
-                M1Compiler2.appendDebugPrintRegisterAligned4(X.x11, prepend: "tdebug LOADING arg for \(reg) base", builder: mem)
-                M1Compiler2.appendDebugPrintRegisterAligned4(X.x12, prepend: "tdebug LOADING arg for \(reg) address (offset \(offset))", builder: mem)
-#endif
                 M1Compiler2.appendLoad(
                     regToUseIx,
                     as: Reg(argIx),
@@ -98,14 +94,7 @@ extension M1Compiler2 {
                     offset: 0,
                     kinds: funProvider.argsProvider,
                     mem: mem)
-#if DEBUG
-                M1Compiler2.appendDebugPrintRegisterAligned4(regToUseIx, kind: argKind, prepend: "tdebug LOADED arg for \(reg)", builder: mem)
-#endif
             }
-            
-            #if DEBUG
-            M1Compiler2.appendDebugPrintRegisterAligned4(regToUseIx, kind: argKind, prepend: "hl_dyn_call_obj arg \(reg) in hlc_static_call (offset \(offset))", builder: mem)
-            #endif
             
             offset += Int64(MemoryLayout<OpaquePointer>.stride)    // args are memory addresses
         }
