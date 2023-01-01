@@ -19,33 +19,30 @@ extension M1Compiler2 {
 
         /* we'll JIT the call
          *
-         * x20 will hold the arg offset
-         * x21 will hold the target func offset
+         * x11 will hold the arg offset
+         * x10 will hold the target func offset
          */
         let mem = CpuOpBuffer()
         
         // no-stack-prologue
         mem.append(
-            M1Op.subImm12(X.sp, X.sp, Imm12Lsl12(16)),
+            M1Op.subImm12(X.sp, X.sp, try! Imm12Lsl12(16, signed: false)),
             M1Op.stp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 0, nil))
         )
         
-        #if DEBUG
-        appendDebugPrintAligned4("[hlc_static_call] entering...", builder: mem)
-        #endif
-        
-        // set x20/x21
+        // set x10/x11
         mem.append(
             // argPtr is `void *vargs[10]` from hl_wrapper_call (i.e. `void**`)
             // for non-pointer values, we need to advance, then dereference
             // for pointer values, we need to advance, then use that address
-            PseudoOp.mov(X.x20, argPtr),
+            PseudoOp.mov(X.x11, argPtr),
             
-            PseudoOp.mov(X.x21, funPtr)
+            PseudoOp.mov(X.x10, funPtr)
         )
         
+        
         #if DEBUG
-        appendDebugPrintRegisterAligned4(X.x20, prepend: "base in hlc_static_call", builder: mem)
+        appendDebugPrintRegisterAligned4(X.x11, prepend: "base in hlc_static_call", builder: mem)
         #endif
 
         var offset: ByteCount = 0
@@ -82,25 +79,32 @@ extension M1Compiler2 {
                     fatalError("Pointer values must use GP registers")
                 }
                 mem.append(
-                    M1Op.add(regGP, X.x20, .imm(offset, nil)),
+                    M1Op.add(regGP, X.x11, .imm(offset, nil)),
                     M1Op.ldr(regGP, .reg(regGP, .imm(0, nil)))
                 )
             } else {
                 // hold value
                 M1Compiler2.appendLoad(
-                    reg: X.x23,
+                    reg: X.x12,
                     as: 0,
-                    addressRegister: X.x20,
+                    addressRegister: X.x11,
                     offset: offset,
                     kinds: [HLTypeKind.dyn],    // force an address load
                     mem: mem)
+#if DEBUG
+                M1Compiler2.appendDebugPrintRegisterAligned4(X.x11, prepend: "tdebug LOADING arg for \(reg) base", builder: mem)
+                M1Compiler2.appendDebugPrintRegisterAligned4(X.x12, prepend: "tdebug LOADING arg for \(reg) address (offset \(offset))", builder: mem)
+#endif
                 M1Compiler2.appendLoad(
                     regToUseIx,
                     as: Reg(argIx),
-                    addressRegister: X.x23,
+                    addressRegister: X.x12,
                     offset: 0,
                     kinds: funProvider.argsProvider,
                     mem: mem)
+#if DEBUG
+                M1Compiler2.appendDebugPrintRegisterAligned4(regToUseIx, kind: argKind, prepend: "tdebug LOADED arg for \(reg)", builder: mem)
+#endif
             }
             
             #if DEBUG
@@ -111,11 +115,11 @@ extension M1Compiler2 {
         }
 
 #if DEBUG
-        appendDebugPrintRegisterAligned4(X.x21, prepend: "[hlc_static_call] jumping...", builder: mem)
+        appendDebugPrintRegisterAligned4(X.x10, prepend: "[hlc_static_call] jumping...", builder: mem)
 #endif
         
         mem.append(
-            M1Op.blr(X.x21)
+            M1Op.blr(X.x10)
         )
         
 #if DEBUG
@@ -125,7 +129,7 @@ extension M1Compiler2 {
         // no-stack-epilogue
         mem.append(
             M1Op.ldp((X.x29_fp, X.x30_lr), .reg64offset(.sp, 0, nil)),
-            M1Op.addImm12(X.sp, X.sp, Imm12Lsl12(16)),
+            M1Op.addImm12(X.sp, X.sp, try! Imm12Lsl12(16, signed: false)),
             M1Op.ret
         )
 
