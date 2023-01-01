@@ -561,7 +561,8 @@ extension M1Compiler2 {
         addressRegister addrRegCandidate: Register64,
         offset offsetCandidate: Int64,
         kinds: [any HLTypeKindProvider],
-        mem: CpuOpBuffer)
+        mem: CpuOpBuffer,
+        allowJitDebug: Bool = false)
     {
         
         // NOTE: if offset is larger than 9 bits, we'll not use an immediate
@@ -584,7 +585,9 @@ extension M1Compiler2 {
                 PseudoOp.mov(X.x21, offsetCandidate),
                 M1Op.add(X.x20, X.x20, .r64shift(X.x21, .lsl(0)))
             )
-            self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendLoad indirect]", builder: mem)
+            if allowJitDebug {
+                self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendLoad indirect]", builder: mem)
+            }
         }
         
         
@@ -718,7 +721,7 @@ extension M1Compiler2 {
     ///   - offsetFromAddress: offset from address in `addrReg`
     ///   - kinds: register kinds for current context
     ///   - mem: op buffer
-    static func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrRegCandidate: Register64, offsetFromAddress offsetCandidate: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer) {
+    static func appendStore(reg: any Register, as vreg: Reg, intoAddressFrom addrRegCandidate: Register64, offsetFromAddress offsetCandidate: Int64, kinds: [any HLTypeKindProvider], mem: CpuOpBuffer, allowJitDebug: Bool = false) {
         let vregKind = requireTypeKind(reg: vreg, from: kinds)
         
         guard vregKind != .void else {
@@ -750,7 +753,9 @@ extension M1Compiler2 {
                 PseudoOp.mov(X.x21, offsetCandidate),
                 M1Op.add(X.x20, X.x20, .r64shift(X.x21, .lsl(0)))
             )
-            self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendStore indirect offset:\(offsetCandidate)]", builder: mem)
+            if allowJitDebug {
+                self.appendDebugPrintRegisterAligned4(X.x20, prepend: "[appendStore indirect offset:\(offsetCandidate)]", builder: mem)
+            }
         }
         
         if vregKind.hlRegSize == 8 {
@@ -1134,6 +1139,7 @@ extension M1Compiler2 {
     ///   - prepend: an additional debug message to prepend
     ///   - builder: `CpuOpBuffer` into which to emit the instructions
     static func appendDebugPrintRegisterAligned4(_ reg: any Register, prepend: String? = nil, builder: CpuOpBuffer, format: String? = nil, kind: HLTypeKind? = nil) {
+        
         guard let printfAddr = dlsym(dlopen(nil, RTLD_LAZY), "printf") else {
             fatalError("No printf addr")
         }
@@ -1363,10 +1369,10 @@ extension M1Compiler2 {
         Self.appendDebugPrintAligned4(val, builder: builder)
     }
     
-    static func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer) {
+    static func appendDebugPrintAligned4(_ val: String, builder: CpuOpBuffer, header: String = "[jitdebug]") {
         var adr = RelativeDeferredOffset()
         var jmpTarget = RelativeDeferredOffset()
-        let str = "[jitdebug] \(val)\n"
+        let str = "\(header) \(val)\n"
         builder.append(PseudoOp.debugMarker("Printing debug message: \(val)"))
         builder.append(
             // Stash registers we'll use (so we can reset)
@@ -1430,11 +1436,12 @@ extension M1Compiler2 {
         jmpTarget.stop(at: builder.byteSize)
     }
     
-    func appendSystemExit(_ code: UInt8, builder: CpuOpBuffer) {
-        Self.appendSystemExit(code, builder: builder)
+    func appendSystemExit(_ code: UInt8, builder: CpuOpBuffer, message: String? = nil, file: String = #file, line: Int = #line) {
+        Self.appendSystemExit(code, builder: builder, message: message, file: file, line: line)
     }
     
-    static func appendSystemExit(_ code: UInt8, builder: CpuOpBuffer) {
+    static func appendSystemExit(_ code: UInt8, builder: CpuOpBuffer, message: String? = nil, file: String = #file, line: Int = #line) {
+        Self.appendDebugPrintAligned4("\(file): \(line): \(message ?? "unspecified reason")", builder: builder, header: "[exit(\(code))]")
         builder.append(
             M1Op.movz64(.x0, UInt16(code), nil),
             M1Op.movz64(.x16, 1, nil),
@@ -1442,7 +1449,8 @@ extension M1Compiler2 {
         )
     }
     
-    func appendSystemExit_CodeInX0(builder: CpuOpBuffer) {
+    func appendSystemExit_CodeInX0(builder: CpuOpBuffer, message: String? = nil, file: String = #file, line: Int = #line) {
+        Self.appendDebugPrintAligned4("\(file): \(line): \(message ?? "unspecified reason")", builder: builder, header: "[exit(x0)]")
         builder.append(
             M1Op.movz64(.x16, 1, nil),
             M1Op.svc(0x80)
@@ -2594,7 +2602,7 @@ class M1Compiler2 {
                 appendDebugPrintAligned4("Null access exception", builder: mem)
                 
                 // tmp crash on null access. TODO: add proper error here
-                appendSystemExit(1, builder: mem)
+                appendSystemExit(1, builder: mem, message: "ONullCheck failed in fun@\(compilable.findex) op#\(currentInstruction)")
                 jumpOverDeath.stop(at: mem.byteSize)
             case .OAnd(let dst, let a, let b):
                 appendLoad(reg: X.x0, from: a, kinds: regs, mem: mem)

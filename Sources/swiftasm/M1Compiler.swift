@@ -10,8 +10,10 @@ let _trap: (@convention(c) (Int64, Int64) -> ()) = { (_ exc: Int64, _ offset: In
     
     let newCtx: UnsafeMutablePointer<HLTrapCtx_CCompat> = .allocate(capacity: 1)
     
+    let newBuf: jmp_buf = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    
     newCtx.initialize(to: HLTrapCtx_CCompat(
-        buf: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+        buf: newBuf,
         prev: __tinf.pointee.trap_current,
         tcheck: nil))
     

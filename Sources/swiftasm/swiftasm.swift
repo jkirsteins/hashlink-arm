@@ -83,6 +83,10 @@ struct SwiftAsm: ParsableCommand {
         var offsetToCompilable: Dictionary<ByteCount, (ByteCount, any Compilable2)> = [:]
         
         Self.logger.debug("Compiling...")
+        
+        let progressChunkSize: Float = 0.05
+        var progressLastReport: Float = 0
+        
         for frix in (0..<mod.nfunctions) {
             let fix = mod.mainContext.pointee.code!.pointee.functions.advanced(by: Int(frix)).pointee.findex
             
@@ -91,6 +95,12 @@ struct SwiftAsm: ParsableCommand {
             let startByteSize = buf.byteSize
             let compilable = try sut.compile(findex: RefFun(fix), into: buf)
             offsetToCompilable[startByteSize] = (buf.byteSize, compilable)
+            
+            let progress = Float(frix+1)/Float(mod.nfunctions)
+            if (progress-progressLastReport) > progressChunkSize {
+                progressLastReport = progress
+                print("Progress", String(format: "%.2f%%", progress * 100))
+            }
         }
         
         let epIx = mod.mainContext.pointee.code!.pointee.entrypoint
