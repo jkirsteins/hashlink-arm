@@ -2517,6 +2517,7 @@ class M1Compiler2 {
                 
                 appendStore(0, into: dst, kinds: regs, mem: mem)
             case .ONullCheck(let dst):
+                // TODO: see jit_null_access, jit_null_field_access
                 let dstKind = requireTypeKind(reg: dst, from: regs)
                 
                 if FP_TYPE_KINDS.contains(dstKind) {
